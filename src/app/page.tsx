@@ -6,7 +6,8 @@ import { Swords, Download, TrendingUp, HandCoins, Twitter } from "lucide-react";
 import { nanoid } from "nanoid";
 import { QRCodeSVG } from "qrcode.react";
 import { useSearchParams } from "next/navigation";
-import { usePrivy } from "@privy-io/react-auth";
+import { usePrivy, useWallets } from "@privy-io/react-auth";
+import { ethers } from "ethers";
 
 function HomeContent() {
   const searchParams = useSearchParams();
@@ -22,6 +23,47 @@ function HomeContent() {
   const [shareUrl, setShareUrl] = useState("");
 
   const { ready, authenticated, user, login, logout } = usePrivy();
+  const { wallets } = useWallets();
+
+  const [walletAddress, setWalletAddress] = useState("");
+  const [usdcBalance, setUsdcBalance] = useState("0.00");
+
+  useEffect(() => {
+    async function fetchBalance() {
+      if (!wallets || wallets.length === 0) return;
+      const wallet = wallets[0];
+      setWalletAddress(wallet.address);
+      
+      try {
+        const ethereumProvider = await wallet.getEthereumProvider();
+        const provider = new ethers.providers.Web3Provider(ethereumProvider as any);
+        // Polygon POS USDC.e Address
+        const USDC_ADDRESS = "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174";
+        const USDC_ABI = ["function balanceOf(address owner) view returns (uint256)"];
+        const contract = new ethers.Contract(USDC_ADDRESS, USDC_ABI, provider);
+        
+        const balance = await contract.balanceOf(wallet.address);
+        const formattedBalance = ethers.utils.formatUnits(balance, 6);
+        setUsdcBalance(Number(formattedBalance).toFixed(2));
+      } catch (err) {
+        console.error("Failed to fetch balance:", err);
+      }
+    }
+
+    if (authenticated) {
+      fetchBalance();
+    }
+  }, [wallets, authenticated]);
+
+  const displayIdentifier = user?.twitter?.username 
+    ? `@${user.twitter.username}`
+    : user?.email?.address
+      ? user.email.address
+      : walletAddress 
+        ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`
+        : "Wallet Connected";
+        
+  const displayAvatar = user?.twitter?.profilePictureUrl || `https://api.dicebear.com/7.x/pixel-art/svg?seed=${walletAddress || "default"}`;
 
   const cardRef = useRef<HTMLDivElement>(null);
   const twitterCardRef = useRef<HTMLDivElement>(null);
@@ -108,13 +150,23 @@ function HomeContent() {
           </button>
         )}
         {ready && authenticated && (
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-zinc-400 font-mono">
-              {user?.twitter?.username || user?.email?.address || "Wallet Connected"}
-            </span>
+          <div className="flex items-center gap-3 bg-zinc-900 border border-zinc-800 p-2 pr-4 rounded-full shadow-lg">
+            <div className="w-8 h-8 rounded-full overflow-hidden border border-zinc-700">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={displayAvatar} alt="avatar" className="w-full h-full object-cover" />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-sm font-bold text-white leading-tight">
+                {displayIdentifier}
+              </span>
+              <span className="text-xs text-green-400 font-mono font-medium leading-tight">
+                ${usdcBalance} USDC
+              </span>
+            </div>
+            <div className="w-[1px] h-6 bg-zinc-800 mx-1"></div>
             <button 
               onClick={logout}
-              className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 rounded-lg text-sm shadow transition-colors"
+              className="text-sm font-medium text-zinc-400 hover:text-white transition-colors"
             >
               退出
             </button>

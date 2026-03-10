@@ -1,11 +1,27 @@
 "use client";
 
+import { useEffect } from "react";
+
 import { PrivyProvider } from "@privy-io/react-auth";
+import { polygon } from "viem/chains";
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   // 必须有一个有效的 Privy App ID
-  // 我们暂时放在环境变量里：NEXT_PUBLIC_PRIVY_APP_ID
   const appId = process.env.NEXT_PUBLIC_PRIVY_APP_ID || "cmmj2xch900fy0cl41zbpp3zn";
+
+  // Suppress Privy's internal React 19 missing key warning overlay in Dev mode
+  useEffect(() => {
+    const originalError = console.error;
+    console.error = (...args: any[]) => {
+      if (typeof args[0] === "string" && args[0].includes("unique \"key\" prop") && args[0].includes("Me")) {
+        return;
+      }
+      originalError.apply(console, args);
+    };
+    return () => {
+      console.error = originalError;
+    };
+  }, []);
 
   return (
     <PrivyProvider
@@ -23,6 +39,8 @@ export default function Providers({ children }: { children: React.ReactNode }) {
             createOnLogin: "users-without-wallets", // 核心功能：使用社交/邮箱登录时，静默生成不可见链上钱包的终极武器！
           },
         },
+        defaultChain: polygon,
+        supportedChains: [polygon],
       }}
     >
       {children}
