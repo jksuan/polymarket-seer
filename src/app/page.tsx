@@ -6,6 +6,7 @@ import { Swords, Download, TrendingUp, HandCoins, Twitter } from "lucide-react";
 import { nanoid } from "nanoid";
 import { QRCodeSVG } from "qrcode.react";
 import { useSearchParams } from "next/navigation";
+import { usePrivy } from "@privy-io/react-auth";
 
 function HomeContent() {
   const searchParams = useSearchParams();
@@ -19,6 +20,8 @@ function HomeContent() {
   const [hash, setHash] = useState("VERIFYING...");
   const [challengeId, setChallengeId] = useState("");
   const [shareUrl, setShareUrl] = useState("");
+
+  const { ready, authenticated, user, login, logout } = usePrivy();
 
   const cardRef = useRef<HTMLDivElement>(null);
   const twitterCardRef = useRef<HTMLDivElement>(null);
@@ -93,10 +96,36 @@ function HomeContent() {
 
   return (
     <main className="flex min-h-screen flex-col bg-zinc-950 text-white font-sans sm:items-center sm:justify-center">
+      
+      {/* Top right Navigation for Privy Authentication */}
+      <div className="absolute top-4 right-4 z-50">
+        {ready && !authenticated && (
+          <button 
+            onClick={login}
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-sm font-bold shadow-lg transition-colors"
+          >
+            一键登录对接
+          </button>
+        )}
+        {ready && authenticated && (
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-zinc-400 font-mono">
+              {user?.twitter?.username || user?.email?.address || "Wallet Connected"}
+            </span>
+            <button 
+              onClick={logout}
+              className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 rounded-lg text-sm shadow transition-colors"
+            >
+              退出
+            </button>
+          </div>
+        )}
+      </div>
+
       <div className="w-full max-w-md p-6 space-y-8">
         
         {/* Header */}
-        <div className="text-center space-y-2">
+        <div className="text-center space-y-2 mt-8 sm:mt-0">
           <div className="inline-flex items-center justify-center p-3 bg-blue-600/20 text-blue-500 rounded-2xl mb-2">
             <Swords size={32} strokeWidth={2.5} />
           </div>
