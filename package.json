@@ -9,7 +9,10 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@polymarket/builder-relayer-client": "^0.0.8",
+    "@polymarket/clob-client": "^5.8.0",
     "@privy-io/react-auth": "^3.16.0",
+    "ethers": "^5.8.0",
     "html-to-image": "^1.11.13",
     "html2canvas": "^1.4.1",
     "lucide-react": "^0.577.0",

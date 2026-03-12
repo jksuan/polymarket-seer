@@ -8,6 +8,12 @@ import { QRCodeSVG } from "qrcode.react";
 import { useSearchParams } from "next/navigation";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { ethers } from "ethers";
+import { ClobClient } from "@polymarket/clob-client";
+import { deriveSafe } from "@polymarket/builder-relayer-client/dist/builder/derive";
+import { RelayClient, RelayerTxType } from "@polymarket/builder-relayer-client";
+// Import BuilderConfig from the SAME copy that builder-relayer-client uses internally
+// to avoid TS "separate declarations of private property" type conflict
+import { BuilderConfig } from "@polymarket/builder-relayer-client/node_modules/@polymarket/builder-signing-sdk";
 
 function HomeContent() {
   const searchParams = useSearchParams();
@@ -26,25 +32,153 @@ function HomeContent() {
   const { wallets } = useWallets();
 
   const [walletAddress, setWalletAddress] = useState("");
+  const [proxyAddress, setProxyAddress] = useState("");
   const [usdcBalance, setUsdcBalance] = useState("0.00");
 
   useEffect(() => {
+    let active = true; // Fix React Race Condition between multiple wallets!
+
     async function fetchBalance() {
       if (!wallets || wallets.length === 0) return;
-      const wallet = wallets[0];
-      setWalletAddress(wallet.address);
+      
+      // 1. Try to find the exact wallet the user authenticated with (from Privy's `user` object)
+      let wallet = null;
+      if (user && user.wallet && user.wallet.address) {
+         wallet = wallets.find(w => w.address.toLowerCase() === user.wallet?.address.toLowerCase());
+      }
+
+      // 2. Fallback: Prioritize embedded wallet (email login) over any leftover external wallets
+      if (!wallet) {
+         const embeddedWallet = wallets.find(w => w.walletClientType === 'privy');
+         wallet = embeddedWallet || wallets[0];
+      }
+      
+      // 3. Final safety check
+      if (!wallet) return;
+
+      if (active) setWalletAddress(wallet.address);
       
       try {
         const ethereumProvider = await wallet.getEthereumProvider();
         const provider = new ethers.providers.Web3Provider(ethereumProvider as any);
-        // Polygon POS USDC.e Address
+        const signer = provider.getSigner();
+
+        // Initialize Polymarket CLOB Client
+        const clobClient = new ClobClient("https://clob.polymarket.com", 137, signer as any);
+
+        console.log("EOA Address:", wallet.address);
+        
+        let targetAddress = wallet.address;
+        
+        // --- 1. PROXY WALLET DISCOVERY (Instant Math!) ---
+        try {
+           // Safe wallets have a fixed factory address deployed on Polygon.
+           const SAFE_FACTORY_POLYGON = "0xaacFeEa03eb1561C4e67d661e40682Bd20E3541b";
+           
+           // Zero API requests - Pure Math Calculation via Create2
+           const derivedProxy = deriveSafe(wallet.address, SAFE_FACTORY_POLYGON);
+           
+           if (derivedProxy) {
+              console.log("Calculated Proxy Wallet Address:", derivedProxy);
+              targetAddress = derivedProxy;
+              setWalletAddress(derivedProxy); // Directly UI show Proxy!
+           }
+        } catch(e) { 
+           console.warn("Proxy Math Calculation failed", e); 
+        }
+
+        // --- 2. CLOB API KEY GENERATION & CACHING ---
+        try {
+            const cacheKey = `poly_creds_${wallet.address}`;
+            let creds = null;
+            
+            // Try to load perfectly healthy creds from storage
+            try {
+               const cachedBody = localStorage.getItem(cacheKey);
+               if (cachedBody) {
+                  const parsed = JSON.parse(cachedBody);
+                  // Ensure they are correctly formatted
+                  if (parsed && parsed.key && parsed.secret && parsed.passphrase) {
+                     creds = parsed;
+                  }
+               }
+            } catch(e) {}
+            
+            if (!creds) {
+              console.log("Deriving Polymarket API Key for EOA (Requires 1-time Signature)...");
+              
+              // NEW FIX: Ensure the user's wallet is actively switched to Polygon (ChainID: 137)
+              // Otherwise MetaMask will throw RPC Error -32603 (chain mismatch) upon signing!
+              try {
+                await wallet.switchChain(137);
+              } catch (switchError: any) {
+                console.warn("Wallet chain switch skipped or failed:", switchError);
+                // If they haven't added Polygon to their wallet, this would fail, but we try as best effort.
+              }
+
+              // If we are ALREADY showing the user a metamask popup, don't throw another one!
+              if (isDerivingPolymarketKeyDialogActive) {
+                console.log("Waiting: Derivation popup already open in another React render cycle.");
+                return; 
+              }
+
+              isDerivingPolymarketKeyDialogActive = true;
+              try {
+                // We only derive credentials if they are NOT stored locally!
+                // For Metamask/Coinbase users, this will prompt a metamask signing window ONCE.
+                creds = await clobClient.createOrDeriveApiKey();
+              } finally {
+                // Release the lock when done signing (or rejecting)
+                isDerivingPolymarketKeyDialogActive = false;
+              }
+              
+              // Only save valid keys
+              if (creds && creds.key) {
+                 localStorage.setItem(cacheKey, JSON.stringify(creds));
+                 console.log("Successfully created/derived Polymarket API credentials!");
+              } else {
+                 throw new Error("Invalid API creds returned");
+              }
+            } else {
+              console.log("Loaded Polymarket API creds from LocalStorage seamlessly!");
+            }
+            
+            // --- 3. PROXY BALANCE FETCHING ---
+            const clobClientWithCreds = new ClobClient(
+              "https://clob.polymarket.com", 
+              137, 
+              signer as any,
+              creds,
+              2, // SignatureType.GNOSIS_SAFE
+              targetAddress // Funder address (Proxy address)
+            );
+
+            // "COLLATERAL" retrieves Polygon USDC.e balance of the active proxy wallet
+            const balanceData = await clobClientWithCreds.getBalanceAllowance({ asset_type: "COLLATERAL" as any });
+            console.log("True Polymarket Profile Balance Data:", balanceData);
+            
+            if (balanceData && balanceData.balance && balanceData.balance !== "0") {
+               const balanceNumber = Number(ethers.utils.formatUnits(balanceData.balance, 6)).toFixed(2);
+               if (active) setUsdcBalance(balanceNumber);
+               return; // Skip fallback
+            } else {
+               if (active) setUsdcBalance("0.00");
+               return; // Standard 0!
+            }
+        } catch(e) {
+            console.error("Polymarket Derivation error:", e);
+        }
+        
+        // 2. Fallback: Check balance of EOA if derivation failed or user rejected signature
+        console.log("Falling back to raw EOA balance...");
         const USDC_ADDRESS = "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174";
         const USDC_ABI = ["function balanceOf(address owner) view returns (uint256)"];
         const contract = new ethers.Contract(USDC_ADDRESS, USDC_ABI, provider);
         
-        const balance = await contract.balanceOf(wallet.address);
+        // Check balance of the EOA directly
+        const balance = await contract.balanceOf(targetAddress);
         const formattedBalance = ethers.utils.formatUnits(balance, 6);
-        setUsdcBalance(Number(formattedBalance).toFixed(2));
+        if (active) setUsdcBalance(Number(formattedBalance).toFixed(2));
       } catch (err) {
         console.error("Failed to fetch balance:", err);
       }
@@ -53,7 +187,11 @@ function HomeContent() {
     if (authenticated) {
       fetchBalance();
     }
-  }, [wallets, authenticated]);
+    
+    return () => {
+       active = false;
+    };
+  }, [wallets, authenticated, user]);
 
   const displayIdentifier = user?.twitter?.username 
     ? `@${user.twitter.username}`
@@ -131,6 +269,213 @@ function HomeContent() {
     } catch (err) {
       console.error(err);
       alert("发推失败，请重试");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handlePlaceRealBet = async () => {
+    if (!authenticated || !wallets || wallets.length === 0) {
+      alert("请先连接钱包登录！");
+      login();
+      return;
+    }
+    
+    setIsGenerating(true);
+    try {
+      
+      let wallet = null;
+      if (user && user.wallet && user.wallet.address) {
+         wallet = wallets.find(w => w.address.toLowerCase() === user.wallet?.address.toLowerCase());
+      }
+      if (!wallet) {
+         const embeddedWallet = wallets.find(w => w.walletClientType === 'privy');
+         wallet = embeddedWallet || wallets[0];
+      }
+
+      if (!wallet) throw new Error("No wallet connected");
+
+      // NEW FIX: Force switch to Polygon before signing the mainnet trading order
+      try {
+        await wallet.switchChain(137);
+      } catch (e) {
+        console.warn("Could not auto-switch chain before bet:", e);
+      }
+
+      const ethereumProvider = await wallet.getEthereumProvider();
+      const provider = new ethers.providers.Web3Provider(ethereumProvider as any);
+      const signer = provider.getSigner();
+
+      const cacheKey = `poly_creds_${wallet.address}`;
+      const cachedBody = localStorage.getItem(cacheKey);
+      if (!cachedBody) {
+         alert("未找到已授权的金库凭据，请刷新页面重新签名！");
+         return;
+      }
+      const creds = JSON.parse(cachedBody);
+
+      // Safe Factory Polygon address
+      const SAFE_FACTORY_POLYGON = "0xaacFeEa03eb1561C4e67d661e40682Bd20E3541b";
+      const derivedProxy = deriveSafe(wallet.address, SAFE_FACTORY_POLYGON);
+
+      const clobClientWithCreds = new ClobClient(
+        "https://clob.polymarket.com", 
+        137, 
+        signer as any,
+        creds,
+        2, // GNOSIS_SAFE
+        derivedProxy 
+      );
+
+      // Fetch an active market from Polymarket to dynamically get a valid tokenID!
+      const activeMarkets = await clobClientWithCreds.getSamplingSimplifiedMarkets();
+      // Usually the first valid market has tokens. The first token is typically the YES token.
+      const liveTokenId = activeMarkets.data[0]?.tokens[0]?.token_id;
+
+      if (!liveTokenId) {
+         throw new Error("未能获取到活跃的 Polymarket 交易对，请稍后再试！");
+      }
+
+      alert(`🚀 准备向主网抛单！(激活金库)\n====================\n主网拉取活跃Token: ${liveTokenId.slice(0,8)}...\n金库门牌: ${derivedProxy.slice(0, 6)}...${derivedProxy.slice(-4)}\n方向: YES 看涨\n订单类型: 市价单 (Market Order)\n下单金额: $1.00 USDC (Polymarket最低门槛)\n====================`);
+
+      // ======== STEP 1: SAFE DEPLOYMENT VIA RELAYER ========
+      // BuilderConfig with remote signing: our /api/sign route securely holds Builder API credentials
+      const builderConfig = new BuilderConfig({
+        remoteBuilderConfig: { url: `${window.location.origin}/api/sign` }
+      });
+      const relayClient = new RelayClient(
+        "https://relayer-v2.polymarket.com/",
+        137,
+        signer as any,
+        builderConfig,
+        RelayerTxType.SAFE
+      );
+      
+      try {
+        const isDeployed = await relayClient.getDeployed(derivedProxy);
+        if (!isDeployed) {
+           alert("⚙️ 发现你的专属金库尚未部署！\n正在通过 Polymarket Relayer 免费上链部署...");
+           const deployResp = await relayClient.deploy();
+           console.log("Deploy Tx requested:", deployResp);
+           const deployResult = await deployResp.wait();
+           console.log("Deploy confirmation:", deployResult);
+           alert("✅ 金库部署成功！地址已在 Polygon 主网生成。");
+        } else {
+           console.log("Safe wallet already deployed:", derivedProxy);
+        }
+      } catch (deployErr: any) {
+        // If it says "Safe already deployed", that's fine — proceed!
+        if (String(deployErr.message || deployErr).includes("deployed")) {
+          console.log("Safe already deployed, continuing...");
+        } else {
+          console.error("Relayer Deployment Error:", deployErr);
+          alert("⚠️ 金库部署异常：" + String(deployErr.message || deployErr) + "\n(系统将继续尝试...)");
+        }
+      }
+
+      // ======== STEP 2: TOKEN APPROVALS VIA RELAYER (CRITICAL!) ========
+      // Polymarket requires on-chain ERC20 approvals before trading.
+      // Without these, the matching engine will reject all orders with "insufficient allowance".
+      const ADDRESSES = {
+        USDCe: "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174",
+        CTF: "0x4D97DCd97eC945f40cF65F87097ACe5EA0476045",
+        CTF_EXCHANGE: "0x4bFb41d5B3570DeFd03C39a9A4D8dE6Bd8B8982E",
+        NEG_RISK_CTF_EXCHANGE: "0xC5d563A36AE78145C45a50134d48A1215220f80a",
+        NEG_RISK_ADAPTER: "0xd91E80cF2E7be2e162c6513ceD06f1dD0dA35296",
+      };
+
+      const erc20ApproveInterface = new ethers.utils.Interface([
+        "function approve(address spender, uint256 amount) returns (bool)",
+      ]);
+      const erc1155ApproveInterface = new ethers.utils.Interface([
+        "function setApprovalForAll(address operator, bool approved)",
+      ]);
+      const MAX_UINT256 = ethers.constants.MaxUint256;
+
+      try {
+        alert("🔐 正在设置代币授权（approve）...\n这是首次交易必须的一次性操作，由 Polymarket 免费代付 Gas！");
+
+        // 1. Approve USDC.e → CTF contract (for splitting USDC into outcome tokens)
+        const approveUsdcForCtf = {
+          to: ADDRESSES.USDCe,
+          data: erc20ApproveInterface.encodeFunctionData("approve", [ADDRESSES.CTF, MAX_UINT256]),
+          value: "0",
+        };
+
+        // 2. Approve USDC.e → CTF_EXCHANGE (for standard market buy orders)
+        const approveUsdcForExchange = {
+          to: ADDRESSES.USDCe,
+          data: erc20ApproveInterface.encodeFunctionData("approve", [ADDRESSES.CTF_EXCHANGE, MAX_UINT256]),
+          value: "0",
+        };
+
+        // 3. Approve USDC.e → NEG_RISK_CTF_EXCHANGE (for multi-outcome market buy orders)
+        const approveUsdcForNegRisk = {
+          to: ADDRESSES.USDCe,
+          data: erc20ApproveInterface.encodeFunctionData("approve", [ADDRESSES.NEG_RISK_CTF_EXCHANGE, MAX_UINT256]),
+          value: "0",
+        };
+
+        // 4. Approve CTF outcome tokens → CTF_EXCHANGE (for selling positions)
+        const approveCtfForExchange = {
+          to: ADDRESSES.CTF,
+          data: erc1155ApproveInterface.encodeFunctionData("setApprovalForAll", [ADDRESSES.CTF_EXCHANGE, true]),
+          value: "0",
+        };
+
+        // 5. Approve CTF outcome tokens → NEG_RISK_CTF_EXCHANGE (for selling neg-risk positions)
+        const approveCtfForNegRisk = {
+          to: ADDRESSES.CTF,
+          data: erc1155ApproveInterface.encodeFunctionData("setApprovalForAll", [ADDRESSES.NEG_RISK_CTF_EXCHANGE, true]),
+          value: "0",
+        };
+
+        // Execute ALL approvals in a single batched Relayer transaction (gasless!)
+        const approvalResp = await relayClient.execute(
+          [approveUsdcForCtf, approveUsdcForExchange, approveUsdcForNegRisk, approveCtfForExchange, approveCtfForNegRisk],
+          "Batch Approve USDC.e + CTF for Polymarket Trading"
+        );
+        console.log("Approval Tx requested:", approvalResp);
+        const approvalResult = await approvalResp.wait();
+        console.log("Approval confirmation:", approvalResult);
+        alert("✅ 代币授权完成！你的金库现在可以在 Polymarket 上进行交易了。");
+      } catch (approveErr: any) {
+        console.error("Approval Error:", approveErr);
+        // Don't block - maybe approvals were already set
+        alert("⚠️ 代币授权过程有异常：" + String(approveErr.message || approveErr) + "\n(可能已授权，将继续尝试下单...)");
+      }
+
+      // ======== STEP 3: NOTIFY CLOB API OF UPDATED ALLOWANCES ========
+      try {
+        await clobClientWithCreds.updateBalanceAllowance({ asset_type: "COLLATERAL" as any });
+        console.log("CLOB balance/allowance cache updated");
+      } catch (e) {
+        console.warn("updateBalanceAllowance failed (non-critical):", e);
+      }
+
+      // ======== STEP 4: PLACE MARKET ORDER ========
+      // Polymarket requires a STRICT minimum of $1.00 for marketable BUY orders.
+      const resp = await clobClientWithCreds.createAndPostMarketOrder(
+        {
+          tokenID: liveTokenId,
+          amount: 1.00, // 1.00 USDC is the STRICT minimum cost for a BUY market order.
+          side: "BUY" as any, 
+        }
+      );
+
+      console.log("Order placed response:", resp);
+      
+      if (resp && resp.success) {
+         alert("🏆 下注成功！去 Polymarket 查看你的仓位！\n订单ID: " + resp.orderID);
+      } else if (resp && resp.error) {
+         alert("❌ 订单被主网拒绝: " + String(resp.error) + "\n\n完整响应:\n" + JSON.stringify(resp, null, 2));
+      } else {
+         alert("❌ 订单被主网拒绝: " + JSON.stringify(resp, null, 2));
+      }
+
+    } catch (err: any) {
+      console.error(err);
+      alert("❌ 本地构造下单失败: " + (err.message || String(err)));
     } finally {
       setIsGenerating(false);
     }
@@ -322,11 +667,22 @@ function HomeContent() {
         {/* Action Buttons */}
         <div className="pt-4 pb-12 flex flex-col gap-3">
           <button 
+            onClick={handlePlaceRealBet}
+            disabled={isGenerating || !authenticated}
+            className="w-full bg-green-500 hover:bg-green-400 text-black font-black py-4 px-6 rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-[0.98] shadow-[0_0_20px_rgba(34,197,94,0.3)] disabled:opacity-50 disabled:cursor-not-allowed text-lg tracking-wider"
+          >
+            <HandCoins size={22} className="stroke-2" /> 
+            {authenticated ? "真金白银一键下注 (买入 YES)" : "请先连接钱包"}
+          </button>
+          
+          <div className="h-4"></div> {/* Separator */}
+
+          <button 
             onClick={handleGenerate}
             disabled={isGenerating}
             className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold py-4 px-6 rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-[0.98] shadow-[0_0_20px_rgba(79,70,229,0.4)] disabled:opacity-70 disabled:pointer-events-none"
           >
-            {isGenerating ? "生成中..." : <><Download size={20} /> 保存高清海报图片</>}
+            {isGenerating ? "生成中..." : <><Download size={20} /> 保存决战海报图片</>}
           </button>
           
           <button 
@@ -417,6 +773,8 @@ function HomeContent() {
     </main>
   );
 }
+
+let isDerivingPolymarketKeyDialogActive = false;
 
 export default function Home() {
   return (
