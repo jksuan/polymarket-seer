@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, Suspense } from "react";
 import * as htmlToImage from "html-to-image";
-import { Swords, Download, TrendingUp, HandCoins, Twitter, Copy, Check, LogOut, ExternalLink, Loader2, CheckCircle2, XCircle } from "lucide-react";
+import { Swords, Download, TrendingUp, HandCoins, Twitter, Copy, Check, LogOut, ExternalLink, Loader2, CheckCircle2, XCircle, RefreshCw } from "lucide-react";
 import { nanoid } from "nanoid";
 import { QRCodeSVG } from "qrcode.react";
 import { useSearchParams } from "next/navigation";
@@ -44,87 +44,92 @@ function HomeContent() {
   const [txMessage, setTxMessage] = useState("");
   const [txOrderId, setTxOrderId] = useState<string | null>(null);
   const [txError, setTxError] = useState<string | null>(null);
+  const [isRefreshingBalance, setIsRefreshingBalance] = useState(false);
 
   // --- LOGIC: Fetch Balance and Proxy Address ---
-  useEffect(() => {
-    let active = true;
-
-    async function fetchBalance() {
-      if (!wallets || wallets.length === 0) return;
-      
-      let wallet = null;
-      if (user && user.wallet && user.wallet.address) {
-         wallet = wallets.find(w => w.address.toLowerCase() === user.wallet?.address.toLowerCase());
-      }
-      if (!wallet) {
-         const embeddedWallet = wallets.find(w => w.walletClientType === 'privy');
-         wallet = embeddedWallet || wallets[0];
-      }
-      if (!wallet) return;
-
-      if (active) setWalletAddress(wallet.address);
-      
-      try {
-        const ethereumProvider = await wallet.getEthereumProvider();
-        const provider = new ethers.providers.Web3Provider(ethereumProvider as any);
-        const signer = provider.getSigner();
-
-        const clobClient = new ClobClient("https://clob.polymarket.com", 137, signer as any);
-        
-        // 1. Calculate Proxy
-        const SAFE_FACTORY_POLYGON = "0xaacFeEa03eb1561C4e67d661e40682Bd20E3541b";
-        const derivedProxy = deriveSafe(wallet.address, SAFE_FACTORY_POLYGON);
-        if (active) setProxyAddress(derivedProxy);
-
-        // 2. Derive/Load API Credentials for Polymarket
-        const cacheKey = `poly_creds_${wallet.address}`;
-        let creds = null;
-        try {
-           const cachedBody = localStorage.getItem(cacheKey);
-           if (cachedBody) creds = JSON.parse(cachedBody);
-        } catch(e) {}
-
-        if (!creds && authenticated) {
-           if (isDerivingPolymarketKeyDialogActive) return;
-           isDerivingPolymarketKeyDialogActive = true;
-           try {
-              await wallet.switchChain(137);
-              creds = await clobClient.createOrDeriveApiKey();
-              if (creds && creds.key) localStorage.setItem(cacheKey, JSON.stringify(creds));
-           } finally {
-              isDerivingPolymarketKeyDialogActive = false;
-           }
-        }
-
-        if (creds) {
-           const clobWithCreds = new ClobClient(
-              "https://clob.polymarket.com",
-              137,
-              signer as any,
-              creds,
-              2, // GNOSIS_SAFE
-              derivedProxy
-           );
-           const balanceData = await clobWithCreds.getBalanceAllowance({ asset_type: "COLLATERAL" as any });
-           if (balanceData && balanceData.balance) {
-              const formatted = ethers.utils.formatUnits(balanceData.balance, 6);
-              if (active) setUsdcBalance(Number(formatted).toFixed(2));
-           }
-        } else {
-           // Fallback to direct EOA USDC.e check
-           const USDC_ADDRESS = "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174";
-           const USDC_ABI = ["function balanceOf(address owner) view returns (uint256)"];
-           const contract = new ethers.Contract(USDC_ADDRESS, USDC_ABI, provider);
-           const bal = await contract.balanceOf(wallet.address);
-           if (active) setUsdcBalance(Number(ethers.utils.formatUnits(bal, 6)).toFixed(2));
-        }
-      } catch (err) {
-        console.error("Balance fetch failed", err);
-      }
+  const fetchBalance = async (showLoading = false) => {
+    if (!wallets || wallets.length === 0) return;
+    
+    if (showLoading) setIsRefreshingBalance(true);
+    
+    let wallet = null;
+    if (user && user.wallet && user.wallet.address) {
+       wallet = wallets.find(w => w.address.toLowerCase() === user.wallet?.address.toLowerCase());
+    }
+    if (!wallet) {
+       const embeddedWallet = wallets.find(w => w.walletClientType === 'privy');
+       wallet = embeddedWallet || wallets[0];
+    }
+    if (!wallet) {
+      if (showLoading) setIsRefreshingBalance(false);
+      return;
     }
 
+    setWalletAddress(wallet.address);
+    
+    try {
+      const ethereumProvider = await wallet.getEthereumProvider();
+      const provider = new ethers.providers.Web3Provider(ethereumProvider as any);
+      const signer = provider.getSigner();
+
+      const clobClient = new ClobClient("https://clob.polymarket.com", 137, signer as any);
+      
+      // 1. Calculate Proxy
+      const SAFE_FACTORY_POLYGON = "0xaacFeEa03eb1561C4e67d661e40682Bd20E3541b";
+      const derivedProxy = deriveSafe(wallet.address, SAFE_FACTORY_POLYGON);
+      setProxyAddress(derivedProxy);
+
+      // 2. Derive/Load API Credentials for Polymarket
+      const cacheKey = `poly_creds_${wallet.address}`;
+      let creds = null;
+      try {
+         const cachedBody = localStorage.getItem(cacheKey);
+         if (cachedBody) creds = JSON.parse(cachedBody);
+      } catch(e) {}
+
+      if (!creds && authenticated) {
+         if (isDerivingPolymarketKeyDialogActive) return;
+         isDerivingPolymarketKeyDialogActive = true;
+         try {
+            await wallet.switchChain(137);
+            creds = await clobClient.createOrDeriveApiKey();
+            if (creds && creds.key) localStorage.setItem(cacheKey, JSON.stringify(creds));
+         } finally {
+            isDerivingPolymarketKeyDialogActive = false;
+         }
+      }
+
+      if (creds) {
+         const clobWithCreds = new ClobClient(
+            "https://clob.polymarket.com",
+            137,
+            signer as any,
+            creds,
+            2, // GNOSIS_SAFE
+            derivedProxy
+         );
+         const balanceData = await clobWithCreds.getBalanceAllowance({ asset_type: "COLLATERAL" as any });
+         if (balanceData && balanceData.balance) {
+            const formatted = ethers.utils.formatUnits(balanceData.balance, 6);
+            setUsdcBalance(Number(formatted).toFixed(2));
+         }
+      } else {
+         // Fallback to direct EOA USDC.e check
+         const USDC_ADDRESS = "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174";
+         const USDC_ABI = ["function balanceOf(address owner) view returns (uint256)"];
+         const contract = new ethers.Contract(USDC_ADDRESS, USDC_ABI, provider);
+         const bal = await contract.balanceOf(wallet.address);
+         setUsdcBalance(Number(ethers.utils.formatUnits(bal, 6)).toFixed(2));
+      }
+    } catch (err) {
+      console.error("Balance fetch failed", err);
+    } finally {
+      if (showLoading) setIsRefreshingBalance(false);
+    }
+  };
+
+  useEffect(() => {
     if (authenticated) fetchBalance();
-    return () => { active = false; };
   }, [wallets, authenticated, user]);
 
   const handleCopy = (text: string) => {
@@ -316,25 +321,47 @@ function HomeContent() {
     <main className="flex min-h-screen flex-col bg-zinc-950 text-white font-sans sm:items-center sm:justify-center relative overflow-x-hidden">
       
       {/* 顶部导航栏 - Profile + Proxy Wallet Address 展示 */}
-      <div className="absolute top-4 right-4 z-50">
+      <div className="absolute top-4 left-4 right-4 sm:left-auto sm:right-4 z-50 flex justify-center sm:block">
         {!authenticated ? (
           <button onClick={login} className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 rounded-xl text-sm font-bold shadow-xl transition-all active:scale-95">
             一键登录对接
           </button>
         ) : (
-          <div className="flex items-center gap-3 bg-zinc-900 border border-zinc-800 p-2 pr-4 rounded-full shadow-lg">
-            <img src={displayAvatar} alt="avatar" className="w-8 h-8 rounded-full border border-zinc-700 object-cover flex-shrink-0" />
+          <div className="flex items-center gap-3 bg-zinc-900/90 backdrop-blur-md border border-zinc-800 p-2 pr-4 rounded-full shadow-2xl shadow-black/50">
+            <div className="relative">
+              <img src={displayAvatar} alt="avatar" className="w-8 h-8 rounded-full border border-zinc-700 object-cover flex-shrink-0" />
+              <div className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-zinc-900 rounded-full flex items-center justify-center border border-zinc-800">
+                <div className="w-2 h-2 rounded-full bg-purple-500 shadow-[0_0_5px_rgba(168,85,247,0.5)]" />
+              </div>
+            </div>
             <div className="flex flex-col">
-              <span className="text-white text-sm font-bold leading-tight">{displayIdentifier}</span>
+              <div className="flex items-center gap-2">
+                <span className="text-white text-sm font-bold leading-tight">{displayIdentifier}</span>
+                <span className="px-1.5 py-0.5 bg-purple-500/10 border border-purple-500/20 rounded text-[8px] font-black text-purple-400 tracking-tighter">Polygon</span>
+              </div>
               {proxyAddress && (
                 <div className="flex items-center gap-1">
-                  <span className="text-zinc-500 text-[10px] font-mono">PolyMarket Proxy Wallet: {proxyAddress.slice(0, 6)}...{proxyAddress.slice(-4)}</span>
+                  <span className="text-zinc-400 text-[10px] font-mono leading-none">
+                    <span className="hidden sm:inline">Polymarket Proxy Wallet:</span>
+                    <span className="sm:hidden">Proxy Wallet:</span>
+                    {" "}{proxyAddress.slice(0, 6)}...{proxyAddress.slice(-4)}
+                  </span>
                   <button onClick={() => handleCopy(proxyAddress)} title="Copy" className="text-zinc-600 hover:text-blue-400 transition-colors p-0.5">
                     {copied ? <Check size={10} className="text-green-400" /> : <Copy size={10} />}
                   </button>
                 </div>
               )}
-              <span className="text-green-400 text-[11px] font-black leading-tight">${usdcBalance} USDC.e</span>
+              <div className="flex items-center gap-1.5 leading-none mt-0.5">
+                <span className="text-green-400 text-[11px] font-black">${usdcBalance} USDC.e</span>
+                <button 
+                  onClick={() => fetchBalance(true)} 
+                  disabled={isRefreshingBalance}
+                  className={`text-zinc-500 hover:text-blue-400 transition-all p-0.5 ${isRefreshingBalance ? 'animate-spin text-blue-400' : ''}`}
+                  title="刷新余额"
+                >
+                  <RefreshCw size={10} />
+                </button>
+              </div>
             </div>
             <div className="w-[1px] h-6 bg-zinc-800" />
             <button onClick={() => logout()} className="text-zinc-500 hover:text-red-400 transition-colors text-xs font-medium">
@@ -345,7 +372,7 @@ function HomeContent() {
       </div>
 
       <div className="w-full max-w-md p-6 space-y-8 relative z-10">
-        <div className="text-center space-y-2 mt-12 sm:mt-0">
+        <div className="text-center space-y-2 mt-28 sm:mt-0">
           <div className="inline-flex items-center justify-center p-3 bg-blue-600/20 text-blue-500 rounded-2xl mb-2 animate-bounce-slow">
             <Swords size={32} strokeWidth={2.5} />
           </div>
