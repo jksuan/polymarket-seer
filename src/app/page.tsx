@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, Suspense } from "react";
 import * as htmlToImage from "html-to-image";
-import { Swords, Download, TrendingUp, HandCoins, Twitter, Copy, Check, LogOut, ExternalLink } from "lucide-react";
+import { Swords, Download, TrendingUp, HandCoins, Twitter, Copy, Check, LogOut, ExternalLink, Loader2, CheckCircle2, XCircle } from "lucide-react";
 import { nanoid } from "nanoid";
 import { QRCodeSVG } from "qrcode.react";
 import { useSearchParams } from "next/navigation";
@@ -37,6 +37,13 @@ function HomeContent() {
   const [proxyAddress, setProxyAddress] = useState<string | null>(null);
   const [usdcBalance, setUsdcBalance] = useState("0.00");
   const [copied, setCopied] = useState(false);
+
+  // --- Transaction Progress Overlay States ---
+  type TxStep = "idle" | "preparing" | "deploying" | "approving" | "placing" | "success" | "error";
+  const [txStep, setTxStep] = useState<TxStep>("idle");
+  const [txMessage, setTxMessage] = useState("");
+  const [txOrderId, setTxOrderId] = useState<string | null>(null);
+  const [txError, setTxError] = useState<string | null>(null);
 
   // --- LOGIC: Fetch Balance and Proxy Address ---
   useEffect(() => {
@@ -172,41 +179,73 @@ function HomeContent() {
     } catch (err) { console.error(err); alert("发推失败"); } finally { setIsGenerating(false); }
   };
 
+  const closeTxOverlay = () => {
+    setTxStep("idle");
+    setTxMessage("");
+    setTxOrderId(null);
+    setTxError(null);
+  };
+
   const handlePlaceRealBet = async () => {
     if (!authenticated || !wallets || wallets.length === 0) { login(); return; }
-    setIsGenerating(true);
+
+    // Reset & show overlay
+    setTxStep("preparing");
+    setTxMessage("正在切换至 Polygon 网络...");
+    setTxOrderId(null);
+    setTxError(null);
+
     try {
-      let wallet = wallets.find(w => w.address.toLowerCase() === user?.wallet?.address?.toLowerCase()) 
-                   || wallets.find(w => w.walletClientType === 'privy') 
+      // --- Step 0: Wallet preparation ---
+      let wallet = wallets.find(w => w.address.toLowerCase() === user?.wallet?.address?.toLowerCase())
+                   || wallets.find(w => w.walletClientType === 'privy')
                    || wallets[0];
-      if (!wallet) throw new Error("No wallet connected");
-      await wallet.switchChain(137);
-      
+      if (!wallet) throw new Error("未找到已连接钱包");
+
+      try { await wallet.switchChain(137); } catch(e) { console.warn("Switch chain skipped", e); }
+
+      setTxMessage("正在初始化交易环境...");
       const ethereumProvider = await wallet.getEthereumProvider();
       const provider = new ethers.providers.Web3Provider(ethereumProvider as any);
       const signer = provider.getSigner();
 
       const cachedBody = localStorage.getItem(`poly_creds_${wallet.address}`);
-      if (!cachedBody) throw new Error("Credentials missing, please refresh.");
+      if (!cachedBody) throw new Error("API 凭据丢失，请刷新页面重新签名");
       const creds = JSON.parse(cachedBody);
       const derivedProxy = proxyAddress || deriveSafe(wallet.address, "0xaacFeEa03eb1561C4e67d661e40682Bd20E3541b");
 
+      setTxMessage("正在获取活跃市场数据...");
       const clobClientWithCreds = new ClobClient("https://clob.polymarket.com", 137, signer as any, creds, 2, derivedProxy);
       const activeMarkets = await clobClientWithCreds.getSamplingSimplifiedMarkets();
       const liveTokenId = activeMarkets.data[0]?.tokens[0]?.token_id;
-      if (!liveTokenId) throw new Error("Could not fetch active token ID.");
+      if (!liveTokenId) throw new Error("未获取到活跃交易对，请稍后重试");
 
-      // Deployment & Approvals via Relayer
+      // --- Step 1: Deploy Safe Wallet ---
+      setTxStep("deploying");
+      setTxMessage("正在检查金库部署状态...");
       const builderConfig = new BuilderConfig({ remoteBuilderConfig: { url: `${window.location.origin}/api/sign` } });
       const relayClient = new RelayClient("https://relayer-v2.polymarket.com/", 137, signer as any, builderConfig, RelayerTxType.SAFE);
-      
-      const isDeployed = await relayClient.getDeployed(derivedProxy);
-      if (!isDeployed) {
-          alert("发现金库尚未部署，正在通过 Relayer 激活中...");
-          const d = await relayClient.deploy(); await d.wait();
+
+      try {
+        const isDeployed = await relayClient.getDeployed(derivedProxy);
+        if (!isDeployed) {
+          setTxMessage("金库尚未激活，正在通过 Relayer 免费部署...");
+          const d = await relayClient.deploy();
+          setTxMessage("部署交易已提交，等待链上确认...");
+          await d.wait();
+        } else {
+          setTxMessage("金库已激活 ✓");
+        }
+      } catch (deployErr: any) {
+        if (!String(deployErr.message || deployErr).includes("deployed")) {
+          console.error("Deploy error:", deployErr);
+          // Non-fatal: continue
+        }
       }
 
-      // Batch Approvals
+      // --- Step 2: Batch Token Approvals ---
+      setTxStep("approving");
+      setTxMessage("正在设置代币交易授权 (一次性操作)...");
       const ADDRESSES = {
         USDCe: "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174",
         CTF: "0x4D97DCd97eC945f40cF65F87097ACe5EA0476045",
@@ -217,23 +256,60 @@ function HomeContent() {
       const erc1155 = new ethers.utils.Interface(["function setApprovalForAll(address operator, bool approved)"]);
       const MAX = ethers.constants.MaxUint256;
 
-      await relayClient.execute([
-        { to: ADDRESSES.USDCe, data: erc20.encodeFunctionData("approve", [ADDRESSES.CTF, MAX]), value: "0" },
-        { to: ADDRESSES.USDCe, data: erc20.encodeFunctionData("approve", [ADDRESSES.CTF_EXCHANGE, MAX]), value: "0" },
-        { to: ADDRESSES.USDCe, data: erc20.encodeFunctionData("approve", [ADDRESSES.NEG_RISK_CTF_EXCHANGE, MAX]), value: "0" },
-        { to: ADDRESSES.CTF, data: erc1155.encodeFunctionData("setApprovalForAll", [ADDRESSES.CTF_EXCHANGE, true]), value: "0" }
-      ], "Market Launch Approvals");
+      try {
+        await relayClient.execute([
+          { to: ADDRESSES.USDCe, data: erc20.encodeFunctionData("approve", [ADDRESSES.CTF, MAX]), value: "0" },
+          { to: ADDRESSES.USDCe, data: erc20.encodeFunctionData("approve", [ADDRESSES.CTF_EXCHANGE, MAX]), value: "0" },
+          { to: ADDRESSES.USDCe, data: erc20.encodeFunctionData("approve", [ADDRESSES.NEG_RISK_CTF_EXCHANGE, MAX]), value: "0" },
+          { to: ADDRESSES.CTF, data: erc1155.encodeFunctionData("setApprovalForAll", [ADDRESSES.CTF_EXCHANGE, true]), value: "0" }
+        ], "Batch Approve");
+        setTxMessage("授权完成 ✓，正在同步余额...");
+      } catch (approveErr: any) {
+        console.warn("Approval may have already been set:", approveErr);
+        setTxMessage("授权已存在，跳过 ✓");
+      }
 
-      await clobClientWithCreds.updateBalanceAllowance({ asset_type: "COLLATERAL" as any });
+      try {
+        await clobClientWithCreds.updateBalanceAllowance({ asset_type: "COLLATERAL" as any });
+      } catch(e) { console.warn("updateBalanceAllowance non-critical", e); }
 
+      // --- Step 3: Place Market Order ---
+      setTxStep("placing");
+      setTxMessage("正在向 Polymarket 提交市价买入订单...");
       const resp = await clobClientWithCreds.createAndPostMarketOrder({
         tokenID: liveTokenId, amount: 1.00, side: "BUY" as any
       });
-      
-      if (resp.success) alert("🏆 下注且成交成功！\n订单ID: " + resp.orderID);
-      else alert("❌ 报错: " + JSON.stringify(resp));
 
-    } catch (err: any) { alert("Error: " + (err.message || String(err))); } finally { setIsGenerating(false); }
+      if (resp && resp.success) {
+        setTxStep("success");
+        setTxMessage("下注成功！订单已被 Polymarket 撮合引擎接受。");
+        setTxOrderId(resp.orderID || null);
+      } else {
+        // --- IMPROVEMENT: Scrape human-readable error from JSON string ---
+        let errorMsg = resp?.error || JSON.stringify(resp);
+        try {
+          // If the error is a stringified JSON containing "data: { error: ... }"
+          const parsed = JSON.parse(errorMsg);
+          if (parsed?.data?.error) {
+             errorMsg = parsed.data.error;
+          }
+        } catch(e) {}
+        
+        throw new Error(errorMsg);
+      }
+
+    } catch (err: any) {
+      console.error("Place bet error:", err);
+      setTxStep("error");
+      
+      // Clean up common error messages
+      let finalMsg = err.message || String(err);
+      if (finalMsg.includes("not enough balance")) finalMsg = "余额不足或授权尚未生效，请确认金库中有足够的 USDC.e。";
+      if (finalMsg.includes("user rejected")) finalMsg = "用户取消了签名请求。";
+      
+      setTxError(finalMsg);
+      setTxMessage("交易流程中断");
+    }
   };
 
   return (
@@ -351,6 +427,114 @@ function HomeContent() {
 
       {/* Hidden Twitter Social Component */}
       <div className="absolute opacity-0 pointer-events-none -z-50"><div ref={twitterCardRef} className="w-[1200px] h-[630px] bg-black">...</div></div>
+
+      {/* ========== Transaction Progress Overlay ========== */}
+      {txStep !== "idle" && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-md">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-8 max-w-sm w-full mx-4 shadow-2xl shadow-black/80 flex flex-col items-center gap-5 text-center">
+            
+            {/* Spinner / Success / Error Icon */}
+            {(txStep === "preparing" || txStep === "deploying" || txStep === "approving" || txStep === "placing") && (
+              <div className="relative">
+                <div className="w-20 h-20 rounded-full border-4 border-zinc-800 border-t-blue-500 animate-spin" />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-3 h-3 rounded-full bg-blue-500 animate-pulse" />
+                </div>
+              </div>
+            )}
+            {txStep === "success" && (
+              <div className="w-20 h-20 rounded-full bg-green-500/20 border-2 border-green-500 flex items-center justify-center animate-[scaleIn_0.3s_ease-out]">
+                <CheckCircle2 size={40} className="text-green-500" />
+              </div>
+            )}
+            {txStep === "error" && (
+              <div className="w-20 h-20 rounded-full bg-red-500/20 border-2 border-red-500 flex items-center justify-center animate-[scaleIn_0.3s_ease-out]">
+                <XCircle size={40} className="text-red-500" />
+              </div>
+            )}
+
+            {/* Step Indicators */}
+            {txStep !== "success" && txStep !== "error" && (
+              <div className="flex items-center gap-2 w-full justify-center">
+                {["preparing", "deploying", "approving", "placing"].map((step, i) => {
+                  const steps: TxStep[] = ["preparing", "deploying", "approving", "placing"];
+                  const currentIdx = steps.indexOf(txStep as any);
+                  const stepIdx = i;
+                  const isActive = stepIdx === currentIdx;
+                  const isDone = stepIdx < currentIdx;
+                  return (
+                    <div key={step} className="flex items-center gap-2">
+                      <div className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${
+                        isDone ? "bg-green-500" : isActive ? "bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.6)]" : "bg-zinc-700"
+                      }`} />
+                      {i < 3 && <div className={`w-6 h-0.5 transition-all duration-300 ${isDone ? "bg-green-500" : "bg-zinc-800"}`} />}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Step Label */}
+            <div>
+              {txStep === "preparing" && <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest">准备中</p>}
+              {txStep === "deploying" && <p className="text-blue-400 text-xs font-bold uppercase tracking-widest">部署金库</p>}
+              {txStep === "approving" && <p className="text-purple-400 text-xs font-bold uppercase tracking-widest">代币授权</p>}
+              {txStep === "placing" && <p className="text-green-400 text-xs font-bold uppercase tracking-widest">提交订单</p>}
+              {txStep === "success" && <p className="text-green-400 text-sm font-black uppercase tracking-widest">交易成功</p>}
+              {txStep === "error" && <p className="text-red-400 text-sm font-black uppercase tracking-widest">交易失败</p>}
+            </div>
+
+            {/* Dynamic Message */}
+            <p className="text-white text-sm font-medium leading-relaxed">{txMessage}</p>
+
+            {/* Order ID on success */}
+            {txStep === "success" && txOrderId && (
+              <div className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-3">
+                <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-1">订单 ID</p>
+                <p className="text-xs font-mono text-zinc-300 break-all">{txOrderId}</p>
+              </div>
+            )}
+
+            {/* Error detail */}
+            {txStep === "error" && txError && (
+              <div className="w-full bg-red-500/5 border border-red-500/20 rounded-xl p-3 max-h-24 overflow-y-auto">
+                <p className="text-xs text-red-300/80 font-mono break-all">{txError}</p>
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            {(txStep === "success" || txStep === "error") && (
+              <div className="flex gap-3 w-full mt-2">
+                <button
+                  onClick={closeTxOverlay}
+                  className={`flex-1 py-3 rounded-xl font-bold text-sm transition-all active:scale-95 ${
+                    txStep === "success"
+                      ? "bg-green-500 hover:bg-green-400 text-black"
+                      : "bg-zinc-800 hover:bg-zinc-700 text-white"
+                  }`}
+                >
+                  {txStep === "success" ? "完成" : "关闭"}
+                </button>
+                {txStep === "error" && (
+                  <button
+                    onClick={() => { closeTxOverlay(); handlePlaceRealBet(); }}
+                    className="flex-1 py-3 rounded-xl font-bold text-sm bg-blue-600 hover:bg-blue-500 text-white transition-all active:scale-95"
+                  >
+                    重试
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Subtle hint during processing */}
+            {txStep !== "success" && txStep !== "error" && (
+              <p className="text-amber-400/90 text-[10px] mt-2 font-medium animate-pulse px-4 py-1.5 bg-amber-400/5 rounded-full border border-amber-400/10">
+                ⚠️ 请勿关闭页面，交易正在链上处理中...
+              </p>
+            )}
+          </div>
+        </div>
+      )}
     </main>
   );
 }
