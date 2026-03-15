@@ -14,8 +14,7 @@ import { RelayClient, RelayerTxType } from "@polymarket/builder-relayer-client";
 // Use specific import to avoid type mismatch
 import { BuilderConfig } from "@polymarket/builder-relayer-client/node_modules/@polymarket/builder-signing-sdk";
 
-// Prevents double-signature popups in React Dev Mode
-let isDerivingPolymarketKeyDialogActive = false;
+// 旧的模块级锁已移除，改为组件内 useRef 锁（三层防护方案）
 
 function HomeContent() {
   const searchParams = useSearchParams();
@@ -54,6 +53,10 @@ function HomeContent() {
   const [portfolioTab, setPortfolioTab] = useState<"positions" | "orders" | "history">("positions");
   const [expandedPosition, setExpandedPosition] = useState<string | null>(null);
 
+  // --- 三层防护：防止签名竞态 ---
+  const isFetchingBalanceRef = useRef(false);       // 锁层：fetchBalance 是否正在执行
+  const fetchBalanceTimerRef = useRef<NodeJS.Timeout | null>(null); // 防抖定时器
+
   // --- 逻辑：获取资产组合数据 ---
   const fetchPortfolio = async (proxyAddr: string, creds: any, signer: any) => {
     if (!proxyAddr) return;
@@ -90,10 +93,21 @@ function HomeContent() {
     }
   };
 
-  // --- LOGIC: Fetch Balance and Proxy Address ---
+  // --- LOGIC: Fetch Balance and Proxy Address (三层防护版) ---
   const fetchBalance = async (showLoading = false) => {
-    if (!wallets || wallets.length === 0) return;
-    
+    // === 锁层 ===：如果已有一个 fetchBalance 在执行，直接跳过
+    if (isFetchingBalanceRef.current) {
+      console.log("[三层防护/锁层] fetchBalance 已在执行中，跳过本次调用");
+      return;
+    }
+
+    // === 门控层 ===：确保 Privy 完全就绪且钱包已加载
+    if (!ready || !authenticated || !wallets || wallets.length === 0) {
+      console.log("[三层防护/门控层] Privy 未就绪或钱包未加载，跳过");
+      return;
+    }
+
+    isFetchingBalanceRef.current = true; // 上锁
     if (showLoading) setIsRefreshingBalance(true);
     
     let wallet = null;
@@ -105,6 +119,7 @@ function HomeContent() {
        wallet = embeddedWallet || wallets[0];
     }
     if (!wallet) {
+      isFetchingBalanceRef.current = false; // 释放锁
       if (showLoading) setIsRefreshingBalance(false);
       return;
     }
@@ -118,28 +133,54 @@ function HomeContent() {
 
       const clobClient = new ClobClient("https://clob.polymarket.com", 137, signer as any);
       
-      // 1. Calculate Proxy
+      // 1. 计算 Proxy 地址
       const SAFE_FACTORY_POLYGON = "0xaacFeEa03eb1561C4e67d661e40682Bd20E3541b";
       const derivedProxy = deriveSafe(wallet.address, SAFE_FACTORY_POLYGON);
       setProxyAddress(derivedProxy);
 
-      // 2. Derive/Load API Credentials for Polymarket
+      // 2. 加载或衍生 API 凭证
       const cacheKey = `poly_creds_${wallet.address}`;
       let creds = null;
+
+      // 第一次读取缓存
       try {
          const cachedBody = localStorage.getItem(cacheKey);
          if (cachedBody) creds = JSON.parse(cachedBody);
       } catch(e) {}
 
-      if (!creds && authenticated) {
-         if (isDerivingPolymarketKeyDialogActive) return;
-         isDerivingPolymarketKeyDialogActive = true;
+      if (!creds) {
+         // === 缓存层 ===：弹签名框前最后一刻，再检查一次缓存（防止并发写入后未读到）
+         await new Promise(r => setTimeout(r, 200)); // 短暂等待，让可能并行的写入完成
+         try {
+            const rechecked = localStorage.getItem(cacheKey);
+            if (rechecked) creds = JSON.parse(rechecked);
+         } catch(e) {}
+      }
+
+      if (!creds) {
+         // 确认此刻仍然没有缓存，才发起签名请求
+         // 关键优化：先 derive 再 create（仅需一次签名）
+         // createOrDeriveApiKey() 内部会先 create 再 derive，导致已有账户弹两次签名
+         // 改为先 deriveApiKey()，对已有账户只需一次签名即可成功
+         console.log("[三层防护] 缓存中无 API Key，尝试衍生...");
          try {
             await wallet.switchChain(137);
-            creds = await clobClient.createOrDeriveApiKey();
-            if (creds && creds.key) localStorage.setItem(cacheKey, JSON.stringify(creds));
-         } finally {
-            isDerivingPolymarketKeyDialogActive = false;
+            // 优先尝试 derive（适用于已存在 API Key 的账户，只需一次签名）
+            try {
+               creds = await clobClient.deriveApiKey();
+               console.log("[三层防护] deriveApiKey 成功（仅一次签名）");
+            } catch (deriveErr) {
+               // derive 失败（首次创建账户），fallback 到 create
+               console.log("[三层防护] deriveApiKey 失败，尝试 createApiKey...");
+               creds = await clobClient.createApiKey();
+               console.log("[三层防护] createApiKey 成功");
+            }
+            if (creds && creds.key) {
+              localStorage.setItem(cacheKey, JSON.stringify(creds));
+              console.log("[三层防护] API Key 已生成并缓存");
+            }
+         } catch (keyErr) {
+            console.error("[三层防护] API Key 获取完全失败:", keyErr);
          }
       }
 
@@ -160,7 +201,7 @@ function HomeContent() {
          // 同步刷新资产组合
          fetchPortfolio(derivedProxy, creds, signer);
       } else {
-         // Fallback to direct EOA USDC.e check
+         // Fallback: 直接检查 EOA 的 USDC.e 余额
          const USDC_ADDRESS = "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174";
          const USDC_ABI = ["function balanceOf(address owner) view returns (uint256)"];
          const contract = new ethers.Contract(USDC_ADDRESS, USDC_ABI, provider);
@@ -170,13 +211,31 @@ function HomeContent() {
     } catch (err) {
       console.error("Balance fetch failed", err);
     } finally {
+      isFetchingBalanceRef.current = false; // 释放锁
       if (showLoading) setIsRefreshingBalance(false);
     }
   };
 
+  // === 门控层 + 防抖 ===：只在 Privy 完全 ready 且已认证时触发，300ms 防抖合并多次快速调用
   useEffect(() => {
-    if (authenticated) fetchBalance();
-  }, [wallets, authenticated, user]);
+    if (!ready || !authenticated || !wallets || wallets.length === 0) return;
+
+    // 清除之前的防抖定时器
+    if (fetchBalanceTimerRef.current) {
+      clearTimeout(fetchBalanceTimerRef.current);
+    }
+
+    // 300ms 防抖：等所有状态（wallets, user）都稳定后再发起请求
+    fetchBalanceTimerRef.current = setTimeout(() => {
+      fetchBalance();
+    }, 300);
+
+    return () => {
+      if (fetchBalanceTimerRef.current) {
+        clearTimeout(fetchBalanceTimerRef.current);
+      }
+    };
+  }, [ready, wallets, authenticated, user]);
 
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
