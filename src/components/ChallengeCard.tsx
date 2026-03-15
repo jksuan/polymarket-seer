@@ -81,7 +81,7 @@ export default function ChallengeCard({
             <label className="text-sm font-bold text-zinc-400 px-1 uppercase tracking-wider text-[10px]">我们在赌什么？</label>
             <input type="text" value={topic} onChange={(e) => setTopic(e.target.value)} className="w-full bg-zinc-950/80 border border-zinc-800 rounded-xl p-3 text-white focus:ring-2 focus:ring-blue-500 transition-all font-bold" placeholder="湖人队今晚夺冠" />
           </div>
-          <div className="space-y-1.5">
+          <div className="space-y-3">
             <label className="text-sm font-bold text-zinc-400 px-1 uppercase tracking-wider text-[10px]">下注金额 (USDC)</label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-green-500"><HandCoins size={18} /></div>
@@ -100,8 +100,26 @@ export default function ChallengeCard({
                  onBlur={() => {
                    if (!amount || Number(amount) < 1) setAmount("1");
                  }} 
-                 className="w-full bg-zinc-950/80 border border-zinc-800 rounded-xl p-3 pl-10 text-white focus:ring-2 focus:ring-blue-500 transition-all font-bold" 
+                 className="w-full bg-zinc-950/80 border border-zinc-800 rounded-xl p-3 pl-10 text-white focus:ring-2 focus:ring-blue-500 transition-all font-bold text-lg" 
               />
+            </div>
+            
+            {/* Quick Amount Presets */}
+            <div className="flex gap-2">
+              {["10", "20", "50", "100"].map((val) => (
+                <button
+                  key={val}
+                  type="button"
+                  onClick={() => setAmount(val)}
+                  className={`flex-1 py-2 rounded-xl border text-[11px] font-black transition-all active:scale-95 ${
+                    amount === val 
+                      ? "bg-green-500/20 border-green-500/50 text-green-400" 
+                      : "bg-zinc-900 border-zinc-800 text-zinc-500 hover:border-zinc-700 hover:text-zinc-300"
+                  }`}
+                >
+                  ${val}
+                </button>
+              ))}
             </div>
           </div>
         </div>
