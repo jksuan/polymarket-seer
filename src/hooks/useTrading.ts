@@ -313,6 +313,12 @@ export function useTrading(
       if (finalMsg.includes("not enough balance")) finalMsg = "余额不足或授权尚未生效，请确认金库中有足够的 USDC.e。";
       if (finalMsg.includes("user rejected")) finalMsg = "用户取消了签名请求。";
       
+      if (finalMsg.includes("余额不足") || finalMsg.includes("not enough balance")) {
+        setTxMessage("执行中断：资金未就绪");
+      } else {
+        setTxMessage("交易出错或被中断");
+      }
+
       setTxError(finalMsg);
     }
   };
