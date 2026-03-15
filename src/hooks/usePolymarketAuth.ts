@@ -32,6 +32,7 @@ export function usePolymarketAuth() {
   const isFetchingBalanceRef = useRef(false);
   const fetchBalanceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const hasTriedCreateWalletRef = useRef(false);
+  const hasTriedDeriveCredsRef = useRef(false); // 新增：防止对全新账户反复弹签名框
 
   // --- 自动为社交登录用户创建 Embedded Wallet ---
   useEffect(() => {
@@ -81,7 +82,8 @@ export function usePolymarketAuth() {
          creds = getCachedCreds(wallet.address);
       }
 
-      if (!creds) {
+      if (!creds && !hasTriedDeriveCredsRef.current) {
+         hasTriedDeriveCredsRef.current = true; // 标记只尝试一次
          // 确认此刻仍然没有缓存，才发起签名请求
          console.log("[三层防护] 缓存中无 API Key，尝试衍生...");
          try {
