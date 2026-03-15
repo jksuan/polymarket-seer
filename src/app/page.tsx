@@ -401,9 +401,27 @@ function HomeContent() {
       const provider = new ethers.providers.Web3Provider(ethereumProvider as any);
       const signer = provider.getSigner();
 
-      const cachedBody = getCachedCreds(wallet.address);
-      if (!cachedBody) throw new Error("API 凭据丢失，请刷新页面重新签名");
-      const creds = cachedBody;
+      let creds = getCachedCreds(wallet.address);
+      if (!creds) {
+        // 尝试在下单时实时衍生/创建 API Key（适用于全新账户或缓存丢失的场景）
+        setTxMessage("正在生成 API 凭据...");
+        const clobForDerive = new ClobClient(CLOB_API_URL, POLYGON_CHAIN_ID, signer as any);
+        try {
+          creds = await clobForDerive.deriveApiKey();
+          console.log("[下单] deriveApiKey 成功");
+        } catch {
+          try {
+            creds = await clobForDerive.createApiKey();
+            console.log("[下单] createApiKey 成功");
+          } catch (e2) {
+            console.error("[下单] API Key 创建也失败:", e2);
+          }
+        }
+        if (creds && creds.key) {
+          setCachedCreds(wallet.address, creds);
+        }
+        if (!creds) throw new Error("API 凭据生成失败，请刷新页面后重试");
+      }
       const derivedProxy = proxyAddress || deriveSafe(wallet.address, SAFE_FACTORY_POLYGON);
 
       // --- Step 1: Pre-flight Check (Balance) ---
