@@ -27,7 +27,7 @@ import { getCachedCreds, setCachedCreds } from "@/lib/utils";
 export type TxStep = "idle" | "preparing" | "deploying" | "approving" | "placing" | "success" | "error";
 
 export function useTrading(
-  walletAddress: string, 
+  walletAddress: string,
   proxyAddress: string | null,
   fetchBalance: () => void
 ) {
@@ -49,20 +49,20 @@ export function useTrading(
   // --- 逻辑：获取资产组合数据 ---
   const fetchPortfolio = useCallback(async (proxyAddr: string, walletAddress: string) => {
     if (!proxyAddr || !walletAddress) return;
-    
+
     // Check creds before pulling CLOB data
     const creds = getCachedCreds(walletAddress);
     if (!creds) return; // If API keys aren't ready, we skip
 
     // Find the right wallet to sign with clob
     const walletInfo = wallets.find(w => w.address.toLowerCase() === walletAddress?.toLowerCase())
-                || wallets.find(w => w.walletClientType === "privy")
-                || wallets[0];
+      || wallets.find(w => w.walletClientType === "privy")
+      || wallets[0];
     if (!walletInfo) return;
 
     try {
       setPortfolioLoading(true);
-      
+
       const ethereumProvider = await walletInfo.getEthereumProvider();
       const provider = new ethers.providers.Web3Provider(ethereumProvider as any);
       const signer = provider.getSigner();
@@ -89,7 +89,7 @@ export function useTrading(
       const clob = new ClobClient(CLOB_API_URL, POLYGON_CHAIN_ID, signer, creds, SIGNATURE_TYPE_GNOSIS_SAFE, proxyAddr);
       const orders = await clob.getOpenOrders().catch(() => []);
       setOpenOrders(orders || []);
-      
+
     } catch (err) {
       console.error("fetchPortfolio error:", err);
     } finally {
@@ -107,7 +107,7 @@ export function useTrading(
   // --- 逻辑：执行领奖 (Redeem) ---
   const handleRedeem = async (pos: any) => {
     if (!pos || !proxyAddress) return;
-    
+
     setTxStep("preparing");
     setTxMessage("正在构造领奖交易请求...");
     setTxError(null);
@@ -122,14 +122,14 @@ export function useTrading(
       const ctfInterface = new ethers.utils.Interface(CTF_ABI);
       const parentCollectionId = ZERO_PARENT_COLLECTION_ID;
       // 将 outcomeIndex 转换为 indexSets 格式
-      const indexSets = [Math.pow(2, pos.outcomeIndex)]; 
+      const indexSets = [Math.pow(2, pos.outcomeIndex)];
 
       const builderConfig = new BuilderConfig({ remoteBuilderConfig: { url: `${window.location.origin}/api/sign` } });
       const relayClient = new RelayClient(RELAYER_URL, POLYGON_CHAIN_ID, signer as any, builderConfig, RelayerTxType.SAFE);
 
       setTxStep("placing");
       setTxMessage("正在通过 Relayer 激活资产并提取奖励...");
-      
+
       const tx = await relayClient.execute([{
         to: ADDRESSES.CTF,
         data: ctfInterface.encodeFunctionData("redeemPositions", [ADDRESSES.USDCe, parentCollectionId, pos.conditionId, indexSets]),
@@ -160,11 +160,11 @@ export function useTrading(
     try {
       // --- Step 0: Wallet preparation ---
       let wallet = wallets.find(w => w.address.toLowerCase() === walletAddress?.toLowerCase())
-                   || wallets.find(w => w.walletClientType === 'privy')
-                   || wallets[0];
+        || wallets.find(w => w.walletClientType === 'privy')
+        || wallets[0];
       if (!wallet) throw new Error("未找到已连接钱包");
 
-      try { await wallet.switchChain(POLYGON_CHAIN_ID); } catch(e) { console.warn("Switch chain skipped", e); }
+      try { await wallet.switchChain(POLYGON_CHAIN_ID); } catch (e) { console.warn("Switch chain skipped", e); }
 
       setTxMessage("正在初始化交易环境...");
       const ethereumProvider = await wallet.getEthereumProvider();
@@ -173,31 +173,31 @@ export function useTrading(
 
       let creds = getCachedCreds(wallet.address);
       if (!creds) {
-         setTxMessage("初次交易，正在自动为您生成交易凭据...");
-         const clobClient = new ClobClient(CLOB_API_URL, POLYGON_CHAIN_ID, signer as any);
-         try {
-            creds = await clobClient.deriveApiKey();
-         } catch(e) {
-            try {
-               creds = await clobClient.createApiKey();
-            } catch(err) {
-               console.warn("createApiKey failed:", err);
-            }
-         }
-         if (creds && creds.key) {
-            setCachedCreds(wallet.address, creds);
-         } else {
-            // 如果生成失败，可能是因为没激活且余额为 0（Polymarket 拒绝未入金的新地址）。
-            // 在此拦截，假装是余额不足，从而让页面弹起充值引导层。
-            const derivedProxy = proxyAddress || deriveSafe(wallet.address, SAFE_FACTORY_POLYGON);
-            const contract = new ethers.Contract(ADDRESSES.USDCe, ERC20_ABI, provider);
-            const onchainBalWei = await contract.balanceOf(derivedProxy);
-            const onchainBal = Number(ethers.utils.formatUnits(onchainBalWei, USDC_DECIMALS));
-            if (onchainBal < Number(amount)) {
-                throw new Error(`余额不足: 当前金库含 $${onchainBal.toFixed(2)} USDC.e，但下注需要 $${Number(amount).toFixed(2)} USDC.e`);
-            }
-            throw new Error("API 凭据初始化失败，请在 Polygon 链准备少量资产后重试");
-         }
+        setTxMessage("初次交易，正在自动为您生成交易凭据...");
+        const clobClient = new ClobClient(CLOB_API_URL, POLYGON_CHAIN_ID, signer as any);
+        try {
+          creds = await clobClient.deriveApiKey();
+        } catch (e) {
+          try {
+            creds = await clobClient.createApiKey();
+          } catch (err) {
+            console.warn("createApiKey failed:", err);
+          }
+        }
+        if (creds && creds.key) {
+          setCachedCreds(wallet.address, creds);
+        } else {
+          // 如果生成失败，可能是因为没激活且余额为 0（Polymarket 拒绝未入金的新地址）。
+          // 在此拦截，假装是余额不足，从而让页面弹起充值引导层。
+          const derivedProxy = proxyAddress || deriveSafe(wallet.address, SAFE_FACTORY_POLYGON);
+          const contract = new ethers.Contract(ADDRESSES.USDCe, ERC20_ABI, provider);
+          const onchainBalWei = await contract.balanceOf(derivedProxy);
+          const onchainBal = Number(ethers.utils.formatUnits(onchainBalWei, USDC_DECIMALS));
+          if (onchainBal < Number(amount)) {
+            throw new Error(`余额不足: 当前金库含 $${onchainBal.toFixed(2)} USDC.e，但下注需要 $${Number(amount).toFixed(2)} USDC.e`);
+          }
+          throw new Error("API 凭据初始化失败，请在 Polygon 链准备少量资产后重试");
+        }
       }
       const derivedProxy = proxyAddress || deriveSafe(wallet.address, SAFE_FACTORY_POLYGON);
 
@@ -215,19 +215,19 @@ export function useTrading(
         if (balErr.message && balErr.message.includes("余额不足")) {
           throw balErr;
         } else {
-           console.warn("余额查询失败，如果确认有钱请忽略", balErr);
-           try {
-             const contract = new ethers.Contract(ADDRESSES.USDCe, ERC20_ABI, provider);
-             const onchainBalWei = await contract.balanceOf(derivedProxy);
-             const onchainBal = Number(ethers.utils.formatUnits(onchainBalWei, USDC_DECIMALS));
-             if (onchainBal < Number(amount)) {
-                throw new Error(`余额不足: 金库可用资金不足以支付此次下注`);
-             }
-           } catch (fallbackBalErr: any) {
-             if (fallbackBalErr.message && fallbackBalErr.message.includes("余额不足")) {
-               throw fallbackBalErr;
-             }
-           }
+          console.warn("余额查询失败，如果确认有钱请忽略", balErr);
+          try {
+            const contract = new ethers.Contract(ADDRESSES.USDCe, ERC20_ABI, provider);
+            const onchainBalWei = await contract.balanceOf(derivedProxy);
+            const onchainBal = Number(ethers.utils.formatUnits(onchainBalWei, USDC_DECIMALS));
+            if (onchainBal < Number(amount)) {
+              throw new Error(`余额不足: 金库可用资金不足以支付此次下注`);
+            }
+          } catch (fallbackBalErr: any) {
+            if (fallbackBalErr.message && fallbackBalErr.message.includes("余额不足")) {
+              throw fallbackBalErr;
+            }
+          }
         }
       }
 
@@ -280,7 +280,7 @@ export function useTrading(
 
       try {
         await clobClientWithCreds.updateBalanceAllowance({ asset_type: "COLLATERAL" as any });
-      } catch(e) { console.warn("updateBalanceAllowance non-critical", e); }
+      } catch (e) { console.warn("updateBalanceAllowance non-critical", e); }
 
       // --- Step 3: Place Market Order ---
       setTxStep("placing");
@@ -298,23 +298,23 @@ export function useTrading(
         try {
           const parsed = JSON.parse(errorMsg);
           if (parsed?.data?.error) {
-             errorMsg = parsed.data.error;
+            errorMsg = parsed.data.error;
           }
-        } catch(e) {}
-        
+        } catch (e) { }
+
         throw new Error(errorMsg);
       }
 
     } catch (err: any) {
       console.error("Place bet error:", err);
       setTxStep("error");
-      
+
       let finalMsg = err.message || String(err);
       if (finalMsg.includes("not enough balance")) finalMsg = "余额不足或授权尚未生效，请确认金库中有足够的 USDC.e。";
       if (finalMsg.includes("user rejected")) finalMsg = "用户取消了签名请求。";
-      
+
       if (finalMsg.includes("余额不足") || finalMsg.includes("not enough balance")) {
-        setTxMessage("执行中断：资金未就绪");
+        setTxMessage("账户余额不足，请充值后重试");
       } else {
         setTxMessage("交易出错或被中断");
       }
@@ -329,7 +329,7 @@ export function useTrading(
     setTxOrderId(null);
     setTxError(null);
     if (proxyAddress) {
-       fetchBalance(); 
+      fetchBalance();
     }
   };
 
