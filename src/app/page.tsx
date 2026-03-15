@@ -428,13 +428,49 @@ function HomeContent() {
       const creds = JSON.parse(cachedBody);
       const derivedProxy = proxyAddress || deriveSafe(wallet.address, "0xaacFeEa03eb1561C4e67d661e40682Bd20E3541b");
 
-      setTxMessage("正在获取活跃市场数据...");
+      // --- Step 1: Pre-flight Check (Balance) ---
+      setTxMessage("正在检查金库余额...");
       const clobClientWithCreds = new ClobClient("https://clob.polymarket.com", 137, signer as any, creds, 2, derivedProxy);
+      try {
+        const balanceData = await clobClientWithCreds.getBalanceAllowance({ asset_type: "COLLATERAL" as any });
+        const currentBalance = balanceData?.balance ? Number(ethers.utils.formatUnits(balanceData.balance, 6)) : 0;
+        const targetAmount = Number(amount);
+        if (currentBalance < targetAmount) {
+          throw new Error(`余额不足: 当前金库含 $${currentBalance.toFixed(2)} USDC.e，但下注需要 $${targetAmount.toFixed(2)} USDC.e`);
+        }
+      } catch (balErr: any) {
+        if (balErr.message && balErr.message.includes("余额不足")) {
+          throw balErr;
+        } else {
+           console.warn("余额查询失败，如果确认有钱请忽略", balErr);
+           // Fallback check using ethers onchain? 
+           // If we can't check balance, we might fail later, but for now we let it pass
+           // Or we could force them to load on-chain balance. Let's rely on the error thrown or assume 0 if fetch fails.
+           // Actually, if it's a new proxy without creds active yet, CLOB might fail.
+           // Let's do an on-chain fallback check.
+           try {
+             const USDC_ADDRESS = "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174";
+             const USDC_ABI = ["function balanceOf(address owner) view returns (uint256)"];
+             const contract = new ethers.Contract(USDC_ADDRESS, USDC_ABI, provider);
+             const onchainBalWei = await contract.balanceOf(derivedProxy);
+             const onchainBal = Number(ethers.utils.formatUnits(onchainBalWei, 6));
+             if (onchainBal < Number(amount)) {
+                throw new Error(`余额不足: 金库可用资金不足以支付此次下注`);
+             }
+           } catch (fallbackBalErr: any) {
+             if (fallbackBalErr.message && fallbackBalErr.message.includes("余额不足")) {
+               throw fallbackBalErr;
+             }
+           }
+        }
+      }
+
+      setTxMessage("正在获取活跃市场数据...");
       const activeMarkets = await clobClientWithCreds.getSamplingSimplifiedMarkets();
       const liveTokenId = activeMarkets.data[0]?.tokens[0]?.token_id;
       if (!liveTokenId) throw new Error("未获取到活跃交易对，请稍后重试");
 
-      // --- Step 1: Deploy Safe Wallet ---
+      // --- Step 2: Deploy Safe Wallet ---
       setTxStep("deploying");
       setTxMessage("正在检查金库部署状态...");
       const builderConfig = new BuilderConfig({ remoteBuilderConfig: { url: `${window.location.origin}/api/sign` } });
@@ -573,7 +609,22 @@ function HomeContent() {
               </div>
             </div>
             <div className="w-[1px] h-6 bg-zinc-800" />
-            <button onClick={() => logout()} className="text-zinc-500 hover:text-red-400 transition-colors text-xs font-medium">
+            <button onClick={async () => {
+              await logout();
+              const keysToRem = [];
+              for (let i = 0; i < localStorage.length; i++) {
+                const k = localStorage.key(i);
+                if (k && k.startsWith('poly_creds_')) keysToRem.push(k);
+              }
+              keysToRem.forEach(k => localStorage.removeItem(k));
+              setWalletAddress("");
+              setProxyAddress(null);
+              setUsdcBalance("0.00");
+              setPositions([]);
+              setOpenOrders([]);
+              setTrades([]);
+              console.log("[Logout] 缓存与状态已深度清理");
+            }} className="text-zinc-500 hover:text-red-400 transition-colors text-xs font-medium">
               退出
             </button>
           </div>
@@ -603,7 +654,19 @@ function HomeContent() {
             <label className="text-sm font-bold text-zinc-400 px-1 uppercase tracking-wider text-[10px]">下注金额 (USDC)</label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-green-500"><HandCoins size={18} /></div>
-              <input type="number" min="0" value={amount} onChange={(e) => setAmount(e.target.value)} className="w-full bg-zinc-950/80 border border-zinc-800 rounded-xl p-3 pl-10 text-white focus:ring-2 focus:ring-blue-500 transition-all font-bold" />
+              <input 
+                 type="number" 
+                 min="1" 
+                 value={amount} 
+                 onChange={(e) => {
+                   let val = e.target.value.replace(/^0+/, ""); // Remove leading zeros
+                   if (val === "" || Number(val) < 1) {
+                     val = "1"; // Default to 1 if empty or less than 1
+                   }
+                   setAmount(val);
+                 }} 
+                 className="w-full bg-zinc-950/80 border border-zinc-800 rounded-xl p-3 pl-10 text-white focus:ring-2 focus:ring-blue-500 transition-all font-bold" 
+              />
             </div>
           </div>
         </div>
@@ -927,6 +990,27 @@ function HomeContent() {
             {/* Dynamic Message */}
             <p className="text-white text-sm font-medium leading-relaxed">{txMessage}</p>
 
+            {/* ERROR STATE: Insufficient Balance specific view (Deposit View) */}
+            {txStep === "error" && txError && txError.includes("余额不足") && proxyAddress && (
+              <div className="w-full flex flex-col items-center gap-4 mt-2 mb-2">
+                <div className="bg-white p-2 rounded-xl">
+                  <QRCodeSVG value={proxyAddress} size={120} />
+                </div>
+                <div className="bg-zinc-950/80 border border-zinc-800 rounded-xl p-3 w-full space-y-2">
+                   <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest text-left">您的专属金库地址 (Polygon)</p>
+                   <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs font-mono text-zinc-300 truncate w-full">{proxyAddress}</span>
+                      <button onClick={() => handleCopy(proxyAddress)} className="text-blue-400 hover:text-blue-300 p-1 flex-shrink-0">
+                        {copied ? <Check size={14} className="text-green-400" /> : <Copy size={14} />}
+                      </button>
+                   </div>
+                </div>
+                <p className="text-xs text-orange-400 font-bold bg-orange-400/10 border border-orange-400/20 px-3 py-2 rounded-lg text-left w-full">
+                  ⚠️ 提示：请通过 Polygon 网络向此地址转入至少 <b>${amount} USDC.e</b>。到账后点击下方重试。
+                </p>
+              </div>
+            )}
+
             {/* Order ID on success */}
             {txStep === "success" && txOrderId && (
               <div className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-3">
@@ -935,8 +1019,8 @@ function HomeContent() {
               </div>
             )}
 
-            {/* Error detail */}
-            {txStep === "error" && txError && (
+            {/* Error detail (Generic) */}
+            {txStep === "error" && txError && !(txError.includes("余额不足") && proxyAddress) && (
               <div className="w-full bg-red-500/5 border border-red-500/20 rounded-xl p-3 max-h-24 overflow-y-auto">
                 <p className="text-xs text-red-300/80 font-mono break-all">{txError}</p>
               </div>
@@ -945,23 +1029,33 @@ function HomeContent() {
             {/* Action Buttons */}
             {(txStep === "success" || txStep === "error") && (
               <div className="flex gap-3 w-full mt-2">
-                <button
-                  onClick={closeTxOverlay}
-                  className={`flex-1 py-3 rounded-xl font-bold text-sm transition-all active:scale-95 ${
-                    txStep === "success"
-                      ? "bg-green-500 hover:bg-green-400 text-black"
-                      : "bg-zinc-800 hover:bg-zinc-700 text-white"
-                  }`}
-                >
-                  {txStep === "success" ? "完成" : "关闭"}
-                </button>
+                {(!txError?.includes("余额不足") || !proxyAddress) && (
+                  <button
+                    onClick={closeTxOverlay}
+                    className={`flex-1 py-3 rounded-xl font-bold text-sm transition-all active:scale-95 ${
+                      txStep === "success"
+                        ? "bg-green-500 hover:bg-green-400 text-black"
+                        : "bg-zinc-800 hover:bg-zinc-700 text-white"
+                    }`}
+                  >
+                    {txStep === "success" ? "完成" : "关闭"}
+                  </button>
+                )}
+                
                 {txStep === "error" && (
                   <button
                     onClick={() => { closeTxOverlay(); handlePlaceRealBet(); }}
                     className="flex-1 py-3 rounded-xl font-bold text-sm bg-blue-600 hover:bg-blue-500 text-white transition-all active:scale-95"
                   >
-                    重试
+                     {txError?.includes("余额不足") ? "已充值，继续下注" : "重试"}
                   </button>
+                )}
+                
+                {/* 如果是余额不足，额外给一个取消按钮 */}
+                {txStep === "error" && txError?.includes("余额不足") && proxyAddress && (
+                   <button onClick={closeTxOverlay} className="py-3 px-4 rounded-xl font-bold text-sm bg-zinc-800 hover:bg-zinc-700 text-white transition-all active:scale-95 text-xs">
+                     稍后
+                   </button>
                 )}
               </div>
             )}
