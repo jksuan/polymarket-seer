@@ -54,7 +54,7 @@ export default function Navbar({
               </div>
             )}
             <div className="flex items-center gap-1.5 leading-none mt-0.5">
-              <span className="text-green-400 text-[11px] font-black">${usdcBalance} USDC.e</span>
+              <span className="text-green-400 text-[11px] font-black">${usdcBalance}</span>
               <button 
                 onClick={onRefreshBalance} 
                 disabled={isRefreshingBalance}
