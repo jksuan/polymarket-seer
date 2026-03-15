@@ -11,10 +11,18 @@ import { ethers } from "ethers";
 import { ClobClient } from "@polymarket/clob-client";
 import { deriveSafe } from "@polymarket/builder-relayer-client/dist/builder/derive";
 import { RelayClient, RelayerTxType } from "@polymarket/builder-relayer-client";
-// Use specific import to avoid type mismatch
 import { BuilderConfig } from "@polymarket/builder-relayer-client/node_modules/@polymarket/builder-signing-sdk";
 
-// 旧的模块级锁已移除，改为组件内 useRef 锁（三层防护方案）
+import {
+  POLYGON_CHAIN_ID, CLOB_API_URL, DATA_API_URL, RELAYER_URL,
+  SAFE_FACTORY_POLYGON, ADDRESSES, USDC_DECIMALS,
+  ERC20_ABI, ERC1155_ABI, CTF_ABI, SIGNATURE_TYPE_GNOSIS_SAFE,
+  ZERO_PARENT_COLLECTION_ID,
+} from "@/lib/constants";
+import {
+  formatRelativeTime, copyToClipboard, clearCredsCache,
+  getCachedCreds, setCachedCreds, shortenAddress,
+} from "@/lib/utils";
 
 function HomeContent() {
   const searchParams = useSearchParams();
@@ -82,8 +90,8 @@ function HomeContent() {
     try {
       // 同时发起两个 API 请求：持仓 + 活动记录
       const [posRes, activityRes] = await Promise.all([
-        fetch(`https://data-api.polymarket.com/positions?user=${proxyAddr}`),
-        fetch(`https://data-api.polymarket.com/activity?user=${proxyAddr}`)
+        fetch(`${DATA_API_URL}/positions?user=${proxyAddr}`),
+        fetch(`${DATA_API_URL}/activity?user=${proxyAddr}`)
       ]);
 
       // 解析持仓
@@ -100,7 +108,7 @@ function HomeContent() {
       }
 
       // 3. 从 CLOB SDK 获取挂单
-      const clob = new ClobClient("https://clob.polymarket.com", 137, signer, creds, 2, proxyAddr);
+      const clob = new ClobClient(CLOB_API_URL, POLYGON_CHAIN_ID, signer, creds, SIGNATURE_TYPE_GNOSIS_SAFE, proxyAddr);
       const orders = await clob.getOpenOrders().catch(() => []);
       setOpenOrders(orders || []);
       
@@ -149,30 +157,19 @@ function HomeContent() {
       const provider = new ethers.providers.Web3Provider(ethereumProvider as any);
       const signer = provider.getSigner();
 
-      const clobClient = new ClobClient("https://clob.polymarket.com", 137, signer as any);
+      const clobClient = new ClobClient(CLOB_API_URL, POLYGON_CHAIN_ID, signer as any);
       
       // 1. 计算 Proxy 地址
-      const SAFE_FACTORY_POLYGON = "0xaacFeEa03eb1561C4e67d661e40682Bd20E3541b";
       const derivedProxy = deriveSafe(wallet.address, SAFE_FACTORY_POLYGON);
       setProxyAddress(derivedProxy);
 
       // 2. 加载或衍生 API 凭证
-      const cacheKey = `poly_creds_${wallet.address}`;
-      let creds = null;
-
-      // 第一次读取缓存
-      try {
-         const cachedBody = localStorage.getItem(cacheKey);
-         if (cachedBody) creds = JSON.parse(cachedBody);
-      } catch(e) {}
+      let creds = getCachedCreds(wallet.address);
 
       if (!creds) {
          // === 缓存层 ===：弹签名框前最后一刻，再检查一次缓存（防止并发写入后未读到）
          await new Promise(r => setTimeout(r, 200)); // 短暂等待，让可能并行的写入完成
-         try {
-            const rechecked = localStorage.getItem(cacheKey);
-            if (rechecked) creds = JSON.parse(rechecked);
-         } catch(e) {}
+         creds = getCachedCreds(wallet.address);
       }
 
       if (!creds) {
@@ -180,7 +177,7 @@ function HomeContent() {
          // 关键优化：先 derive 再 create（仅需一次签名）
          console.log("[三层防护] 缓存中无 API Key，尝试衍生...");
          try {
-            await wallet.switchChain(137);
+            await wallet.switchChain(POLYGON_CHAIN_ID);
             // 优先尝试 derive（适用于已存在 API Key 的账户，只需一次签名）
             try {
                creds = await clobClient.deriveApiKey();
@@ -198,7 +195,7 @@ function HomeContent() {
                }
             }
             if (creds && creds.key) {
-              localStorage.setItem(cacheKey, JSON.stringify(creds));
+              setCachedCreds(wallet.address, creds);
               console.log("[三层防护] API Key 已生成并缓存");
             }
          } catch (keyErr) {
@@ -208,17 +205,17 @@ function HomeContent() {
 
       if (creds) {
          const clobWithCreds = new ClobClient(
-            "https://clob.polymarket.com",
-            137,
+            CLOB_API_URL,
+            POLYGON_CHAIN_ID,
             signer as any,
             creds,
-            2, // GNOSIS_SAFE
+            SIGNATURE_TYPE_GNOSIS_SAFE,
             derivedProxy
          );
          try {
             const balanceData = await clobWithCreds.getBalanceAllowance({ asset_type: "COLLATERAL" as any });
             if (balanceData && balanceData.balance) {
-               const formatted = ethers.utils.formatUnits(balanceData.balance, 6);
+               const formatted = ethers.utils.formatUnits(balanceData.balance, USDC_DECIMALS);
                setUsdcBalance(Number(formatted).toFixed(2));
             }
          } catch (balErr) {
@@ -230,13 +227,11 @@ function HomeContent() {
          // Fallback: 直接在 Polygon 链上查询 EOA 的 USDC.e 余额
          // 对全新账户，这里安全降级为 $0.00
          try {
-            await wallet.switchChain(137);
-            const USDC_ADDRESS = "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174";
-            const USDC_ABI = ["function balanceOf(address owner) view returns (uint256)"];
-            const contract = new ethers.Contract(USDC_ADDRESS, USDC_ABI, provider);
+            await wallet.switchChain(POLYGON_CHAIN_ID);
+            const contract = new ethers.Contract(ADDRESSES.USDCe, ERC20_ABI, provider);
             const bal = await contract.balanceOf(wallet.address);
             if (bal) {
-               setUsdcBalance(Number(ethers.utils.formatUnits(bal, 6)).toFixed(2));
+               setUsdcBalance(Number(ethers.utils.formatUnits(bal, USDC_DECIMALS)).toFixed(2));
             }
          } catch (fallbackErr) {
             console.log("[余额查询] 链上余额查询失败（全新账户正常现象），默认显示 $0.00");
@@ -273,7 +268,7 @@ function HomeContent() {
   }, [ready, wallets, authenticated, user]);
 
   const handleCopy = (text: string) => {
-    navigator.clipboard.writeText(text);
+    copyToClipboard(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -285,7 +280,7 @@ function HomeContent() {
       : user?.google?.email
         ? user.google.email
         : walletAddress 
-          ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`
+          ? shortenAddress(walletAddress)
           : "Wallet Connected";
 
   const displayAvatar = user?.twitter?.profilePictureUrl || `https://api.dicebear.com/7.x/pixel-art/svg?seed=${walletAddress || "default"}`;
@@ -326,16 +321,6 @@ function HomeContent() {
     } catch (err) { console.error(err); alert("发推失败"); } finally { setIsGenerating(false); }
   };
 
-  const formatRelativeTime = (timestamp: number) => {
-    if (!timestamp) return "-";
-    // Polymarket API uses seconds
-    const diff = Math.floor(Date.now() / 1000 - timestamp);
-    if (diff < 60) return "刚刚";
-    if (diff < 3600) return `${Math.floor(diff / 60)}分前`;
-    if (diff < 86400) return `${Math.floor(diff / 3600)}小时前`;
-    return `${Math.floor(diff / 86400)}天前`;
-  };
-
   const closeTxOverlay = () => {
     setTxStep("idle");
     setTxMessage("");
@@ -361,22 +346,15 @@ function HomeContent() {
       const provider = new ethers.providers.Web3Provider(ethereumProvider as any);
       const signer = provider.getSigner();
 
-      const ADDRESSES = {
-        USDCe: "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174",
-        CTF: "0x4D97DCd97eC945f40cF65F87097ACe5EA0476045",
-      };
-
       // 构造智能合约调用数据
-      const ctfInterface = new ethers.utils.Interface([
-        "function redeemPositions(address collateralToken, bytes32 parentCollectionId, bytes32 conditionId, uint256[] indexSets)"
-      ]);
+      const ctfInterface = new ethers.utils.Interface(CTF_ABI);
 
-      const parentCollectionId = "0x0000000000000000000000000000000000000000000000000000000000000000";
+      const parentCollectionId = ZERO_PARENT_COLLECTION_ID;
       // 将 outcomeIndex 转换为 indexSets 格式
       const indexSets = [Math.pow(2, pos.outcomeIndex)]; 
 
       const builderConfig = new BuilderConfig({ remoteBuilderConfig: { url: `${window.location.origin}/api/sign` } });
-      const relayClient = new RelayClient("https://relayer-v2.polymarket.com/", 137, signer as any, builderConfig, RelayerTxType.SAFE);
+      const relayClient = new RelayClient(RELAYER_URL, POLYGON_CHAIN_ID, signer as any, builderConfig, RelayerTxType.SAFE);
 
       setTxStep("placing");
       setTxMessage("正在通过 Relayer 激活资产并提取奖励...");
@@ -416,24 +394,24 @@ function HomeContent() {
                    || wallets[0];
       if (!wallet) throw new Error("未找到已连接钱包");
 
-      try { await wallet.switchChain(137); } catch(e) { console.warn("Switch chain skipped", e); }
+      try { await wallet.switchChain(POLYGON_CHAIN_ID); } catch(e) { console.warn("Switch chain skipped", e); }
 
       setTxMessage("正在初始化交易环境...");
       const ethereumProvider = await wallet.getEthereumProvider();
       const provider = new ethers.providers.Web3Provider(ethereumProvider as any);
       const signer = provider.getSigner();
 
-      const cachedBody = localStorage.getItem(`poly_creds_${wallet.address}`);
+      const cachedBody = getCachedCreds(wallet.address);
       if (!cachedBody) throw new Error("API 凭据丢失，请刷新页面重新签名");
-      const creds = JSON.parse(cachedBody);
-      const derivedProxy = proxyAddress || deriveSafe(wallet.address, "0xaacFeEa03eb1561C4e67d661e40682Bd20E3541b");
+      const creds = cachedBody;
+      const derivedProxy = proxyAddress || deriveSafe(wallet.address, SAFE_FACTORY_POLYGON);
 
       // --- Step 1: Pre-flight Check (Balance) ---
       setTxMessage("正在检查金库余额...");
-      const clobClientWithCreds = new ClobClient("https://clob.polymarket.com", 137, signer as any, creds, 2, derivedProxy);
+      const clobClientWithCreds = new ClobClient(CLOB_API_URL, POLYGON_CHAIN_ID, signer as any, creds, SIGNATURE_TYPE_GNOSIS_SAFE, derivedProxy);
       try {
         const balanceData = await clobClientWithCreds.getBalanceAllowance({ asset_type: "COLLATERAL" as any });
-        const currentBalance = balanceData?.balance ? Number(ethers.utils.formatUnits(balanceData.balance, 6)) : 0;
+        const currentBalance = balanceData?.balance ? Number(ethers.utils.formatUnits(balanceData.balance, USDC_DECIMALS)) : 0;
         const targetAmount = Number(amount);
         if (currentBalance < targetAmount) {
           throw new Error(`余额不足: 当前金库含 $${currentBalance.toFixed(2)} USDC.e，但下注需要 $${targetAmount.toFixed(2)} USDC.e`);
@@ -449,11 +427,9 @@ function HomeContent() {
            // Actually, if it's a new proxy without creds active yet, CLOB might fail.
            // Let's do an on-chain fallback check.
            try {
-             const USDC_ADDRESS = "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174";
-             const USDC_ABI = ["function balanceOf(address owner) view returns (uint256)"];
-             const contract = new ethers.Contract(USDC_ADDRESS, USDC_ABI, provider);
+             const contract = new ethers.Contract(ADDRESSES.USDCe, ERC20_ABI, provider);
              const onchainBalWei = await contract.balanceOf(derivedProxy);
-             const onchainBal = Number(ethers.utils.formatUnits(onchainBalWei, 6));
+             const onchainBal = Number(ethers.utils.formatUnits(onchainBalWei, USDC_DECIMALS));
              if (onchainBal < Number(amount)) {
                 throw new Error(`余额不足: 金库可用资金不足以支付此次下注`);
              }
@@ -474,7 +450,7 @@ function HomeContent() {
       setTxStep("deploying");
       setTxMessage("正在检查金库部署状态...");
       const builderConfig = new BuilderConfig({ remoteBuilderConfig: { url: `${window.location.origin}/api/sign` } });
-      const relayClient = new RelayClient("https://relayer-v2.polymarket.com/", 137, signer as any, builderConfig, RelayerTxType.SAFE);
+      const relayClient = new RelayClient(RELAYER_URL, POLYGON_CHAIN_ID, signer as any, builderConfig, RelayerTxType.SAFE);
 
       try {
         const isDeployed = await relayClient.getDeployed(derivedProxy);
@@ -496,14 +472,8 @@ function HomeContent() {
       // --- Step 2: Batch Token Approvals ---
       setTxStep("approving");
       setTxMessage("正在设置代币交易授权 (一次性操作)...");
-      const ADDRESSES = {
-        USDCe: "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174",
-        CTF: "0x4D97DCd97eC945f40cF65F87097ACe5EA0476045",
-        CTF_EXCHANGE: "0x4bFb41d5B3570DeFd03C39a9A4D8dE6Bd8B8982E",
-        NEG_RISK_CTF_EXCHANGE: "0xC5d563A36AE78145C45a50134d48A1215220f80a",
-      };
-      const erc20 = new ethers.utils.Interface(["function approve(address spender, uint256 amount) returns (bool)"]);
-      const erc1155 = new ethers.utils.Interface(["function setApprovalForAll(address operator, bool approved)"]);
+      const erc20 = new ethers.utils.Interface(ERC20_ABI);
+      const erc1155 = new ethers.utils.Interface(ERC1155_ABI);
       const MAX = ethers.constants.MaxUint256;
 
       try {
@@ -611,12 +581,7 @@ function HomeContent() {
             <div className="w-[1px] h-6 bg-zinc-800" />
             <button onClick={async () => {
               await logout();
-              const keysToRem = [];
-              for (let i = 0; i < localStorage.length; i++) {
-                const k = localStorage.key(i);
-                if (k && k.startsWith('poly_creds_')) keysToRem.push(k);
-              }
-              keysToRem.forEach(k => localStorage.removeItem(k));
+              clearCredsCache();
               setWalletAddress("");
               setProxyAddress(null);
               setUsdcBalance("0.00");
