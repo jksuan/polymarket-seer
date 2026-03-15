@@ -106,6 +106,7 @@ function HomeContent() {
           authenticated={authenticated}
           onPlaceBet={() => handlePlaceRealBet(amount)}
           isGeneratingTx={txStep !== "idle"}
+          usdcBalance={usdcBalance}
         />
 
         {/* ========== Portfolio 资产组合面板 ========== */}

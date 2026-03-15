@@ -13,11 +13,12 @@ interface ChallengeCardProps {
   setUsername: (u: string) => void;
   authenticated: boolean;
   onPlaceBet: () => void;
-  isGeneratingTx: boolean; // Renamed to avoid collison with local isGenerating
+  isGeneratingTx: boolean;
+  usdcBalance: string;
 }
 
 export default function ChallengeCard({
-  topic, setTopic, amount, setAmount, username, setUsername, authenticated, onPlaceBet, isGeneratingTx
+  topic, setTopic, amount, setAmount, username, setUsername, authenticated, onPlaceBet, isGeneratingTx, usdcBalance
 }: ChallengeCardProps) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [hash, setHash] = useState("VERIFYING...");
@@ -82,26 +83,34 @@ export default function ChallengeCard({
             <input type="text" value={topic} onChange={(e) => setTopic(e.target.value)} className="w-full bg-zinc-950/80 border border-zinc-800 rounded-xl p-3 text-white focus:ring-2 focus:ring-blue-500 transition-all font-bold" placeholder="湖人队今晚夺冠" />
           </div>
           <div className="space-y-3">
-            <label className="text-sm font-bold text-zinc-400 px-1 uppercase tracking-wider text-[10px]">下注金额</label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-green-500"><HandCoins size={18} /></div>
-              <input 
-                 type="number" 
-                 min="1" 
-                 value={amount} 
+            {/* Polymarket-style Input Box */}
+            <div className="flex items-center justify-between w-full bg-zinc-950/80 border border-zinc-800 hover:border-zinc-700 rounded-2xl p-4 transition-all focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500">
+              {/* Left Side: Labels */}
+              <div className="flex flex-col gap-1">
+                <span className="text-zinc-300 font-bold">金额</span>
+                <span className="text-zinc-500 text-xs font-mono">余额 ${Number(usdcBalance || 0).toFixed(2)}</span>
+              </div>
+              
+              {/* Right Side: Input */}
+              <div className="relative flex flex-1 items-center justify-end pl-4">
+                <input 
+                 type="text" 
+                 inputMode="numeric"
+                 placeholder="$0"
+                 value={amount ? `$${amount}` : ""} 
                  onChange={(e) => {
-                   let val = e.target.value;
+                   let val = e.target.value.replace(/[^0-9]/g, "");
                    if (val !== "") {
                      val = val.replace(/^0+/, "");
-                     if (val === "" && e.target.value !== "") val = "0";
+                     if (val === "" && e.target.value.match(/[0-9]/)) val = "0";
                    }
                    setAmount(val);
                  }}
-                 onBlur={() => {
-                   if (!amount || Number(amount) < 1) setAmount("1");
-                 }} 
-                 className="w-full bg-zinc-950/80 border border-zinc-800 rounded-xl p-3 pl-10 text-white focus:ring-2 focus:ring-blue-500 transition-all font-bold text-lg" 
-              />
+                 className={`w-full bg-transparent outline-none text-right text-4xl font-black transition-all ${
+                    amount ? "text-white" : "text-zinc-600 placeholder:text-zinc-600"
+                 }`} 
+                />
+              </div>
             </div>
             
             {/* Quick Amount Presets */}
