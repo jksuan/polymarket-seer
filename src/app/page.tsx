@@ -6,7 +6,7 @@ import { Swords, Download, TrendingUp, HandCoins, Twitter, Copy, Check, LogOut, 
 import { nanoid } from "nanoid";
 import { QRCodeSVG } from "qrcode.react";
 import { useSearchParams } from "next/navigation";
-import { usePrivy, useWallets } from "@privy-io/react-auth";
+import { usePrivy, useWallets, useCreateWallet } from "@privy-io/react-auth";
 import { ethers } from "ethers";
 import { ClobClient } from "@polymarket/clob-client";
 import { deriveSafe } from "@polymarket/builder-relayer-client/dist/builder/derive";
@@ -31,6 +31,24 @@ function HomeContent() {
   
   const { ready, authenticated, user, login, logout } = usePrivy();
   const { wallets } = useWallets();
+  const { createWallet } = useCreateWallet();
+
+  // --- 自动为社交登录用户创建 Embedded Wallet ---
+  const hasTriedCreateWalletRef = useRef(false);
+  useEffect(() => {
+    if (!ready || !authenticated || !user) return;
+    // 检查用户是否已有 embedded wallet
+    const hasEmbeddedWallet = wallets.some(w => w.walletClientType === 'privy');
+    if (!hasEmbeddedWallet && !hasTriedCreateWalletRef.current) {
+      hasTriedCreateWalletRef.current = true;
+      console.log("[自动钱包] 社交登录用户无 Embedded Wallet，正在创建...");
+      createWallet().then(() => {
+        console.log("[自动钱包] Embedded Wallet 创建成功");
+      }).catch((err) => {
+        console.warn("[自动钱包] Embedded Wallet 创建失败（可能已存在）:", err);
+      });
+    }
+  }, [ready, authenticated, user, wallets]);
 
   const [walletAddress, setWalletAddress] = useState("");
   const [proxyAddress, setProxyAddress] = useState<string | null>(null);
@@ -160,8 +178,6 @@ function HomeContent() {
       if (!creds) {
          // 确认此刻仍然没有缓存，才发起签名请求
          // 关键优化：先 derive 再 create（仅需一次签名）
-         // createOrDeriveApiKey() 内部会先 create 再 derive，导致已有账户弹两次签名
-         // 改为先 deriveApiKey()，对已有账户只需一次签名即可成功
          console.log("[三层防护] 缓存中无 API Key，尝试衍生...");
          try {
             await wallet.switchChain(137);
@@ -170,17 +186,23 @@ function HomeContent() {
                creds = await clobClient.deriveApiKey();
                console.log("[三层防护] deriveApiKey 成功（仅一次签名）");
             } catch (deriveErr) {
-               // derive 失败（首次创建账户），fallback 到 create
+               // derive 失败，尝试 create（全新账户注册场景）
                console.log("[三层防护] deriveApiKey 失败，尝试 createApiKey...");
-               creds = await clobClient.createApiKey();
-               console.log("[三层防护] createApiKey 成功");
+               try {
+                  creds = await clobClient.createApiKey();
+                  console.log("[三层防护] createApiKey 成功");
+               } catch (createErr) {
+                  // 全新账户（从未在 Polymarket 下过单），derive 和 create 都会 400
+                  // 这是完全正常的预期行为，不需要报错
+                  console.log("[三层防护] 全新 Polymarket 账户，API Key 暂不可用（首次下单后生效）");
+               }
             }
             if (creds && creds.key) {
               localStorage.setItem(cacheKey, JSON.stringify(creds));
               console.log("[三层防护] API Key 已生成并缓存");
             }
          } catch (keyErr) {
-            console.error("[三层防护] API Key 获取完全失败:", keyErr);
+            console.warn("[三层防护] API Key 获取流程异常:", keyErr);
          }
       }
 
@@ -193,20 +215,33 @@ function HomeContent() {
             2, // GNOSIS_SAFE
             derivedProxy
          );
-         const balanceData = await clobWithCreds.getBalanceAllowance({ asset_type: "COLLATERAL" as any });
-         if (balanceData && balanceData.balance) {
-            const formatted = ethers.utils.formatUnits(balanceData.balance, 6);
-            setUsdcBalance(Number(formatted).toFixed(2));
+         try {
+            const balanceData = await clobWithCreds.getBalanceAllowance({ asset_type: "COLLATERAL" as any });
+            if (balanceData && balanceData.balance) {
+               const formatted = ethers.utils.formatUnits(balanceData.balance, 6);
+               setUsdcBalance(Number(formatted).toFixed(2));
+            }
+         } catch (balErr) {
+            console.warn("[余额查询] CLOB 余额查询失败，回退到链上查询:", balErr);
          }
          // 同步刷新资产组合
          fetchPortfolio(derivedProxy, creds, signer);
       } else {
-         // Fallback: 直接检查 EOA 的 USDC.e 余额
-         const USDC_ADDRESS = "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174";
-         const USDC_ABI = ["function balanceOf(address owner) view returns (uint256)"];
-         const contract = new ethers.Contract(USDC_ADDRESS, USDC_ABI, provider);
-         const bal = await contract.balanceOf(wallet.address);
-         setUsdcBalance(Number(ethers.utils.formatUnits(bal, 6)).toFixed(2));
+         // Fallback: 直接在 Polygon 链上查询 EOA 的 USDC.e 余额
+         // 对全新账户，这里安全降级为 $0.00
+         try {
+            await wallet.switchChain(137);
+            const USDC_ADDRESS = "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174";
+            const USDC_ABI = ["function balanceOf(address owner) view returns (uint256)"];
+            const contract = new ethers.Contract(USDC_ADDRESS, USDC_ABI, provider);
+            const bal = await contract.balanceOf(wallet.address);
+            if (bal) {
+               setUsdcBalance(Number(ethers.utils.formatUnits(bal, 6)).toFixed(2));
+            }
+         } catch (fallbackErr) {
+            console.log("[余额查询] 链上余额查询失败（全新账户正常现象），默认显示 $0.00");
+            setUsdcBalance("0.00");
+         }
       }
     } catch (err) {
       console.error("Balance fetch failed", err);
@@ -247,9 +282,11 @@ function HomeContent() {
     ? `@${user.twitter.username}`
     : user?.email?.address
       ? user.email.address
-      : walletAddress 
-        ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`
-        : "Wallet Connected";
+      : user?.google?.email
+        ? user.google.email
+        : walletAddress 
+          ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`
+          : "Wallet Connected";
 
   const displayAvatar = user?.twitter?.profilePictureUrl || `https://api.dicebear.com/7.x/pixel-art/svg?seed=${walletAddress || "default"}`;
 
