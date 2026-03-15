@@ -90,9 +90,15 @@ export default function ChallengeCard({
                  min="1" 
                  value={amount} 
                  onChange={(e) => {
-                   let val = e.target.value.replace(/^0+/, ""); 
-                   if (val === "" || Number(val) < 1) val = "1";
+                   let val = e.target.value;
+                   if (val !== "") {
+                     val = val.replace(/^0+/, "");
+                     if (val === "" && e.target.value !== "") val = "0";
+                   }
                    setAmount(val);
+                 }}
+                 onBlur={() => {
+                   if (!amount || Number(amount) < 1) setAmount("1");
                  }} 
                  className="w-full bg-zinc-950/80 border border-zinc-800 rounded-xl p-3 pl-10 text-white focus:ring-2 focus:ring-blue-500 transition-all font-bold" 
               />
