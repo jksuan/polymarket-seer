@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { ethers } from "ethers";
 import { ClobClient } from "@polymarket/clob-client";
 import { RelayClient, RelayerTxType } from "@polymarket/builder-relayer-client";
@@ -20,7 +20,7 @@ import {
   SIGNATURE_TYPE_GNOSIS_SAFE,
   ZERO_PARENT_COLLECTION_ID,
 } from "@/lib/constants";
-import { getCachedCreds } from "@/lib/utils";
+import { getCachedCreds, setCachedCreds } from "@/lib/utils";
 
 export type TxStep = "idle" | "preparing" | "deploying" | "approving" | "placing" | "success" | "error";
 
@@ -95,6 +95,13 @@ export function useTrading(
     }
   }, [wallets]);
 
+  // Auto-fetch portfolio when authenticated and proxy is ready
+  useEffect(() => {
+    if (authenticated && proxyAddress && walletAddress) {
+      fetchPortfolio(proxyAddress, walletAddress);
+    }
+  }, [authenticated, proxyAddress, walletAddress, fetchPortfolio]);
+
   // --- 逻辑：执行领奖 (Redeem) ---
   const handleRedeem = async (pos: any) => {
     if (!pos || !proxyAddress) return;
@@ -162,9 +169,21 @@ export function useTrading(
       const provider = new ethers.providers.Web3Provider(ethereumProvider as any);
       const signer = provider.getSigner();
 
-      const cachedBody = getCachedCreds(wallet.address);
-      if (!cachedBody) throw new Error("API 凭据丢失，请刷新页面重新签名");
-      const creds = cachedBody;
+      let creds = getCachedCreds(wallet.address);
+      if (!creds) {
+         setTxMessage("初次交易，正在自动为您生成交易凭据...");
+         const clobClient = new ClobClient(CLOB_API_URL, POLYGON_CHAIN_ID, signer as any);
+         try {
+            creds = await clobClient.deriveApiKey();
+         } catch(e) {
+            creds = await clobClient.createApiKey();
+         }
+         if (creds && creds.key) {
+            setCachedCreds(wallet.address, creds);
+         } else {
+            throw new Error("API 凭据初始化失败");
+         }
+      }
       const derivedProxy = proxyAddress; // Fallback to derive proxy skipped since AuthHook derives it guaranteed
 
       // --- Step 1: Pre-flight Check (Balance) ---
