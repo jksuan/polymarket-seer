@@ -5,11 +5,13 @@ import { ethers } from "ethers";
 import { ClobClient } from "@polymarket/clob-client";
 import { RelayClient, RelayerTxType } from "@polymarket/builder-relayer-client";
 import { BuilderConfig } from "@polymarket/builder-relayer-client/node_modules/@polymarket/builder-signing-sdk";
+import { deriveSafe } from "@polymarket/builder-relayer-client/dist/builder/derive";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
 
 import {
   POLYGON_CHAIN_ID,
   CLOB_API_URL,
+  SAFE_FACTORY_POLYGON,
   DATA_API_URL,
   RELAYER_URL,
   ADDRESSES,
@@ -176,15 +178,28 @@ export function useTrading(
          try {
             creds = await clobClient.deriveApiKey();
          } catch(e) {
-            creds = await clobClient.createApiKey();
+            try {
+               creds = await clobClient.createApiKey();
+            } catch(err) {
+               console.warn("createApiKey failed:", err);
+            }
          }
          if (creds && creds.key) {
             setCachedCreds(wallet.address, creds);
          } else {
-            throw new Error("API 凭据初始化失败");
+            // 如果生成失败，可能是因为没激活且余额为 0（Polymarket 拒绝未入金的新地址）。
+            // 在此拦截，假装是余额不足，从而让页面弹起充值引导层。
+            const derivedProxy = proxyAddress || deriveSafe(wallet.address, SAFE_FACTORY_POLYGON);
+            const contract = new ethers.Contract(ADDRESSES.USDCe, ERC20_ABI, provider);
+            const onchainBalWei = await contract.balanceOf(derivedProxy);
+            const onchainBal = Number(ethers.utils.formatUnits(onchainBalWei, USDC_DECIMALS));
+            if (onchainBal < Number(amount)) {
+                throw new Error(`余额不足: 当前金库含 $${onchainBal.toFixed(2)} USDC.e，但下注需要 $${Number(amount).toFixed(2)} USDC.e`);
+            }
+            throw new Error("API 凭据初始化失败，请在 Polygon 链准备少量资产后重试");
          }
       }
-      const derivedProxy = proxyAddress; // Fallback to derive proxy skipped since AuthHook derives it guaranteed
+      const derivedProxy = proxyAddress || deriveSafe(wallet.address, SAFE_FACTORY_POLYGON);
 
       // --- Step 1: Pre-flight Check (Balance) ---
       setTxMessage("正在检查金库余额...");
