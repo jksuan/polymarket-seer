@@ -34,7 +34,8 @@ function HomeContent() {
     fetchBalance, 
     setWalletAddress,
     setProxyAddress,
-    setUsdcBalance
+    setUsdcBalance,
+    hasCreds
   } = usePolymarketAuth();
 
   // 2. 初始化 Trading Hook
@@ -42,7 +43,7 @@ function HomeContent() {
     txStep, txMessage, txOrderId, txError, setTxStep,
     positions, openOrders, trades, portfolioLoading,
     handlePlaceRealBet, handleRedeem, fetchPortfolio, setPositions, setOpenOrders, setTrades
-  } = useTrading(walletAddress, proxyAddress, () => fetchBalance(false));
+  } = useTrading(walletAddress, proxyAddress, hasCreds, () => fetchBalance(false));
 
   const handleCopy = (text: string) => {
     copyToClipboard(text);

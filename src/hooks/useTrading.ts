@@ -29,6 +29,7 @@ export type TxStep = "idle" | "preparing" | "deploying" | "approving" | "placing
 export function useTrading(
   walletAddress: string,
   proxyAddress: string | null,
+  hasCreds: boolean,
   fetchBalance: () => void
 ) {
   const { authenticated, login } = usePrivy();
@@ -99,10 +100,10 @@ export function useTrading(
 
   // Auto-fetch portfolio when authenticated and proxy is ready
   useEffect(() => {
-    if (authenticated && proxyAddress && walletAddress) {
+    if (authenticated && proxyAddress && walletAddress && hasCreds) {
       fetchPortfolio(proxyAddress, walletAddress);
     }
-  }, [authenticated, proxyAddress, walletAddress, fetchPortfolio]);
+  }, [authenticated, proxyAddress, walletAddress, hasCreds, fetchPortfolio]);
 
   // --- 逻辑：执行领奖 (Redeem) ---
   const handleRedeem = async (pos: any) => {

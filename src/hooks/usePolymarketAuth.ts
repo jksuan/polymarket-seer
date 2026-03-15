@@ -27,6 +27,7 @@ export function usePolymarketAuth() {
   const [proxyAddress, setProxyAddress] = useState<string | null>(null);
   const [usdcBalance, setUsdcBalance] = useState("0.00");
   const [isRefreshingBalance, setIsRefreshingBalance] = useState(false);
+  const [hasCreds, setHasCreds] = useState(false);
 
   // --- 三层防护：防止签名竞态 ---
   const isFetchingBalanceRef = useRef(false);
@@ -105,11 +106,14 @@ export function usePolymarketAuth() {
             }
             if (creds && creds.key) {
               setCachedCreds(wallet.address, creds);
+              setHasCreds(true);
               console.log("[三层防护] API Key 已生成并缓存");
             }
          } catch (keyErr) {
             console.warn("[三层防护] API Key 获取流程异常:", keyErr);
          }
+      } else if (creds) {
+         setHasCreds(true);
       }
 
       if (creds) {
@@ -201,6 +205,7 @@ export function usePolymarketAuth() {
     isRefreshingBalance,
     fetchBalance,
     displayIdentifier,
-    displayAvatar
+    displayAvatar,
+    hasCreds
   };
 }
