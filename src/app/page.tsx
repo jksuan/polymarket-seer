@@ -23,6 +23,8 @@ import {
   formatRelativeTime, copyToClipboard, clearCredsCache,
   getCachedCreds, setCachedCreds, shortenAddress,
 } from "@/lib/utils";
+import Portfolio from "@/components/Portfolio";
+import TxOverlay from "@/components/TxOverlay";
 
 function HomeContent() {
   const searchParams = useSearchParams();
@@ -76,8 +78,6 @@ function HomeContent() {
   const [openOrders, setOpenOrders] = useState<any[]>([]);
   const [trades, setTrades] = useState<any[]>([]);
   const [portfolioLoading, setPortfolioLoading] = useState(false);
-  const [portfolioTab, setPortfolioTab] = useState<"positions" | "orders" | "history">("positions");
-  const [expandedPosition, setExpandedPosition] = useState<string | null>(null);
 
   // --- 三层防护：防止签名竞态 ---
   const isFetchingBalanceRef = useRef(false);       // 锁层：fetchBalance 是否正在执行
@@ -710,206 +710,13 @@ function HomeContent() {
 
         {/* ========== Portfolio 资产组合面板 ========== */}
         {authenticated && (
-          <div className="space-y-4 pt-4 border-t border-zinc-900">
-            <div className="flex items-center justify-between px-1">
-              <h2 className="text-lg font-black flex items-center gap-2">
-                <Briefcase size={20} className="text-blue-500" />
-                我的资产组合
-              </h2>
-              {portfolioLoading && <Loader2 size={16} className="animate-spin text-zinc-500" />}
-            </div>
-
-            {/* 选项卡切换 */}
-            <div className="flex bg-zinc-900/50 p-1 rounded-xl border border-zinc-800/50">
-              <button onClick={() => setPortfolioTab("positions")} className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${portfolioTab === 'positions' ? 'bg-zinc-800 text-white shadow-lg' : 'text-zinc-500 hover:text-zinc-300'}`}>
-                <Wallet size={14} /> 持仓 ({positions.length})
-              </button>
-              <button onClick={() => setPortfolioTab("orders")} className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${portfolioTab === 'orders' ? 'bg-zinc-800 text-white shadow-lg' : 'text-zinc-500 hover:text-zinc-300'}`}>
-                <ClipboardList size={14} /> 挂单 ({openOrders.length})
-              </button>
-              <button onClick={() => setPortfolioTab("history")} className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${portfolioTab === 'history' ? 'bg-zinc-800 text-white shadow-lg' : 'text-zinc-500 hover:text-zinc-300'}`}>
-                <History size={14} /> 历史
-              </button>
-            </div>
-
-            {/* 列表内容 */}
-            <div className="min-h-[200px] space-y-3 pb-8">
-              {portfolioTab === "positions" && (
-                <>
-                  {positions.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-12 text-zinc-600 gap-2 border border-dashed border-zinc-800 rounded-3xl bg-zinc-900/20">
-                      <CircleSlash size={24} />
-                      <p className="text-xs font-medium">暂无活跃持仓</p>
-                    </div>
-                  ) : (
-                    positions.map((pos, idx) => (
-                      <div key={idx} className="bg-zinc-900/80 border border-zinc-800/80 rounded-2xl overflow-hidden transition-all hover:border-zinc-700 shadow-xl">
-                        <div className="p-4 space-y-3">
-                          {/* 第一行：图标 + 标题 + 方向标签 */}
-                          <div className="flex items-start gap-3">
-                            {pos.icon ? (
-                              <img src={pos.icon} className="w-9 h-9 rounded-lg object-cover flex-shrink-0 bg-zinc-800" />
-                            ) : (
-                              <div className="w-9 h-9 rounded-lg bg-zinc-800 flex items-center justify-center flex-shrink-0">
-                                <Wallet size={16} className="text-zinc-600" />
-                              </div>
-                            )}
-                            <div className="flex-1 min-w-0">
-                              <h4 className="text-[11px] font-bold text-zinc-300 line-clamp-2 leading-snug">{pos.title || pos.question || pos.marketName || "未知预测市场"}</h4>
-                              <div className="flex items-center gap-2 mt-1">
-                                <span className={`px-1.5 py-0.5 rounded text-[9px] font-black ${pos.outcome === 'Yes' ? 'bg-green-500/20 text-green-400 border border-green-500/30' : 'bg-red-500/20 text-red-400 border border-red-500/30'}`}>
-                                  {pos.outcome} {(Number(pos.avgPrice || 0) * 100).toFixed(1)}¢
-                                </span>
-                                <span className="text-[10px] font-mono text-zinc-500">{Number(pos.size).toFixed(1)} 份额</span>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* 第二行：均价 / 当前价 / 价值 */}
-                          <div className="flex items-center justify-between text-[10px] bg-zinc-950/50 rounded-xl px-3 py-2">
-                            <div className="text-center">
-                              <div className="text-zinc-600 font-bold">均价</div>
-                              <div className="text-zinc-300 font-black">{(Number(pos.avgPrice || 0) * 100).toFixed(1)}¢</div>
-                            </div>
-                            <div className="text-center">
-                              <div className="text-zinc-600 font-bold">当前</div>
-                              <div className="text-zinc-300 font-black">{(Number(pos.curPrice || 0) * 100).toFixed(1)}¢</div>
-                            </div>
-                            <div className="text-center">
-                              <div className="text-zinc-600 font-bold">价值</div>
-                              <div className="text-white font-black">${Number(pos.currentValue || 0).toFixed(2)}</div>
-                            </div>
-                            <div className="text-center">
-                              <div className="text-zinc-600 font-bold">盈亏</div>
-                              <div className={`font-black ${Number(pos.cashPnl || 0) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                                {Number(pos.cashPnl || 0) >= 0 ? '+' : ''}${Number(pos.cashPnl || 0).toFixed(2)}
-                                <span className="ml-0.5">({Number(pos.percentPnl || 0).toFixed(1)}%)</span>
-                              </div>
-                            </div>
-                          </div>
-                          
-                          {/* 可领奖按钮 */}
-                          {pos.redeemable && (
-                            <button 
-                              onClick={() => handleRedeem(pos)} 
-                              className="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white text-[11px] font-black py-2.5 rounded-xl transition-all active:scale-95 flex items-center justify-center gap-1.5 shadow-lg shadow-blue-900/40"
-                            >
-                              <HandCoins size={14} strokeWidth={2.5} /> 立即领奖 (Redeem)
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </>
-              )}
-
-              {portfolioTab === "orders" && (
-                <div className="space-y-2">
-                  {openOrders.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-12 text-zinc-600 gap-2 border border-dashed border-zinc-800 rounded-3xl bg-zinc-900/20">
-                      <ClipboardList size={24} />
-                      <p className="text-xs font-medium">暂无进行中的挂单</p>
-                    </div>
-                  ) : (
-                    openOrders.map((order, i) => (
-                      <div key={i} className="flex items-center justify-between p-4 bg-zinc-900/80 border border-zinc-800 rounded-2xl shadow-lg">
-                        <div className="text-left space-y-0.5">
-                          <div className={`text-[10px] font-black uppercase tracking-wider ${order.side === 'BUY' ? 'text-green-400' : 'text-red-400'}`}>{order.side} 限价单</div>
-                          <div className="text-xs font-bold text-white">价格: ${order.price} • 数量: {order.size}</div>
-                        </div>
-                        <div className="px-2.5 py-1 rounded-full bg-zinc-800/80 text-[9px] font-black text-zinc-500 uppercase">待撮合</div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              )}
-
-              {portfolioTab === "history" && (
-                <div className="space-y-3">
-                  {trades.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-12 text-zinc-600 gap-2 border border-dashed border-zinc-800 rounded-3xl bg-zinc-900/20">
-                      <History size={24} />
-                      <p className="text-xs font-medium">暂无成交记录</p>
-                    </div>
-                  ) : (
-                    trades.slice(0, 20).map((item, i) => {
-                      const isTrade = item.type === 'TRADE';
-                      const isBuy = isTrade && item.side === 'BUY';
-                      const isSell = isTrade && item.side === 'SELL';
-                      const isRedeem = item.type === 'REDEEM';
-                      const isReward = item.type === 'REWARD';
-                      
-                      let typeLabel = "交易";
-                      let typeIcon = <History size={14} />;
-                      let colorClass = "text-zinc-400 bg-zinc-400/10 border-zinc-400/20";
-                      
-                      if (isBuy) {
-                        typeLabel = "已买入";
-                        typeIcon = <Plus size={14} />;
-                        colorClass = "text-blue-400 bg-blue-400/10 border-blue-400/20";
-                      } else if (isSell) {
-                        typeLabel = "已卖出";
-                        typeIcon = <TrendingUp size={14} className="rotate-180" />;
-                        colorClass = "text-orange-400 bg-orange-400/10 border-orange-400/20";
-                      } else if (isRedeem) {
-                        typeLabel = "领奖";
-                        typeIcon = <CheckCircle2 size={14} />;
-                        colorClass = "text-green-400 bg-green-400/10 border-green-400/20";
-                      } else if (isReward) {
-                        typeLabel = "奖励";
-                        typeIcon = <HandCoins size={14} />;
-                        colorClass = "text-purple-400 bg-purple-400/10 border-purple-400/20";
-                      }
-
-                      return (
-                        <div key={i} className="bg-zinc-900/40 border border-zinc-800/40 rounded-2xl p-3 hover:bg-zinc-900/60 transition-all flex flex-col gap-3">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-[10px] font-black uppercase tracking-tight ${colorClass}`}>
-                                {typeIcon}
-                                {typeLabel}
-                              </div>
-                              <span className="text-[10px] text-zinc-600 font-bold">{formatRelativeTime(item.timestamp)}</span>
-                            </div>
-                            <div className={`text-xs font-black ${isBuy ? 'text-zinc-400' : 'text-green-500'}`}>
-                              {isBuy ? '-' : '+'}${Number(item.usdcSize || (Number(item.size) * Number(item.price)) || 0).toFixed(2)}
-                            </div>
-                          </div>
-                          
-                          <div className="flex items-start gap-3">
-                            {item.icon ? (
-                              <img src={item.icon} className="w-8 h-8 rounded-lg object-cover flex-shrink-0 bg-zinc-800" />
-                            ) : (
-                              <div className="w-8 h-8 rounded-lg bg-zinc-800 flex items-center justify-center flex-shrink-0">
-                                {isReward ? <HandCoins size={16} className="text-purple-400" /> : <CircleSlash size={16} className="text-zinc-600" />}
-                              </div>
-                            )}
-                            <div className="flex-1 min-w-0">
-                              <h5 className="text-[11px] font-bold text-zinc-300 line-clamp-2 leading-snug">
-                                {item.title || (isReward ? "周期奖励已发放" : "平台活动记录")}
-                              </h5>
-                              <div className="flex items-center gap-2 mt-1">
-                                {item.outcome && (
-                                  <span className={`text-[9px] font-black ${item.outcome === 'Yes' ? 'text-green-500' : 'text-red-500'}`}>
-                                    {item.outcome} {(Number(item.price || 0) * 100).toFixed(1)}¢
-                                  </span>
-                                )}
-                                <span className="text-[9px] text-zinc-500 font-bold">{item.size > 0 ? `${Number(item.size).toFixed(2)} 份额` : ''}</span>
-                              </div>
-                            </div>
-                            <a href={`https://polygonscan.com/tx/${item.transactionHash}`} target="_blank" className="text-zinc-700 hover:text-zinc-400 p-1">
-                               <ExternalLink size={12} />
-                            </a>
-                          </div>
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
+          <Portfolio 
+            positions={positions}
+            openOrders={openOrders}
+            trades={trades}
+            portfolioLoading={portfolioLoading}
+            onRedeem={handleRedeem}
+          />
         )}
       </div>
 
@@ -917,143 +724,16 @@ function HomeContent() {
       <div className="absolute opacity-0 pointer-events-none -z-50"><div ref={twitterCardRef} className="w-[1200px] h-[630px] bg-black">...</div></div>
 
       {/* ========== Transaction Progress Overlay ========== */}
-      {txStep !== "idle" && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-md">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-8 max-w-sm w-full mx-4 shadow-2xl shadow-black/80 flex flex-col items-center gap-5 text-center">
-            
-            {/* Spinner / Success / Error Icon */}
-            {(txStep === "preparing" || txStep === "deploying" || txStep === "approving" || txStep === "placing") && (
-              <div className="relative">
-                <div className="w-20 h-20 rounded-full border-4 border-zinc-800 border-t-blue-500 animate-spin" />
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-3 h-3 rounded-full bg-blue-500 animate-pulse" />
-                </div>
-              </div>
-            )}
-            {txStep === "success" && (
-              <div className="w-20 h-20 rounded-full bg-green-500/20 border-2 border-green-500 flex items-center justify-center animate-[scaleIn_0.3s_ease-out]">
-                <CheckCircle2 size={40} className="text-green-500" />
-              </div>
-            )}
-            {txStep === "error" && (
-              <div className="w-20 h-20 rounded-full bg-red-500/20 border-2 border-red-500 flex items-center justify-center animate-[scaleIn_0.3s_ease-out]">
-                <XCircle size={40} className="text-red-500" />
-              </div>
-            )}
-
-            {/* Step Indicators */}
-            {txStep !== "success" && txStep !== "error" && (
-              <div className="flex items-center gap-2 w-full justify-center">
-                {["preparing", "deploying", "approving", "placing"].map((step, i) => {
-                  const steps: TxStep[] = ["preparing", "deploying", "approving", "placing"];
-                  const currentIdx = steps.indexOf(txStep as any);
-                  const stepIdx = i;
-                  const isActive = stepIdx === currentIdx;
-                  const isDone = stepIdx < currentIdx;
-                  return (
-                    <div key={step} className="flex items-center gap-2">
-                      <div className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${
-                        isDone ? "bg-green-500" : isActive ? "bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.6)]" : "bg-zinc-700"
-                      }`} />
-                      {i < 3 && <div className={`w-6 h-0.5 transition-all duration-300 ${isDone ? "bg-green-500" : "bg-zinc-800"}`} />}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* Step Label */}
-            <div>
-              {txStep === "preparing" && <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest">准备中</p>}
-              {txStep === "deploying" && <p className="text-blue-400 text-xs font-bold uppercase tracking-widest">部署金库</p>}
-              {txStep === "approving" && <p className="text-purple-400 text-xs font-bold uppercase tracking-widest">代币授权</p>}
-              {txStep === "placing" && <p className="text-green-400 text-xs font-bold uppercase tracking-widest">提交订单</p>}
-              {txStep === "success" && <p className="text-green-400 text-sm font-black uppercase tracking-widest">交易成功</p>}
-              {txStep === "error" && <p className="text-red-400 text-sm font-black uppercase tracking-widest">交易失败</p>}
-            </div>
-
-            {/* Dynamic Message */}
-            <p className="text-white text-sm font-medium leading-relaxed">{txMessage}</p>
-
-            {/* ERROR STATE: Insufficient Balance specific view (Deposit View) */}
-            {txStep === "error" && txError && txError.includes("余额不足") && proxyAddress && (
-              <div className="w-full flex flex-col items-center gap-4 mt-2 mb-2">
-                <div className="bg-white p-2 rounded-xl">
-                  <QRCodeSVG value={proxyAddress} size={120} />
-                </div>
-                <div className="bg-zinc-950/80 border border-zinc-800 rounded-xl p-3 w-full space-y-2">
-                   <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest text-left">您的专属金库地址 (Polygon)</p>
-                   <div className="flex items-center justify-between gap-2">
-                      <span className="text-xs font-mono text-zinc-300 truncate w-full">{proxyAddress}</span>
-                      <button onClick={() => handleCopy(proxyAddress)} className="text-blue-400 hover:text-blue-300 p-1 flex-shrink-0">
-                        {copied ? <Check size={14} className="text-green-400" /> : <Copy size={14} />}
-                      </button>
-                   </div>
-                </div>
-                <p className="text-xs text-orange-400 font-bold bg-orange-400/10 border border-orange-400/20 px-3 py-2 rounded-lg text-left w-full">
-                  ⚠️ 提示：请通过 Polygon 网络向此地址转入至少 <b>${amount} USDC.e</b>。到账后点击下方重试。
-                </p>
-              </div>
-            )}
-
-            {/* Order ID on success */}
-            {txStep === "success" && txOrderId && (
-              <div className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-3">
-                <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-1">订单 ID</p>
-                <p className="text-xs font-mono text-zinc-300 break-all">{txOrderId}</p>
-              </div>
-            )}
-
-            {/* Error detail (Generic) */}
-            {txStep === "error" && txError && !(txError.includes("余额不足") && proxyAddress) && (
-              <div className="w-full bg-red-500/5 border border-red-500/20 rounded-xl p-3 max-h-24 overflow-y-auto">
-                <p className="text-xs text-red-300/80 font-mono break-all">{txError}</p>
-              </div>
-            )}
-
-            {/* Action Buttons */}
-            {(txStep === "success" || txStep === "error") && (
-              <div className="flex gap-3 w-full mt-2">
-                {(!txError?.includes("余额不足") || !proxyAddress) && (
-                  <button
-                    onClick={closeTxOverlay}
-                    className={`flex-1 py-3 rounded-xl font-bold text-sm transition-all active:scale-95 ${
-                      txStep === "success"
-                        ? "bg-green-500 hover:bg-green-400 text-black"
-                        : "bg-zinc-800 hover:bg-zinc-700 text-white"
-                    }`}
-                  >
-                    {txStep === "success" ? "完成" : "关闭"}
-                  </button>
-                )}
-                
-                {txStep === "error" && (
-                  <button
-                    onClick={() => { closeTxOverlay(); handlePlaceRealBet(); }}
-                    className="flex-1 py-3 rounded-xl font-bold text-sm bg-blue-600 hover:bg-blue-500 text-white transition-all active:scale-95"
-                  >
-                     {txError?.includes("余额不足") ? "已充值，继续下注" : "重试"}
-                  </button>
-                )}
-                
-                {/* 如果是余额不足，额外给一个取消按钮 */}
-                {txStep === "error" && txError?.includes("余额不足") && proxyAddress && (
-                   <button onClick={closeTxOverlay} className="py-3 px-4 rounded-xl font-bold text-sm bg-zinc-800 hover:bg-zinc-700 text-white transition-all active:scale-95 text-xs">
-                     稍后
-                   </button>
-                )}
-              </div>
-            )}
-
-            {/* Subtle hint during processing */}
-            {txStep !== "success" && txStep !== "error" && (
-              <p className="text-amber-400/90 text-[10px] mt-2 font-medium animate-pulse px-4 py-1.5 bg-amber-400/5 rounded-full border border-amber-400/10">
-                ⚠️ 请勿关闭页面，交易正在链上处理中...
-              </p>
-            )}
-          </div>
-        </div>
-      )}
+      <TxOverlay
+        txStep={txStep}
+        txMessage={txMessage}
+        txOrderId={txOrderId}
+        txError={txError}
+        proxyAddress={proxyAddress}
+        amount={amount}
+        onClose={closeTxOverlay}
+        onRetry={handlePlaceRealBet}
+      />
     </main>
   );
 }
