@@ -82,6 +82,7 @@ function HomeContent() {
   // --- 三层防护：防止签名竞态 ---
   const isFetchingBalanceRef = useRef(false);       // 锁层：fetchBalance 是否正在执行
   const fetchBalanceTimerRef = useRef<NodeJS.Timeout | null>(null); // 防抖定时器
+  const hasTriedDeriveCredsRef = useRef(false);     // 新增：防止反复弹窗
 
   // --- 逻辑：获取资产组合数据 ---
   const fetchPortfolio = async (proxyAddr: string, creds: any, signer: any) => {
@@ -172,7 +173,8 @@ function HomeContent() {
          creds = getCachedCreds(wallet.address);
       }
 
-      if (!creds) {
+      if (!creds && !hasTriedDeriveCredsRef.current) {
+         hasTriedDeriveCredsRef.current = true;
          // 确认此刻仍然没有缓存，才发起签名请求
          // 关键优化：先 derive 再 create（仅需一次签名）
          console.log("[三层防护] 缓存中无 API Key，尝试衍生...");
