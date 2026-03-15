@@ -5,6 +5,7 @@ import { ethers } from "ethers";
 import { ClobClient } from "@polymarket/clob-client";
 import { RelayClient, RelayerTxType } from "@polymarket/builder-relayer-client";
 import { BuilderConfig } from "@polymarket/builder-relayer-client/node_modules/@polymarket/builder-signing-sdk";
+import { usePrivy, useWallets } from "@privy-io/react-auth";
 
 import {
   POLYGON_CHAIN_ID,
@@ -24,12 +25,13 @@ import { getCachedCreds } from "@/lib/utils";
 export type TxStep = "idle" | "preparing" | "deploying" | "approving" | "placing" | "success" | "error";
 
 export function useTrading(
-  authenticated: boolean, 
-  wallets: any[], 
-  login: () => void, 
-  proxyAddress: string | null, 
+  walletAddress: string, 
+  proxyAddress: string | null,
   fetchBalance: () => void
 ) {
+  const { authenticated, login } = usePrivy();
+  const { wallets } = useWallets();
+
   // --- Transaction Progress Overlay States ---
   const [txStep, setTxStep] = useState<TxStep>("idle");
   const [txMessage, setTxMessage] = useState("");
@@ -94,7 +96,7 @@ export function useTrading(
   }, [wallets]);
 
   // --- 逻辑：执行领奖 (Redeem) ---
-  const handleRedeem = async (pos: any, userWalletAddress: string) => {
+  const handleRedeem = async (pos: any) => {
     if (!pos || !proxyAddress) return;
     
     setTxStep("preparing");
@@ -102,7 +104,7 @@ export function useTrading(
     setTxError(null);
 
     try {
-      const wallet = wallets.find(w => w.address.toLowerCase() === userWalletAddress?.toLowerCase()) || wallets[0];
+      const wallet = wallets.find(w => w.address.toLowerCase() === walletAddress?.toLowerCase()) || wallets[0];
       const ethereumProvider = await wallet.getEthereumProvider();
       const provider = new ethers.providers.Web3Provider(ethereumProvider as any);
       const signer = provider.getSigner();
@@ -138,7 +140,7 @@ export function useTrading(
     }
   };
 
-  const handlePlaceRealBet = async (amount: string, userWalletAddress: string) => {
+  const handlePlaceRealBet = async (amount: string) => {
     if (!authenticated || !wallets || wallets.length === 0) { login(); return; }
 
     setTxStep("preparing");
@@ -148,7 +150,7 @@ export function useTrading(
 
     try {
       // --- Step 0: Wallet preparation ---
-      let wallet = wallets.find(w => w.address.toLowerCase() === userWalletAddress?.toLowerCase())
+      let wallet = wallets.find(w => w.address.toLowerCase() === walletAddress?.toLowerCase())
                    || wallets.find(w => w.walletClientType === 'privy')
                    || wallets[0];
       if (!wallet) throw new Error("未找到已连接钱包");

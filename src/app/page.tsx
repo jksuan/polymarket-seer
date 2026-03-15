@@ -32,15 +32,17 @@ function HomeContent() {
     usdcBalance, 
     isRefreshingBalance, 
     fetchBalance, 
-    clearAuthState
-  } = usePolymarketAuth(authenticated);
+    setWalletAddress,
+    setProxyAddress,
+    setUsdcBalance
+  } = usePolymarketAuth();
 
   // 2. 初始化 Trading Hook
   const {
     txStep, txMessage, txOrderId, txError, setTxStep,
     positions, openOrders, trades, portfolioLoading,
     handlePlaceRealBet, handleRedeem, fetchPortfolio, setPositions, setOpenOrders, setTrades
-  } = useTrading(walletAddress, proxyAddress, user, amount, fetchBalance);
+  } = useTrading(walletAddress, proxyAddress, () => fetchBalance(false));
 
   const handleCopy = (text: string) => {
     copyToClipboard(text);
@@ -83,7 +85,9 @@ function HomeContent() {
         onCopyCopy={handleCopy}
         onClearState={() => {
            clearCredsCache();
-           clearAuthState();
+           setWalletAddress("");
+           setProxyAddress(null);
+           setUsdcBalance("0.00");
            setPositions([]);
            setOpenOrders([]);
            setTrades([]);
@@ -99,7 +103,7 @@ function HomeContent() {
           username={username}
           setUsername={setUsername}
           authenticated={authenticated}
-          onPlaceBet={handlePlaceRealBet}
+          onPlaceBet={() => handlePlaceRealBet(amount)}
           isGeneratingTx={txStep !== "idle"}
         />
 
@@ -123,7 +127,7 @@ function HomeContent() {
         proxyAddress={proxyAddress!}
         amount={amount}
         onClose={closeTxOverlay}
-        onRetry={handlePlaceRealBet}
+        onRetry={() => handlePlaceRealBet(amount)}
       />
     </main>
   );
