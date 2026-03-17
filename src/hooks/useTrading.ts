@@ -150,7 +150,7 @@ export function useTrading(
     }
   };
 
-  const handlePlaceRealBet = async (amount: string) => {
+  const handlePlaceRealBet = async (amount: string, customTokenId?: string) => {
     if (!authenticated || !wallets || wallets.length === 0) { login(); return; }
 
     setTxStep("preparing");
@@ -232,10 +232,13 @@ export function useTrading(
         }
       }
 
-      setTxMessage("正在获取活跃市场数据...");
-      const activeMarkets = await clobClientWithCreds.getSamplingSimplifiedMarkets();
-      const liveTokenId = activeMarkets.data[0]?.tokens[0]?.token_id;
-      if (!liveTokenId) throw new Error("未获取到活跃交易对，请稍后重试");
+      setTxMessage(customTokenId ? "已关联目标市场..." : "正在获取活跃市场数据...");
+      let finalTokenId = customTokenId;
+      if (!finalTokenId) {
+        const activeMarkets = await clobClientWithCreds.getSamplingSimplifiedMarkets();
+        finalTokenId = activeMarkets.data[0]?.tokens[0]?.token_id;
+      }
+      if (!finalTokenId) throw new Error("未获取到交易对，请重试");
 
       // --- Step 2: Deploy Safe Wallet ---
       setTxStep("deploying");
@@ -286,8 +289,10 @@ export function useTrading(
       // --- Step 3: Place Market Order ---
       setTxStep("placing");
       setTxMessage("正在向 Polymarket 提交市价买入订单...");
+      const parsedAmount = Number(amount);
+      if (isNaN(parsedAmount) || parsedAmount <= 0) throw new Error("下注金额无效");
       const resp = await clobClientWithCreds.createAndPostMarketOrder({
-        tokenID: liveTokenId, amount: 1.00, side: "BUY" as any
+        tokenID: finalTokenId, amount: parsedAmount, side: "BUY" as any
       });
 
       if (resp && resp.success) {

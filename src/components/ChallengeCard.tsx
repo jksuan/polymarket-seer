@@ -4,6 +4,8 @@ import { Swords, Download, HandCoins, Twitter, TrendingUp } from "lucide-react";
 import { nanoid } from "nanoid";
 import { QRCodeSVG } from "qrcode.react";
 
+import MarketSearch, { MarketDef } from "./MarketSearch";
+
 interface ChallengeCardProps {
   topic: string;
   setTopic: (t: string) => void;
@@ -12,7 +14,7 @@ interface ChallengeCardProps {
   username: string;
   setUsername: (u: string) => void;
   authenticated: boolean;
-  onPlaceBet: () => void;
+  onPlaceBet: (tokenId?: string) => void;
   isGeneratingTx: boolean;
   usdcBalance: string;
 }
@@ -24,6 +26,8 @@ export default function ChallengeCard({
   const [hash, setHash] = useState("VERIFYING...");
   const [challengeId, setChallengeId] = useState("");
   const [shareUrl, setShareUrl] = useState("");
+  const [selectedMarket, setSelectedMarket] = useState<MarketDef | null>(null);
+  const [side, setSide] = useState<"YES" | "NO">("YES");
   
   const cardRef = useRef<HTMLDivElement>(null);
   const twitterCardRef = useRef<HTMLDivElement>(null);
@@ -78,11 +82,37 @@ export default function ChallengeCard({
             <label className="text-sm font-bold text-zinc-400 px-1 uppercase tracking-wider text-[10px]">你的发单ID</label>
             <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} className="w-full bg-zinc-950/80 border border-zinc-800 rounded-xl p-3 text-white focus:ring-2 focus:ring-blue-500 transition-all font-bold" placeholder="ShibaWhale" />
           </div>
-          <div className="space-y-1.5">
-            <label className="text-sm font-bold text-zinc-400 px-1 uppercase tracking-wider text-[10px]">我们在赌什么？</label>
-            <input type="text" value={topic} onChange={(e) => setTopic(e.target.value)} className="w-full bg-zinc-950/80 border border-zinc-800 rounded-xl p-3 text-white focus:ring-2 focus:ring-blue-500 transition-all font-bold" placeholder="湖人队今晚夺冠" />
-          </div>
+          <MarketSearch 
+            onSelect={((m) => {
+              setSelectedMarket(m);
+              if (m) setTopic(m.title);
+            })} 
+          />
+          
           <div className="space-y-3">
+            {/* Pick your side (Yes/No) */}
+            <div className="flex bg-zinc-950/80 rounded-2xl p-1.5 border border-zinc-800">
+               <button 
+                 onClick={() => setSide("YES")}
+                 className={`flex-1 py-2.5 rounded-xl font-black text-sm transition-all focus:outline-none ${
+                   side === "YES" 
+                     ? "bg-blue-600 text-white shadow-lg" 
+                     : "text-zinc-500 hover:text-zinc-300"
+                 }`}
+               >
+                 YES (会发生)
+               </button>
+               <button 
+                 onClick={() => setSide("NO")}
+                 className={`flex-1 py-2.5 rounded-xl font-black text-sm transition-all focus:outline-none ${
+                   side === "NO" 
+                     ? "bg-red-500 text-white shadow-lg" 
+                     : "text-zinc-500 hover:text-zinc-300"
+                 }`}
+               >
+                 NO (不会发生)
+               </button>
+            </div>
             {/* Polymarket-style Input Box */}
             <div className="flex items-center justify-between w-full bg-zinc-950/80 border border-zinc-800 hover:border-zinc-700 rounded-2xl p-4 transition-all focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500">
               {/* Left Side: Labels */}
@@ -144,17 +174,17 @@ export default function ChallengeCard({
               </div>
               <div className="flex items-center justify-between w-full mt-6 mb-4 relative z-10">
                 <div className="flex flex-col items-center gap-2 w-5/12">
-                  <div className="w-20 h-20 rounded-full border-4 border-blue-500 bg-zinc-800 overflow-hidden flex items-center justify-center p-1 relative">
+                  <div className={`w-20 h-20 rounded-full border-4 ${side === "YES" ? "border-blue-500" : "border-red-500"} bg-zinc-800 overflow-hidden flex items-center justify-center p-1 relative`}>
                     <img src={`https://api.dicebear.com/7.x/pixel-art/svg?seed=${username}`} alt="Avatar" className="w-full h-full rounded-full bg-zinc-900" crossOrigin="anonymous" />
-                    <div className="absolute -bottom-2 bg-blue-600 text-[10px] font-bold px-2 py-0.5 rounded-full border-2 border-black">YES</div>
+                    <div className={`absolute -bottom-2 ${side === "YES" ? "bg-blue-600" : "bg-red-500"} text-[10px] font-bold px-2 py-0.5 rounded-full border-2 border-black`}>{side}</div>
                   </div>
-                  <span className="font-black text-sm text-blue-400 truncate w-full text-center">{username}</span>
+                  <span className="font-black text-sm text-white truncate w-full text-center">{username}</span>
                 </div>
                 <span className="text-3xl font-black italic text-zinc-700">VS</span>
                 <div className="flex flex-col items-center gap-2 w-5/12 text-center">
-                  <div className="w-20 h-20 rounded-full border-4 border-zinc-600 border-dashed bg-zinc-900 flex items-center justify-center relative">
+                  <div className={`w-20 h-20 rounded-full border-4 border-zinc-600 border-dashed bg-zinc-900 flex items-center justify-center relative`}>
                     <span className="text-2xl text-zinc-600 font-black">?</span>
-                    <div className="absolute -bottom-2 bg-zinc-700 text-[10px] font-bold px-2 py-0.5 rounded-full border-2 border-black">NO</div>
+                    <div className={`absolute -bottom-2 bg-zinc-700 text-[10px] font-bold px-2 py-0.5 rounded-full border-2 border-black`}>{side === "YES" ? "NO" : "YES"}</div>
                   </div>
                   <span className="text-zinc-500 text-[10px] font-bold leading-tight uppercase">等你接战</span>
                 </div>
@@ -176,7 +206,11 @@ export default function ChallengeCard({
 
         {/* Cta Buttons */}
         <div className="flex flex-col gap-4">
-          <button onClick={onPlaceBet} disabled={isGenerating || isGeneratingTx} className="w-full bg-green-500 hover:bg-green-400 text-black font-black py-4 rounded-2xl flex items-center justify-center gap-2 shadow-[0_10px_20px_rgba(34,197,94,0.3)] transition-all active:scale-95 disabled:opacity-50">
+          <button 
+            onClick={() => onPlaceBet(selectedMarket ? (side === "YES" ? selectedMarket.yesTokenId : selectedMarket.noTokenId) : undefined)} 
+            disabled={isGenerating || isGeneratingTx} 
+            className={`w-full ${side === "YES" ? "bg-blue-600 hover:bg-blue-500 shadow-[0_10px_20px_rgba(37,99,235,0.3)]" : "bg-red-500 hover:bg-red-400 shadow-[0_10px_20px_rgba(239,68,68,0.3)]"} text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50`}
+          >
             <HandCoins size={22} strokeWidth={3} /> {authenticated ? "真金白银一键下注" : "立即连接钱包"}
           </button>
           <div className="flex gap-3">

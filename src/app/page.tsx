@@ -104,7 +104,7 @@ function HomeContent() {
           username={username}
           setUsername={setUsername}
           authenticated={authenticated}
-          onPlaceBet={() => handlePlaceRealBet(amount)}
+          onPlaceBet={(marketTokenId) => handlePlaceRealBet(amount, marketTokenId)}
           isGeneratingTx={txStep !== "idle"}
           usdcBalance={usdcBalance}
         />
