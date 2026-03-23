@@ -27,8 +27,11 @@ export default function RootLayout({
     <html lang="en">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        style={{ background: '#0D0518', minHeight: '100dvh' }}
       >
-        <Providers>{children}</Providers>
+        <div style={{ maxWidth: '480px', margin: '0 auto', position: 'relative', overflowX: 'hidden', minHeight: '100dvh' }}>
+          <Providers>{children}</Providers>
+        </div>
       </body>
     </html>
   );

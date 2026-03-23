@@ -74,10 +74,16 @@ export function useTrading(
         fetch(`${DATA_API_URL}/activity?user=${proxyAddr}`)
       ]);
 
-      // 解析持仓
+      // 解析持仓 — 按 endDate 降序排列（最近的盘口排最前）
       if (posRes.ok) {
         const posData = await posRes.json();
-        setPositions(Array.isArray(posData) ? posData : []);
+        const posArr = Array.isArray(posData) ? posData : [];
+        posArr.sort((a: any, b: any) => {
+          const dateA = a.endDate ? new Date(a.endDate).getTime() : 0;
+          const dateB = b.endDate ? new Date(b.endDate).getTime() : 0;
+          return dateB - dateA;
+        });
+        setPositions(posArr);
       }
 
       // 解析活动

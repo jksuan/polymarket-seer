@@ -1,140 +1,119 @@
-"use client";
+'use client';
 
-import { useState, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useState, Suspense } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
+
 import { usePrivy } from "@privy-io/react-auth";
-
-import { clearCredsCache, copyToClipboard, shortenAddress } from "@/lib/utils";
+import { clearCredsCache } from "@/lib/utils";
 import { usePolymarketAuth } from "@/hooks/usePolymarketAuth";
 import { useTrading } from "@/hooks/useTrading";
 
-import Navbar from "@/components/Navbar";
-import ChallengeCard from "@/components/ChallengeCard";
-import Portfolio from "@/components/Portfolio";
+import { BottomNav } from '@/components/ui/BottomNav';
+import { HomePage } from '@/components/pages/HomePage';
+import { SearchPage } from '@/components/pages/SearchPage';
+import { LeaderboardPage } from '@/components/pages/LeaderboardPage';
+import { ProfilePage } from '@/components/pages/ProfilePage';
+import { ChallengePage } from '@/components/pages/ChallengePage';
 import TxOverlay from "@/components/TxOverlay";
 
-function HomeContent() {
-  const searchParams = useSearchParams();
-  const initialAmount = searchParams.get("amount") || "50";
-  const initialTopic = searchParams.get("topic") || "马斯克下周去火星";
+function AppRouterContent() {
+  const [activeTab, setActiveTab] = useState('home');
 
-  const [topic, setTopic] = useState(initialTopic);
-  const [amount, setAmount] = useState<string>(initialAmount);
-  const [username, setUsername] = useState("CryptoKing");
-  const [copied, setCopied] = useState(false);
-  
+  // Web3 Core Hooks
   const { authenticated, user, login, logout } = usePrivy();
-
-  // 1. 初始化 Auth Hook
   const { 
-    walletAddress, 
-    proxyAddress, 
-    usdcBalance, 
-    isRefreshingBalance, 
-    fetchBalance, 
-    setWalletAddress,
-    setProxyAddress,
-    setUsdcBalance,
-    hasCreds
+    walletAddress, proxyAddress, usdcBalance, isRefreshingBalance, fetchBalance,
+    setWalletAddress, setProxyAddress, setUsdcBalance, hasCreds
   } = usePolymarketAuth();
 
-  // 2. 初始化 Trading Hook
   const {
     txStep, txMessage, txOrderId, txError, setTxStep,
     positions, openOrders, trades, portfolioLoading,
     handlePlaceRealBet, handleRedeem, fetchPortfolio, setPositions, setOpenOrders, setTrades
   } = useTrading(walletAddress, proxyAddress, hasCreds, () => fetchBalance(false));
 
-  const handleCopy = (text: string) => {
-    copyToClipboard(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
   const closeTxOverlay = () => {
     setTxStep("idle");
     if (proxyAddress) fetchBalance(false);
   };
 
-  const displayIdentifier = user?.twitter?.username 
-    ? `@${user.twitter.username}`
-    : user?.email?.address
-      ? user.email.address
-      : user?.google?.email
-        ? user.google.email
-        : walletAddress 
-          ? shortenAddress(walletAddress)
-          : "Wallet Connected";
+  const handleClearState = () => {
+    clearCredsCache();
+    setWalletAddress("");
+    setProxyAddress(null);
+    setUsdcBalance("0.00");
+    setPositions([]);
+    setOpenOrders([]);
+    setTrades([]);
+  };
 
-  const displayAvatar = user?.twitter?.profilePictureUrl || `https://api.dicebear.com/7.x/pixel-art/svg?seed=${walletAddress || "default"}`;
+  // Temp bet state logic to handle retries from TxOverlay
+  const [lastBetAmount, setLastBetAmount] = useState("10");
+  
+  const handlePlaceBetWrap = async (amount: string, tokenId: string) => {
+      setLastBetAmount(amount);
+      await handlePlaceRealBet(amount, tokenId);
+  };
 
   return (
-    <main className="flex min-h-screen flex-col bg-zinc-950 text-white font-sans sm:items-center sm:justify-center relative overflow-x-hidden">
+    <div className="relative min-h-[100dvh] w-full bg-[#0D0518]">
+      <AnimatePresence mode="popLayout" initial={false}>
+        <motion.div
+          key={activeTab}
+          initial={{ opacity: 0, scale: 0.98, filter: 'blur(5px)' }}
+          animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+          exit={{ opacity: 0, scale: 1.05, filter: 'blur(5px)' }}
+          transition={{ duration: 0.25, ease: 'easeOut' }}
+          className="w-full absolute inset-0 pb-[70px] overflow-y-auto"
+          style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}
+        >
+          {activeTab === 'home' && (
+             <HomePage onPlaceBet={handlePlaceBetWrap} />
+          )}
+          {activeTab === 'search' && <SearchPage />}
+          {activeTab === 'leaderboard' && <LeaderboardPage />}
+          {activeTab === 'profile' && (
+            <ProfilePage 
+              authenticated={authenticated}
+              login={login}
+              logout={logout}
+              user={user}
+              usdcBalance={usdcBalance}
+              isRefreshingBalance={isRefreshingBalance}
+              fetchBalance={() => fetchBalance(true)}
+              walletAddress={walletAddress}
+              proxyAddress={proxyAddress}
+              positions={positions}
+              openOrders={openOrders}
+              trades={trades}
+              portfolioLoading={portfolioLoading}
+              onClearState={handleClearState}
+              onRedeem={handleRedeem}
+            />
+          )}
+          {activeTab === 'challenge' && <ChallengePage />}
+        </motion.div>
+      </AnimatePresence>
+      <BottomNav activeTab={activeTab} onChange={setActiveTab} />
       
-      <Navbar 
-        authenticated={authenticated}
-        login={login}
-        logout={logout}
-        proxyAddress={proxyAddress}
-        walletAddress={walletAddress}
-        usdcBalance={usdcBalance}
-        displayIdentifier={displayIdentifier}
-        displayAvatar={displayAvatar}
-        isRefreshingBalance={isRefreshingBalance}
-        onRefreshBalance={() => fetchBalance(true)}
-        copied={copied}
-        onCopyCopy={handleCopy}
-        onClearState={() => {
-           clearCredsCache();
-           setWalletAddress("");
-           setProxyAddress(null);
-           setUsdcBalance("0.00");
-           setPositions([]);
-           setOpenOrders([]);
-           setTrades([]);
-        }}
-      />
-
-      <div className="w-full max-w-md p-6 space-y-8 relative z-10">
-        <ChallengeCard
-          topic={topic}
-          setTopic={setTopic}
-          amount={amount}
-          setAmount={setAmount}
-          username={username}
-          setUsername={setUsername}
-          authenticated={authenticated}
-          onPlaceBet={(marketTokenId) => handlePlaceRealBet(amount, marketTokenId)}
-          isGeneratingTx={txStep !== "idle"}
-          usdcBalance={usdcBalance}
-        />
-
-        {/* ========== Portfolio 资产组合面板 ========== */}
-        {authenticated && (
-          <Portfolio 
-            positions={positions}
-            openOrders={openOrders}
-            trades={trades}
-            portfolioLoading={portfolioLoading}
-            onRedeem={handleRedeem}
-          />
-        )}
-      </div>
-
       <TxOverlay
         txStep={txStep}
         txMessage={txMessage}
         txOrderId={txOrderId!}
         txError={txError!}
         proxyAddress={proxyAddress!}
-        amount={amount}
+        amount={lastBetAmount}
         onClose={closeTxOverlay}
-        onRetry={() => handlePlaceRealBet(amount)}
+        onRetry={() => {}}
       />
-    </main>
+    </div>
   );
 }
 
-export default function Home() {
-  return (<Suspense fallback={<div className="min-h-screen bg-black text-white flex items-center justify-center">Loading...</div>}><HomeContent /></Suspense>);
+export default function AppRouter() {
+  return (
+    <Suspense fallback={<div className="min-h-[100dvh] bg-[#0D0518] text-white flex items-center justify-center">Loading Framework...</div>}>
+      <AppRouterContent />
+    </Suspense>
+  );
 }
