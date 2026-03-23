@@ -75,9 +75,10 @@ export function useTrading(
       ]);
 
       // 解析持仓 — 按 endDate 降序排列（最近的盘口排最前）
+      let posArr: any[] = [];
       if (posRes.ok) {
         const posData = await posRes.json();
-        const posArr = Array.isArray(posData) ? posData : [];
+        posArr = Array.isArray(posData) ? posData : [];
         posArr.sort((a: any, b: any) => {
           const dateA = a.endDate ? new Date(a.endDate).getTime() : 0;
           const dateB = b.endDate ? new Date(b.endDate).getTime() : 0;
@@ -94,8 +95,87 @@ export function useTrading(
 
       // 3. 从 CLOB SDK 获取挂单
       const clob = new ClobClient(CLOB_API_URL, POLYGON_CHAIN_ID, signer, creds, SIGNATURE_TYPE_GNOSIS_SAFE, proxyAddr);
-      const orders = await clob.getOpenOrders().catch(() => []);
-      setOpenOrders(orders || []);
+      const rawOrders = await clob.getOpenOrders().catch(() => []);
+      const ordersArr: any[] = Array.isArray(rawOrders) ? rawOrders : [];
+
+      // 4. 补充挂单的事件名称/图片等富信息
+      if (ordersArr.length > 0) {
+        // ── 第一层：从已获取的 posArr(持仓) 中提取已知市场信息 ──
+        // 用两种 key 映射：asset(tokenId) 和 conditionId
+        const infoByAssetId: Record<string, any> = {};
+        const infoByCondId: Record<string, any> = {};
+        if (posArr.length > 0) {
+          posArr.forEach((p: any) => {
+            const info = {
+              question: p.title || p.question || p.marketName || '',
+              icon: p.icon || '',
+              endDate: p.endDate || '',
+            };
+            if (p.asset) infoByAssetId[p.asset] = info;
+            if (p.conditionId) infoByCondId[p.conditionId] = info;
+          });
+        }
+
+        // 找出持仓匹配不到的 conditionId，需要通过 CLOB API 二次查询
+        const unmatchedCondIds = [...new Set(
+          ordersArr
+            .filter((o: any) => {
+              const assetId = o.asset_id;
+              const condId = o.market;
+              return !infoByAssetId[assetId] && !infoByCondId[condId];
+            })
+            .map((o: any) => o.market)
+            .filter(Boolean)
+        )];
+
+        // ── 第二层：用 CLOB getMarket(conditionId) 补充缺失的市场标题 ──
+        const clobMarketInfo: Record<string, any> = {};
+        if (unmatchedCondIds.length > 0) {
+          await Promise.all(
+            unmatchedCondIds.map(async (condId: string) => {
+              try {
+                const mkt = await clob.getMarket(condId);
+                if (mkt && (mkt as any).question) {
+                  clobMarketInfo[condId] = {
+                    question: (mkt as any).question || '',
+                    icon: (mkt as any).icon || '',
+                    endDate: (mkt as any).end_date_iso || '',
+                  };
+                }
+              } catch (e) {
+                console.warn('CLOB getMarket failed for', condId, e);
+              }
+            })
+          );
+        }
+
+        // ── 合并：富化每个订单 ──
+        const enriched = ordersArr.map((order: any) => {
+          // 优先级：持仓的 asset 匹配 > 持仓的 conditionId 匹配 > CLOB market 匹配
+          const info =
+            infoByAssetId[order.asset_id] ||
+            infoByCondId[order.market] ||
+            clobMarketInfo[order.market] ||
+            {};
+          return {
+            ...order,
+            title: (info as any).question || '',
+            icon: (info as any).icon || '',
+            marketEndDate: (info as any).endDate || '',
+          };
+        });
+
+        // 按 created_at 降序排列（最新下单排最前）
+        enriched.sort((a: any, b: any) => {
+          const tA = a.created_at ? new Date(a.created_at).getTime() : 0;
+          const tB = b.created_at ? new Date(b.created_at).getTime() : 0;
+          return tB - tA;
+        });
+
+        setOpenOrders(enriched);
+      } else {
+        setOpenOrders([]);
+      }
 
     } catch (err) {
       console.error("fetchPortfolio error:", err);
