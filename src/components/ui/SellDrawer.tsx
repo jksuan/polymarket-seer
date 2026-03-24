@@ -391,7 +391,7 @@ function DrawerContent({ isOpen, onClose, position, onMarketSell, onLimitSell }:
                         onChange={setLimitWinRate}
                         step={step}
                         min={parseFloat(step.toFixed(decimals))}
-                        max={99}
+                        max={parseFloat((100 - step).toFixed(decimals))}
                       />
                     </div>
                     {/* divider above 预估卖出收入 */}
