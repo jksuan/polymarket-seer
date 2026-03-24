@@ -30,7 +30,7 @@ function AppRouterContent() {
     txStep, txMessage, txOrderId, txError, setTxStep,
     positions, openOrders, trades, portfolioLoading,
     handlePlaceRealBet, handleRedeem, fetchPortfolio, setPositions, setOpenOrders, setTrades,
-    handleSellPosition, handleCancelOrder
+    handleSellPosition, handleLimitSellPosition, handleCancelOrder
   } = useTrading(walletAddress, proxyAddress, hasCreds, () => fetchBalance(false));
 
   const closeTxOverlay = () => {
@@ -93,6 +93,10 @@ function AppRouterContent() {
               onSell={async (tokenId, sharesText) => {
                 setLastBetAmount(sharesText);
                 await handleSellPosition(tokenId, sharesText);
+              }}
+              onLimitSell={async (tokenId, sharesText, price) => {
+                setLastBetAmount(sharesText);
+                await handleLimitSellPosition(tokenId, sharesText, price);
               }}
               onCancelOrder={async (orderId) => {
                 setLastBetAmount("0");

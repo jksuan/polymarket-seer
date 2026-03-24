@@ -6,6 +6,7 @@ import { Wallet, LogOut, RefreshCw, Zap, Settings, ArrowUpRight, Share2 } from "
 import { shortenAddress } from "@/lib/utils";
 import { AreaChart, Area, ResponsiveContainer, Tooltip, PieChart, Pie, Cell, XAxis, CartesianGrid } from "recharts";
 import { SettingsDrawer } from "@/components/ui/SettingsDrawer";
+import { SellDrawer } from "@/components/ui/SellDrawer";
 
 const DISTRIBUTION_DATA = [
   { name: "NBA", value: 420, color: "#FF6B00" },
@@ -41,16 +42,19 @@ export interface ProfilePageProps {
   onClearState: () => void;
   onRedeem: (...args: any) => void;
   onSell: (tokenId: string, sharesText: string) => void;
+  onLimitSell: (tokenId: string, sharesText: string, price: number) => void;
   onCancelOrder: (orderId: string) => void;
 }
 
 export function ProfilePage({
   authenticated, login, logout, user, usdcBalance, isRefreshingBalance, fetchBalance,
   proxyAddress, positions, openOrders, trades, portfolioLoading, onClearState, walletAddress,
-  onSell, onCancelOrder
+  onSell, onLimitSell, onCancelOrder
 }: ProfilePageProps) {
   const [activeTab, setActiveTab] = useState<"active" | "orders" | "history" | "transactions">("active");
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [sellDrawerOpen, setSellDrawerOpen] = useState(false);
+  const [activeSellPos, setActiveSellPos] = useState<any>(null);
 
   const displayIdentifier = user?.twitter?.username 
     ? `@${user.twitter.username}`
@@ -318,6 +322,20 @@ export function ProfilePage({
         </div>
       </div>
 
+      <SellDrawer 
+        isOpen={sellDrawerOpen}
+        onClose={() => setSellDrawerOpen(false)}
+        position={activeSellPos}
+        onMarketSell={(tokenId, shares) => {
+          setSellDrawerOpen(false);
+          onSell(tokenId, shares);
+        }}
+        onLimitSell={(tokenId, shares, price) => {
+          setSellDrawerOpen(false);
+          onLimitSell(tokenId, shares, price);
+        }}
+      />
+
       {/* Middle Part: Tabbed Activity and Social Cards */}
       <div className="max-w-md mx-auto px-4 mt-6">
         {/* Tabs */}
@@ -525,7 +543,10 @@ export function ProfilePage({
                       {/* Action buttons */}
                       <div className="flex items-center gap-2 mb-0.5">
                         <button 
-                          onClick={() => onSell(pos.asset, String(pos.size || 0))} 
+                          onClick={() => {
+                            setActiveSellPos(pos);
+                            setSellDrawerOpen(true);
+                          }} 
                           className="bg-transparent border border-[#0099FF]/50 text-[#0099FF] text-[13px] font-bold px-5 py-1.5 rounded-[6px] hover:bg-[#0099FF]/10 active:scale-95 transition-all leading-none h-[28px] shadow-[0_0_12px_rgba(0,153,255,0.15)] tracking-wide"
                         >
                           卖出

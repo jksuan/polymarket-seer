@@ -518,6 +518,69 @@ export function useTrading(
     }
   };
 
+  const handleLimitSellPosition = async (tokenId: string, sharesToSell: string, limitPrice: number) => {
+    if (!authenticated || !wallets || wallets.length === 0 || !proxyAddress) return;
+
+    setTxStep("preparing");
+    setTxMessage("正在计算市场参数准备限价挂单...");
+    setTxError(null);
+
+    try {
+      const wallet = wallets.find(w => w.address.toLowerCase() === walletAddress?.toLowerCase())
+        || wallets.find(w => w.walletClientType === "privy")
+        || wallets[0];
+
+      const ethereumProvider = await wallet.getEthereumProvider();
+      const provider = new ethers.providers.Web3Provider(ethereumProvider as any);
+      const signer = provider.getSigner();
+
+      const creds = getCachedCreds(wallet.address);
+      if (!creds) throw new Error("API凭证过期，请重启");
+
+      const clobClient = new ClobClient(CLOB_API_URL, POLYGON_CHAIN_ID, signer as any, creds, SIGNATURE_TYPE_GNOSIS_SAFE, proxyAddress);
+
+      const parsedShares = Number(sharesToSell);
+      if (!parsedShares || parsedShares <= 0 || !limitPrice || limitPrice <= 0) {
+          throw new Error("无效的出售份额或价格");
+      }
+
+      setTxStep("placing");
+      setTxMessage("正在向 Polygon 提交限价卖单...");
+
+      const tickSize = await clobClient.getTickSize(tokenId).catch(() => "0.01") as "0.1" | "0.01" | "0.001" | "0.0001";
+      const negRisk = await clobClient.getNegRisk(tokenId).catch(() => false);
+
+      const resp = await clobClient.createAndPostOrder({
+        tokenID: tokenId,
+        size: parsedShares,
+        price: limitPrice,
+        side: "SELL" as any
+      }, { tickSize, negRisk });
+
+      if (resp && resp.success) {
+        setTxStep("success");
+        setTxMessage("限价卖单提交成功！等待市场买方吃单。");
+        setTxOrderId(resp.orderID || null);
+      } else {
+        let errorMsg = resp?.error || JSON.stringify(resp);
+        try {
+          const parsed = JSON.parse(errorMsg);
+          if (parsed?.data?.error) errorMsg = parsed.data.error;
+        } catch (e) {}  
+        throw new Error(errorMsg);
+      }
+    } catch (err: any) {
+      console.error("Limit sell error:", err);
+      setTxStep("error");
+      
+      let finalMsg = err.message || String(err);
+      if (finalMsg.includes("user rejected")) finalMsg = "用户取消了签名请求。";
+      
+      setTxError(finalMsg);
+      setTxMessage("限价卖出操作执行失败");
+    }
+  };
+
   const closeTxOverlay = () => {
     setTxStep("idle");
     setTxMessage("");
@@ -543,6 +606,7 @@ export function useTrading(
     handlePlaceRealBet,
     handleCancelOrder,
     handleSellPosition,
+    handleLimitSellPosition,
     closeTxOverlay
   };
 }
