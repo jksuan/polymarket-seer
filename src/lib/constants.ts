@@ -11,6 +11,9 @@ export const CLOB_API_URL = "https://clob.polymarket.com";
 /** Polymarket Data API 端点 */
 export const DATA_API_URL = "https://data-api.polymarket.com";
 
+/** Polymarket Gamma API 端点 (市场/事件/搜索) */
+export const GAMMA_API_URL = "https://gamma-api.polymarket.com";
+
 /** Polymarket Relayer V2 端点 */
 export const RELAYER_URL = "https://relayer-v2.polymarket.com/";
 

@@ -415,6 +415,109 @@ export function useTrading(
     }
   };
 
+  const handleCancelOrder = async (orderId: string) => {
+    if (!authenticated || !wallets || wallets.length === 0 || !proxyAddress) return;
+
+    setTxStep("preparing");
+    setTxMessage("正在向撮合引擎发送取消请求...");
+    setTxError(null);
+
+    try {
+      const wallet = wallets.find(w => w.address.toLowerCase() === walletAddress?.toLowerCase())
+        || wallets.find(w => w.walletClientType === "privy")
+        || wallets[0];
+        
+      const ethereumProvider = await wallet.getEthereumProvider();
+      const provider = new ethers.providers.Web3Provider(ethereumProvider as any);
+      const signer = provider.getSigner();
+
+      const creds = getCachedCreds(wallet.address);
+      if (!creds) throw new Error("API凭证已过期或不存在，请重新连接");
+
+      const clobClient = new ClobClient(CLOB_API_URL, POLYGON_CHAIN_ID, signer as any, creds, SIGNATURE_TYPE_GNOSIS_SAFE, proxyAddress);
+
+      setTxStep("placing");
+      setTxMessage("正在取消订单...");
+
+      const resp = await clobClient.cancelOrder({ orderID: orderId });
+
+      if (resp && resp.canceled && resp.canceled.includes(orderId)) {
+        setTxStep("success");
+        setTxMessage("订单已成功取消");
+        setOpenOrders(prev => prev.filter(o => o.id !== orderId));
+      } else {
+        throw new Error("取消失败，订单可能已成交或已被处理");
+      }
+    } catch (err: any) {
+      console.error("Cancel order error:", err);
+      setTxStep("error");
+      setTxError(err.message || String(err));
+      setTxMessage("取消请求执行失败");
+    }
+  };
+
+  const handleSellPosition = async (tokenId: string, sharesToSell: string) => {
+    if (!authenticated || !wallets || wallets.length === 0 || !proxyAddress) return;
+
+    setTxStep("preparing");
+    setTxMessage("正在计算市场参数准备出售...");
+    setTxError(null);
+
+    try {
+      const wallet = wallets.find(w => w.address.toLowerCase() === walletAddress?.toLowerCase())
+        || wallets.find(w => w.walletClientType === "privy")
+        || wallets[0];
+
+      const ethereumProvider = await wallet.getEthereumProvider();
+      const provider = new ethers.providers.Web3Provider(ethereumProvider as any);
+      const signer = provider.getSigner();
+
+      const creds = getCachedCreds(wallet.address);
+      if (!creds) throw new Error("API凭证过期，请重启");
+
+      const clobClient = new ClobClient(CLOB_API_URL, POLYGON_CHAIN_ID, signer as any, creds, SIGNATURE_TYPE_GNOSIS_SAFE, proxyAddress);
+
+      const parsedShares = Number(sharesToSell);
+      if (!parsedShares || parsedShares <= 0) {
+          throw new Error("无效的出售份额");
+      }
+
+      setTxStep("placing");
+      setTxMessage("正在向 Polygon 提交市价卖单...");
+
+      const tickSize = await clobClient.getTickSize(tokenId).catch(() => "0.01") as "0.1" | "0.01" | "0.001" | "0.0001";
+      const negRisk = await clobClient.getNegRisk(tokenId).catch(() => false);
+
+      const resp = await clobClient.createAndPostMarketOrder({
+        tokenID: tokenId,
+        amount: parsedShares,
+        side: "SELL" as any
+      }, { tickSize, negRisk });
+
+      if (resp && resp.success) {
+        setTxStep("success");
+        setTxMessage("卖出成功！大部分或全部份额已按市价被撮合。");
+        setTxOrderId(resp.orderID || null);
+      } else {
+        let errorMsg = resp?.error || JSON.stringify(resp);
+        try {
+          const parsed = JSON.parse(errorMsg);
+          if (parsed?.data?.error) errorMsg = parsed.data.error;
+        } catch (e) {}  
+        throw new Error(errorMsg);
+      }
+    } catch (err: any) {
+      console.error("Sell position error:", err);
+      setTxStep("error");
+      
+      let finalMsg = err.message || String(err);
+      if (finalMsg.includes("user rejected")) finalMsg = "用户取消了签名请求。";
+      
+      setTxError(finalMsg);
+      setTxMessage("出售操作执行失败");
+    }
+  };
+
   const closeTxOverlay = () => {
     setTxStep("idle");
     setTxMessage("");
@@ -422,6 +525,7 @@ export function useTrading(
     setTxError(null);
     if (proxyAddress) {
       fetchBalance();
+      fetchPortfolio(proxyAddress, walletAddress);
     }
   };
 
@@ -437,6 +541,8 @@ export function useTrading(
     fetchPortfolio,
     handleRedeem,
     handlePlaceRealBet,
+    handleCancelOrder,
+    handleSellPosition,
     closeTxOverlay
   };
 }

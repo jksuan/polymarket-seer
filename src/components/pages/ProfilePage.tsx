@@ -40,11 +40,14 @@ export interface ProfilePageProps {
   portfolioLoading: boolean;
   onClearState: () => void;
   onRedeem: (...args: any) => void;
+  onSell: (tokenId: string, sharesText: string) => void;
+  onCancelOrder: (orderId: string) => void;
 }
 
 export function ProfilePage({
   authenticated, login, logout, user, usdcBalance, isRefreshingBalance, fetchBalance,
-  proxyAddress, positions, openOrders, trades, portfolioLoading, onClearState, walletAddress
+  proxyAddress, positions, openOrders, trades, portfolioLoading, onClearState, walletAddress,
+  onSell, onCancelOrder
 }: ProfilePageProps) {
   const [activeTab, setActiveTab] = useState<"active" | "orders" | "history" | "transactions">("active");
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -521,7 +524,10 @@ export function ProfilePage({
 
                       {/* Action buttons */}
                       <div className="flex items-center gap-2 mb-0.5">
-                        <button className="bg-transparent border border-[#0099FF]/50 text-[#0099FF] text-[13px] font-bold px-5 py-1.5 rounded-[6px] hover:bg-[#0099FF]/10 active:scale-95 transition-all leading-none h-[28px] shadow-[0_0_12px_rgba(0,153,255,0.15)] tracking-wide">
+                        <button 
+                          onClick={() => onSell(pos.asset, String(pos.size || 0))} 
+                          className="bg-transparent border border-[#0099FF]/50 text-[#0099FF] text-[13px] font-bold px-5 py-1.5 rounded-[6px] hover:bg-[#0099FF]/10 active:scale-95 transition-all leading-none h-[28px] shadow-[0_0_12px_rgba(0,153,255,0.15)] tracking-wide"
+                        >
                           卖出
                         </button>
                         <button className="w-[28px] h-[28px] rounded-full bg-[#192540] flex items-center justify-center text-[#60a5fa] hover:bg-[#203050] transition-colors active:scale-95">
@@ -668,7 +674,10 @@ export function ProfilePage({
                         <span className="text-[13px] font-bold text-[#a3aac4] tracking-tight whitespace-nowrap">{expirationDisplay}</span>
                       </div>
                       <div className="flex justify-end">
-                        <button className="bg-transparent border border-[#ff4444]/70 text-[#ff4444] text-[13px] font-bold px-4 py-1.5 rounded-[6px] hover:bg-[#ff4444]/15 active:scale-95 transition-all leading-none h-[28px] shadow-[0_0_10px_rgba(255,26,26,0.3)] shrink-0">
+                        <button 
+                          onClick={() => onCancelOrder(order.id)} 
+                          className="bg-transparent border border-[#ff4444]/70 text-[#ff4444] text-[13px] font-bold px-4 py-1.5 rounded-[6px] hover:bg-[#ff4444]/15 active:scale-95 transition-all leading-none h-[28px] shadow-[0_0_10px_rgba(255,26,26,0.3)] shrink-0"
+                        >
                           取消
                         </button>
                       </div>

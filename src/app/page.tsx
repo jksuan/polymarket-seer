@@ -29,7 +29,8 @@ function AppRouterContent() {
   const {
     txStep, txMessage, txOrderId, txError, setTxStep,
     positions, openOrders, trades, portfolioLoading,
-    handlePlaceRealBet, handleRedeem, fetchPortfolio, setPositions, setOpenOrders, setTrades
+    handlePlaceRealBet, handleRedeem, fetchPortfolio, setPositions, setOpenOrders, setTrades,
+    handleSellPosition, handleCancelOrder
   } = useTrading(walletAddress, proxyAddress, hasCreds, () => fetchBalance(false));
 
   const closeTxOverlay = () => {
@@ -89,6 +90,14 @@ function AppRouterContent() {
               portfolioLoading={portfolioLoading}
               onClearState={handleClearState}
               onRedeem={handleRedeem}
+              onSell={async (tokenId, sharesText) => {
+                setLastBetAmount(sharesText);
+                await handleSellPosition(tokenId, sharesText);
+              }}
+              onCancelOrder={async (orderId) => {
+                setLastBetAmount("0");
+                await handleCancelOrder(orderId);
+              }}
             />
           )}
           {activeTab === 'challenge' && <ChallengePage />}
