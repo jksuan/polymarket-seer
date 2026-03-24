@@ -245,6 +245,7 @@ function DrawerContent({ isOpen, onClose, position, onMarketSell, onLimitSell }:
 
   const isYes = String(position.outcome).toLowerCase() === 'yes';
   const displayTitle = (position.title || "未知市场").replace(/\.+$/, '');
+  const isLimitDisabled = shares < 5;
 
   // Estimated income
   const estimatedMarket = (shares * curPrice).toFixed(2);
@@ -341,9 +342,11 @@ function DrawerContent({ isOpen, onClose, position, onMarketSell, onLimitSell }:
                   <Zap size={14} /> 快速卖出
                 </button>
                 <button
-                  onClick={() => setTab("limit")}
-                  className={`flex-1 py-2 text-sm font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5
-                    ${tab === "limit" ? "bg-white/10 text-white shadow-sm" : "text-[#a3aac4] hover:text-white"}`}
+                  onClick={() => !isLimitDisabled && setTab("limit")}
+                  className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-1.5
+                    ${tab === "limit" ? "bg-white/10 text-white shadow-sm" : "text-[#a3aac4] hover:text-white"}
+                    ${isLimitDisabled ? "opacity-30 cursor-not-allowed filter grayscale" : ""}`}
+                  title={isLimitDisabled ? "持仓份额不足 5 份，无法发起限价单" : ""}
                 >
                   <Target size={14} /> 限价挂单
                 </button>
@@ -422,15 +425,15 @@ function DrawerContent({ isOpen, onClose, position, onMarketSell, onLimitSell }:
                 ) : (
                   <button
                     onClick={() => limitPriceNum !== null && position.asset && onLimitSell(position.asset, String(shares), limitPriceNum)}
-                    disabled={limitPriceNum === null}
+                    disabled={limitPriceNum === null || isLimitDisabled}
                     className="w-full font-bold py-3.5 rounded-2xl active:scale-95 transition-all text-base border shadow-[0_0_20px_rgba(0,240,255,0.12)] disabled:opacity-40 disabled:pointer-events-none disabled:shadow-none"
                     style={{
-                      background: "rgba(0,240,255,0.08)",
-                      border: "1px solid rgba(0,240,255,0.4)",
-                      color: "#00F0FF",
+                      background: isLimitDisabled ? "rgba(255,80,80,0.08)" : "rgba(0,240,255,0.08)",
+                      border: isLimitDisabled ? "1px solid rgba(255,80,80,0.3)" : "1px solid rgba(0,240,255,0.4)",
+                      color: isLimitDisabled ? "#ff6b6b" : "#00F0FF",
                     }}
                   >
-                    提交限价卖单
+                    {isLimitDisabled ? "份额不足 (至少需 5 份)" : "提交限价卖单"}
                   </button>
                 )}
                 <p className="text-center text-[11px] text-[#a3aac4]/60 mt-3 tracking-wide">
