@@ -687,7 +687,7 @@ export function ProfilePage({
                         <span className="text-[15px] font-bold text-[#6bff8f] tracking-tight">${filledAmount} <span className="text-[#a3aac4] text-[12px] font-normal">/ ${totalAmount}</span></span>
                       </div>
                       <div className="flex flex-col gap-1">
-                        <span className="text-[11px] sm:text-[12px] font-medium text-[#a3aac4] whitespace-nowrap">买入胜率</span>
+                        <span className="text-[11px] sm:text-[12px] font-medium text-[#a3aac4] whitespace-nowrap">目标胜率</span>
                         <span className="text-[15px] font-bold text-[#dee5ff] tracking-tight">{(price * 100).toFixed(1)}%</span>
                       </div>
                       <div className="flex flex-col gap-1">
