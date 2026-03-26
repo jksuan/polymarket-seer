@@ -87,27 +87,22 @@ export function ProfilePage({
   proxyAddress, positions, openOrders, trades, portfolioLoading, onClearState, walletAddress,
   onSell, onLimitSell, onCancelOrder, onRedeem
 }: ProfilePageProps) {
-  const [activeTab, setActiveTab] = useState<"active" | "orders" | "history" | "transactions">("active");
+  const [activeTab, setActiveTab] = useState<"stats" | "active" | "orders" | "history" | "transactions">("stats");
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [sellDrawerOpen, setSellDrawerOpen] = useState(false);
   const [activeSellPos, setActiveSellPos] = useState<any>(null);
   const [redeemDrawerOpen, setRedeemDrawerOpen] = useState(false);
   const [activeRedeemPos, setActiveRedeemPos] = useState<any>(null);
 
-  // Tab 栏引用，用于在切换选项卡时平滑滚动至此处
-  const tabBarRef = useRef<HTMLDivElement>(null);
 
   /**
    * 切换选项卡处理函数
    * 说明：除了更新激活 tab 状态外，还会驱使视口平滑滚动回 Tab 栏顶部。
    * 这样做是为了防止因为新 Tab 内容较少导致页面高度坍塌，从而引起浏览器滚动条位置剧烈跳变。
    */
-  const handleTabChange = (tab: "active" | "orders" | "history" | "transactions") => {
+  const handleTabChange = (tab: "stats" | "active" | "orders" | "history" | "transactions") => {
     setActiveTab(tab);
-    // 使用 setTimeout 确保在 DOM 更新后执行滚动，避免某些机型下的渲染竞争
-    setTimeout(() => {
-      tabBarRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }, 0);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   // Derived counts for tabs
@@ -171,8 +166,15 @@ export function ProfilePage({
   }
 
   return (
-    <div className="pt-4 pb-8 min-h-[100dvh]">
-      <div className="flex items-center justify-between px-4 mb-6">
+    <div className="pb-8 min-h-[100dvh]">
+      {/* --- 联合吸顶 App Header: 将页眉和 Tabs 合并 --- */}
+      <div 
+        className="sticky top-0 z-40 border-b border-white/5"
+        style={{ background: "rgba(13,5,24,0.85)", backdropFilter: "blur(12px)" }}
+      >
+        <div className="max-w-md mx-auto pt-4">
+          {/*页眉 (Logo + 会员信息)*/}
+          <div className="flex items-center justify-between px-4 mb-4">
          {/* Left: Logo */}
          <div className="flex items-center gap-1.5 flex-shrink-0">
             <div className="w-7 h-7 rounded-full flex items-center justify-center p-0.5 shadow-[0_0_10px_rgba(173,255,47,0.4)]" style={{ background: 'linear-gradient(135deg,#ADFF2F,#00F0FF)' }}>
@@ -203,9 +205,158 @@ export function ProfilePage({
                </span>
             </div>
          </div>
+          </div>
+
+          {/*Tabs 导航区*/}
+          <div
+            className="px-4 flex items-center gap-6 pb-2 overflow-x-auto whitespace-nowrap [&::-webkit-scrollbar]:hidden"
+            style={{ msOverflowStyle: "none", scrollbarWidth: "none" }}
+          >
+          <button
+            onClick={() => handleTabChange("stats")}
+            className="relative pb-2 font-bold text-[15px] transition-colors shrink-0"
+            style={{
+              color:
+                activeTab === "stats" ? "#dee5ff" : "#a3aac4",
+            }}
+          >
+            总览
+            {activeTab === "stats" && (
+              <motion.div
+                layoutId="activeTabIndicator"
+                className="absolute bottom-[-9px] left-0 w-full h-[3px] rounded-t-md"
+                style={{
+                  background: "#6bff8f",
+                  boxShadow:
+                    "0 -2px 10px rgba(107,255,143,0.5)",
+                }}
+              />
+            )}
+          </button>
+          <button
+            onClick={() => handleTabChange("active")}
+            className="relative pb-2 font-bold text-[15px] transition-colors shrink-0"
+            style={{
+              color:
+                activeTab === "active" ? "#dee5ff" : "#a3aac4",
+            }}
+          >
+            持仓<span className="text-[12px] opacity-60 font-medium">({positions?.length || 0})</span>
+            {activeTab === "active" && (
+              <motion.div
+                layoutId="activeTabIndicator"
+                className="absolute bottom-[-9px] left-0 w-full h-[3px] rounded-t-md"
+                style={{
+                  background: "#6bff8f",
+                  boxShadow:
+                    "0 -2px 10px rgba(107,255,143,0.5)",
+                }}
+              />
+            )}
+          </button>
+          <button
+            onClick={() => handleTabChange("orders")}
+            className="relative pb-2 font-bold text-[15px] transition-colors shrink-0"
+            style={{
+              color:
+                activeTab === "orders" ? "#dee5ff" : "#a3aac4",
+            }}
+          >
+            挂单<span className="text-[12px] opacity-60 font-medium">({openOrders?.length || 0})</span>
+            {activeTab === "orders" && (
+              <motion.div
+                layoutId="activeTabIndicator"
+                className="absolute bottom-[-9px] left-0 w-full h-[3px] rounded-t-md"
+                style={{
+                  background: "#6bff8f",
+                  boxShadow:
+                    "0 -2px 10px rgba(107,255,143,0.5)",
+                }}
+              />
+            )}
+          </button>
+          <button
+            onClick={() => handleTabChange("history")}
+            className="relative pb-2 font-bold text-[15px] transition-colors shrink-0"
+            style={{
+              color:
+                activeTab === "history" ? "#dee5ff" : "#a3aac4",
+            }}
+          >
+            战绩<span className="text-[12px] opacity-60 font-medium">({historyCount})</span>
+            {activeTab === "history" && (
+              <motion.div
+                layoutId="activeTabIndicator"
+                className="absolute bottom-[-9px] left-0 w-full h-[3px] rounded-t-md"
+                style={{
+                  background: "#6bff8f",
+                  boxShadow:
+                    "0 -2px 10px rgba(107,255,143,0.5)",
+                }}
+              />
+            )}
+          </button>
+          <button
+            onClick={() => handleTabChange("transactions")}
+            className="relative pb-2 font-bold text-[15px] transition-colors shrink-0"
+            style={{
+              color:
+                activeTab === "transactions"
+                  ? "#dee5ff"
+                  : "#a3aac4",
+            }}
+          >
+            明细<span className="text-[12px] opacity-60 font-medium">({transactionsCount})</span>
+            {activeTab === "transactions" && (
+              <motion.div
+                layoutId="activeTabIndicator"
+                className="absolute bottom-[-9px] left-0 w-full h-[3px] rounded-t-md"
+                style={{
+                  background: "#6bff8f",
+                  boxShadow:
+                    "0 -2px 10px rgba(107,255,143,0.5)",
+                }}
+              />
+            )}
+          </button>
+          </div>
+        </div>
       </div>
 
-      <div className="max-w-md mx-auto px-4 mt-5">
+<SellDrawer 
+        isOpen={sellDrawerOpen}
+        onClose={() => setSellDrawerOpen(false)}
+        position={activeSellPos}
+        onMarketSell={(tokenId, shares) => {
+          setSellDrawerOpen(false);
+          onSell(tokenId, shares);
+        }}
+        onLimitSell={(tokenId, shares, price) => {
+          setSellDrawerOpen(false);
+          onLimitSell(tokenId, shares, price);
+        }}
+      />
+
+      <RedeemDrawer
+        isOpen={redeemDrawerOpen}
+        onClose={() => setRedeemDrawerOpen(false)}
+        position={activeRedeemPos}
+        onConfirm={(pos) => {
+          setRedeemDrawerOpen(false);
+          onRedeem(pos);
+        }}
+      />
+
+      <div className="max-w-md mx-auto px-4 mt-6">
+        {/* Tab Content */}
+        {activeTab === "stats" && (
+          <motion.div
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 10 }}
+            className="flex flex-col gap-4"
+          >
+      <div className="w-full relative z-20">
         <div
           className="p-4 rounded-3xl relative overflow-hidden"
           style={{
@@ -320,7 +471,7 @@ export function ProfilePage({
       </div>
 
       {/* ── Asset Breakdown ── */}
-      <div className="max-w-md mx-auto px-4 mt-4 flex gap-3">
+      <div className="flex gap-3 w-full relative z-20">
         <div className="flex-1 p-3 rounded-2xl bg-white/5 border border-white/5 flex flex-col items-center relative overflow-hidden">
           <div className="text-[10px] text-white/40 uppercase tracking-widest font-bold mb-1">投入本金</div>
           <div className="text-[16px] font-black text-white">$102.00</div>
@@ -337,7 +488,7 @@ export function ProfilePage({
       </div>
 
       {/* ── Domain Distribution (PieChart) ── */}
-      <div className="max-w-md mx-auto px-4 mt-4">
+      <div className="w-full mb-6 relative z-20">
         <div className="p-4 rounded-3xl bg-white/5 border border-white/5 flex items-center justify-between">
           <div className="flex-1">
             <div className="text-[11px] font-bold text-white/50 uppercase tracking-wider mb-2">
@@ -379,133 +530,8 @@ export function ProfilePage({
           </div>
         </div>
       </div>
-
-      <SellDrawer 
-        isOpen={sellDrawerOpen}
-        onClose={() => setSellDrawerOpen(false)}
-        position={activeSellPos}
-        onMarketSell={(tokenId, shares) => {
-          setSellDrawerOpen(false);
-          onSell(tokenId, shares);
-        }}
-        onLimitSell={(tokenId, shares, price) => {
-          setSellDrawerOpen(false);
-          onLimitSell(tokenId, shares, price);
-        }}
-      />
-
-      <RedeemDrawer
-        isOpen={redeemDrawerOpen}
-        onClose={() => setRedeemDrawerOpen(false)}
-        position={activeRedeemPos}
-        onConfirm={(pos) => {
-          setRedeemDrawerOpen(false);
-          onRedeem(pos);
-        }}
-      />
-
-      {/* Middle Part: Tabbed Activity and Social Cards */}
-      <div className="max-w-md mx-auto px-4 mt-6">
-        {/* Tabs */}
-        <div
-          ref={tabBarRef}
-          className="sticky top-[0px] z-30 pt-3 -mx-4 px-4 flex items-center gap-6 border-b border-white/5 pb-2 mb-6 overflow-x-auto whitespace-nowrap [&::-webkit-scrollbar]:hidden"
-          style={{
-            background: "rgba(13,5,24,0.85)",
-            backdropFilter: "blur(12px)",
-            msOverflowStyle: "none",
-            scrollbarWidth: "none",
-          }}
-        >
-          <button
-            onClick={() => handleTabChange("active")}
-            className="relative pb-2 font-bold text-base transition-colors shrink-0"
-            style={{
-              color:
-                activeTab === "active" ? "#dee5ff" : "#a3aac4",
-            }}
-          >
-            持仓<span className="text-[13px] opacity-60 font-medium">({positions?.length || 0})</span>
-            {activeTab === "active" && (
-              <motion.div
-                layoutId="activeTabIndicator"
-                className="absolute bottom-[-9px] left-0 w-full h-[3px] rounded-t-md"
-                style={{
-                  background: "#6bff8f",
-                  boxShadow:
-                    "0 -2px 10px rgba(107,255,143,0.5)",
-                }}
-              />
-            )}
-          </button>
-          <button
-            onClick={() => handleTabChange("orders")}
-            className="relative pb-2 font-bold text-base transition-colors shrink-0"
-            style={{
-              color:
-                activeTab === "orders" ? "#dee5ff" : "#a3aac4",
-            }}
-          >
-            挂单<span className="text-[13px] opacity-60 font-medium">({openOrders?.length || 0})</span>
-            {activeTab === "orders" && (
-              <motion.div
-                layoutId="activeTabIndicator"
-                className="absolute bottom-[-9px] left-0 w-full h-[3px] rounded-t-md"
-                style={{
-                  background: "#6bff8f",
-                  boxShadow:
-                    "0 -2px 10px rgba(107,255,143,0.5)",
-                }}
-              />
-            )}
-          </button>
-          <button
-            onClick={() => handleTabChange("history")}
-            className="relative pb-2 font-bold text-base transition-colors shrink-0"
-            style={{
-              color:
-                activeTab === "history" ? "#dee5ff" : "#a3aac4",
-            }}
-          >
-            历史战绩<span className="text-[13px] opacity-60 font-medium">({historyCount})</span>
-            {activeTab === "history" && (
-              <motion.div
-                layoutId="activeTabIndicator"
-                className="absolute bottom-[-9px] left-0 w-full h-[3px] rounded-t-md"
-                style={{
-                  background: "#6bff8f",
-                  boxShadow:
-                    "0 -2px 10px rgba(107,255,143,0.5)",
-                }}
-              />
-            )}
-          </button>
-          <button
-            onClick={() => handleTabChange("transactions")}
-            className="relative pb-2 font-bold text-base transition-colors shrink-0"
-            style={{
-              color:
-                activeTab === "transactions"
-                  ? "#dee5ff"
-                  : "#a3aac4",
-            }}
-          >
-            交易记录<span className="text-[13px] opacity-60 font-medium">({transactionsCount})</span>
-            {activeTab === "transactions" && (
-              <motion.div
-                layoutId="activeTabIndicator"
-                className="absolute bottom-[-9px] left-0 w-full h-[3px] rounded-t-md"
-                style={{
-                  background: "#6bff8f",
-                  boxShadow:
-                    "0 -2px 10px rgba(107,255,143,0.5)",
-                }}
-              />
-            )}
-          </button>
-        </div>
-
-        {/* Tab Content */}
+          </motion.div>
+        )}
         {activeTab === "active" && (
           <motion.div
             initial={{ opacity: 0, x: -10 }}
@@ -923,13 +949,10 @@ export function ProfilePage({
                       key={item.transactionHash || idx}
                       className="p-3.5 rounded-xl relative overflow-hidden"
                       style={{
-                        background: isWon ? "rgba(107,255,143,0.03)" : "rgba(255,107,107,0.02)",
-                        border: isWon ? "1px solid rgba(107,255,143,0.1)" : "1px solid rgba(255,107,107,0.08)",
+                        background: "rgba(255,255,255,0.04)",
+                        border: "1px solid rgba(255,255,255,0.06)",
                       }}
                     >
-                      {isWon && (
-                        <div className="absolute top-[-40px] right-[-40px] w-[120px] h-[120px] bg-[#6bff8f] opacity-[0.04] blur-[30px] rounded-full pointer-events-none" />
-                      )}
 
                       {/* Top row: time + 赢/输 badge */}
                       <div className="flex items-center justify-between mb-3 relative z-10">
