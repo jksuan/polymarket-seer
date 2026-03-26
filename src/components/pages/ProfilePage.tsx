@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Wallet, LogOut, RefreshCw, Zap, Settings, ArrowUpRight, Share2 } from "lucide-react";
 import { shortenAddress } from "@/lib/utils";
@@ -93,6 +93,26 @@ export function ProfilePage({
   const [activeSellPos, setActiveSellPos] = useState<any>(null);
   const [redeemDrawerOpen, setRedeemDrawerOpen] = useState(false);
   const [activeRedeemPos, setActiveRedeemPos] = useState<any>(null);
+
+  // Tab 栏引用，用于在切换选项卡时平滑滚动至此处
+  const tabBarRef = useRef<HTMLDivElement>(null);
+
+  /**
+   * 切换选项卡处理函数
+   * 说明：除了更新激活 tab 状态外，还会驱使视口平滑滚动回 Tab 栏顶部。
+   * 这样做是为了防止因为新 Tab 内容较少导致页面高度坍塌，从而引起浏览器滚动条位置剧烈跳变。
+   */
+  const handleTabChange = (tab: "active" | "orders" | "history" | "transactions") => {
+    setActiveTab(tab);
+    // 使用 setTimeout 确保在 DOM 更新后执行滚动，避免某些机型下的渲染竞争
+    setTimeout(() => {
+      tabBarRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 0);
+  };
+
+  // Derived counts for tabs
+  const historyCount = (trades || []).filter((t: any) => t.type === "REDEEM").length;
+  const transactionsCount = (trades || []).length;
 
   const displayIdentifier = user?.twitter?.username 
     ? `@${user.twitter.username}`
@@ -388,23 +408,24 @@ export function ProfilePage({
       <div className="max-w-md mx-auto px-4 mt-6">
         {/* Tabs */}
         <div
-          className="sticky top-[52px] z-30 pt-3 -mx-4 px-4 flex items-center gap-6 border-b border-white/5 pb-2 mb-6 overflow-x-auto whitespace-nowrap [&::-webkit-scrollbar]:hidden"
+          ref={tabBarRef}
+          className="sticky top-[0px] z-30 pt-3 -mx-4 px-4 flex items-center gap-6 border-b border-white/5 pb-2 mb-6 overflow-x-auto whitespace-nowrap [&::-webkit-scrollbar]:hidden"
           style={{
-            background: "rgba(13,5,24,0.92)",
+            background: "rgba(13,5,24,0.85)",
             backdropFilter: "blur(12px)",
             msOverflowStyle: "none",
             scrollbarWidth: "none",
           }}
         >
           <button
-            onClick={() => setActiveTab("active")}
+            onClick={() => handleTabChange("active")}
             className="relative pb-2 font-bold text-base transition-colors shrink-0"
             style={{
               color:
                 activeTab === "active" ? "#dee5ff" : "#a3aac4",
             }}
           >
-            持仓 ({positions?.length || 0})
+            持仓<span className="text-[13px] opacity-60 font-medium">({positions?.length || 0})</span>
             {activeTab === "active" && (
               <motion.div
                 layoutId="activeTabIndicator"
@@ -418,14 +439,14 @@ export function ProfilePage({
             )}
           </button>
           <button
-            onClick={() => setActiveTab("orders")}
+            onClick={() => handleTabChange("orders")}
             className="relative pb-2 font-bold text-base transition-colors shrink-0"
             style={{
               color:
                 activeTab === "orders" ? "#dee5ff" : "#a3aac4",
             }}
           >
-            挂单 ({openOrders?.length || 0})
+            挂单<span className="text-[13px] opacity-60 font-medium">({openOrders?.length || 0})</span>
             {activeTab === "orders" && (
               <motion.div
                 layoutId="activeTabIndicator"
@@ -439,14 +460,14 @@ export function ProfilePage({
             )}
           </button>
           <button
-            onClick={() => setActiveTab("history")}
+            onClick={() => handleTabChange("history")}
             className="relative pb-2 font-bold text-base transition-colors shrink-0"
             style={{
               color:
                 activeTab === "history" ? "#dee5ff" : "#a3aac4",
             }}
           >
-            历史战绩
+            历史战绩<span className="text-[13px] opacity-60 font-medium">({historyCount})</span>
             {activeTab === "history" && (
               <motion.div
                 layoutId="activeTabIndicator"
@@ -460,7 +481,7 @@ export function ProfilePage({
             )}
           </button>
           <button
-            onClick={() => setActiveTab("transactions")}
+            onClick={() => handleTabChange("transactions")}
             className="relative pb-2 font-bold text-base transition-colors shrink-0"
             style={{
               color:
@@ -469,7 +490,7 @@ export function ProfilePage({
                   : "#a3aac4",
             }}
           >
-            交易记录
+            交易记录<span className="text-[13px] opacity-60 font-medium">({transactionsCount})</span>
             {activeTab === "transactions" && (
               <motion.div
                 layoutId="activeTabIndicator"
@@ -811,88 +832,195 @@ export function ProfilePage({
             exit={{ opacity: 0, x: -10 }}
             className="flex flex-col gap-3"
           >
+            {portfolioLoading ? (
+              <div className="text-center text-[#a3aac4] text-[14px] py-10">正在同步历史数据...</div>
+            ) : trades.length === 0 ? (
+              <div className="text-center text-[#a3aac4] text-[14px] py-10">暂无历史战绩</div>
+            ) : (
+              (() => {
+                /**
+                 * 数据聚合处理：
+                 * 1. buyCostByCondId: 统计每个 conditionId 的累计买入成本（用于计算亏损额）。
+                 * 2. buyPriceWeightedByCondId: 统计累计成本和累计份额（用于计算加权平均入场胜率）。
+                 * 3. buyFirstTsByCondId: 记录每个 conditionId 的最早 BUY 时间戳（用于计算持仓历时）。
+                 */
+                const buyCostByCondId: Record<string, number> = {};
+                const buyPriceWeightedByCondId: Record<string, { totalCost: number; totalShares: number }> = {};
+                const buyFirstTsByCondId: Record<string, number> = {};
+                trades.forEach((t: any) => {
+                  if (t.type === "TRADE" && t.side === "BUY" && t.conditionId) {
+                    buyCostByCondId[t.conditionId] = (buyCostByCondId[t.conditionId] || 0) + Number(t.usdcSize || 0);
+                    const cost = Number(t.usdcSize || 0);
+                    const shares = Number(t.size || 0);
+                    if (!buyPriceWeightedByCondId[t.conditionId]) {
+                      buyPriceWeightedByCondId[t.conditionId] = { totalCost: 0, totalShares: 0 };
+                    }
+                    buyPriceWeightedByCondId[t.conditionId].totalCost += cost;
+                    buyPriceWeightedByCondId[t.conditionId].totalShares += shares;
+                    const ts = Number(t.timestamp || 0);
+                    if (ts > 0 && (!buyFirstTsByCondId[t.conditionId] || ts < buyFirstTsByCondId[t.conditionId])) {
+                      buyFirstTsByCondId[t.conditionId] = ts;
+                    }
+                  }
+                });
+                // 过滤出 REDEEM 条目，即已结算的最终结果（历史战绩只展示结算项）
+                const historyItems = [...trades]
+                  .filter((t: any) => t.type === "REDEEM")
+                  .sort((a: any, b: any) => (b.timestamp || 0) - (a.timestamp || 0));
 
+                if (historyItems.length === 0) {
+                  return <div className="text-center text-[#a3aac4] text-[14px] py-10">暂无历史战绩</div>;
+                }
 
-            {/* History Card 1 - WIN */}
-            <div
-              className="p-3.5 rounded-xl relative overflow-hidden"
-              style={{
-                background: "rgba(255,255,255,0.04)",
-                border: "1px solid rgba(255,255,255,0.06)",
-              }}
-            >
-              {/* Subtle green glow on top right */}
-              <div className="absolute top-[-40px] right-[-40px] w-[120px] h-[120px] bg-[#6bff8f] opacity-[0.03] blur-[30px] rounded-full pointer-events-none" />
+                return historyItems.map((item: any, idx: number) => {
+                  const usdcAmt = Number(item.usdcSize || 0);
+                  const isWon = usdcAmt > 0.01;
 
-              <div className="flex items-center justify-between mb-3 relative z-10">
-                <div className="text-[11px] font-bold text-[#a3aac4] tracking-[1px] uppercase">
-                  欧洲冠军联赛
-                </div>
-                <div className="bg-[#6bff8f] px-3 py-1.5 rounded-xl flex items-center justify-center">
-                  <span className="text-[12px] font-bold text-[#091328] uppercase leading-none">
-                    获胜
-                  </span>
-                </div>
-              </div>
+                  // For losses: look up total BUY cost for this conditionId
+                  const lossCost = !isWon ? (buyCostByCondId[item.conditionId] || 0) : 0;
 
-              <div className="text-[20px] font-bold text-[#a3aac4] tracking-tight leading-tight relative z-10 px-1">
-                <span className="text-[#dee5ff]">
-                  皇家马德里
-                </span>{" "}
-                晋级
-              </div>
+                  // Entry win rate: weighted avg buy price → percentage
+                  const wpData = buyPriceWeightedByCondId[item.conditionId];
+                  const entryPct = wpData && wpData.totalShares > 0
+                    ? ((wpData.totalCost / wpData.totalShares) * 100).toFixed(1)
+                    : item.price != null
+                      ? (Number(item.price) * 100).toFixed(1)
+                      : null;
 
-              <div className="flex items-end justify-between mt-5 relative z-10 px-1">
-                <div>
-                  <div className="text-[11px] font-bold text-[#a3aac4] uppercase tracking-[1px]">
-                    净赚
-                  </div>
-                  <div className="mt-1 text-[22px] font-bold text-[#6bff8f]">
-                    +$145.00
-                  </div>
-                </div>
+                  // 计算持仓历时：从该 Condition 下最早的一笔 BUY 到当前 REDEEM 的结算时间
+                  const redeemTs = Number(item.timestamp || 0);
+                  const buyTs = buyFirstTsByCondId[item.conditionId] || 0;
+                  let holdingStr = "";
+                  if (redeemTs > 0 && buyTs > 0 && redeemTs > buyTs) {
+                    const diffSec = redeemTs - buyTs;
+                    const days = Math.floor(diffSec / 86400);
+                    const hours = Math.floor((diffSec % 86400) / 3600);
+                    if (days > 0) {
+                      holdingStr = `${days}天${hours > 0 ? hours + "小时" : ""}`;
+                    } else if (hours > 0) {
+                      holdingStr = `${hours}小时`;
+                    } else {
+                      const mins = Math.floor(diffSec / 60);
+                      holdingStr = mins > 0 ? `${mins}分钟` : "不足1分钟";
+                    }
+                  }
 
-                <button className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#192540] text-[#60a5fa] hover:bg-[#203050] transition-colors font-bold text-[13px] active:scale-95 border border-[#60a5fa]/20">
-                  🎉 分享胜利
-                </button>
-              </div>
-            </div>
+                  // Timestamp
+                  const ts = item.timestamp ? new Date(item.timestamp * 1000) : null;
+                  const timeStr = ts
+                    ? `${ts.getFullYear()}/${String(ts.getMonth()+1).padStart(2,"0")}/${String(ts.getDate()).padStart(2,"0")} ${String(ts.getHours()).padStart(2,"0")}:${String(ts.getMinutes()).padStart(2,"0")}`
+                    : "";
 
-            {/* History Card 2 - LOST */}
-            <div
-              className="p-3.5 rounded-xl"
-              style={{
-                background: "rgba(255,255,255,0.04)",
-                border: "1px solid rgba(255,255,255,0.06)",
-              }}
-            >
-              <div className="flex items-center justify-between mb-3">
-                <div className="text-[11px] font-bold text-[#a3aac4] tracking-[1px] uppercase">
-                  UFC 299
-                </div>
-                <div className="bg-[#9f0519] px-3 py-1.5 rounded-xl flex items-center justify-center">
-                  <span className="text-[12px] font-bold text-[#ffa8a3] uppercase leading-none">
-                    未中
-                  </span>
-                </div>
-              </div>
+                  // Outcome badge
+                  const outcome = item.outcome || "";
+                  const outcomeLC = outcome.toLowerCase();
+                  const outcomeBg = outcomeLC === "yes" ? "rgba(107,255,143,0.12)" : outcomeLC === "no" ? "rgba(255,107,107,0.12)" : "rgba(96,165,250,0.12)";
+                  const outcomeBorder = outcomeLC === "yes" ? "1px solid rgba(107,255,143,0.25)" : outcomeLC === "no" ? "1px solid rgba(255,107,107,0.25)" : "1px solid rgba(96,165,250,0.25)";
+                  const outcomeColor = outcomeLC === "yes" ? "#6bff8f" : outcomeLC === "no" ? "#ff6b6b" : "#60a5fa";
 
-              <div className="text-[20px] font-bold text-[#a3aac4] tracking-tight leading-tight px-1">
-                <span className="text-[#dee5ff]">奥马利</span>{" "}
-                KO胜出
-              </div>
+                  return (
+                    <div
+                      key={item.transactionHash || idx}
+                      className="p-3.5 rounded-xl relative overflow-hidden"
+                      style={{
+                        background: isWon ? "rgba(107,255,143,0.03)" : "rgba(255,107,107,0.02)",
+                        border: isWon ? "1px solid rgba(107,255,143,0.1)" : "1px solid rgba(255,107,107,0.08)",
+                      }}
+                    >
+                      {isWon && (
+                        <div className="absolute top-[-40px] right-[-40px] w-[120px] h-[120px] bg-[#6bff8f] opacity-[0.04] blur-[30px] rounded-full pointer-events-none" />
+                      )}
 
-              <div className="flex items-end justify-between mt-5 px-1">
-                <div>
-                  <div className="text-[11px] font-bold text-[#a3aac4] uppercase tracking-[1px]">
-                    损失
-                  </div>
-                  <div className="mt-1 text-[22px] font-bold text-[#ff6b6b]">
-                    -$25.00
-                  </div>
-                </div>
-              </div>
-            </div>
+                      {/* Top row: time + 赢/输 badge */}
+                      <div className="flex items-center justify-between mb-3 relative z-10">
+                        <span className="text-[11px] text-[#a3aac4]/70 font-medium">{timeStr}</span>
+                        <span
+                          className="px-3 py-1 rounded-lg text-[12px] font-bold leading-none"
+                          style={isWon
+                            ? { background: "#6bff8f", color: "#091328" }
+                            : { background: "rgba(255,107,107,0.15)", color: "#ff6b6b", border: "1px solid rgba(255,107,107,0.3)" }
+                          }
+                        >
+                          {isWon ? "🏆 赢" : "输"}
+                        </span>
+                      </div>
+
+                      {/* Market info */}
+                      <div className="flex items-center gap-3 relative z-10">
+                        {item.icon && (
+                          <img
+                            src={item.icon}
+                            alt=""
+                            className="w-[40px] h-[40px] rounded-[10px] object-cover shrink-0 bg-white"
+                            style={{ border: "1px solid rgba(255,255,255,0.1)" }}
+                          />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <div className="text-[13px] font-semibold text-[#dee5ff] truncate leading-snug notranslate" translate="no">
+                            {item.title || "未知市场"}
+                          </div>
+                          <div className="flex items-center gap-2 mt-1">
+                            {outcome && (
+                              <span
+                                className="inline-flex items-center px-1.5 py-[2px] rounded text-[10px] font-bold leading-none"
+                                style={{ background: outcomeBg, border: outcomeBorder, color: outcomeColor }}
+                              >
+                                {outcome}
+                              </span>
+                            )}
+                            {item.price != null && (
+                              <span className="text-[11px] text-[#a3aac4]/70">
+                                @ {(Number(item.price) * 100).toFixed(1)}%
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* 下方统计栏：单行排列内容包括 盈亏额 | 入场胜率 | 持仓时长 | 分享按钮 */}
+                      <div className="flex items-center justify-between mt-3.5 pt-3 border-t border-white/5 relative z-10 gap-2">
+                        {/* 1. 盈利/亏损金额 */}
+                        <div className="flex flex-col shrink-0">
+                          <span className="text-[9px] font-bold text-[#a3aac4]/50 uppercase tracking-[0.8px] mb-0.5">
+                            {isWon ? "盈利" : "亏损"}
+                          </span>
+                          <span className="text-[18px] font-bold tracking-tight leading-none" style={{ color: isWon ? "#6bff8f" : "#ff6b6b" }}>
+                            {isWon ? `+$${usdcAmt.toFixed(2)}` : `-$${lossCost.toFixed(2)}`}
+                          </span>
+                        </div>
+
+                        {/* 2. 入场平均胜率 (通过加权买入价计算) */}
+                        {entryPct != null && (
+                          <div className="flex flex-col items-center shrink-0">
+                            <span className="text-[9px] font-bold text-[#a3aac4]/50 uppercase tracking-[0.8px] mb-0.5">入场胜率</span>
+                            <span className="text-[13px] font-bold text-[#a3aac4]/80">@ {entryPct}%</span>
+                          </div>
+                        )}
+
+                        {/* 3. 持仓历时 */}
+                        {holdingStr && (
+                          <div className="flex flex-col items-center shrink-0">
+                            <span className="text-[9px] font-bold text-[#a3aac4]/50 uppercase tracking-[0.8px] mb-0.5">持仓历时</span>
+                            <span className="text-[13px] font-bold text-[#a3aac4]/80">{holdingStr}</span>
+                          </div>
+                        )}
+
+                        {/* 4. 分享按钮：针对获胜和亏损通过色系区分反馈预期 */}
+                        {isWon ? (
+                          <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#192540] text-[#60a5fa] hover:bg-[#203050] transition-colors font-bold text-[12px] active:scale-95 border border-[#60a5fa]/20 shrink-0">
+                            🎉 分享胜利
+                          </button>
+                        ) : (
+                          <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#ff9966]/10 text-[#ff9966] hover:bg-[#ff9966]/20 transition-colors font-bold text-[12px] active:scale-95 border border-[#ff9966]/30 shrink-0">
+                            📝 分享复盘
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                });
+              })()
+            )}
           </motion.div>
         )}
 
@@ -903,106 +1031,113 @@ export function ProfilePage({
             exit={{ opacity: 0, x: -10 }}
             className="flex flex-col gap-3"
           >
+            {portfolioLoading ? (
+              <div className="text-center text-[#a3aac4] text-[14px] py-10">正在同步交易记录...</div>
+            ) : trades.length === 0 ? (
+              <div className="text-center text-[#a3aac4] text-[14px] py-10">暂无交易记录</div>
+            ) : (
+              (() => {
+                const txItems = [...trades]
+                  .filter((t: any) => t.type === "TRADE" || t.type === "REDEEM")
+                  .sort((a: any, b: any) => (b.timestamp || 0) - (a.timestamp || 0));
 
+                if (txItems.length === 0) {
+                  return <div className="text-center text-[#a3aac4] text-[14px] py-10">暂无交易记录</div>;
+                }
 
-            {/* Transaction Card 1 */}
-            <div
-              className="p-3.5 rounded-xl flex items-center gap-3"
-              style={{
-                background: "rgba(255,255,255,0.04)",
-                border: "1px solid rgba(255,255,255,0.06)",
-              }}
-            >
-              <div className="w-[50px] shrink-0">
-                <div className="text-[12px] font-bold text-[#6bff8f] uppercase bg-[#6bff8f]/10 py-1.5 rounded-md text-center w-full">
-                  下注
-                </div>
-              </div>
+                return txItems.map((item: any, idx: number) => {
+                  const usdcAmt = Number(item.usdcSize || 0);
+                  const isRedeem = item.type === "REDEEM";
+                  const isBuy = item.side === "BUY";
+                  const isWonRedeem = isRedeem && usdcAmt > 0.01;
 
-              <div className="flex-1 flex flex-col items-center justify-center text-center">
-                <div className="text-[11px] font-bold text-[#a3aac4] tracking-[1px] uppercase mb-1">
-                  盘口
-                </div>
-                <div className="text-[16px] font-bold text-[#dee5ff] tracking-tight line-clamp-1">
-                  湖人 vs 勇士
-                </div>
-              </div>
+                  // Type badge config
+                  let txLabel = "其他";
+                  let txColor = "#a3aac4";
+                  let txBg = "rgba(255,255,255,0.07)";
+                  if (isBuy) { txLabel = "买入"; txColor = "#60a5fa"; txBg = "rgba(96,165,250,0.12)"; }
+                  else if (item.side === "SELL") { txLabel = "卖出"; txColor = "#fb923c"; txBg = "rgba(251,146,60,0.12)"; }
+                  else if (isWonRedeem) { txLabel = "兑换"; txColor = "#6bff8f"; txBg = "rgba(107,255,143,0.12)"; }
+                  else if (isRedeem) { txLabel = "归档"; txColor = "#a3aac4"; txBg = "rgba(255,255,255,0.07)"; }
 
-              <div className="text-right shrink-0 min-w-[90px]">
-                <div className="text-[18px] font-bold text-[#ff6b6b]">
-                  -$50.00
-                </div>
-                <div className="text-[11px] font-medium text-[#a3aac4] mt-1">
-                  2026/03/20 14:30
-                </div>
-              </div>
-            </div>
+                  // Amount: BUY is a cost (red -), everything else is income (green +)
+                  const amtDisplay = isBuy ? `-$${usdcAmt.toFixed(2)}` : `+$${usdcAmt.toFixed(2)}`;
+                  const amtColor = isBuy ? "#ff6b6b" : usdcAmt > 0.01 ? "#6bff8f" : "#a3aac4";
 
-            {/* Transaction Card 2 */}
-            <div
-              className="p-3.5 rounded-xl flex items-center gap-3"
-              style={{
-                background: "rgba(255,255,255,0.04)",
-                border: "1px solid rgba(255,255,255,0.06)",
-              }}
-            >
-              <div className="w-[50px] shrink-0">
-                <div className="text-[12px] font-bold text-[#60a5fa] uppercase bg-[#60a5fa]/10 py-1.5 rounded-md text-center w-full">
-                  结算
-                </div>
-              </div>
+                  // Timestamp
+                  const ts = item.timestamp ? new Date(item.timestamp * 1000) : null;
+                  const timeStr = ts
+                    ? `${ts.getFullYear()}/${String(ts.getMonth()+1).padStart(2,"0")}/${String(ts.getDate()).padStart(2,"0")} ${String(ts.getHours()).padStart(2,"0")}:${String(ts.getMinutes()).padStart(2,"0")}`
+                    : "";
 
-              <div className="flex-1 flex flex-col items-center justify-center text-center">
-                <div className="text-[11px] font-bold text-[#a3aac4] tracking-[1px] uppercase mb-1">
-                  盘口
-                </div>
-                <div className="text-[16px] font-bold text-[#dee5ff] tracking-tight line-clamp-1">
-                  皇家马德里 晋级
-                </div>
-              </div>
+                  // Outcome badge
+                  const outcome = item.outcome || "";
+                  const outcomeLC = outcome.toLowerCase();
+                  const outcomePill = outcomeLC === "yes"
+                    ? { bg: "rgba(107,255,143,0.12)", border: "1px solid rgba(107,255,143,0.25)", color: "#6bff8f" }
+                    : outcomeLC === "no"
+                    ? { bg: "rgba(255,107,107,0.12)", border: "1px solid rgba(255,107,107,0.25)", color: "#ff6b6b" }
+                    : { bg: "rgba(96,165,250,0.12)", border: "1px solid rgba(96,165,250,0.25)", color: "#60a5fa" };
 
-              <div className="text-right shrink-0 min-w-[90px]">
-                <div className="text-[18px] font-bold text-[#6bff8f]">
-                  +$195.00
-                </div>
-                <div className="text-[11px] font-medium text-[#a3aac4] mt-1">
-                  2026/03/19 22:15
-                </div>
-              </div>
-            </div>
+                  return (
+                    <div
+                      key={item.transactionHash || idx}
+                      className="p-3 rounded-xl flex items-center gap-3"
+                      style={{
+                        background: "rgba(255,255,255,0.04)",
+                        border: "1px solid rgba(255,255,255,0.06)",
+                      }}
+                    >
+                      {/* Type badge */}
+                      <div className="w-[42px] shrink-0">
+                        <div
+                          className="text-[11px] font-bold py-1.5 rounded-md text-center w-full leading-none"
+                          style={{ color: txColor, background: txBg }}
+                        >
+                          {txLabel}
+                        </div>
+                      </div>
 
-            {/* Transaction Card 3 */}
-            <div
-              className="p-3.5 rounded-xl flex items-center gap-3"
-              style={{
-                background: "rgba(255,255,255,0.04)",
-                border: "1px solid rgba(255,255,255,0.06)",
-              }}
-            >
-              <div className="w-[50px] shrink-0">
-                <div className="text-[12px] font-bold text-[#dee5ff] uppercase bg-white/10 py-1.5 rounded-md text-center w-full">
-                  充值
-                </div>
-              </div>
+                      {/* Market info */}
+                      <div className="flex-1 flex items-center gap-2 min-w-0">
+                        {item.icon && (
+                          <img
+                            src={item.icon}
+                            alt=""
+                            className="w-[28px] h-[28px] rounded-[6px] object-cover shrink-0 bg-white"
+                            style={{ border: "1px solid rgba(255,255,255,0.1)" }}
+                          />
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <div
+                            className="text-[12px] font-semibold text-[#dee5ff] truncate notranslate"
+                            translate="no"
+                          >
+                            {item.title || "未知市场"}
+                          </div>
+                          {outcome && (
+                            <span
+                              className="inline-flex items-center px-1.5 py-[2px] rounded text-[10px] font-bold leading-none mt-0.5"
+                              style={{ background: outcomePill.bg, border: outcomePill.border, color: outcomePill.color }}
+                            >
+                              {outcome}
+                            </span>
+                          )}
+                        </div>
+                      </div>
 
-              <div className="flex-1 flex flex-col items-center justify-center text-center">
-                <div className="text-[11px] font-bold text-[#a3aac4] tracking-[1px] uppercase mb-1">
-                  USDT 钱包
-                </div>
-                <div className="text-[16px] font-bold text-[#dee5ff] tracking-tight line-clamp-1">
-                  Polygon 网络
-                </div>
-              </div>
-
-              <div className="text-right shrink-0 min-w-[90px]">
-                <div className="text-[18px] font-bold text-[#6bff8f]">
-                  +$500.00
-                </div>
-                <div className="text-[11px] font-medium text-[#a3aac4] mt-1">
-                  2026/03/18 10:00
-                </div>
-              </div>
-            </div>
+                      {/* Amount + time */}
+                      <div className="text-right shrink-0 min-w-[74px]">
+                        <div className="text-[15px] font-bold" style={{ color: amtColor }}>
+                          {amtDisplay}
+                        </div>
+                        <div className="text-[10px] text-[#a3aac4]/60 mt-0.5">{timeStr}</div>
+                      </div>
+                    </div>
+                  );
+                });
+              })()
+            )}
           </motion.div>
         )}
       </div>
