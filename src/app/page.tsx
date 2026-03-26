@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, Suspense } from 'react';
+import { useState, Suspense, useRef, useCallback } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 
 import { usePrivy } from "@privy-io/react-auth";
@@ -48,13 +48,17 @@ function AppRouterContent() {
     setTrades([]);
   };
 
-  // Temp bet state logic to handle retries from TxOverlay
+  // Tracks the last async action so TxOverlay's "Retry" can replay it
+  const lastActionRef = useRef<() => Promise<void>>(() => Promise.resolve());
+
   const [lastBetAmount, setLastBetAmount] = useState("10");
-  
-  const handlePlaceBetWrap = async (amount: string, tokenId: string) => {
-      setLastBetAmount(amount);
-      await handlePlaceRealBet(amount, tokenId);
-  };
+
+  const handlePlaceBetWrap = useCallback(async (amount: string, tokenId: string) => {
+    const action = () => handlePlaceRealBet(amount, tokenId);
+    lastActionRef.current = action;
+    setLastBetAmount(amount);
+    await action();
+  }, [handlePlaceRealBet]);
 
   return (
     <div className="relative min-h-[100dvh] w-full bg-[#0D0518]">
@@ -89,18 +93,29 @@ function AppRouterContent() {
               trades={trades}
               portfolioLoading={portfolioLoading}
               onClearState={handleClearState}
-              onRedeem={handleRedeem}
+              onRedeem={(pos) => {
+                const mode = pos._marketStatus === "lost" ? "archive" : "redeem";
+                const action = () => handleRedeem(pos, mode);
+                lastActionRef.current = action;
+                action();
+              }}
               onSell={async (tokenId, sharesText) => {
+                const action = () => handleSellPosition(tokenId, sharesText);
+                lastActionRef.current = action;
                 setLastBetAmount(sharesText);
-                await handleSellPosition(tokenId, sharesText);
+                await action();
               }}
               onLimitSell={async (tokenId, sharesText, price) => {
+                const action = () => handleLimitSellPosition(tokenId, sharesText, price);
+                lastActionRef.current = action;
                 setLastBetAmount(sharesText);
-                await handleLimitSellPosition(tokenId, sharesText, price);
+                await action();
               }}
               onCancelOrder={async (orderId) => {
+                const action = () => handleCancelOrder(orderId);
+                lastActionRef.current = action;
                 setLastBetAmount("0");
-                await handleCancelOrder(orderId);
+                await action();
               }}
             />
           )}
@@ -117,7 +132,7 @@ function AppRouterContent() {
         proxyAddress={proxyAddress!}
         amount={lastBetAmount}
         onClose={closeTxOverlay}
-        onRetry={() => {}}
+        onRetry={() => { lastActionRef.current(); }}
       />
     </div>
   );

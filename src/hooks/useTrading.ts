@@ -1,6 +1,5 @@
 "use client";
-
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { ethers } from "ethers";
 import { ClobClient } from "@polymarket/clob-client";
 import { RelayClient, RelayerTxType } from "@polymarket/builder-relayer-client";
@@ -184,19 +183,38 @@ export function useTrading(
     }
   }, [wallets]);
 
+  // Stablize fetchBalance reference to prevent infinite render loops in useEffect
+  const fetchBalanceRef = useRef(fetchBalance);
+  useEffect(() => {
+    fetchBalanceRef.current = fetchBalance;
+  }, [fetchBalance]);
+
+  // --- Logic: Sync all portfolio data ---
+  const syncData = useCallback(async (delay = 0) => {
+    if (!proxyAddress || !walletAddress) return;
+    
+    // Optional delay to wait for Polymarket backend indexing
+    if (delay > 0) {
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+    
+    fetchBalanceRef.current();
+    fetchPortfolio(proxyAddress, walletAddress);
+  }, [proxyAddress, walletAddress, fetchPortfolio]);
+
   // Auto-fetch portfolio when authenticated and proxy is ready
   useEffect(() => {
     if (authenticated && proxyAddress && walletAddress && hasCreds) {
-      fetchPortfolio(proxyAddress, walletAddress);
+      syncData();
     }
-  }, [authenticated, proxyAddress, walletAddress, hasCreds, fetchPortfolio]);
+  }, [authenticated, proxyAddress, walletAddress, hasCreds, syncData]);
 
-  // --- 逻辑：执行领奖 (Redeem) ---
-  const handleRedeem = async (pos: any) => {
+  // --- 逻辑：执行兑换 (Redeem) / 归档 (Archive) ---
+  const handleRedeem = async (pos: any, mode: "redeem" | "archive" = "redeem") => {
     if (!pos || !proxyAddress) return;
 
     setTxStep("preparing");
-    setTxMessage("正在构造领奖交易请求...");
+    setTxMessage(mode === "archive" ? "正在准备归档交易..." : "正在构造领奖交易请求...");
     setTxError(null);
 
     try {
@@ -215,24 +233,36 @@ export function useTrading(
       const relayClient = new RelayClient(RELAYER_URL, POLYGON_CHAIN_ID, signer as any, builderConfig, RelayerTxType.SAFE);
 
       setTxStep("placing");
-      setTxMessage("正在通过 Relayer 激活资产并提取奖励...");
+      setTxMessage(mode === "archive"
+        ? "正在通过 Relayer 激活归档交易..."
+        : "正在通过 Relayer 激活资产并提取奖励..."
+      );
 
       const tx = await relayClient.execute([{
         to: ADDRESSES.CTF,
         data: ctfInterface.encodeFunctionData("redeemPositions", [ADDRESSES.USDCe, parentCollectionId, pos.conditionId, indexSets]),
         value: "0"
-      }], "Redeem Positions");
+      }], mode === "archive" ? "Archive Position" : "Redeem Positions");
 
-      setTxMessage("领奖交易已广播，等待区块链状态更新...");
+      setTxMessage(mode === "archive"
+        ? "归档交易已广播，等待链上确认..."
+        : "领奖交易已广播，等待区块链状态更新..."
+      );
       await tx.wait();
 
       setTxStep("success");
-      setTxMessage(`恭喜！奖励已成功领取，资金已划转至您的金库。`);
+      setTxMessage(mode === "archive"
+        ? "持仓已归档，链上代币已清理完成。"
+        : "恭喜！奖励已成功领取，资金已划转至您的金库。"
+      );
+      
+      // Auto-refresh positions after 1.5s to allow for indexing
+      syncData(1500);
     } catch (err: any) {
-      console.error("领奖错误:", err);
+      console.error(mode === "archive" ? "归档错误:" : "领奖错误:", err);
       setTxStep("error");
       setTxError(err.message || String(err));
-      setTxMessage("领奖请求执行失败");
+      setTxMessage(mode === "archive" ? "归档请求执行失败" : "领奖请求执行失败");
     }
   };
 
@@ -385,6 +415,7 @@ export function useTrading(
         setTxStep("success");
         setTxMessage("下注成功！订单已被 Polymarket 撮合引擎接受。");
         setTxOrderId(resp.orderID || null);
+        syncData(1500);
       } else {
         let errorMsg = resp?.error || JSON.stringify(resp);
         try {
@@ -444,7 +475,7 @@ export function useTrading(
       if (resp && resp.canceled && resp.canceled.includes(orderId)) {
         setTxStep("success");
         setTxMessage("订单已成功取消");
-        setOpenOrders(prev => prev.filter(o => o.id !== orderId));
+        syncData(1000); // Cancellation usually indexes faster
       } else {
         throw new Error("取消失败，订单可能已成交或已被处理");
       }
@@ -498,6 +529,7 @@ export function useTrading(
         setTxStep("success");
         setTxMessage("卖出成功！大部分或全部份额已按市价被撮合。");
         setTxOrderId(resp.orderID || null);
+        syncData(1500);
       } else {
         let errorMsg = resp?.error || JSON.stringify(resp);
         try {
@@ -561,6 +593,7 @@ export function useTrading(
         setTxStep("success");
         setTxMessage("限价卖单提交成功！等待市场买方吃单。");
         setTxOrderId(resp.orderID || null);
+        syncData(1500);
       } else {
         let errorMsg = resp?.error || JSON.stringify(resp);
         try {

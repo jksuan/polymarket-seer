@@ -7,6 +7,7 @@ import { shortenAddress } from "@/lib/utils";
 import { AreaChart, Area, ResponsiveContainer, Tooltip, PieChart, Pie, Cell, XAxis, CartesianGrid } from "recharts";
 import { SettingsDrawer } from "@/components/ui/SettingsDrawer";
 import { SellDrawer } from "@/components/ui/SellDrawer";
+import { RedeemDrawer } from "@/components/ui/RedeemDrawer";
 
 const DISTRIBUTION_DATA = [
   { name: "NBA", value: 420, color: "#FF6B00" },
@@ -40,21 +41,58 @@ export interface ProfilePageProps {
   trades: any[];
   portfolioLoading: boolean;
   onClearState: () => void;
-  onRedeem: (...args: any) => void;
+  onRedeem: (pos: any) => void;
   onSell: (tokenId: string, sharesText: string) => void;
   onLimitSell: (tokenId: string, sharesText: string, price: number) => void;
   onCancelOrder: (orderId: string) => void;
 }
 
+/**
+ * Derive market status from position data.
+ * Polymarket sets curPrice → 1.0 for winners, → 0.0 for losers once resolved.
+ * We also check endDate to ensure the market has actually closed.
+ */
+function getMarketStatus(pos: any): "active" | "won" | "lost" | "resolving" {
+  const endDate = pos.endDate ? new Date(pos.endDate) : null;
+  const isExpired = endDate ? endDate.getTime() < Date.now() : false;
+  
+  // Safely parse curPrice to a float. Default to -1.
+  let cp = -1;
+  if (pos.curPrice !== undefined && pos.curPrice !== null && pos.curPrice !== "") {
+    cp = Number(pos.curPrice);
+  } else if (pos.currentValue !== undefined && pos.currentValue !== null && pos.currentValue !== "") {
+    // Some endpoints might return currentValue as 0 if lost
+    if (pos.size > 0 && Number(pos.currentValue) === 0) cp = 0;
+  }
+
+  // 1. Definite Win/Loss bounded checks (handles early resolutions & floating point & string issues)
+  // Polymarket pins resolution to exactly 1 or 0.
+  if (cp >= 0 && cp <= 0.0001) return "lost";
+  if (cp >= 0.9999) return "won";
+
+  // 2. Unexpired markets are always active
+  if (!isExpired) return "active";
+
+  // 3. Expired but Price is still in "Trading" range (e.g. 0.75)
+  // This means the clock ran out but Oracle hasn't confirmed winner yet.
+  // We check slightly broader bounds to avoid flapping.
+  if (cp >= 0.0001 && cp <= 0.9999) return "resolving";
+
+  // 4. Final Fallback if somehow missed
+  return "active";
+}
+
 export function ProfilePage({
   authenticated, login, logout, user, usdcBalance, isRefreshingBalance, fetchBalance,
   proxyAddress, positions, openOrders, trades, portfolioLoading, onClearState, walletAddress,
-  onSell, onLimitSell, onCancelOrder
+  onSell, onLimitSell, onCancelOrder, onRedeem
 }: ProfilePageProps) {
   const [activeTab, setActiveTab] = useState<"active" | "orders" | "history" | "transactions">("active");
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [sellDrawerOpen, setSellDrawerOpen] = useState(false);
   const [activeSellPos, setActiveSellPos] = useState<any>(null);
+  const [redeemDrawerOpen, setRedeemDrawerOpen] = useState(false);
+  const [activeRedeemPos, setActiveRedeemPos] = useState<any>(null);
 
   const displayIdentifier = user?.twitter?.username 
     ? `@${user.twitter.username}`
@@ -336,6 +374,16 @@ export function ProfilePage({
         }}
       />
 
+      <RedeemDrawer
+        isOpen={redeemDrawerOpen}
+        onClose={() => setRedeemDrawerOpen(false)}
+        position={activeRedeemPos}
+        onConfirm={(pos) => {
+          setRedeemDrawerOpen(false);
+          onRedeem(pos);
+        }}
+      />
+
       {/* Middle Part: Tabbed Activity and Social Cards */}
       <div className="max-w-md mx-auto px-4 mt-6">
         {/* Tabs */}
@@ -540,21 +588,67 @@ export function ProfilePage({
                         </div>
                       </div>
 
-                      {/* Action buttons */}
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <button 
-                          onClick={() => {
-                            setActiveSellPos(pos);
-                            setSellDrawerOpen(true);
-                          }} 
-                          className="bg-transparent border border-[#0099FF]/50 text-[#0099FF] text-[13px] font-bold px-5 py-1.5 rounded-[6px] hover:bg-[#0099FF]/10 active:scale-95 transition-all leading-none h-[28px] shadow-[0_0_12px_rgba(0,153,255,0.15)] tracking-wide"
-                        >
-                          卖出
-                        </button>
-                        <button className="w-[28px] h-[28px] rounded-full bg-[#192540] flex items-center justify-center text-[#60a5fa] hover:bg-[#203050] transition-colors active:scale-95">
-                          <Share2 size={14} />
-                        </button>
-                      </div>
+                      {/* Action buttons — 3-state based on market status */}
+                      {(() => {
+                        const status = getMarketStatus(pos);
+                        return (
+                          <div className="flex items-center gap-2 mb-0.5">
+                            {status === "active" && (
+                              <button
+                                onClick={() => {
+                                  setActiveSellPos(pos);
+                                  setSellDrawerOpen(true);
+                                }}
+                                className="bg-transparent border border-[#0099FF]/50 text-[#0099FF] text-[13px] font-bold px-5 py-1.5 rounded-[6px] hover:bg-[#0099FF]/10 active:scale-95 transition-all leading-none h-[28px] shadow-[0_0_12px_rgba(0,153,255,0.15)] tracking-wide"
+                              >
+                                卖出
+                              </button>
+                            )}
+
+                            {status === "won" && (
+                              <button
+                                onClick={() => {
+                                  setActiveRedeemPos({ ...pos, _marketStatus: "won" });
+                                  setRedeemDrawerOpen(true);
+                                }}
+                                className="text-[13px] font-bold px-4 py-1.5 rounded-[6px] active:scale-95 transition-all leading-none h-[28px] tracking-wide"
+                                style={{
+                                  background: "linear-gradient(90deg, #7edd00, #ADFF2F)",
+                                  color: "#0D0518",
+                                  boxShadow: "0 0 14px rgba(173,255,47,0.3)",
+                                }}
+                              >
+                                🏆 兑换
+                              </button>
+                            )}
+
+                            {status === "lost" && (
+                              <button
+                                onClick={() => {
+                                  setActiveRedeemPos({ ...pos, _marketStatus: "lost" });
+                                  setRedeemDrawerOpen(true);
+                                }}
+                                className="bg-transparent border border-white/20 text-white/40 text-[13px] font-bold px-4 py-1.5 rounded-[6px] hover:bg-white/5 active:scale-95 transition-all leading-none h-[28px] tracking-wide"
+                              >
+                                📦 归档
+                              </button>
+                            )}
+
+                            {status === "resolving" && (
+                              <button
+                                disabled
+                                className="bg-[#192540] border border-white/10 text-[#a3aac4]/60 text-[13px] font-bold px-4 py-1.5 rounded-[6px] cursor-not-allowed leading-none h-[28px] tracking-wide flex items-center gap-1.5"
+                              >
+                                ⏳ 结果判定中
+                              </button>
+                            )}
+
+                            <button className="w-[28px] h-[28px] rounded-full bg-[#192540] flex items-center justify-center text-[#60a5fa] hover:bg-[#203050] transition-colors active:scale-95">
+                              <Share2 size={14} />
+                            </button>
+                          </div>
+                        );
+                      })()}
                     </div>
                   </div>
                 </div>
