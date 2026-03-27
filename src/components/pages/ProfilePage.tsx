@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Wallet, LogOut, RefreshCw, Zap, Settings, ArrowUpRight, Share2 } from "lucide-react";
 import { shortenAddress } from "@/lib/utils";
@@ -72,7 +72,16 @@ export function ProfilePage({
   proxyAddress, positions, openOrders, trades, portfolioLoading, onClearState, walletAddress,
   onSell, onLimitSell, onCancelOrder, onRedeem
 }: ProfilePageProps) {
-  const [activeTab, setActiveTab] = useState<"stats" | "active" | "orders" | "history" | "transactions">("stats");
+  const [activeTab, setActiveTab] = useState<"stats" | "active" | "orders" | "history" | "transactions">(
+    (typeof window !== "undefined" ? sessionStorage.getItem("seer_active_tab") : "stats") as any || "stats"
+  );
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      sessionStorage.setItem("seer_active_tab", activeTab);
+    }
+  }, [activeTab]);
+
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [sellDrawerOpen, setSellDrawerOpen] = useState(false);
   const [activeSellPos, setActiveSellPos] = useState<any>(null);

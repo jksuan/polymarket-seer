@@ -273,8 +273,18 @@ export function useTrading(
       syncData(1500);
     } catch (err: any) {
       console.error(mode === "archive" ? "归档错误:" : "领奖错误:", err);
+      const errMsg = err.message || String(err);
+      
+      if (errMsg.toLowerCase().includes("timeout")) {
+        setTxStep("error");
+        setTxMessage("⚠️ 签名通道休眠，交易未发送，资产安全。即将为您重新激活页面...");
+        setTxError("签名通道因长时间休眠已断开。页面将自动刷新以恢复连接，届时您可重新操作。");
+        setTimeout(() => { window.location.reload(); }, 2000);
+        return;
+      }
+
       setTxStep("error");
-      setTxError(err.message || String(err));
+      setTxError(errMsg);
       setTxMessage(mode === "archive" ? "归档请求执行失败" : "领奖请求执行失败");
     }
   };
@@ -443,9 +453,17 @@ export function useTrading(
 
     } catch (err: any) {
       console.error("Place bet error:", err);
-      setTxStep("error");
-
       let finalMsg = err.message || String(err);
+
+      if (finalMsg.toLowerCase().includes("timeout")) {
+        setTxStep("error");
+        setTxMessage("⚠️ 签名通道休眠，交易未发送，资产安全。即将为您重新激活页面...");
+        setTxError("签名通道因长时间休眠已断开。页面将自动刷新以恢复连接，届时您可重新操作。");
+        setTimeout(() => { window.location.reload(); }, 2000);
+        return;
+      }
+
+      setTxStep("error");
       if (finalMsg.includes("not enough balance")) finalMsg = "余额不足或授权尚未生效，请确认金库中有足够的 USDC.e。";
       if (finalMsg.includes("user rejected")) finalMsg = "用户取消了签名请求。";
 
@@ -494,8 +512,18 @@ export function useTrading(
       }
     } catch (err: any) {
       console.error("Cancel order error:", err);
+      const errMsg = err.message || String(err);
+
+      if (errMsg.toLowerCase().includes("timeout")) {
+        setTxStep("error");
+        setTxMessage("⚠️ 签名通道休眠，交易未发送，资产安全。即将为您重新激活页面...");
+        setTxError("签名通道因长时间休眠已断开。页面将自动刷新以恢复连接，届时您可重新操作。");
+        setTimeout(() => { window.location.reload(); }, 2000);
+        return;
+      }
+
       setTxStep("error");
-      setTxError(err.message || String(err));
+      setTxError(errMsg);
       setTxMessage("取消请求执行失败");
     }
   };
@@ -553,9 +581,17 @@ export function useTrading(
       }
     } catch (err: any) {
       console.error("Sell position error:", err);
-      setTxStep("error");
-      
       let finalMsg = err.message || String(err);
+
+      if (finalMsg.toLowerCase().includes("timeout")) {
+        setTxStep("error");
+        setTxMessage("⚠️ 签名通道休眠，交易未发送，资产安全。即将为您重新激活页面...");
+        setTxError("签名通道因长时间休眠已断开。页面将自动刷新以恢复连接，届时您可重新操作。");
+        setTimeout(() => { window.location.reload(); }, 2000);
+        return;
+      }
+
+      setTxStep("error");
       if (finalMsg.includes("user rejected")) finalMsg = "用户取消了签名请求。";
       
       setTxError(finalMsg);
@@ -617,9 +653,17 @@ export function useTrading(
       }
     } catch (err: any) {
       console.error("Limit sell error:", err);
-      setTxStep("error");
-      
       let finalMsg = err.message || String(err);
+
+      if (finalMsg.toLowerCase().includes("timeout")) {
+        setTxStep("error");
+        setTxMessage("⚠️ 签名通道休眠，交易未发送，资产安全。即将为您重新激活页面...");
+        setTxError("签名通道因长时间休眠已断开。页面将自动刷新以恢复连接，届时您可重新操作。");
+        setTimeout(() => { window.location.reload(); }, 2000);
+        return;
+      }
+
+      setTxStep("error");
       if (finalMsg.includes("user rejected")) finalMsg = "用户取消了签名请求。";
       
       setTxError(finalMsg);

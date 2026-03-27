@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, Suspense, useRef, useCallback } from 'react';
+import { useState, useEffect, Suspense, useRef, useCallback } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 
 import { usePrivy } from "@privy-io/react-auth";
@@ -17,7 +17,19 @@ import { ChallengePage } from '@/components/pages/ChallengePage';
 import TxOverlay from "@/components/TxOverlay";
 
 function AppRouterContent() {
-  const [activeTab, setActiveTab] = useState('home');
+  const [activeTab, setActiveTabRaw] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return sessionStorage.getItem('seer_app_tab') || 'home';
+    }
+    return 'home';
+  });
+
+  const setActiveTab = useCallback((tab: string) => {
+    setActiveTabRaw(tab);
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('seer_app_tab', tab);
+    }
+  }, []);
 
   // Web3 Core Hooks
   const { authenticated, user, login, logout } = usePrivy();
