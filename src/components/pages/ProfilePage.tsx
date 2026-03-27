@@ -130,52 +130,101 @@ export function ProfilePage({
         : "Guest";
 
   // --- Dynamic Stats Calculations ---
-  // 1. Current Holdings
+  // 基础累加变量（在下面的 trades / positions 遍历中分别累加）
   let currentInvested = 0;
   let currentValue = 0;
-  let distributionData: {name: string, value: number, color: string}[] = [];
-
-  if (positions) {
-    positions.forEach((pos: any) => {
-      currentInvested += Number(pos.initialValue || pos.totalBought || 0);
-      currentValue += Number(pos.currentValue || 0);
-    });
-
-    // Distribution (Top 3 markets by currentValue + Other)
-    const sorted = [...positions].sort((a, b) => Number(b.currentValue || 0) - Number(a.currentValue || 0));
-    const colors = ["#FF6B00", "#00F0FF", "#ADFF2F", "#8B5CF6"];
-    sorted.slice(0, 3).forEach((pos, idx) => {
-      let label = (pos.title || pos.question || "Market").replace(/([（\(].*?[）\)])/g, '').trim().substring(0, 8);
-      distributionData.push({ name: label, value: Number((Number(pos.currentValue || 0)).toFixed(2)), color: colors[idx] });
-    });
-    if (sorted.length > 3) {
-      const otherValue = sorted.slice(3).reduce((acc, pos) => acc + Number(pos.currentValue || 0), 0);
-      distributionData.push({ name: "其他", value: Number(otherValue.toFixed(2)), color: colors[3] });
-    }
-  }
-
-  if (distributionData.length === 0) {
-    distributionData = [{ name: "空仓", value: 1, color: "#8B5CF6" }]; 
-  }
-
-  // 2. Historical Cash Flow
   let historyInvested = 0;
   let historyRevenue = 0;
 
+  // 收益构成：按运动大类分组（eventSlug 关键词匹配）全周期（历史+持仓）
+  // ── 关键词映射表（顺序即优先级）──
+  const SPORT_CATEGORIES: { name: string; emoji: string; keywords: string[]; color: string }[] = [
+    { name: "篮球",  emoji: "🏀", keywords: ["nba", "basketball", "lakers", "celtics", "warriors", "playoff", "finals"], color: "#FF6B00" },
+    { name: "足球",  emoji: "⚽", keywords: ["soccer", "football", "premier", "laliga", "bundesliga", "champions-league", "world-cup", "uefa", "fifa", "serie-a"], color: "#00F0FF" },
+    { name: "网球",  emoji: "🎾", keywords: ["tennis", "wimbledon", "us-open", "french-open", "australian-open", "atp", "wta"], color: "#ADFF2F" },
+    { name: "其它",  emoji: "📊", keywords: [],                                                                               color: "#8B5CF6" },
+  ];
+
+  function getCategory(item: any) {
+    const slug = (item.eventSlug || item.slug || "").toLowerCase();
+    for (const cat of SPORT_CATEGORIES.slice(0, -1)) {
+      if (cat.keywords.some(k => slug.includes(k))) return cat;
+    }
+    return SPORT_CATEGORIES[SPORT_CATEGORIES.length - 1];
+  }
+
+  // 全周期 PnL = Σ(SELL+REDEEM) - Σ(BUY) from trades + currentValue from open positions
+  // catMap: { totalBuy, totalRevenue, currentValue }
+  const catMap = new Map<string, {
+    cat: typeof SPORT_CATEGORIES[0];
+    totalBuy: number;
+    totalRevenue: number;
+    currentValue: number;
+  }>();
+
+  function ensureCat(catName: string, cat: typeof SPORT_CATEGORIES[0]) {
+    if (!catMap.has(catName)) catMap.set(catName, { cat, totalBuy: 0, totalRevenue: 0, currentValue: 0 });
+    return catMap.get(catName)!;
+  }
+
+  // ① 从历史交易记录计算各大类的资金流水
   if (trades && trades.length > 0) {
     trades.forEach((t: any) => {
       const usdc = Number(t.usdcSize || 0);
+      const cat = getCategory(t);
+      const entry = ensureCat(cat.name, cat);
       if (t.type === "TRADE") {
         if (t.side === "BUY") {
-          historyInvested += usdc;
+          entry.totalBuy     += usdc;
+          historyInvested    += usdc;   // 历史总投入（全周期买入）
         } else if (t.side === "SELL") {
-          historyRevenue += usdc;
+          entry.totalRevenue += usdc;
+          historyRevenue     += usdc;
         }
       } else if (t.type === "REDEEM") {
-        historyRevenue += usdc;
+        entry.totalRevenue   += usdc;
+        historyRevenue       += usdc;
       }
     });
   }
+
+  // ② 从当前持仓补充未平仓的市值（当前价值作为"未锁定的浮动资金"）
+  let distributionData: {name: string, value: number, color: string, pnl: number}[] = [];
+
+  if (positions) {
+    positions.forEach((pos: any) => {
+      const cv = Number(pos.currentValue || 0);
+      const iv = Number(pos.initialValue || pos.totalBought || 0);
+      currentValue    += cv;
+      currentInvested += iv;  // 当前持仓本金（未平仓部分的买入成本）
+      const cat = getCategory(pos);
+      const entry = ensureCat(cat.name, cat);
+      entry.currentValue += cv;
+    });
+  }
+
+  // ③ 合并计算全周期净盈亏 = (历史变现 + 当前市值) - 历史总买入
+  distributionData = [...catMap.values()]
+    .map(({ cat, totalBuy, totalRevenue, currentValue: cv }) => {
+      const netPnl = (totalRevenue + cv) - totalBuy;
+      // 饼图大小用总买入金额（代表资本配置比例），最小 0.0001 防止不渲染
+      return {
+        name:  cat.name,  // 不带 emoji，简洁展示
+        value: Math.max(totalBuy, 0.0001),
+        color: cat.color,
+        pnl:   netPnl,
+      };
+    })
+    .filter(d => d.value > 0.0001 || Math.abs(d.pnl) > 0.001) // 过滤完全无记录的大类
+    .sort((a, b) => b.value - a.value);
+
+  if (distributionData.length === 0) {
+    distributionData = [{ name: "空仓", value: 1, color: "#8B5CF6", pnl: 0 }];
+  }
+
+  const totalPnl = distributionData.reduce((acc, d) => acc + d.pnl, 0);
+
+  // 注：historyInvested / historyRevenue 已在上方的 trades 遍历中累加完毕
 
   const historyNetProfit = historyRevenue - historyInvested;
   const currentUnrealizedPnl = currentValue - currentInvested;
@@ -527,15 +576,17 @@ export function ProfilePage({
             </div>
             <div className="flex flex-col gap-1.5 mt-3">
               {distributionData.map((item, idx) => (
-                <div key={`${item.name}-${idx}`} className="flex items-center gap-2">
-                  <div className="w-2.5 h-2.5 rounded-full shadow-sm" style={{ background: item.color, boxShadow: `0 0 6px ${item.color}80` }} />
-                  <span className="text-[12px] font-bold text-white/80 w-12 truncate">{item.name}</span>
-                  <span className="text-[13px] font-black" style={{ color: item.color }}>${item.value !== 1 ? item.value : '0.00'}</span>
+                <div key={`${item.name}-${idx}`} className="flex items-center gap-1.5">
+                  <div className="w-2 h-2 flex-shrink-0 rounded-full" style={{ background: item.color, boxShadow: `0 0 6px ${item.color}80` }} />
+                  <span className="text-[12px] font-bold text-white/80">{item.name}</span>
+                  <span className="text-[12px] font-black tabular-nums" style={{ color: (item as any).pnl >= 0 ? '#4ade80' : '#f87171' }}>
+                    {(item as any).pnl >= 0 ? '+' : ''}{(item as any).pnl.toFixed(2)}
+                  </span>
                 </div>
               ))}
             </div>
           </div>
-          <div className="w-[110px] h-[110px] relative">
+          <div className="w-[110px] h-[110px] relative flex-shrink-0">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
@@ -553,10 +604,12 @@ export function ProfilePage({
                 </Pie>
               </PieChart>
             </ResponsiveContainer>
-            {/* Center text */}
+            {/* Center: total PnL */}
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-              <span className="text-[9px] font-bold text-white/40 uppercase tracking-wider">总价值</span>
-              <span className="text-[13px] font-black text-white mt-0.5">${currentValue.toFixed(2)}</span>
+              <span className="text-[9px] font-bold text-white/40 uppercase tracking-wider">总盈亏</span>
+              <span className="text-[12px] font-black mt-0.5" style={{ color: totalPnl >= 0 ? '#4ade80' : '#f87171' }}>
+                {totalPnl >= 0 ? '+' : ''}{totalPnl.toFixed(2)}
+              </span>
             </div>
           </div>
         </div>
