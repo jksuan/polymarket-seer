@@ -29,7 +29,7 @@ function AppRouterContent() {
   const {
     txStep, txMessage, txOrderId, txError, setTxStep,
     positions, openOrders, trades, portfolioLoading,
-    handlePlaceRealBet, handleRedeem, fetchPortfolio, setPositions, setOpenOrders, setTrades,
+    handlePlaceRealBet, handleRedeem, fetchPortfolio,
     handleSellPosition, handleLimitSellPosition, handleCancelOrder
   } = useTrading(walletAddress, proxyAddress, hasCreds, () => fetchBalance(false));
 
@@ -43,9 +43,6 @@ function AppRouterContent() {
     setWalletAddress("");
     setProxyAddress(null);
     setUsdcBalance("0.00");
-    setPositions([]);
-    setOpenOrders([]);
-    setTrades([]);
   };
 
   // Tracks the last async action so TxOverlay's "Retry" can replay it

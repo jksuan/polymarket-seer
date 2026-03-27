@@ -9,22 +9,6 @@ import { SettingsDrawer } from "@/components/ui/SettingsDrawer";
 import { SellDrawer } from "@/components/ui/SellDrawer";
 import { RedeemDrawer } from "@/components/ui/RedeemDrawer";
 
-const DISTRIBUTION_DATA = [
-  { name: "NBA", value: 420, color: "#FF6B00" },
-  { name: "英超", value: 310, color: "#00F0FF" },
-  { name: "欧冠", value: 180, color: "#ADFF2F" },
-  { name: "其他", value: 90, color: "#8B5CF6" },
-];
-
-const CHART_DATA = [
-  { date: "03-16", value: 0 },
-  { date: "03-17", value: 50 },
-  { date: "03-18", value: 30 },
-  { date: "03-19", value: 140 },
-  { date: "03-20", value: 95 },
-  { date: "03-21", value: 260 },
-  { date: "03-22", value: 420 },
-];
 
 export interface ProfilePageProps {
   authenticated: boolean;
@@ -53,9 +37,6 @@ export interface ProfilePageProps {
  * We also check endDate to ensure the market has actually closed.
  */
 function getMarketStatus(pos: any): "active" | "won" | "lost" | "resolving" {
-  const endDate = pos.endDate ? new Date(pos.endDate) : null;
-  const isExpired = endDate ? endDate.getTime() < Date.now() : false;
-  
   // Safely parse curPrice to a float. Default to -1.
   let cp = -1;
   if (pos.curPrice !== undefined && pos.curPrice !== null && pos.curPrice !== "") {
@@ -70,15 +51,13 @@ function getMarketStatus(pos: any): "active" | "won" | "lost" | "resolving" {
   if (cp >= 0 && cp <= 0.0001) return "lost";
   if (cp >= 0.9999) return "won";
 
-  // 2. Unexpired markets are always active
-  if (!isExpired) return "active";
+  // 2. Check explicit flags if available from Gamma API
+  if (pos.active === false || pos.closed === true) return "resolving";
 
-  // 3. Expired but Price is still in "Trading" range (e.g. 0.75)
-  // This means the clock ran out but Oracle hasn't confirmed winner yet.
-  // We check slightly broader bounds to avoid flapping.
-  if (cp >= 0.0001 && cp <= 0.9999) return "resolving";
-
-  // 4. Final Fallback if somehow missed
+  // 3. Unexpired/Expired but active: default to "active"
+  // Note: We deliberately ignore `endDate < Date.now()` here because Polymarket markets 
+  // frequently remain actively tradable beyond their nominal `endDate`.
+  // If a market is truly halted, the CLOB API will natively reject the sell attempt.
   return "active";
 }
 
@@ -105,6 +84,24 @@ export function ProfilePage({
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  const handleShare = async (title: string, text: string) => {
+    const url = window.location.origin;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title, text, url });
+      } catch (err) {
+        console.warn("分享被取消或失败", err);
+      }
+    } else {
+      try {
+        await navigator.clipboard.writeText(`${title}\n${text}\n${url}`);
+        alert("文案及链接已复制到剪贴板");
+      } catch (err) {
+        console.error("复制失败", err);
+      }
+    }
+  };
+
   // Derived counts for tabs
   const historyCount = (trades || []).filter((t: any) => t.type === "REDEEM").length;
   const transactionsCount = (trades || []).length;
@@ -116,6 +113,59 @@ export function ProfilePage({
       : walletAddress 
         ? shortenAddress(walletAddress)
         : "Guest";
+
+  // --- Dynamic Stats Calculations ---
+  // 1. Current Holdings
+  let currentInvested = 0;
+  let currentValue = 0;
+  let distributionData: {name: string, value: number, color: string}[] = [];
+
+  if (positions) {
+    positions.forEach((pos: any) => {
+      currentInvested += Number(pos.initialValue || pos.totalBought || 0);
+      currentValue += Number(pos.currentValue || 0);
+    });
+
+    // Distribution (Top 3 markets by currentValue + Other)
+    const sorted = [...positions].sort((a, b) => Number(b.currentValue || 0) - Number(a.currentValue || 0));
+    const colors = ["#FF6B00", "#00F0FF", "#ADFF2F", "#8B5CF6"];
+    sorted.slice(0, 3).forEach((pos, idx) => {
+      let label = (pos.title || pos.question || "Market").replace(/([（\(].*?[）\)])/g, '').trim().substring(0, 8);
+      distributionData.push({ name: label, value: Number((Number(pos.currentValue || 0)).toFixed(2)), color: colors[idx] });
+    });
+    if (sorted.length > 3) {
+      const otherValue = sorted.slice(3).reduce((acc, pos) => acc + Number(pos.currentValue || 0), 0);
+      distributionData.push({ name: "其他", value: Number(otherValue.toFixed(2)), color: colors[3] });
+    }
+  }
+
+  if (distributionData.length === 0) {
+    distributionData = [{ name: "空仓", value: 1, color: "#8B5CF6" }]; 
+  }
+
+  // 2. Historical Cash Flow
+  let historyInvested = 0;
+  let historyRevenue = 0;
+
+  if (trades && trades.length > 0) {
+    trades.forEach((t: any) => {
+      const usdc = Number(t.usdcSize || 0);
+      if (t.type === "TRADE") {
+        if (t.side === "BUY") {
+          historyInvested += usdc;
+        } else if (t.side === "SELL") {
+          historyRevenue += usdc;
+        }
+      } else if (t.type === "REDEEM") {
+        historyRevenue += usdc;
+      }
+    });
+  }
+
+  const historyNetProfit = historyRevenue - historyInvested;
+  const currentUnrealizedPnl = currentValue - currentInvested;
+  const currentUnrealizedPct = currentInvested > 0 ? (currentUnrealizedPnl / currentInvested) * 100 : 0;
+
 
   if (!authenticated) {
     return (
@@ -356,134 +406,100 @@ export function ProfilePage({
             exit={{ opacity: 0, x: 10 }}
             className="flex flex-col gap-4"
           >
-      <div className="w-full relative z-20">
+      <div className="flex flex-col gap-3 w-full relative z-20">
+        
+        {/* ── 历史流水账本 (Top Card) ── */}
         <div
-          className="p-4 rounded-3xl relative overflow-hidden"
+          className="p-4 rounded-3xl relative overflow-hidden flex flex-col justify-between gap-4"
           style={{
             background: "linear-gradient(160deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01))",
             border: "1px solid rgba(255,255,255,0.06)",
             boxShadow: "0 12px 32px rgba(0,0,0,0.3)",
           }}
         >
-          <div className="flex justify-between items-start mb-2 relative z-10">
-            <div>
-              <div
-                style={{
-                  fontSize: "11px",
-                  fontFamily: "Inter",
-                  fontWeight: 600,
-                  color: "rgba(255,255,255,0.5)",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.05em",
-                }}
-              >
-                总盈利 (近 7 天)
-              </div>
-              <div className="flex items-baseline gap-2 mt-1">
-                <span
-                  style={{
-                    fontSize: "30px",
-                    fontFamily: "Inter",
-                    fontWeight: 900,
-                    color: "#ADFF2F",
-                    letterSpacing: "-0.02em",
-                    textShadow: "0 0 16px rgba(173,255,47,0.3)",
-                  }}
-                >
-                  +$420.00
-                </span>
-              </div>
-            </div>
+          {/* Main Profit Number */}
+          <div className="flex flex-col relative z-10 h-full">
             <div
-              className="flex items-center px-2 py-1 rounded-lg"
               style={{
-                background: "rgba(0,240,255,0.1)",
-                color: "#00F0FF",
+                fontSize: "11px", fontFamily: "Inter", fontWeight: 600,
+                color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: "0.05em",
               }}
             >
-              <ArrowUpRight size={14} />
+              全周期总净盈亏 (Net Cash)
+            </div>
+            <div className="flex items-baseline gap-2 mt-1 flex-1">
               <span
                 style={{
-                  fontSize: "12px",
-                  fontFamily: "Inter",
-                  fontWeight: 800,
-                  marginLeft: "2px",
+                  fontSize: "32px", fontFamily: "Inter", fontWeight: 900,
+                  color: historyNetProfit >= 0 ? "#ADFF2F" : "#ff6b6b",
+                  letterSpacing: "-0.02em",
+                  textShadow: historyNetProfit >= 0 ? "0 0 16px rgba(173,255,47,0.3)" : "0 0 16px rgba(255,107,107,0.3)",
                 }}
               >
-                35%
+                {historyNetProfit >= 0 ? '+' : '-'}${Math.abs(historyNetProfit).toFixed(2)}
               </span>
             </div>
-          </div>
-
-          <div className="h-[120px] w-[calc(100%+32px)] -ml-4 -mb-4 relative z-10">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart
-                data={CHART_DATA}
-                margin={{ top: 10, right: 0, left: 0, bottom: 0 }}
-              >
-                <defs>
-                  <linearGradient id="colorProfit" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#ADFF2F" stopOpacity={0.4} />
-                    <stop offset="95%" stopColor="#ADFF2F" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="4 4" stroke="rgba(255,255,255,0.06)" vertical={false} />
-                <XAxis dataKey="date" hide={true} />
-                <Tooltip
-                  formatter={(value: any) => [`+$${Number(value).toFixed(2)}`, "盈利"]}
-                  labelFormatter={(label) => `日期: ${label}`}
-                  contentStyle={{
-                    background: "rgba(13,5,24,0.95)",
-                    border: "1px solid rgba(173,255,47,0.3)",
-                    borderRadius: "12px",
-                    boxShadow: "0 8px 32px rgba(0,0,0,0.6)",
-                  }}
-                  itemStyle={{
-                    color: "#ADFF2F",
-                    fontWeight: 900,
-                    fontFamily: "Inter",
-                  }}
-                  labelStyle={{
-                    color: "rgba(255,255,255,0.5)",
-                    fontSize: "11px",
-                    marginBottom: "4px",
-                    fontFamily: "Inter",
-                    textTransform: "uppercase",
-                  }}
-                  cursor={{
-                    stroke: "rgba(255,255,255,0.2)",
-                    strokeWidth: 1,
-                    strokeDasharray: "4 4",
-                  }}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="value"
-                  stroke="#ADFF2F"
-                  strokeWidth={3}
-                  fillOpacity={1}
-                  fill="url(#colorProfit)"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
+            
+            {/* Supporting Breakdown */}
+            <div className="flex justify-between items-end border-t border-white/10 pt-2 mt-auto">
+              <div>
+                <span className="text-[10px] text-white/30 uppercase tracking-widest font-bold">总投入(买入)</span>
+                <div className="text-[13px] font-black text-white/80">${historyInvested.toFixed(2)}</div>
+              </div>
+              <div className="text-right">
+                <span className="text-[10px] text-white/30 uppercase tracking-widest font-bold">总收入(卖出+兑换)</span>
+                <div className="text-[13px] font-black text-white/80">${historyRevenue.toFixed(2)}</div>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* ── Asset Breakdown ── */}
-      <div className="flex gap-3 w-full relative z-20">
-        <div className="flex-1 p-3 rounded-2xl bg-white/5 border border-white/5 flex flex-col items-center relative overflow-hidden">
-          <div className="text-[10px] text-white/40 uppercase tracking-widest font-bold mb-1">投入本金</div>
-          <div className="text-[16px] font-black text-white">$102.00</div>
-        </div>
-        <div className="flex-1 p-3 rounded-2xl bg-white/5 border border-white/5 flex flex-col items-center relative overflow-hidden">
-          <div className="text-[10px] text-white/40 uppercase tracking-widest font-bold mb-1">未结算</div>
-          <div className="text-[16px] font-black text-[#00F0FF]">$21.32</div>
-        </div>
-        <div className="flex-1 p-3 rounded-2xl bg-[#ADFF2F]/10 border border-[#ADFF2F]/20 flex flex-col items-center relative overflow-hidden">
-          <div className="absolute -right-4 -top-4 w-12 h-12 bg-[#ADFF2F] opacity-10 blur-xl rounded-full" />
-          <div className="text-[10px] text-[#ADFF2F]/60 uppercase tracking-widest font-bold mb-1 relative z-10">已实现利润</div>
-          <div className="text-[16px] font-black text-[#ADFF2F] relative z-10">+$420.00</div>
+        {/* ── 当前持仓阵地 (Bottom Card) ── */}
+        <div
+          className="p-4 rounded-3xl relative overflow-hidden flex flex-col gap-3 w-full"
+          style={{
+            background: "linear-gradient(160deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01))",
+            border: "1px solid rgba(255,255,255,0.06)",
+            boxShadow: "0 12px 32px rgba(0,0,0,0.3)",
+          }}
+        >
+          {/* Subtle background glow based on unrealized PnL */}
+          <div className={`absolute -right-10 -bottom-10 w-32 h-32 opacity-10 blur-3xl rounded-full ${currentUnrealizedPnl >= 0 ? 'bg-[#ADFF2F]' : 'bg-[#ff6b6b]'}`} />
+
+          {/* Title */}
+          <div
+            className="relative z-10 border-b border-white/10 pb-3 mb-1"
+            style={{
+              fontSize: "11px", fontFamily: "Inter", fontWeight: 600,
+              color: "rgba(255,255,255,0.4)", letterSpacing: "0.05em",
+            }}
+          >
+            当前持仓
+          </div>
+
+          <div className="flex w-full">
+            <div className="flex-1 flex flex-col items-center relative z-10 border-r border-white/10">
+              <div className="text-[10px] text-white/40 uppercase tracking-widest font-bold mb-1">总本金</div>
+              <div className="text-[16px] font-black text-white">${currentInvested.toFixed(2)}</div>
+            </div>
+            
+            <div className="flex-1 flex flex-col items-center relative z-10 border-r border-white/10">
+              <div className="text-[10px] text-white/40 uppercase tracking-widest font-bold mb-1">总价值</div>
+              <div className="text-[16px] font-black text-[#00F0FF]">${currentValue.toFixed(2)}</div>
+            </div>
+            
+            <div className="flex-1 flex flex-col items-center justify-center relative z-10">
+              <div className="text-[10px] uppercase tracking-widest font-bold mb-1" style={{ color: currentUnrealizedPnl >= 0 ? "rgba(173,255,47,0.7)" : "rgba(255,107,107,0.7)" }}>浮动盈亏</div>
+              <div className="flex flex-col items-center">
+                 <div className={`text-[15px] font-black leading-none ${currentUnrealizedPnl >= 0 ? 'text-[#ADFF2F]' : 'text-[#ff6b6b]'}`}>
+                   {currentUnrealizedPnl >= 0 ? '+' : '-'}${Math.abs(currentUnrealizedPnl).toFixed(2)}
+                 </div>
+                 <div className={`text-[10px] font-bold mt-1 leading-none ${currentUnrealizedPnl > 0 ? 'text-[#ADFF2F]/70' : currentUnrealizedPnl < 0 ? 'text-[#ff6b6b]/70' : 'text-white/30'}`}>
+                   ({currentUnrealizedPnl > 0 ? '+' : ''}{currentUnrealizedPct.toFixed(1)}%)
+                 </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -495,11 +511,11 @@ export function ProfilePage({
               收益构成
             </div>
             <div className="flex flex-col gap-1.5 mt-3">
-              {DISTRIBUTION_DATA.map((item) => (
-                <div key={item.name} className="flex items-center gap-2">
+              {distributionData.map((item, idx) => (
+                <div key={`${item.name}-${idx}`} className="flex items-center gap-2">
                   <div className="w-2.5 h-2.5 rounded-full shadow-sm" style={{ background: item.color, boxShadow: `0 0 6px ${item.color}80` }} />
-                  <span className="text-[12px] font-bold text-white/80 w-10">{item.name}</span>
-                  <span className="text-[13px] font-black" style={{ color: item.color }}>${item.value}</span>
+                  <span className="text-[12px] font-bold text-white/80 w-12 truncate">{item.name}</span>
+                  <span className="text-[13px] font-black" style={{ color: item.color }}>${item.value !== 1 ? item.value : '0.00'}</span>
                 </div>
               ))}
             </div>
@@ -508,7 +524,7 @@ export function ProfilePage({
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
-                  data={DISTRIBUTION_DATA}
+                  data={distributionData}
                   innerRadius={36}
                   outerRadius={52}
                   paddingAngle={6}
@@ -516,7 +532,7 @@ export function ProfilePage({
                   stroke="none"
                   cornerRadius={4}
                 >
-                  {DISTRIBUTION_DATA.map((entry, index) => (
+                  {distributionData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
@@ -524,8 +540,8 @@ export function ProfilePage({
             </ResponsiveContainer>
             {/* Center text */}
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-              <span className="text-[9px] font-bold text-white/40 uppercase tracking-wider">总收益</span>
-              <span className="text-[13px] font-black text-white mt-0.5">1k+</span>
+              <span className="text-[9px] font-bold text-white/40 uppercase tracking-wider">总价值</span>
+              <span className="text-[13px] font-black text-white mt-0.5">${currentValue.toFixed(2)}</span>
             </div>
           </div>
         </div>
@@ -560,7 +576,7 @@ export function ProfilePage({
 
               return (
                 <div
-                  key={pos.asset || idx}
+                  key={`${pos.asset}-${idx}`}
                   translate="no"
                   className="p-2.5 rounded-xl notranslate"
                   style={{
@@ -690,7 +706,13 @@ export function ProfilePage({
                               </button>
                             )}
 
-                            <button className="w-[28px] h-[28px] rounded-full bg-[#192540] flex items-center justify-center text-[#60a5fa] hover:bg-[#203050] transition-colors active:scale-95">
+                            <button 
+                              onClick={() => handleShare(
+                                "SEER.SPORTS 预测",
+                                `我正在关注「${displayTitle}」，目前关注度 ${curPct}%，快来看看！`
+                              )}
+                              className="w-[28px] h-[28px] rounded-full bg-[#192540] flex items-center justify-center text-[#60a5fa] hover:bg-[#203050] transition-colors active:scale-95"
+                            >
                               <Share2 size={14} />
                             </button>
                           </div>
@@ -1030,11 +1052,23 @@ export function ProfilePage({
 
                         {/* 4. 分享按钮：针对获胜和亏损通过色系区分反馈预期 */}
                         {isWon ? (
-                          <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#192540] text-[#60a5fa] hover:bg-[#203050] transition-colors font-bold text-[12px] active:scale-95 border border-[#60a5fa]/20 shrink-0">
+                          <button 
+                            onClick={() => handleShare(
+                              "SEER.SPORTS 胜利战报",
+                              `我在「${item.title || "未知市场"}」中成功预测，实现盈利 $${usdcAmt.toFixed(2)}${entryPct ? `，入场精准度 ${entryPct}%` : ''}！胜算满满！`
+                            )}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#192540] text-[#60a5fa] hover:bg-[#203050] transition-colors font-bold text-[12px] active:scale-95 border border-[#60a5fa]/20 shrink-0"
+                          >
                             🎉 分享胜利
                           </button>
                         ) : (
-                          <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#ff9966]/10 text-[#ff9966] hover:bg-[#ff9966]/20 transition-colors font-bold text-[12px] active:scale-95 border border-[#ff9966]/30 shrink-0">
+                          <button 
+                            onClick={() => handleShare(
+                              "SEER.SPORTS 交易复盘",
+                              `在「${item.title || "未知市场"}」预测失利，当期建仓精确度 ${entryPct || '--'}%，吃一堑长一智，准备再战！`
+                            )}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#ff9966]/10 text-[#ff9966] hover:bg-[#ff9966]/20 transition-colors font-bold text-[12px] active:scale-95 border border-[#ff9966]/30 shrink-0"
+                          >
                             📝 分享复盘
                           </button>
                         )}

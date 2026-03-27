@@ -1,5 +1,6 @@
 "use client";
 import { useState, useCallback, useEffect, useRef } from "react";
+import useSWR from "swr";
 import { ethers } from "ethers";
 import { ClobClient } from "@polymarket/clob-client";
 import { RelayClient, RelayerTxType } from "@polymarket/builder-relayer-client";
@@ -40,62 +41,59 @@ export function useTrading(
   const [txOrderId, setTxOrderId] = useState<string | null>(null);
   const [txError, setTxError] = useState<string | null>(null);
 
-  // --- Portfolio 资产组合状态 ---
-  const [positions, setPositions] = useState<any[]>([]);
-  const [openOrders, setOpenOrders] = useState<any[]>([]);
-  const [trades, setTrades] = useState<any[]>([]);
-  const [portfolioLoading, setPortfolioLoading] = useState(false);
+  const walletsRef = useRef(wallets);
+  useEffect(() => {
+    walletsRef.current = wallets;
+  }, [wallets]);
 
-  // --- 逻辑：获取资产组合数据 ---
-  const fetchPortfolio = useCallback(async (proxyAddr: string, walletAddress: string) => {
-    if (!proxyAddr || !walletAddress) return;
+  // --- 逻辑：获取资产组合数据 (SWR Fetcher) ---
+  const fetcher = useCallback(async ([key, proxyAddr, walletAddr]: [string, string, string]) => {
+    if (!proxyAddr || !walletAddr) return { positions: [], openOrders: [], trades: [] };
 
     // Check creds before pulling CLOB data
-    const creds = getCachedCreds(walletAddress);
-    if (!creds) return; // If API keys aren't ready, we skip
+    const creds = getCachedCreds(walletAddr);
+    if (!creds) return { positions: [], openOrders: [], trades: [] }; // If API keys aren't ready, we skip
 
     // Find the right wallet to sign with clob
-    const walletInfo = wallets.find(w => w.address.toLowerCase() === walletAddress?.toLowerCase())
-      || wallets.find(w => w.walletClientType === "privy")
-      || wallets[0];
-    if (!walletInfo) return;
+    const currentWallets = walletsRef.current;
+    const walletInfo = currentWallets.find(w => w.address.toLowerCase() === walletAddr?.toLowerCase())
+      || currentWallets.find(w => w.walletClientType === "privy")
+      || currentWallets[0];
+    if (!walletInfo) return { positions: [], openOrders: [], trades: [] };
 
-    try {
-      setPortfolioLoading(true);
+    const ethereumProvider = await walletInfo.getEthereumProvider();
+    const provider = new ethers.providers.Web3Provider(ethereumProvider as any);
+    const signer = provider.getSigner();
 
-      const ethereumProvider = await walletInfo.getEthereumProvider();
-      const provider = new ethers.providers.Web3Provider(ethereumProvider as any);
-      const signer = provider.getSigner();
+    // 同时发起两个 API 请求：持仓 + 活动记录
+    const [posRes, activityRes] = await Promise.all([
+      fetch(`${DATA_API_URL}/positions?user=${proxyAddr}`),
+      fetch(`${DATA_API_URL}/activity?user=${proxyAddr}`)
+    ]);
 
-      // 同时发起两个 API 请求：持仓 + 活动记录
-      const [posRes, activityRes] = await Promise.all([
-        fetch(`${DATA_API_URL}/positions?user=${proxyAddr}`),
-        fetch(`${DATA_API_URL}/activity?user=${proxyAddr}`)
-      ]);
+    // 解析持仓 — 按 endDate 降序排列
+    let posArr: any[] = [];
+    if (posRes.ok) {
+      const posData = await posRes.json();
+      posArr = Array.isArray(posData) ? posData : [];
+      posArr.sort((a: any, b: any) => {
+        const dateA = a.endDate ? new Date(a.endDate).getTime() : 0;
+        const dateB = b.endDate ? new Date(b.endDate).getTime() : 0;
+        return dateB - dateA;
+      });
+    }
 
-      // 解析持仓 — 按 endDate 降序排列（最近的盘口排最前）
-      let posArr: any[] = [];
-      if (posRes.ok) {
-        const posData = await posRes.json();
-        posArr = Array.isArray(posData) ? posData : [];
-        posArr.sort((a: any, b: any) => {
-          const dateA = a.endDate ? new Date(a.endDate).getTime() : 0;
-          const dateB = b.endDate ? new Date(b.endDate).getTime() : 0;
-          return dateB - dateA;
-        });
-        setPositions(posArr);
-      }
+    // 解析活动
+    let actData: any[] = [];
+    if (activityRes.ok) {
+      const data = await activityRes.json();
+      actData = Array.isArray(data) ? data : [];
+    }
 
-      // 解析活动
-      if (activityRes.ok) {
-        const actData = await activityRes.json();
-        setTrades(Array.isArray(actData) ? actData : []);
-      }
-
-      // 3. 从 CLOB SDK 获取挂单
-      const clob = new ClobClient(CLOB_API_URL, POLYGON_CHAIN_ID, signer, creds, SIGNATURE_TYPE_GNOSIS_SAFE, proxyAddr);
-      const rawOrders = await clob.getOpenOrders().catch(() => []);
-      const ordersArr: any[] = Array.isArray(rawOrders) ? rawOrders : [];
+    // 3. 从 CLOB SDK 获取挂单
+    const clob = new ClobClient(CLOB_API_URL, POLYGON_CHAIN_ID, signer, creds, SIGNATURE_TYPE_GNOSIS_SAFE, proxyAddr);
+    const rawOrders = await clob.getOpenOrders().catch(() => []);
+    const ordersArr: any[] = Array.isArray(rawOrders) ? rawOrders : [];
 
       // 4. 补充挂单的事件名称/图片等富信息
       if (ordersArr.length > 0) {
@@ -171,17 +169,29 @@ export function useTrading(
           return tB - tA;
         });
 
-        setOpenOrders(enriched);
-      } else {
-        setOpenOrders([]);
+        return { positions: posArr, trades: actData, openOrders: enriched };
       }
 
-    } catch (err) {
-      console.error("fetchPortfolio error:", err);
-    } finally {
-      setPortfolioLoading(false);
+      return { positions: posArr, trades: actData, openOrders: [] };
+  }, []);
+
+  // --- SWR 集成 ---
+  const { data, mutate, isLoading, isValidating } = useSWR(
+    (authenticated && proxyAddress && walletAddress && hasCreds)
+      ? ["portfolio", proxyAddress, walletAddress]
+      : null,
+    fetcher,
+    {
+      refreshInterval: 15000,
+      revalidateOnFocus: true,
+      dedupingInterval: 2000
     }
-  }, [wallets]);
+  );
+
+  const positions = data?.positions || [];
+  const openOrders = data?.openOrders || [];
+  const trades = data?.trades || [];
+  const portfolioLoading = isLoading;
 
   // Stablize fetchBalance reference to prevent infinite render loops in useEffect
   const fetchBalanceRef = useRef(fetchBalance);
@@ -199,15 +209,18 @@ export function useTrading(
     }
     
     fetchBalanceRef.current();
-    fetchPortfolio(proxyAddress, walletAddress);
-  }, [proxyAddress, walletAddress, fetchPortfolio]);
+    mutate();
+  }, [proxyAddress, walletAddress, mutate]);
 
-  // Auto-fetch portfolio when authenticated and proxy is ready
+  // Auto-fetch portfolio wrapper for compatibility
+  const fetchPortfolio = () => { mutate(); };
+
+  // 保证余额能够自动拉取（持仓和记录由 SWR 自动处理）
   useEffect(() => {
     if (authenticated && proxyAddress && walletAddress && hasCreds) {
-      syncData();
+      fetchBalanceRef.current();
     }
-  }, [authenticated, proxyAddress, walletAddress, hasCreds, syncData]);
+  }, [authenticated, proxyAddress, walletAddress, hasCreds]);
 
   // --- 逻辑：执行兑换 (Redeem) / 归档 (Archive) ---
   const handleRedeem = async (pos: any, mode: "redeem" | "archive" = "redeem") => {
@@ -621,7 +634,7 @@ export function useTrading(
     setTxError(null);
     if (proxyAddress) {
       fetchBalance();
-      fetchPortfolio(proxyAddress, walletAddress);
+      mutate();
     }
   };
 
@@ -630,9 +643,9 @@ export function useTrading(
     txMessage, setTxMessage,
     txOrderId, setTxOrderId,
     txError, setTxError,
-    positions, setPositions,
-    openOrders, setOpenOrders,
-    trades, setTrades,
+    positions,
+    openOrders,
+    trades,
     portfolioLoading,
     fetchPortfolio,
     handleRedeem,
