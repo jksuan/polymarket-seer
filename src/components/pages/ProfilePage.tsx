@@ -51,13 +51,19 @@ function getMarketStatus(pos: any): "active" | "won" | "lost" | "resolving" {
   if (cp >= 0 && cp <= 0.0001) return "lost";
   if (cp >= 0.9999) return "won";
 
-  // 2. Check explicit flags if available from Gamma API
-  if (pos.active === false || pos.closed === true) return "resolving";
+  // 防线 1: 明确的关闭信号 (已关闭/已结算)
+  if (pos.closed === true) return "resolving";
 
-  // 3. Unexpired/Expired but active: default to "active"
-  // Note: We deliberately ignore `endDate < Date.now()` here because Polymarket markets 
-  // frequently remain actively tradable beyond their nominal `endDate`.
-  // If a market is truly halted, the CLOB API will natively reject the sell attempt.
+  // 防线 2: 权威的订单簿关停标志 (如字段存在)
+  if (pos.enableOrderBook === false) return "resolving";
+
+  // 防线 3 取消：官方 API 文档特别声明「不应仅凭 endDate 过期就硬禁用卖出按钮」。
+  // 因 endDate 与订单簿真实关停之间没有绝对的即时同步关系。有些短期竞猜允许在 endDate 模糊期内继续交易。
+
+  // 防线 4: 最后放行前，确保后台活跃标记正常
+  if (pos.active === false) return "resolving";
+
+  // 所有关卡均通过，确认为真正可交易活盘
   return "active";
 }
 
