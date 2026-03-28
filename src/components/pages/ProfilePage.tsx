@@ -38,15 +38,23 @@ export function ProfilePage({
   proxyAddress, positions, openOrders, trades, portfolioLoading, onClearState, walletAddress,
   onSell, onLimitSell, onCancelOrder, onRedeem
 }: ProfilePageProps) {
-  const [activeTab, setActiveTab] = useState<"stats" | "active" | "orders" | "history" | "transactions">(
-    (typeof window !== "undefined" ? sessionStorage.getItem("seer_active_tab") : "stats") as any || "stats"
-  );
+  const [activeTab, setActiveTabRaw] = useState<"stats" | "active" | "orders" | "history" | "transactions">("stats");
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      sessionStorage.setItem("seer_active_tab", activeTab);
+      const savedTab = sessionStorage.getItem("seer_active_tab");
+      if (savedTab) {
+        setActiveTabRaw(savedTab as any);
+      }
     }
-  }, [activeTab]);
+  }, []);
+
+  const setActiveTab = (tab: "stats" | "active" | "orders" | "history" | "transactions") => {
+    setActiveTabRaw(tab);
+    if (typeof window !== "undefined") {
+      sessionStorage.setItem("seer_active_tab", tab);
+    }
+  };
 
   const [settingsOpen, setSettingsOpen] = useState(false);
 

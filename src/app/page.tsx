@@ -17,12 +17,16 @@ import { ChallengePage } from '@/components/pages/ChallengePage';
 import TxOverlay from "@/components/TxOverlay";
 
 function AppRouterContent() {
-  const [activeTab, setActiveTabRaw] = useState(() => {
+  const [activeTab, setActiveTabRaw] = useState('home');
+
+  useEffect(() => {
     if (typeof window !== 'undefined') {
-      return sessionStorage.getItem('seer_app_tab') || 'home';
+      const savedTab = sessionStorage.getItem('seer_app_tab');
+      if (savedTab) {
+        setActiveTabRaw(savedTab);
+      }
     }
-    return 'home';
-  });
+  }, []);
 
   const setActiveTab = useCallback((tab: string) => {
     setActiveTabRaw(tab);
