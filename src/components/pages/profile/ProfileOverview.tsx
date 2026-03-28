@@ -1,6 +1,7 @@
 import { motion } from "motion/react";
-import { ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { useProfileStats } from "./useProfileStats";
+import { CategoryPnlChart } from "./CategoryPnlChart";
+import { useSportCategories } from "@/hooks/useSportCategories";
 
 export interface ProfileOverviewProps {
   trades: any[];
@@ -8,17 +9,21 @@ export interface ProfileOverviewProps {
 }
 
 export function ProfileOverview({ trades, positions }: ProfileOverviewProps) {
+  const { leagueToSport, keywords, iconToCategory } = useSportCategories();
+
   const {
     historyInvested,
     historyRevenue,
     currentInvested,
     currentValue,
-    distributionData,
-    totalPnl,
     historyNetProfit,
     currentUnrealizedPnl,
-    currentUnrealizedPct
-  } = useProfileStats(trades, positions);
+    currentUnrealizedPct,
+
+    categoryPnlData,
+  } = useProfileStats(trades, positions, leagueToSport, keywords, iconToCategory);
+
+  const hasCategoryData = categoryPnlData && categoryPnlData.length > 0;
 
   return (
     <motion.div
@@ -28,7 +33,6 @@ export function ProfileOverview({ trades, positions }: ProfileOverviewProps) {
       className="flex flex-col gap-4"
     >
       <div className="flex flex-col gap-3 w-full relative z-20">
-        
         {/* ── 历史流水账本 (Top Card) ── */}
         <div
           className="p-4 rounded-3xl relative overflow-hidden flex flex-col justify-between gap-4"
@@ -46,7 +50,7 @@ export function ProfileOverview({ trades, positions }: ProfileOverviewProps) {
                 color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: "0.05em",
               }}
             >
-              全周期总净盈亏 (Net Cash)
+              总净盈亏 · 全周期
             </div>
             <div className="flex items-baseline gap-2 mt-1 flex-1">
               <span
@@ -60,7 +64,6 @@ export function ProfileOverview({ trades, positions }: ProfileOverviewProps) {
                 {historyNetProfit >= 0 ? '+' : '-'}${Math.abs(historyNetProfit).toFixed(2)}
               </span>
             </div>
-            
             {/* Supporting Breakdown */}
             <div className="flex justify-between items-end border-t border-white/10 pt-2 mt-auto">
               <div>
@@ -124,50 +127,36 @@ export function ProfileOverview({ trades, positions }: ProfileOverviewProps) {
         </div>
       </div>
 
-      {/* ── Domain Distribution (PieChart) ── */}
+
+
+      {/* ── 分类盈亏条形图 ── */}
       <div className="w-full mb-6 relative z-20">
-        <div className="p-4 rounded-3xl bg-white/5 border border-white/5 flex items-center justify-between">
-          <div className="flex-1">
-            <div className="text-[11px] font-bold text-white/50 uppercase tracking-wider mb-2">
-              收益构成
+        <div
+          className="p-4 rounded-3xl"
+          style={{
+            background: "linear-gradient(160deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01))",
+            border: "1px solid rgba(255,255,255,0.06)",
+            boxShadow: "0 12px 32px rgba(0,0,0,0.3)",
+          }}
+        >
+          <div className="flex items-center justify-between mb-3">
+            <div className="text-[11px] font-bold text-white/50 uppercase tracking-wider">
+              分类盈亏 · 全周期
             </div>
-            <div className="flex flex-col gap-1.5 mt-3">
-              {distributionData.map((item, idx) => (
-                <div key={`${item.name}-${idx}`} className="flex items-center gap-1.5">
-                  <div className="w-2 h-2 flex-shrink-0 rounded-full" style={{ background: item.color, boxShadow: `0 0 6px ${item.color}80` }} />
-                  <span className="text-[12px] font-bold text-white/80">{item.name}</span>
-                  <span className="text-[12px] font-black tabular-nums" style={{ color: (item as any).pnl >= 0 ? '#4ade80' : '#f87171' }}>
-                    {(item as any).pnl >= 0 ? '+' : ''}{(item as any).pnl.toFixed(2)}
-                  </span>
-                </div>
-              ))}
-            </div>
+            {hasCategoryData && (
+              <div className="text-[10px] text-white/25 font-medium">
+                自动分类 · {categoryPnlData.length} 类
+              </div>
+            )}
           </div>
-          <div className="w-[110px] h-[110px] relative flex-shrink-0">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={distributionData}
-                  innerRadius={36}
-                  outerRadius={52}
-                  paddingAngle={6}
-                  dataKey="value"
-                  stroke="none"
-                  cornerRadius={4}
-                >
-                  {distributionData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-              </PieChart>
-            </ResponsiveContainer>
-            {/* Center: total PnL */}
-            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-              <span className="text-[9px] font-bold text-white/40 uppercase tracking-wider">总盈亏</span>
-              <span className="text-[12px] font-black mt-0.5" style={{ color: totalPnl >= 0 ? '#4ade80' : '#f87171' }}>
-                {totalPnl >= 0 ? '+' : ''}{totalPnl.toFixed(2)}
-              </span>
-            </div>
+          <div className="w-full">
+            {hasCategoryData ? (
+              <CategoryPnlChart data={categoryPnlData} width={320} />
+            ) : (
+              <div className="flex items-center justify-center" style={{ height: 80 }}>
+                <span className="text-[12px] text-white/20">正在加载分类数据…</span>
+              </div>
+            )}
           </div>
         </div>
       </div>
