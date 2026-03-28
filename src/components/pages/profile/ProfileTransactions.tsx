@@ -1,5 +1,8 @@
 import { motion } from "motion/react";
 import { useProfileTransactions } from "./useProfileTransactions";
+import { GlassCard } from "./components/GlassCard";
+import { OutcomePill } from "./components/OutcomePill";
+import { ProfileEmptyState } from "./components/ProfileEmptyState";
 
 export interface ProfileTransactionsProps {
   portfolioLoading: boolean;
@@ -17,21 +20,14 @@ export function ProfileTransactions({ portfolioLoading, trades }: ProfileTransac
       className="flex flex-col gap-3"
     >
       {portfolioLoading ? (
-        <div className="text-center text-[#a3aac4] text-[14px] py-10">正在同步交易记录...</div>
+        <ProfileEmptyState loading={true} loadingText="正在同步交易记录..." />
       ) : transactionData.length === 0 ? (
-        <div className="text-center text-[#a3aac4] text-[14px] py-10">暂无交易记录</div>
+        <ProfileEmptyState loading={false} emptyText="暂无交易记录" />
       ) : (
         transactionData.map(({
-          item, idx, txLabel, txColor, txBg, amtDisplay, amtColor, timeStr, outcome, outcomePill
+          item, idx, txLabel, txColor, txBg, amtDisplay, amtColor, timeStr, outcome
         }) => (
-          <div
-            key={item.transactionHash || idx}
-            className="p-3 rounded-xl flex items-center gap-3"
-            style={{
-              background: "rgba(255,255,255,0.04)",
-              border: "1px solid rgba(255,255,255,0.06)",
-            }}
-          >
+          <GlassCard key={item.transactionHash || idx} className="p-3 flex items-center gap-3">
             <div className="w-[42px] shrink-0">
               <div
                 className="text-[11px] font-bold py-1.5 rounded-md text-center w-full leading-none"
@@ -57,14 +53,7 @@ export function ProfileTransactions({ portfolioLoading, trades }: ProfileTransac
                 >
                   {item.title || "未知市场"}
                 </div>
-                {outcome && (
-                  <span
-                    className="inline-flex items-center px-1.5 py-[2px] rounded text-[10px] font-bold leading-none mt-0.5"
-                    style={{ background: outcomePill.bg, border: outcomePill.border, color: outcomePill.color }}
-                  >
-                    {outcome}
-                  </span>
-                )}
+                <OutcomePill outcome={outcome} className="mt-0.5" />
               </div>
             </div>
 
@@ -74,7 +63,7 @@ export function ProfileTransactions({ portfolioLoading, trades }: ProfileTransac
               </div>
               <div className="text-[10px] text-[#a3aac4]/60 mt-0.5">{timeStr}</div>
             </div>
-          </div>
+          </GlassCard>
         ))
       )}
     </motion.div>

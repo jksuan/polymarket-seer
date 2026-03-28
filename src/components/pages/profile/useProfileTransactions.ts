@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { formatTimestamp } from "./utils";
 
 export interface TransactionRowData {
   item: any;
@@ -11,7 +12,6 @@ export interface TransactionRowData {
   amtColor: string;
   timeStr: string;
   outcome: string;
-  outcomePill: { bg: string, border: string, color: string };
 }
 
 export function useProfileTransactions(trades: any[]): TransactionRowData[] {
@@ -39,21 +39,11 @@ export function useProfileTransactions(trades: any[]): TransactionRowData[] {
       const amtDisplay = isBuy ? `-$${usdcAmt.toFixed(2)}` : `+$${usdcAmt.toFixed(2)}`;
       const amtColor = isBuy ? "#ff6b6b" : usdcAmt > 0.01 ? "#6bff8f" : "#a3aac4";
 
-      const ts = item.timestamp ? new Date(item.timestamp * 1000) : null;
-      const timeStr = ts
-        ? `${ts.getFullYear()}/${String(ts.getMonth()+1).padStart(2,"0")}/${String(ts.getDate()).padStart(2,"0")} ${String(ts.getHours()).padStart(2,"0")}:${String(ts.getMinutes()).padStart(2,"0")}`
-        : "";
-
+      const timeStr = formatTimestamp(item.timestamp);
       const outcome = item.outcome || "";
-      const outcomeLC = outcome.toLowerCase();
-      const outcomePill = outcomeLC === "yes"
-        ? { bg: "rgba(107,255,143,0.12)", border: "1px solid rgba(107,255,143,0.25)", color: "#6bff8f" }
-        : outcomeLC === "no"
-        ? { bg: "rgba(255,107,107,0.12)", border: "1px solid rgba(255,107,107,0.25)", color: "#ff6b6b" }
-        : { bg: "rgba(96,165,250,0.12)", border: "1px solid rgba(96,165,250,0.25)", color: "#60a5fa" };
 
       return {
-        item, idx, usdcAmt, txLabel, txColor, txBg, amtDisplay, amtColor, timeStr, outcome, outcomePill
+        item, idx, usdcAmt, txLabel, txColor, txBg, amtDisplay, amtColor, timeStr, outcome
       };
     });
   }, [trades]);

@@ -1,6 +1,9 @@
 import { motion } from "motion/react";
 import { handleShare } from "./utils";
 import { useProfileHistory } from "./useProfileHistory";
+import { GlassCard } from "./components/GlassCard";
+import { OutcomePill } from "./components/OutcomePill";
+import { ProfileEmptyState } from "./components/ProfileEmptyState";
 
 export interface ProfileHistoryProps {
   portfolioLoading: boolean;
@@ -18,22 +21,14 @@ export function ProfileHistory({ portfolioLoading, trades }: ProfileHistoryProps
       className="flex flex-col gap-3"
     >
       {portfolioLoading ? (
-        <div className="text-center text-[#a3aac4] text-[14px] py-10">正在同步历史数据...</div>
+        <ProfileEmptyState loading={true} loadingText="正在同步历史数据..." />
       ) : historyData.length === 0 ? (
-        <div className="text-center text-[#a3aac4] text-[14px] py-10">暂无历史战绩</div>
+        <ProfileEmptyState loading={false} emptyText="暂无历史战绩" />
       ) : (
         historyData.map(({
-          item, idx, usdcAmt, isWon, lossCost, entryPct, holdingStr, timeStr,
-          outcome, outcomeBg, outcomeBorder, outcomeColor
+          item, idx, usdcAmt, isWon, lossCost, entryPct, holdingStr, timeStr, outcome
         }) => (
-          <div
-            key={item.transactionHash || idx}
-            className="p-3.5 rounded-xl relative overflow-hidden"
-            style={{
-              background: "rgba(255,255,255,0.04)",
-              border: "1px solid rgba(255,255,255,0.06)",
-            }}
-          >
+          <GlassCard key={item.transactionHash || idx} className="p-3.5">
             <div className="flex items-center justify-between mb-3 relative z-10">
               <span className="text-[11px] text-[#a3aac4]/70 font-medium">{timeStr}</span>
               <span
@@ -61,14 +56,7 @@ export function ProfileHistory({ portfolioLoading, trades }: ProfileHistoryProps
                   {item.title || "未知市场"}
                 </div>
                 <div className="flex items-center gap-2 mt-1">
-                  {outcome && (
-                    <span
-                      className="inline-flex items-center px-1.5 py-[2px] rounded text-[10px] font-bold leading-none"
-                      style={{ background: outcomeBg, border: outcomeBorder, color: outcomeColor }}
-                    >
-                      {outcome}
-                    </span>
-                  )}
+                  <OutcomePill outcome={outcome} />
                   {item.price != null && (
                     <span className="text-[11px] text-[#a3aac4]/70">
                       @ {(Number(item.price) * 100).toFixed(1)}%
@@ -124,7 +112,7 @@ export function ProfileHistory({ portfolioLoading, trades }: ProfileHistoryProps
                 </button>
               )}
             </div>
-          </div>
+          </GlassCard>
         ))
       )}
     </motion.div>
