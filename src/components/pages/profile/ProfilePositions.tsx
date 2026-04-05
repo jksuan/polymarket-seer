@@ -1,12 +1,14 @@
 import { useState } from "react";
 import { motion } from "motion/react";
 import { Share2 } from "lucide-react";
-import { handleShare } from "./utils";
 import { SellDrawer } from "@/components/ui/SellDrawer";
 import { RedeemDrawer } from "@/components/ui/RedeemDrawer";
+import { ShareCardModal } from "@/components/ui/ShareCardModal";
+import { useShareCard } from "@/hooks/useShareCard";
 import { GlassCard } from "./components/GlassCard";
 import { OutcomePill } from "./components/OutcomePill";
 import { ProfileEmptyState } from "./components/ProfileEmptyState";
+
 
 function getMarketStatus(pos: any): "active" | "won" | "lost" | "resolving" {
   let cp = -1;
@@ -37,6 +39,28 @@ export function ProfilePositions({ portfolioLoading, positions, onSell, onLimitS
   const [redeemDrawerOpen, setRedeemDrawerOpen] = useState(false);
   const [activeRedeemPos, setActiveRedeemPos] = useState<any>(null);
 
+  const {
+    isGenerating, showModal, cardImageUrl, cardData,
+    generateCard, saveCard, shareToX, closeModal,
+  } = useShareCard();
+
+  const handleSharePosition = (pos: any) => {
+    const displayTitle = (pos.title || "Unknown Market").replace(/\.+$/, '');
+    generateCard({
+      type: 'position',
+      icon: pos.icon,       // raw URL — hook will fetch as base64
+      title: displayTitle,
+      outcome: pos.outcome,
+      initialValue: Number(pos.initialValue || pos.totalBought || 0),
+      currentValue: Number(pos.currentValue || 0),
+      pnl: pos.cashPnl || 0,
+      pnlPct: pos.percentPnl || 0,
+      avgPrice: pos.avgPrice || 0,
+      curPrice: pos.curPrice || 0,
+      expectedReturn: pos.size || 0,
+    });
+  };
+
   return (
     <>
       <SellDrawer 
@@ -61,6 +85,16 @@ export function ProfilePositions({ portfolioLoading, positions, onSell, onLimitS
           setRedeemDrawerOpen(false);
           onRedeem(pos);
         }}
+      />
+
+      <ShareCardModal
+        isOpen={showModal}
+        isGenerating={isGenerating}
+        cardImageUrl={cardImageUrl}
+        cardData={cardData}
+        onClose={closeModal}
+        onSaveCard={saveCard}
+        onShareToX={() => shareToX(cardData?.title)}
       />
 
       <motion.div
@@ -195,10 +229,7 @@ export function ProfilePositions({ portfolioLoading, positions, onSell, onLimitS
                           )}
 
                           <button 
-                            onClick={() => handleShare(
-                              "SEER.SPORTS 预测",
-                              `我正在关注「${displayTitle}」，目前关注度 ${curPct}%，快来看看！`
-                            )}
+                            onClick={() => handleSharePosition(pos)}
                             className="w-[28px] h-[28px] rounded-full bg-[#192540] flex items-center justify-center text-[#60a5fa] hover:bg-[#203050] transition-colors active:scale-95"
                           >
                             <Share2 size={14} />
