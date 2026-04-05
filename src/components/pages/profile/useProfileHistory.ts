@@ -5,6 +5,7 @@ export interface HistoryRowData {
   item: any;
   idx: number;
   usdcAmt: number;
+  netProfit: number;
   isWon: boolean;
   lossCost: number;
   entryPct: string | null;
@@ -60,11 +61,14 @@ export function useProfileHistory(trades: any[]): HistoryRowData[] {
       const holdingStr = formatHoldingTime(redeemTs, buyTs);
       const timeStr = formatTimestamp(item.timestamp);
       const outcome = item.outcome || "";
+      
+      const netProfit = isWon ? (usdcAmt - (usdcAmt * (Number(entryPct || 100) / 100))) : 0;
 
       return {
         item,
         idx,
         usdcAmt,
+        netProfit,
         isWon,
         lossCost,
         entryPct,

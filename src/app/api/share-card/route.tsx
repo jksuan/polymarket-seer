@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
       type, title = 'Unknown Market', iconBase64, outcome,
       initialValue = 0, currentValue = 0, pnl = 0, pnlPct = 0,
       avgPrice = 0, curPrice = 0, expectedReturn = 0,
-      usdcAmt = 0, entryPct, holdingStr, timeStr,
+      netProfit = 0, entryPct, holdingStr, timeStr,
     } = body;
 
     const displayTitle = title.replace(/\.+$/, '');
@@ -95,7 +95,9 @@ export async function POST(req: NextRequest) {
           borderWidth: 1, borderStyle: 'solid', borderColor: '#3a5a1f',
         }}>
           <div style={{ fontSize: 17, color: '#8bcc5a', marginBottom: 8, display: 'flex' }}>净盈利</div>
-          <div style={{ fontSize: 46, fontWeight: 900, color: '#ADFF2F', display: 'flex' }}>+${Number(usdcAmt).toFixed(2)}</div>
+          <div style={{ fontSize: 46, fontWeight: 900, color: '#ADFF2F', display: 'flex' }}>
+            +${Number(netProfit || 0).toFixed(2)}
+          </div>
         </div>
         <StatBox label="入场胜率" value={entryPct != null ? `@ ${entryPct}%` : '—'} valueColor="#dee5ff" />
         <StatBox label="持仓历时" value={holdingStr || '—'} valueColor="#dee5ff" />

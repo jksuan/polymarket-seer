@@ -14,7 +14,7 @@ export type ShareCardData = {
   expectedReturn?: number;
   avgPrice?: number;
   curPrice?: number;
-  usdcAmt?: number;
+  netProfit?: number;
   entryPct?: number;
   holdingStr?: string;
   timeStr?: string;
@@ -113,12 +113,22 @@ export function useShareCard() {
   const shareToX = useCallback(async (title?: string) => {
     if (!cardData) return;
     const t = title ? `我正在预测「${title}」\n` : '我的 Polymarket 预测\n';
+    
+    // 从环境变量中读取品牌名和链接，并提供默认兜底值
+    const brandName = process.env.NEXT_PUBLIC_BRAND_NAME || 'SEER.SPORTS';
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://supastarter.08612345.xyz';
+    
     let xText: string;
     if (cardData.type === 'position') {
       const p = cardData.pnl || 0;
-      xText = `${t}当前浮${p >= 0 ? '盈' : '亏'} $${Math.abs(p).toFixed(2)}\n\n快来 SEER.SPORTS 一起交流！\n`;
+      const pct = cardData.pnlPct || 0;
+      xText = `${t}当前浮${p >= 0 ? '盈' : '亏'} $${Math.abs(p).toFixed(2)}，收益率${Math.abs(pct).toFixed(2)}%，坐等收米！\n\n快来 ${brandName} 挑战我！\n${baseUrl}`;
     } else {
-      xText = `${t}净盈利 $${(cardData.usdcAmt || 0).toFixed(2)}\n\n来 SEER.SPORTS 挑战我！\n`;
+      const netProfit = cardData.netProfit || 0;
+      const entryPct = cardData.entryPct || 100; // 避免除以 0
+      const roi = ((100 - entryPct) / entryPct) * 100;
+      
+      xText = `${t}成功吃肉！净利 $${netProfit.toFixed(2)}，回报率 ${roi.toFixed(2)}%，收米离场！\n\n快来 ${brandName} 挑战我！\n${baseUrl}`;
     }
 
     // Only use Web Share API on real mobile devices

@@ -26,7 +26,7 @@ export function ProfileHistory({ portfolioLoading, trades }: ProfileHistoryProps
       title: row.item.title || '未知市场',
       outcome: row.outcome,
       isWon: true,
-      usdcAmt: row.usdcAmt,
+      netProfit: row.netProfit,
       entryPct: row.entryPct != null ? Number(row.entryPct) : undefined,
       holdingStr: row.holdingStr,
       timeStr: row.timeStr,
@@ -57,16 +57,17 @@ export function ProfileHistory({ portfolioLoading, trades }: ProfileHistoryProps
           <ProfileEmptyState loading={false} emptyText="暂无历史战绩" />
         ) : (
           historyData.map(({
-            item, idx, usdcAmt, isWon, lossCost, entryPct, holdingStr, timeStr, outcome
+            item, idx, usdcAmt, netProfit, isWon, lossCost, entryPct, holdingStr, timeStr, outcome
           }) => (
-            <GlassCard key={item.transactionHash || idx} className="p-3.5">
+            <GlassCard key={`${item.id}-${idx}`} className="p-4" style={{ borderRadius: 12 }}>
               <div className="flex items-center justify-between mb-3 relative z-10">
-                <span className="text-[11px] text-[#a3aac4]/70 font-medium">{timeStr}</span>
+                <span className="text-[12px] font-medium text-[#a3aac4]/70 tracking-wide">{timeStr}</span>
                 <span
-                  className="px-3 py-1 rounded-lg text-[12px] font-bold leading-none"
-                  style={isWon
-                    ? { background: "#6bff8f", color: "#091328" }
-                    : { background: "rgba(255,107,107,0.15)", color: "#ff6b6b", border: "1px solid rgba(255,107,107,0.3)" }
+                  className="px-2.5 py-1 rounded-[6px] text-[11px] font-bold tracking-wide"
+                  style={
+                    isWon
+                      ? { background: "rgba(107,255,143,0.15)", color: "#6bff8f" }
+                      : { background: "rgba(255,107,107,0.15)", color: "#ff6b6b" }
                   }
                 >
                   {isWon ? "🏆 赢" : "输"}
@@ -95,10 +96,10 @@ export function ProfileHistory({ portfolioLoading, trades }: ProfileHistoryProps
               <div className="flex items-center justify-between mt-3.5 pt-3 border-t border-white/5 relative z-10 gap-2">
                 <div className="flex flex-col shrink-0">
                   <span className="text-[9px] font-bold text-[#a3aac4]/50 uppercase tracking-[0.8px] mb-0.5">
-                    {isWon ? "盈利" : "亏损"}
+                    {isWon ? "净盈利" : "净亏损"}
                   </span>
                   <span className="text-[18px] font-bold tracking-tight leading-none" style={{ color: isWon ? "#6bff8f" : "#ff6b6b" }}>
-                    {isWon ? `+$${usdcAmt.toFixed(2)}` : `-$${lossCost.toFixed(2)}`}
+                    {isWon ? `+$${netProfit.toFixed(2)}` : `-$${lossCost.toFixed(2)}`}
                   </span>
                 </div>
 
@@ -119,7 +120,7 @@ export function ProfileHistory({ portfolioLoading, trades }: ProfileHistoryProps
                 {/* 仅"赢"显示分享按钮，"输"不显示（已删除分享复盘） */}
                 {isWon && (
                   <button
-                    onClick={() => handleShareWin({ item, idx, usdcAmt, isWon, lossCost, entryPct, holdingStr, timeStr, outcome })}
+                    onClick={() => handleShareWin({ item, idx, usdcAmt, netProfit, isWon, lossCost, entryPct, holdingStr, timeStr, outcome })}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors font-bold text-[12px] active:scale-95 shrink-0"
                     style={{ background: '#192540', color: '#60a5fa', border: '1px solid rgba(96,165,250,0.2)' }}
                   >
