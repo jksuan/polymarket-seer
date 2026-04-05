@@ -79,8 +79,29 @@ export function useShareCard() {
     setShowModal(false);
   }, []);
 
-  const saveCard = useCallback(() => {
+  const saveCard = useCallback(async () => {
     if (!cardImageUrl) return;
+
+    const isMobile = typeof navigator !== 'undefined' &&
+      /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+    // Mobile: use native share sheet (files only) — user taps "Save to Photos"
+    if (isMobile && navigator.share && navigator.canShare) {
+      try {
+        const response = await fetch(cardImageUrl);
+        const blob = await response.blob();
+        const file = new File([blob], `SEER_${Date.now()}.png`, { type: 'image/png' });
+        if (navigator.canShare({ files: [file] })) {
+          await navigator.share({ files: [file] });
+          return;
+        }
+      } catch (e: unknown) {
+        if (e instanceof DOMException && e.name === 'AbortError') return; // user cancelled
+        console.warn('Web Share save failed, falling back to download:', e);
+      }
+    }
+
+    // Desktop fallback: trigger browser download
     const a = document.createElement('a');
     a.href = cardImageUrl;
     a.download = `SEER_${Date.now()}.png`;
@@ -89,7 +110,7 @@ export function useShareCard() {
     document.body.removeChild(a);
   }, [cardImageUrl]);
 
-  const shareToX = useCallback((title?: string) => {
+  const shareToX = useCallback(async (title?: string) => {
     if (!cardData) return;
     const t = title ? `我正在预测「${title}」\n` : '我的 Polymarket 预测\n';
     let xText: string;
@@ -99,10 +120,32 @@ export function useShareCard() {
     } else {
       xText = `${t}净盈利 $${(cardData.usdcAmt || 0).toFixed(2)}\n\n来 SEER.SPORTS 挑战我！\n`;
     }
+
+    // Only use Web Share API on real mobile devices
+    const isMobile = typeof navigator !== 'undefined' &&
+      /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+    if (isMobile && cardImageUrl && navigator.share && navigator.canShare) {
+      try {
+        const response = await fetch(cardImageUrl);
+        const blob = await response.blob();
+        const file = new File([blob], `SEER_${Date.now()}.png`, { type: 'image/png' });
+        if (navigator.canShare({ files: [file] })) {
+          await navigator.share({ title: 'SEER.SPORTS', text: xText, files: [file] });
+          return;
+        }
+      } catch (e: unknown) {
+        // User cancelled the share sheet — do nothing, stay on preview
+        if (e instanceof DOMException && e.name === 'AbortError') return;
+        console.warn('Web Share API failed, falling back to X intent:', e);
+      }
+    }
+
+    // Desktop / fallback: open X intent link
     setTimeout(() => {
       window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(xText)}`, '_blank');
-    }, 500);
-  }, [cardData, saveCard]);
+    }, 100);
+  }, [cardData, cardImageUrl]);
 
   return { showModal, isGenerating, cardImageUrl, cardData, generateCard, closeModal, saveCard, shareToX };
 }

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Download, Loader2 } from 'lucide-react';
+import { X, Download, Loader2, Share2 } from 'lucide-react';
 import type { ShareCardData } from '@/hooks/useShareCard';
 
 function XLogo({ size = 16 }: { size?: number }) {
@@ -23,9 +23,16 @@ interface ShareCardModalProps {
   onShareToX: () => void;
 }
 
+function canNativeShare() {
+  if (typeof navigator === 'undefined' || !navigator.share || !navigator.canShare) return false;
+  // Only treat as native share on real mobile devices (not Windows desktop Chrome/Edge)
+  return /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+}
+
 export function ShareCardModal({
   isOpen, isGenerating, cardImageUrl, cardData, onClose, onSaveCard, onShareToX,
 }: ShareCardModalProps) {
+  const nativeShare = canNativeShare();
   if (!isOpen || !cardData) return null;
 
   return (
@@ -70,15 +77,26 @@ export function ShareCardModal({
                   <Download size={16} /> 保存卡片
                 </button>
                 <button onClick={onShareToX} className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-[14px] active:scale-95 transition-all outline-none" style={{ background: 'rgba(74,222,128,0.9)', color: '#FFF', boxShadow: '0 4px 12px rgba(34,197,94,0.25)', border: '1px solid rgba(255,255,255,0.15)' }}>
-                  <XLogo size={15} /> 一键分享到 X
+                  {nativeShare ? <Share2 size={15} /> : <XLogo size={15} />}
+                  {nativeShare ? '一键分享' : '分享到 X'}
                 </button>
               </motion.div>
             )}
 
             {cardImageUrl && !isGenerating && (
-              <p className="text-[10px] text-white/70 mt-3 text-center leading-relaxed">
-                点击「保存卡片」会自动下载图片，<br />请手动将图片附加到 Instagram、Facebook、Telegram 等社交媒体的帖子中
-              </p>
+              <div className="text-[10px] text-white/70 mt-3 text-center leading-relaxed">
+                {nativeShare ? (
+                  <>
+                    「保存卡片」→ 存储到相册<br />
+                    「一键分享」→ 直接发布到 X、Instagram 等社交媒体
+                  </>
+                ) : (
+                  <>
+                    点击「保存卡片」下载图片<br />
+                    请手动将图片附加到 Instagram、Facebook、Telegram 等社交媒体的帖子中
+                  </>
+                )}
+              </div>
             )}
           </motion.div>
         </motion.div>

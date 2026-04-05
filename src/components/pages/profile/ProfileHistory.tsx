@@ -27,7 +27,7 @@ export function ProfileHistory({ portfolioLoading, trades }: ProfileHistoryProps
       outcome: row.outcome,
       isWon: true,
       usdcAmt: row.usdcAmt,
-      entryPct: row.entryPct,
+      entryPct: row.entryPct != null ? Number(row.entryPct) : undefined,
       holdingStr: row.holdingStr,
       timeStr: row.timeStr,
     });
