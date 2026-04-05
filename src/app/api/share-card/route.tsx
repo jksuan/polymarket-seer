@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
 
     const avgPctStr = (avgPrice * 100).toFixed(1);
     const curPctStr = (curPrice * 100).toFixed(1);
-    const bgColor = type === 'position' ? '#141831' : '#14261a';
+    const bgColor = type === 'position' ? '#141831' : '#0a1329';
     const badgeBg = type === 'position' ? (isProfitable ? '#1a2d14' : '#2d1414') : '#1a2d14';
     const badgeBorderColor = type === 'position' ? (isProfitable ? '#3a5a1f' : '#5a1f1f') : '#3a5a1f';
     const badgeColor = type === 'position' ? pnlColor : '#ADFF2F';

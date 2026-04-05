@@ -88,11 +88,6 @@ export function ProfileHistory({ portfolioLoading, trades }: ProfileHistoryProps
                   </div>
                   <div className="flex items-center gap-2 mt-1">
                     <OutcomePill outcome={outcome} />
-                    {item.price != null && (
-                      <span className="text-[11px] text-[#a3aac4]/70">
-                        @ {(Number(item.price) * 100).toFixed(1)}%
-                      </span>
-                    )}
                   </div>
                 </div>
               </div>
