@@ -122,7 +122,11 @@ export function useShareCard() {
     if (cardData.type === 'position') {
       const p = cardData.pnl || 0;
       const pct = cardData.pnlPct || 0;
-      xText = `${t}当前浮${p >= 0 ? '盈' : '亏'} $${Math.abs(p).toFixed(2)}，收益率${Math.abs(pct).toFixed(2)}%，坐等收米！\n\n快来 ${brandName} 挑战我！\n${baseUrl}`;
+      if (p >= 0) {
+        xText = `${t}当前浮盈 $${Math.abs(p).toFixed(2)}，收益率+${Math.abs(pct).toFixed(2)}%，坐等收米！\n\n快来 ${brandName} 挑战我！\n${baseUrl}`;
+      } else {
+        xText = `${t}当前浮亏 $${Math.abs(p).toFixed(2)}，收益率-${Math.abs(pct).toFixed(2)}%，持有中，静待翻盘！\n\n快来 ${brandName} 挑战我！\n${baseUrl}`;
+      }
     } else {
       const netProfit = cardData.netProfit || 0;
       const entryPct = cardData.entryPct || 100; // 避免除以 0
