@@ -1,6 +1,7 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Download, Loader2, Share2 } from 'lucide-react';
 import type { ShareCardData } from '@/hooks/useShareCard';
@@ -33,11 +34,17 @@ export function ShareCardModal({
   isOpen, isGenerating, cardImageUrl, cardData, onClose, onSaveCard, onShareToX,
 }: ShareCardModalProps) {
   const nativeShare = canNativeShare();
-  if (!isOpen || !cardData) return null;
+  const [mounted, setMounted] = useState(false);
 
-  return (
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) return null;
+
+  return createPortal(
     <AnimatePresence>
-      {isOpen && (
+      {isOpen && cardData && (
         <motion.div
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
           className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center"
@@ -101,6 +108,7 @@ export function ShareCardModal({
           </motion.div>
         </motion.div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 }
