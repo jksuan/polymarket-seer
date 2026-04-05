@@ -91,7 +91,6 @@ export function useShareCard() {
 
   const shareToX = useCallback((title?: string) => {
     if (!cardData) return;
-    saveCard();
     const t = title ? `我正在预测「${title}」\n` : '我的 Polymarket 预测\n';
     let xText: string;
     if (cardData.type === 'position') {

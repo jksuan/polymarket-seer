@@ -77,7 +77,7 @@ export function ShareCardModal({
 
             {cardImageUrl && !isGenerating && (
               <p className="text-[10px] text-white/70 mt-3 text-center leading-relaxed">
-                点击「一键分享」会自动下载图片并跳转到 X 发帖页，<br />请手动将图片附加到帖子中
+                点击「保存卡片」会自动下载图片，<br />请手动将图片附加到 Instagram、Facebook、Telegram 等社交媒体的帖子中
               </p>
             )}
           </motion.div>
