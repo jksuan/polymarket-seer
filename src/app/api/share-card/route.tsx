@@ -5,7 +5,7 @@ import path from 'path';
 
 let interRegular: ArrayBuffer | null = null;
 let interBold: ArrayBuffer | null = null;
-let simHeiFont: ArrayBuffer | null = null;
+let notoFont: ArrayBuffer | null = null;
 
 function loadFonts() {
   if (!interRegular) {
@@ -16,11 +16,11 @@ function loadFonts() {
     const buf = readFileSync(path.join(process.cwd(), 'public', 'fonts', 'Inter-Bold.ttf'));
     interBold = buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength);
   }
-  if (!simHeiFont) {
-    const buf = readFileSync('C:\\Windows\\Fonts\\simhei.ttf');
-    simHeiFont = buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength);
+  if (!notoFont) {
+    const buf = readFileSync(path.join(process.cwd(), 'public', 'fonts', 'NotoSansSC-Regular.woff'));
+    notoFont = buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength);
   }
-  return { interRegular, interBold, simHeiFont };
+  return { interRegular, interBold, notoFont };
 }
 
 function StatBox({ label, value, valueColor, sub, subColor }: {
@@ -41,7 +41,7 @@ function StatBox({ label, value, valueColor, sub, subColor }: {
 
 export async function POST(req: NextRequest) {
   try {
-    const { interRegular: regularData, interBold: boldData, simHeiFont: simHeiData } = loadFonts();
+    const { interRegular: regularData, interBold: boldData, notoFont: notoData } = loadFonts();
     const body = await req.json();
     const {
       type, title = 'Unknown Market', iconBase64, outcome,
@@ -110,7 +110,7 @@ export async function POST(req: NextRequest) {
         <div style={{
           width: '100%', height: '100%', display: 'flex', flexDirection: 'column',
           justifyContent: 'space-between', padding: '30px 40px',
-          background: bgColor, color: '#fff', fontFamily: 'Inter, SimHei',
+          background: bgColor, color: '#fff', fontFamily: 'Inter, Noto Sans SC',
           position: 'relative', overflow: 'hidden',
         }}>
           {/* Decorative circles (solid color, no gradient) */}
@@ -181,7 +181,7 @@ export async function POST(req: NextRequest) {
         fonts: [
           { name: 'Inter', data: regularData!, style: 'normal' as const, weight: 400 },
           { name: 'Inter', data: boldData!, style: 'normal' as const, weight: 700 },
-          { name: 'SimHei', data: simHeiData!, style: 'normal' as const, weight: 400 },
+          { name: 'Noto Sans SC', data: notoData!, style: 'normal' as const, weight: 400 },
         ],
       }
     );
