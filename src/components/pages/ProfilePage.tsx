@@ -5,6 +5,7 @@ import { motion } from "motion/react";
 import { Wallet, Settings, Zap } from "lucide-react";
 import { shortenAddress } from "@/lib/utils";
 import { SettingsDrawer } from "@/components/ui/SettingsDrawer";
+import { usePolymarketAuth } from "@/contexts/PolymarketAuthContext";
 
 import { ProfileOverview } from "./profile/ProfileOverview";
 import { ProfilePositions } from "./profile/ProfilePositions";
@@ -38,6 +39,7 @@ export function ProfilePage({
   proxyAddress, positions, openOrders, trades, portfolioLoading, onClearState, walletAddress,
   onSell, onLimitSell, onCancelOrder, onRedeem
 }: ProfilePageProps) {
+  const { displayIdentifier } = usePolymarketAuth();
   const [activeTab, setActiveTabRaw] = useState<"stats" | "active" | "orders" | "history" | "transactions">("stats");
 
   useEffect(() => {
@@ -66,13 +68,7 @@ export function ProfilePage({
   const historyCount = (trades || []).filter((t: any) => t.type === "REDEEM").length;
   const transactionsCount = (trades || []).length;
 
-  const displayIdentifier = user?.twitter?.username 
-    ? `@${user.twitter.username}`
-    : user?.email?.address
-      ? user.email.address
-      : walletAddress 
-        ? shortenAddress(walletAddress)
-        : "Guest";
+  // displayIdentifier is now pulled from usePolymarketAuth() to guarantee consistency
 
   if (!authenticated) {
     return (
