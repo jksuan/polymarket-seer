@@ -67,8 +67,7 @@ export default function Navbar({
           </div>
           <div className="w-[1px] h-6 bg-zinc-800" />
           <button onClick={async () => {
-            await logout();
-            onClearState();
+            await onClearState();
           }} className="text-zinc-500 hover:text-red-400 transition-colors text-xs font-medium">
             退出
           </button>

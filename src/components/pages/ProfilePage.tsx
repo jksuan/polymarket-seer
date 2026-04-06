@@ -255,7 +255,7 @@ export function ProfilePage({
         isOpen={settingsOpen} 
         onClose={() => setSettingsOpen(false)} 
         authenticated={true}
-        onLogout={() => { logout(); onClearState(); }}
+        onLogout={() => { onClearState(); }}
       />
     </div>
   );

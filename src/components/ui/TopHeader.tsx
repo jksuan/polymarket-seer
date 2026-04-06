@@ -2,7 +2,7 @@
 
 import { Zap, Wallet } from 'lucide-react';
 import { usePrivy } from '@privy-io/react-auth';
-import { usePolymarketAuth } from '@/hooks/usePolymarketAuth';
+import { usePolymarketAuth } from '@/contexts/PolymarketAuthContext';
 import { shortenAddress } from '@/lib/utils';
 
 export function TopHeader() {

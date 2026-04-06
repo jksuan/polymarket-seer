@@ -10,7 +10,7 @@ import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { formatVolume, formatSupporters } from '@/lib/utils';
 
 import { usePrivy } from '@privy-io/react-auth';
-import { usePolymarketAuth } from '@/hooks/usePolymarketAuth';
+import { usePolymarketAuth } from '@/contexts/PolymarketAuthContext';
 import { shortenAddress } from '@/lib/utils';
 
 // We use mock markets to ensure there's always something to swipe for challenges 

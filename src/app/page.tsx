@@ -3,9 +3,7 @@
 import { useState, useEffect, Suspense, useRef, useCallback } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 
-import { usePrivy } from "@privy-io/react-auth";
-import { clearCredsCache } from "@/lib/utils";
-import { usePolymarketAuth } from "@/hooks/usePolymarketAuth";
+import { PolymarketAuthProvider, usePolymarketAuth } from "@/contexts/PolymarketAuthContext";
 import { useTrading } from "@/hooks/useTrading";
 
 import { BottomNav } from '@/components/ui/BottomNav';
@@ -36,8 +34,8 @@ function AppRouterContent() {
   }, []);
 
   // Web3 Core Hooks
-  const { authenticated, user, login, logout } = usePrivy();
   const { 
+    authenticated, user, login, handleLogout,
     walletAddress, proxyAddress, usdcBalance, isRefreshingBalance, fetchBalance,
     setWalletAddress, setProxyAddress, setUsdcBalance, hasCreds
   } = usePolymarketAuth();
@@ -54,12 +52,7 @@ function AppRouterContent() {
     if (proxyAddress) fetchBalance(false);
   };
 
-  const handleClearState = () => {
-    clearCredsCache();
-    setWalletAddress("");
-    setProxyAddress(null);
-    setUsdcBalance("0.00");
-  };
+  // handleLogout 已由 Context 提供，包含完整的退出清理逻辑
 
   // Tracks the last async action so TxOverlay's "Retry" can replay it
   const lastActionRef = useRef<() => Promise<void>>(() => Promise.resolve());
@@ -94,7 +87,7 @@ function AppRouterContent() {
             <ProfilePage 
               authenticated={authenticated}
               login={login}
-              logout={logout}
+              logout={handleLogout}
               user={user}
               usdcBalance={usdcBalance}
               isRefreshingBalance={isRefreshingBalance}
@@ -105,7 +98,7 @@ function AppRouterContent() {
               openOrders={openOrders}
               trades={trades}
               portfolioLoading={portfolioLoading}
-              onClearState={handleClearState}
+              onClearState={handleLogout}
               onRedeem={(pos) => {
                 const mode = pos._marketStatus === "lost" ? "archive" : "redeem";
                 const action = () => handleRedeem(pos, mode);
@@ -153,8 +146,10 @@ function AppRouterContent() {
 
 export default function AppRouter() {
   return (
-    <Suspense fallback={<div className="min-h-[100dvh] bg-[#0D0518] text-white flex items-center justify-center">Loading Framework...</div>}>
-      <AppRouterContent />
-    </Suspense>
+    <PolymarketAuthProvider>
+      <Suspense fallback={<div className="min-h-[100dvh] bg-[#0D0518] text-white flex items-center justify-center">Loading Framework...</div>}>
+        <AppRouterContent />
+      </Suspense>
+    </PolymarketAuthProvider>
   );
 }
