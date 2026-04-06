@@ -153,8 +153,8 @@ export function ProfileOverview({ trades, positions }: ProfileOverviewProps) {
             {hasCategoryData ? (
               <CategoryPnlChart data={categoryPnlData} width={320} />
             ) : (
-              <div className="flex items-center justify-center" style={{ height: 80 }}>
-                <span className="text-[12px] text-white/20">正在加载分类数据…</span>
+              <div className="flex items-center justify-center flex-col gap-1.5" style={{ height: 80 }}>
+                <span className="text-[12px] font-medium text-white/40 tracking-wide">暂无交易数据</span>
               </div>
             )}
           </div>

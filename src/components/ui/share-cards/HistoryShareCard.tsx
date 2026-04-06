@@ -5,7 +5,7 @@ import type { ShareCardData } from '@/hooks/useShareCard';
 
 export function HistoryShareCard({ data }: { data: ShareCardData }) {
   const displayTitle = (data.title || '未知市场').replace(/\.+$/, '');
-  const usdcAmt = data.usdcAmt || 0;
+  const netProfit = data.netProfit || 0;
   const entryPct = data.entryPct;
   const holdingStr = data.holdingStr || '';
   const timeStr = data.timeStr || '';
@@ -128,7 +128,7 @@ export function HistoryShareCard({ data }: { data: ShareCardData }) {
             净盈利
           </div>
           <div style={{ fontSize: 24, fontWeight: 900, color: '#ADFF2F', letterSpacing: -1, lineHeight: 1 }}>
-            +${usdcAmt.toFixed(2)}
+            +${netProfit.toFixed(2)}
           </div>
         </div>
 
