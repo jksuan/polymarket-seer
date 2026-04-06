@@ -139,30 +139,39 @@ export function PolymarketAuthProvider({ children }: { children: ReactNode }) {
          creds = getCachedCreds(wallet.address);
       }
 
-      // --- CLOB API Key 衍生（仅一次，区分永久/临时失败） ---
+      // --- CLOB API Key 获取（仅一次）：先 derive 再 create ---
+      // deriveApiKey 优先：老账号已有 Key，此处能直接拿到，不会报错。新账号会失败（抛出 400 Could not derive）。
+      // createApiKey 备用：当 derive 失败且确定无 Key 时，发起注册。
       if (!creds && !hasTriedDeriveCredsRef.current) {
          hasTriedDeriveCredsRef.current = true;
-         console.log("[CLOB 衍生] 缓存中无 API Key，尝试衍生...");
+         console.log("[CLOB] 缓存中无 API Key，尝试获取...");
          try {
             await wallet.switchChain(POLYGON_CHAIN_ID);
+            // 第一步：尝试 deriveApiKey（针对老账号）
             try {
                creds = await clobClient.deriveApiKey();
-               console.log("[CLOB 衍生] deriveApiKey 成功 ✅");
+               console.log("[CLOB] deriveApiKey 成功 ✅");
             } catch (deriveErr: any) {
                if (isUserRejection(deriveErr)) {
-                  console.log("[CLOB 衍生] 用户拒绝签名");
-               } else if (isPermanentClobFailure(deriveErr)) {
-                  console.log("[CLOB 衍生] 全新 Polymarket 账户，API Key 暂不可用（首次下单后生效）");
+                  console.log("[CLOB] 用户拒绝签名");
                } else {
-                  console.log("[CLOB 衍生] deriveApiKey 失败，尝试 createApiKey...");
+                  // 第二步：derive 失败时（通常是新账号没有 Key），尝试 createApiKey 注册
+                  if (isPermanentClobFailure(deriveErr)) {
+                     console.log("[CLOB] 链上无可用 API Key（新账号），准备注册...");
+                  } else {
+                     console.log("[CLOB] deriveApiKey 发生未知错误，尝试备用注册...");
+                  }
+                  
                   try {
                      creds = await clobClient.createApiKey();
-                     console.log("[CLOB 衍生] createApiKey 成功 ✅");
+                     console.log("[CLOB] createApiKey 成功 ✅");
                   } catch (createErr: any) {
-                     if (isPermanentClobFailure(createErr)) {
-                        console.log("[CLOB 衍生] 全新 Polymarket 账户，API Key 暂不可用");
+                     if (isUserRejection(createErr)) {
+                        console.log("[CLOB] 用户拒绝签名");
+                     } else if (isPermanentClobFailure(createErr)) {
+                        console.log("[CLOB] 注册被拒绝。可能原因：账号在 Polygon 上无资金记录或未发生交互");
                      } else {
-                        console.warn("[CLOB 衍生] createApiKey 也失败:", createErr);
+                        console.log("[CLOB] 无法注册 API Key。原因：" + (createErr?.message || "未知报错"));
                      }
                   }
                }
@@ -170,10 +179,10 @@ export function PolymarketAuthProvider({ children }: { children: ReactNode }) {
             if (creds && creds.key) {
               setCachedCreds(wallet.address, creds);
               setHasCreds(true);
-              console.log("[CLOB 衍生] API Key 已生成并缓存");
+              console.log("[CLOB] API Key 已生成并缓存");
             }
          } catch (keyErr: any) {
-            console.warn("[CLOB 衍生] API Key 获取流程异常:", keyErr);
+            console.warn("[CLOB] API Key 获取流程异常:", keyErr);
          }
       } else if (creds) {
          setHasCreds(true);
@@ -242,13 +251,13 @@ export function PolymarketAuthProvider({ children }: { children: ReactNode }) {
     };
   }, [ready, wallets, authenticated, user, fetchBalance]);
 
-  // Derived Values
+  // Derived Values — Google 登录时 email 存在 user.google.email 而非 user.email.address
   const displayIdentifier = user?.twitter?.username 
     ? `@${user.twitter.username}`
-    : user?.email?.address
-      ? user.email.address
-      : user?.google?.email
-        ? user.google.email
+    : user?.google?.email
+      ? user.google.email
+      : user?.email?.address
+        ? user.email.address
         : walletAddress 
           ? shortenAddress(walletAddress)
           : "Wallet Connected";

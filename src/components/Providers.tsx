@@ -21,6 +21,10 @@ if (typeof window !== "undefined") {
     if (typeof args[0] === "string" && args[0].includes("unique \"key\" prop") && args[0].includes("Me")) {
       return;
     }
+    // 屏蔽 CLOB SDK 内部的 api key Axios 报错（正常流程中的 fallback 报错机制，已在代码中 catch 处理）
+    if (typeof args[0] === "string" && args[0].includes("[CLOB Client] request error") && (args[0].includes("Could not derive api key!") || args[0].includes("Could not create api key"))) {
+      return;
+    }
     _origError(...args);
   };
 }
