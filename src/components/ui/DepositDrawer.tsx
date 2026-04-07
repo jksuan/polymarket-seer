@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "motion/react";
 import { X, Copy, CheckCircle2, AlertTriangle, Info } from "lucide-react";
 import QRCode from "react-qr-code";
@@ -9,7 +10,7 @@ interface DepositDrawerProps {
   proxyAddress: string;
 }
 
-export function DepositDrawer({ isOpen, onClose, proxyAddress }: DepositDrawerProps) {
+function DrawerContent({ isOpen, onClose, proxyAddress }: DepositDrawerProps) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
@@ -42,7 +43,7 @@ export function DepositDrawer({ isOpen, onClose, proxyAddress }: DepositDrawerPr
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="fixed bottom-0 left-0 right-0 z-50 flex flex-col max-h-[90vh] rounded-t-3xl border-t border-white/10"
+            className="fixed bottom-0 left-0 right-0 z-50 flex flex-col max-h-[90vh] rounded-t-3xl border-t border-white/10 mx-auto w-full max-w-[448px]"
             style={{
               background: "linear-gradient(180deg, #1c0f2e 0%, #0d0518 100%)",
               boxShadow: "0 -20px 40px rgba(0,0,0,0.5)",
@@ -55,7 +56,7 @@ export function DepositDrawer({ isOpen, onClose, proxyAddress }: DepositDrawerPr
 
             <div className="px-6 pb-8 overflow-y-auto">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-black text-white italic tracking-wide">
+                <h2 className="text-xl font-black text-white tracking-wide">
                   充值到金库
                 </h2>
                 <button
@@ -138,5 +139,20 @@ export function DepositDrawer({ isOpen, onClose, proxyAddress }: DepositDrawerPr
         </>
       )}
     </AnimatePresence>
+  );
+}
+
+export function DepositDrawer(props: DepositDrawerProps) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) return null;
+
+  return createPortal(
+    <DrawerContent {...props} />,
+    document.body
   );
 }
