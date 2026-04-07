@@ -30,6 +30,8 @@ export const ADDRESSES = {
   CTF_EXCHANGE: "0x4bFb41d5B3570DeFd03C39a9A4D8dE6Bd8B8982E",
   /** Neg Risk CTF Exchange (反向风险市场) */
   NEG_RISK_CTF_EXCHANGE: "0xC5d563A36AE78145C45a50134d48A1215220f80a",
+  /** Neg Risk Adapter (NegRisk 市场的代币管理与兑换) */
+  NEG_RISK_ADAPTER: "0xd91E80cF2E7be2e162c6513ceD06f1dD0dA35296",
 } as const;
 
 /** USDC.e 精度 (6位小数) */
@@ -46,9 +48,14 @@ export const ERC1155_ABI = [
   "function setApprovalForAll(address operator, bool approved)",
 ];
 
-/** CTF ABI 片段 - 用于 redeemPositions */
+/** CTF ABI 片段 - 用于 redeemPositions (标准二元市场) */
 export const CTF_ABI = [
   "function redeemPositions(address collateralToken, bytes32 parentCollectionId, bytes32 conditionId, uint256[] indexSets)",
+];
+
+/** NegRiskAdapter ABI 片段 - 用于 redeemPositions (NegRisk 多结果互斥市场) */
+export const NEG_RISK_ADAPTER_ABI = [
+  "function redeemPositions(bytes32 conditionId, uint256[] amounts)",
 ];
 
 /** Gnosis Safe 签名类型标识 (ClobClient 的 signatureType 参数) */

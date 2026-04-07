@@ -19,6 +19,7 @@ import {
   ERC20_ABI,
   ERC1155_ABI,
   CTF_ABI,
+  NEG_RISK_ADAPTER_ABI,
   SIGNATURE_TYPE_GNOSIS_SAFE,
   ZERO_PARENT_COLLECTION_ID,
 } from "@/lib/constants";
@@ -223,6 +224,7 @@ export function useTrading(
   }, [authenticated, proxyAddress, walletAddress, hasCreds]);
 
   // --- 逻辑：执行兑换 (Redeem) / 归档 (Archive) ---
+  // 自动检测 NegRisk（多结果互斥）市场并路由到正确的合约
   const handleRedeem = async (pos: any, mode: "redeem" | "archive" = "redeem") => {
     if (!pos || !proxyAddress) return;
 
@@ -236,26 +238,77 @@ export function useTrading(
       const provider = new ethers.providers.Web3Provider(ethereumProvider as any);
       const signer = provider.getSigner();
 
-      // 构造智能合约调用数据
-      const ctfInterface = new ethers.utils.Interface(CTF_ABI);
-      const parentCollectionId = ZERO_PARENT_COLLECTION_ID;
-      // 将 outcomeIndex 转换为 indexSets 格式
-      const indexSets = [Math.pow(2, pos.outcomeIndex)];
+      // ── Step 1: 检测市场类型（NegRisk vs Standard） ──
+      let isNegRisk = false;
+      if (pos.asset) {
+        try {
+          const creds = getCachedCreds(walletAddress);
+          if (creds) {
+            const clobClient = new ClobClient(CLOB_API_URL, POLYGON_CHAIN_ID, signer as any, creds, SIGNATURE_TYPE_GNOSIS_SAFE, proxyAddress);
+            isNegRisk = await clobClient.getNegRisk(pos.asset);
+          }
+        } catch (e) {
+          console.warn("[Redeem] getNegRisk check failed, falling back to standard CTF:", e);
+        }
+      }
+      console.log(`[Redeem] Market type: ${isNegRisk ? "NegRisk (多结果)" : "Standard (二元)"}, conditionId: ${pos.conditionId}, asset: ${pos.asset}`);
 
+      // ── Step 2: 构造 Relayer 客户端 ──
       const builderConfig = new BuilderConfig({ remoteBuilderConfig: { url: `${window.location.origin}/api/sign` } });
       const relayClient = new RelayClient(RELAYER_URL, POLYGON_CHAIN_ID, signer as any, builderConfig, RelayerTxType.SAFE);
 
+      // ── Step 3: 根据市场类型，构造不同的合约调用 ──
+      let redeemTx: { to: string; data: string; value: string };
+
+      if (isNegRisk) {
+        // ▸ NegRisk 市场 → 调用 NegRiskAdapter.redeemPositions(conditionId, amounts)
+        setTxMessage(mode === "archive"
+          ? "检测到多结果市场，正在查询链上代币余额..."
+          : "检测到多结果市场，正在查询可领取奖励..."
+        );
+
+        // 查询链上 ERC1155 代币的实际余额
+        const ctfContract = new ethers.Contract(
+          ADDRESSES.CTF,
+          ["function balanceOf(address account, uint256 id) view returns (uint256)"],
+          provider
+        );
+        const tokenBalance = await ctfContract.balanceOf(proxyAddress, pos.asset);
+        console.log(`[Redeem NegRisk] Token balance on-chain: ${tokenBalance.toString()}, outcomeIndex: ${pos.outcomeIndex}`);
+
+        // 构造 amounts 数组：[outcome0_amount, outcome1_amount]
+        // 用户只持有一个 outcome，另一个为 0
+        const outcomeIdx = Number(pos.outcomeIndex || 0);
+        const amounts = outcomeIdx === 0
+          ? [tokenBalance, ethers.BigNumber.from(0)]
+          : [ethers.BigNumber.from(0), tokenBalance];
+
+        const negRiskInterface = new ethers.utils.Interface(NEG_RISK_ADAPTER_ABI);
+        redeemTx = {
+          to: ADDRESSES.NEG_RISK_ADAPTER,
+          data: negRiskInterface.encodeFunctionData("redeemPositions", [pos.conditionId, amounts]),
+          value: "0"
+        };
+      } else {
+        // ▸ 标准二元市场 → 调用 CTF.redeemPositions(collateralToken, parentCollectionId, conditionId, [1, 2])
+        const ctfInterface = new ethers.utils.Interface(CTF_ABI);
+        const parentCollectionId = ZERO_PARENT_COLLECTION_ID;
+        const indexSets = [1, 2];
+        redeemTx = {
+          to: ADDRESSES.CTF,
+          data: ctfInterface.encodeFunctionData("redeemPositions", [ADDRESSES.USDCe, parentCollectionId, pos.conditionId, indexSets]),
+          value: "0"
+        };
+      }
+
+      // ── Step 4: 通过 Relayer 提交交易 ──
       setTxStep("placing");
       setTxMessage(mode === "archive"
         ? "正在通过 Relayer 激活归档交易..."
         : "正在通过 Relayer 激活资产并提取奖励..."
       );
 
-      const tx = await relayClient.execute([{
-        to: ADDRESSES.CTF,
-        data: ctfInterface.encodeFunctionData("redeemPositions", [ADDRESSES.USDCe, parentCollectionId, pos.conditionId, indexSets]),
-        value: "0"
-      }], mode === "archive" ? "Archive Position" : "Redeem Positions");
+      const tx = await relayClient.execute([redeemTx], mode === "archive" ? "Archive Position" : "Redeem Positions");
 
       setTxMessage(mode === "archive"
         ? "归档交易已广播，等待链上确认..."
