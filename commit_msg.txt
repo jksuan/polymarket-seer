@@ -1,0 +1,5 @@
+feat(ui): 全站 TopHeader 统一化架构整合及布局尺寸对齐
+
+1. 取消了 TopHeader 中预留的 leftNode 和 centerNode 拓展插槽，从架构上强制保障全网页眉绝对独立与统一。在 Challenge 页面剥离了其特殊的返回与挑战进度自定义 Header，全面切回全局版本。
+2. 修复了高度边距差异：移除了 HomePage、SearchPage 和 LeaderboardPage 最外层父容器带来的多余 pt-4（16px） 内边距干扰，确保全页面的顶部留空全权由 TopHeader 接管。
+3. 修复了布局宽度不一带来的横向间距撕裂感：重构 ProfilePage 和 ChallengePage 的外包层，大胆去除了局限性的 max-w-md（约束在 448px）。全站释放拉平至底层 layout 钦定的最大值 480px，彻底解决了 Flex 布局下左右两侧区块距离忽长忽短的问题。
