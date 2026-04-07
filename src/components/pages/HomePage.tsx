@@ -95,7 +95,7 @@ export function HomePage({ onPlaceBet }: { onPlaceBet?: (amount: string, tokenId
   }, [activeCategory]);
 
   return (
-    <div className="pb-32 pt-4 min-h-[100dvh]">
+    <div className="pb-32 min-h-[100dvh]">
       {/* Header */}
       <TopHeader />
 

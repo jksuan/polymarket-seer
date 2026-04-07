@@ -16,7 +16,7 @@ const TOP_USERS = [
 
 export function LeaderboardPage() {
   return (
-    <div className="pb-32 pt-4 min-h-[100dvh]">
+    <div className="pb-32 min-h-[100dvh]">
       <TopHeader />
       <div className="px-4 mb-6 text-center">
          <div className="flex items-center justify-center gap-3 mb-2">

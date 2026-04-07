@@ -67,7 +67,7 @@ export function SearchPage() {
   };
 
   return (
-    <div className="pb-32 pt-4 min-h-[100dvh]">
+    <div className="pb-32 min-h-[100dvh]">
       <TopHeader />
       <div className="px-4 mb-6">
          <h1 className="text-2xl font-black italic text-white tracking-widest uppercase mb-4 text-shadow-[0_0_12px_rgba(255,255,255,0.2)]">探索市场</h1>

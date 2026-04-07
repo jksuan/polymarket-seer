@@ -12,6 +12,7 @@ import { formatVolume, formatSupporters } from '@/lib/utils';
 import { usePrivy } from '@privy-io/react-auth';
 import { usePolymarketAuth } from '@/contexts/PolymarketAuthContext';
 import { shortenAddress } from '@/lib/utils';
+import { TopHeader } from '@/components/ui/TopHeader';
 
 // We use mock markets to ensure there's always something to swipe for challenges 
 const SWIPE_MARKETS = MOCK_MARKETS.slice(0, 8);
@@ -223,50 +224,14 @@ export function ChallengePage() {
     setConfirmSide(null);
   };
 
-  const { login, authenticated } = usePrivy();
-  const { proxyAddress, displayIdentifier } = usePolymarketAuth();
-
   return (
     <div
-      className="pb-32 pt-4 h-[100dvh] max-w-md mx-auto flex flex-col overflow-hidden"
+      className="pb-32 h-[100dvh] flex flex-col overflow-hidden relative"
       style={{ background: '#0D0518', fontFamily: 'Inter, sans-serif' }}
     >
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 mb-4 z-20">
-        <button className="flex items-center gap-1 active:scale-90 transition-transform" style={{ color: 'rgba(255,255,255,0.5)' }}>
-          <ChevronLeft size={20} />
-          <span style={{ fontSize: '13px', fontFamily: 'Inter', fontWeight: 600 }}>返回</span>
-        </button>
-
-        {/* Series Progress */}
-        <div className="flex flex-col items-center px-6 py-2 rounded-[16px]" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>
-          <span className="mb-0.5" style={{ fontSize: '10px', fontFamily: 'Inter', fontWeight: 800, color: '#ADFF2F', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-             当前挑战进度
-          </span>
-          <div className="flex items-center gap-3">
-            <span style={{ fontSize: '18px', fontFamily: 'Inter', fontWeight: 900, color: '#00F0FF', textShadow: '0 0 10px rgba(0,240,255,0.4)', lineHeight: 1 }}>
-              {currentIndex + 1} <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: '14px' }}>/</span> {SWIPE_MARKETS.length}
-            </span>
-          </div>
-        </div>
-
-        {/* Wallet Button */}
-        <button
-          onClick={() => !authenticated && login()}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full active:scale-95 transition-all"
-          style={{
-            background: authenticated ? 'rgba(255,255,255,0.05)' : 'rgba(173,255,47,0.08)',
-            border: authenticated ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(173,255,47,0.5)',
-            boxShadow: authenticated ? 'none' : '0 0 12px rgba(173,255,47,0.15)',
-            color: authenticated ? '#dee5ff' : '#ADFF2F',
-            fontFamily: 'Inter',
-            fontWeight: 800,
-            fontSize: '11px',
-          }}
-        >
-          <Wallet size={12} />
-          {authenticated ? (proxyAddress ? shortenAddress(proxyAddress, 4, 3) : displayIdentifier) : '连接钱包'}
-        </button>
+      {/* Global Header Injection */}
+      <div className="z-30 relative">
+        <TopHeader />
       </div>
 
       {/* Progress bar */}

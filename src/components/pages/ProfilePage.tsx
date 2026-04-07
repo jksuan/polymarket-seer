@@ -2,10 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "motion/react";
-import { Wallet, Settings, Zap, ArrowDownToLine } from "lucide-react";
-import { shortenAddress } from "@/lib/utils";
-import { SettingsDrawer } from "@/components/ui/SettingsDrawer";
-import { DepositDrawer } from "@/components/ui/DepositDrawer";
+import { Wallet } from "lucide-react";
+import { TopHeader } from "@/components/ui/TopHeader";
 import { usePolymarketAuth } from "@/contexts/PolymarketAuthContext";
 
 import { ProfileOverview } from "./profile/ProfileOverview";
@@ -59,9 +57,6 @@ export function ProfilePage({
     }
   };
 
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const [depositOpen, setDepositOpen] = useState(false);
-
   const handleTabChange = (tab: "stats" | "active" | "orders" | "history" | "transactions") => {
     setActiveTab(tab);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -70,28 +65,11 @@ export function ProfilePage({
   const historyCount = (trades || []).filter((t: any) => t.type === "REDEEM").length;
   const transactionsCount = (trades || []).length;
 
-  // displayIdentifier is now pulled from usePolymarketAuth() to guarantee consistency
-
   if (!authenticated) {
     return (
       <div className="flex flex-col h-[100dvh]">
-        <div className="flex items-center justify-between px-4 pt-4 mb-4">
-           <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full flex items-center justify-center p-0.5 shadow-[0_0_12px_rgba(173,255,47,0.4)]" style={{ background: 'linear-gradient(135deg,#ADFF2F,#00F0FF)' }}>
-                 <div className="w-full h-full bg-[#0D0518] rounded-full flex items-center justify-center">
-                    <Zap size={14} fill="#ADFF2F" color="#ADFF2F" />
-                 </div>
-              </div>
-              <span style={{ fontSize: '18px', fontWeight: 900, fontFamily: 'Inter', color: '#fff', letterSpacing: '-0.5px' }}>
-                SEER<span style={{ color: '#ADFF2F' }}>.</span>SPORTS
-              </span>
-           </div>
-           
-           <div className="flex items-center gap-3">
-              <button onClick={() => setSettingsOpen(true)} className="text-white/40 hover:text-white active:scale-90 transition-all">
-                 <Settings size={20} />
-              </button>
-           </div>
+        <div className="w-full">
+          <TopHeader />
         </div>
 
         <div className="flex-1 flex flex-col items-center justify-center pb-32 px-4">
@@ -106,12 +84,6 @@ export function ProfilePage({
              连接 / 注册钱包
            </button>
         </div>
-
-        <SettingsDrawer 
-          isOpen={settingsOpen} 
-          onClose={() => setSettingsOpen(false)} 
-          authenticated={false} 
-        />
       </div>
     );
   }
@@ -122,48 +94,8 @@ export function ProfilePage({
         className="sticky top-0 z-40 border-b border-white/5"
         style={{ background: "rgba(13,5,24,0.85)", backdropFilter: "blur(12px)" }}
       >
-        <div className="max-w-md mx-auto pt-4">
-          <div className="flex items-center justify-between px-4 mb-4">
-         <div className="flex items-center gap-1.5 flex-shrink-0">
-            <div className="w-7 h-7 rounded-full flex items-center justify-center p-0.5 shadow-[0_0_10px_rgba(173,255,47,0.4)]" style={{ background: 'linear-gradient(135deg,#ADFF2F,#00F0FF)' }}>
-              <div className="w-full h-full bg-[#0D0518] rounded-full flex items-center justify-center">
-                <Zap size={12} fill="#ADFF2F" color="#ADFF2F" />
-              </div>
-            </div>
-            <span style={{ fontSize: '16px', fontWeight: 900, fontFamily: 'Inter', color: '#fff', letterSpacing: '-0.5px' }}>
-              SEER
-            </span>
-         </div>
-
-         <div className="flex items-center gap-3">
-            <div className="flex items-center gap-3 mr-1">
-               <div className="flex flex-col items-end justify-center">
-                  <span className="text-[9px] font-bold text-white/40 uppercase tracking-widest mb-0.5">
-                     可用余额
-                  </span>
-                  <span className="text-[15px] font-black text-[#ADFF2F] leading-none" style={{ textShadow: "0 0 10px rgba(173,255,47,0.4)" }}>
-                     ${Number(usdcBalance || 0).toFixed(2)}
-                  </span>
-               </div>
-               <button 
-                  onClick={() => setDepositOpen(true)}
-                  className="flex items-center gap-1 bg-[#ADFF2F] hover:bg-[#8CEE1C] text-[#0D0518] px-3 py-1.5 rounded-lg text-[12px] font-bold tracking-wider transition-all shadow-[0_0_12px_rgba(173,255,47,0.3)] active:scale-95"
-               >
-                  <ArrowDownToLine size={12} strokeWidth={2.5} />
-                  充值
-               </button>
-            </div>
-
-            <button 
-               onClick={() => setSettingsOpen(true)}
-               className="flex items-center justify-center pl-3 pr-1 border-l border-white/10 active:scale-95 transition-all outline-none"
-            >
-               <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#00F0FF] to-[#007AFF] flex items-center justify-center text-white font-black text-[14px] shadow-[0_0_12px_rgba(0,240,255,0.4)] shrink-0">
-                  {displayIdentifier[0] === '@' ? displayIdentifier[1]?.toUpperCase() || 'S' : displayIdentifier[0]?.toUpperCase() || 'S'}
-               </div>
-            </button>
-         </div>
-          </div>
+        <div>
+          <TopHeader />
 
           <div
             className="px-4 flex items-center gap-6 pb-2 overflow-x-auto whitespace-nowrap [&::-webkit-scrollbar]:hidden"
@@ -243,7 +175,7 @@ export function ProfilePage({
         </div>
       </div>
 
-      <div className="max-w-md mx-auto px-4 mt-6">
+      <div className="px-4 mt-6">
         {activeTab === "stats" && (
           <ProfileOverview trades={trades} positions={positions} />
         )}
@@ -260,19 +192,6 @@ export function ProfilePage({
           <ProfileTransactions portfolioLoading={portfolioLoading} trades={trades} />
         )}
       </div>
-
-      <SettingsDrawer 
-        isOpen={settingsOpen} 
-        onClose={() => setSettingsOpen(false)} 
-        authenticated={true}
-        onLogout={() => { onClearState(); }}
-      />
-
-      <DepositDrawer
-        isOpen={depositOpen}
-        onClose={() => setDepositOpen(false)}
-        proxyAddress={proxyAddress || ""}
-      />
     </div>
   );
 }
