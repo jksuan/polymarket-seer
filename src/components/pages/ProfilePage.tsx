@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "motion/react";
-import { Wallet, Settings, Zap } from "lucide-react";
+import { Wallet, Settings, Zap, ArrowDownToLine } from "lucide-react";
 import { shortenAddress } from "@/lib/utils";
 import { SettingsDrawer } from "@/components/ui/SettingsDrawer";
+import { DepositDrawer } from "@/components/ui/DepositDrawer";
 import { usePolymarketAuth } from "@/contexts/PolymarketAuthContext";
 
 import { ProfileOverview } from "./profile/ProfileOverview";
@@ -59,6 +60,7 @@ export function ProfilePage({
   };
 
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [depositOpen, setDepositOpen] = useState(false);
 
   const handleTabChange = (tab: "stats" | "active" | "orders" | "history" | "transactions") => {
     setActiveTab(tab);
@@ -133,21 +135,33 @@ export function ProfilePage({
             </span>
          </div>
 
-         <div className="flex items-center gap-2">
-            <button onClick={() => setSettingsOpen(true)} className="mr-1 w-9 h-9 rounded-full bg-white/5 border border-white/10 text-white/50 hover:text-white flex items-center justify-center active:scale-95 transition-all flex-shrink-0">
-               <Settings size={16} />
+         <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 mr-1">
+               <div className="flex flex-col items-end justify-center">
+                  <span className="text-[9px] font-bold text-white/40 uppercase tracking-widest mb-0.5">
+                     可用余额
+                  </span>
+                  <span className="text-[15px] font-black text-[#ADFF2F] leading-none" style={{ textShadow: "0 0 10px rgba(173,255,47,0.4)" }}>
+                     ${Number(usdcBalance || 0).toFixed(2)}
+                  </span>
+               </div>
+               <button 
+                  onClick={() => setDepositOpen(true)}
+                  className="flex items-center gap-1 bg-[#ADFF2F] hover:bg-[#8CEE1C] text-[#0D0518] px-3 py-1.5 rounded-lg text-[12px] font-bold tracking-wider transition-all shadow-[0_0_12px_rgba(173,255,47,0.3)] active:scale-95"
+               >
+                  <ArrowDownToLine size={12} strokeWidth={2.5} />
+                  充值
+               </button>
+            </div>
+
+            <button 
+               onClick={() => setSettingsOpen(true)}
+               className="flex items-center justify-center pl-3 pr-1 border-l border-white/10 active:scale-95 transition-all outline-none"
+            >
+               <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#00F0FF] to-[#007AFF] flex items-center justify-center text-white font-black text-[14px] shadow-[0_0_12px_rgba(0,240,255,0.4)] shrink-0">
+                  {displayIdentifier[0] === '@' ? displayIdentifier[1]?.toUpperCase() || 'S' : displayIdentifier[0]?.toUpperCase() || 'S'}
+               </div>
             </button>
-            <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#00F0FF] to-[#007AFF] flex items-center justify-center text-white font-black text-[13px] shadow-[0_0_10px_rgba(0,240,255,0.4)] flex-shrink-0">
-               {displayIdentifier[0] === '@' ? displayIdentifier[1]?.toUpperCase() || 'S' : displayIdentifier[0]?.toUpperCase() || 'S'}
-            </div>
-            <div className="flex flex-col justify-center max-w-[120px]">
-               <span className="text-white font-bold text-sm truncate">
-                  {displayIdentifier}
-               </span>
-               <span className="text-white/40 text-[10px] font-mono leading-none truncate mt-0.5">
-                  {proxyAddress ? shortenAddress(proxyAddress) : shortenAddress(walletAddress || '')}
-               </span>
-            </div>
          </div>
           </div>
 
@@ -252,6 +266,12 @@ export function ProfilePage({
         onClose={() => setSettingsOpen(false)} 
         authenticated={true}
         onLogout={() => { onClearState(); }}
+      />
+
+      <DepositDrawer
+        isOpen={depositOpen}
+        onClose={() => setDepositOpen(false)}
+        proxyAddress={proxyAddress || ""}
       />
     </div>
   );

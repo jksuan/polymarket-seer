@@ -14,7 +14,13 @@ import {
   Moon,
   LogOut,
   Info,
+  Copy,
+  CheckCircle2,
+  Wallet,
+  Building2,
 } from "lucide-react";
+import { usePolymarketAuth } from "@/contexts/PolymarketAuthContext";
+import { shortenAddress } from "@/lib/utils";
 
 interface SettingsDrawerProps {
   isOpen: boolean;
@@ -49,6 +55,21 @@ const SETTINGS_GROUPS = [
 ];
 
 function DrawerContent({ isOpen, onClose, authenticated = false, onLogout }: SettingsDrawerProps) {
+  const { displayIdentifier, proxyAddress, walletAddress } = usePolymarketAuth();
+  const [copiedProxy, setCopiedProxy] = useState(false);
+  const [copiedEoa, setCopiedEoa] = useState(false);
+
+  const handleCopy = async (text: string, setCopied: (v: boolean) => void) => {
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error("Failed to copy", err);
+    }
+  };
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -131,6 +152,80 @@ function DrawerContent({ isOpen, onClose, authenticated = false, onLogout }: Set
                 <X size={16} color="#a3aac4" />
               </button>
             </div>
+
+            {/* Profile Identity Block */}
+            {authenticated && (
+              <div className="px-4 mb-6 mt-1">
+                <div 
+                  className="rounded-2xl p-4 flex flex-col gap-4 relative overflow-hidden" 
+                  style={{
+                    background: "linear-gradient(160deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02))",
+                    border: "1px solid rgba(255,255,255,0.08)"
+                  }}
+                >
+                  <div className="absolute -top-10 -right-10 w-24 h-24 bg-[#00F0FF] opacity-10 rounded-full blur-[40px] pointer-events-none" />
+                  <div className="absolute -bottom-10 -left-10 w-24 h-24 bg-[#007AFF] opacity-10 rounded-full blur-[40px] pointer-events-none" />
+                  
+                  {/* Avatar and Name */}
+                  <div className="flex items-center gap-3 relative z-10">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-[#00F0FF] to-[#007AFF] flex items-center justify-center text-white font-black text-[20px] shadow-[0_0_15px_rgba(0,240,255,0.4)] shrink-0">
+                      {displayIdentifier[0] === '@' ? displayIdentifier[1]?.toUpperCase() || 'S' : displayIdentifier[0]?.toUpperCase() || 'S'}
+                    </div>
+                    <div className="flex flex-col min-w-0">
+                      <span className="text-white font-bold text-lg truncate">
+                        {displayIdentifier}
+                      </span>
+                      <span className="text-[#00F0FF] text-[11px] font-bold uppercase tracking-widest mt-0.5">
+                        SEER SPORTS 登录账户
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="h-[1px] w-full bg-white/10 my-1" />
+
+                  {/* Addresses */}
+                  <div className="flex flex-col gap-3 relative z-10">
+                    {/* Proxy Address */}
+                    <div 
+                      onClick={() => handleCopy(proxyAddress || "", setCopiedProxy)}
+                      className="flex items-center justify-between bg-black/40 p-3 rounded-xl border border-white/5 active:bg-white/5 transition-colors cursor-pointer group"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-7 h-7 rounded-lg bg-[#ADFF2F]/10 border border-[#ADFF2F]/20 flex items-center justify-center shrink-0">
+                          <Building2 size={13} className="text-[#ADFF2F]" />
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-[10px] text-white/50 font-bold tracking-wider mb-0.5 uppercase">智能金库 (Polymarket Proxy)</span>
+                          <span className="text-[12px] text-white font-mono">{proxyAddress ? shortenAddress(proxyAddress, 6, 6) : "未分配"}</span>
+                        </div>
+                      </div>
+                      <div className={`w-6 h-6 flex items-center justify-center rounded-md ${copiedProxy ? 'text-[#ADFF2F]' : 'text-white/30 group-hover:text-white/60 transition-colors'}`}>
+                        {copiedProxy ? <CheckCircle2 size={14} /> : <Copy size={14} />}
+                      </div>
+                    </div>
+
+                    {/* EOA Address */}
+                    <div 
+                      onClick={() => handleCopy(walletAddress || "", setCopiedEoa)}
+                      className="flex items-center justify-between bg-black/40 p-3 rounded-xl border border-white/5 active:bg-white/5 transition-colors cursor-pointer group"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-7 h-7 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0">
+                          <Wallet size={13} className="text-blue-400" />
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-[10px] text-white/50 font-bold tracking-wider mb-0.5 uppercase">底层钱包 (Signer EOA)</span>
+                          <span className="text-[12px] text-white font-mono">{walletAddress ? shortenAddress(walletAddress, 6, 6) : "未连接"}</span>
+                        </div>
+                      </div>
+                      <div className={`w-6 h-6 flex items-center justify-center rounded-md ${copiedEoa ? 'text-blue-400' : 'text-white/30 group-hover:text-white/60 transition-colors'}`}>
+                        {copiedEoa ? <CheckCircle2 size={14} /> : <Copy size={14} />}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Settings Groups */}
             <div className="px-4 pb-12 flex flex-col gap-6 mt-2">

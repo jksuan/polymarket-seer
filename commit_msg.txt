@@ -1,0 +1,6 @@
+﻿feat(profile): 添加扫码充值面板并重构个人中心头部 UI
+
+1. 新增 DepositDrawer 组件：通过 react-qr-code 实时生成智能金库（Proxy）代理地址二维码，配置强引导安全提示（必须 Polygon/USDC、防充值至授权 EOA），提供带防篡改机制的复制操作。
+2. 极简重构 ProfilePage 头部：删除冗长邮箱与哈希，右上角采用极简光晕头像作为一键唤起设置的单一交互入口，最大化释放移动端横向空间；并在核心区强化「可用余额」标示与高亮充值按钮。
+3. 升级 SettingsDrawer 账户体系展示：将数字身份剥离并重组为独立卡片置于抽屉顶部，用区分颜色清晰呈现智能金库 (Polymarket Proxy)和底层钱包 (Signer EOA)，配备一键复制功能。
+4. 依赖和基础优化：引入 react-qr-code 库，并将其它全局 Navbar 及 Challenge 页面默认显示层级全部挂钩至 Proxy Address 保障全链路充值不出错。

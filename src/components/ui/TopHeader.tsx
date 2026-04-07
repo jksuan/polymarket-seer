@@ -7,7 +7,7 @@ import { shortenAddress } from '@/lib/utils';
 
 export function TopHeader() {
   const { login, authenticated } = usePrivy();
-  const { walletAddress, usdcBalance } = usePolymarketAuth();
+  const { proxyAddress, displayIdentifier, usdcBalance } = usePolymarketAuth();
 
   return (
     <div className="flex items-center justify-between px-4 mb-4">
@@ -41,7 +41,7 @@ export function TopHeader() {
           <div className="flex items-center gap-2 leading-none">
             <span className="text-[#ADFF2F]">{Number(usdcBalance || 0).toFixed(2)} USDC</span>
             <span className="text-white/40">|</span>
-            <span className="text-white/70">{shortenAddress(walletAddress || '', 4, 4)}</span>
+            <span className="text-white/70">{proxyAddress ? shortenAddress(proxyAddress, 4, 4) : displayIdentifier}</span>
           </div>
         ) : (
           '连接钱包'

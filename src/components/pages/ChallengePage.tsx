@@ -224,7 +224,7 @@ export function ChallengePage() {
   };
 
   const { login, authenticated } = usePrivy();
-  const { walletAddress } = usePolymarketAuth();
+  const { proxyAddress, displayIdentifier } = usePolymarketAuth();
 
   return (
     <div
@@ -265,7 +265,7 @@ export function ChallengePage() {
           }}
         >
           <Wallet size={12} />
-          {authenticated ? shortenAddress(walletAddress || '', 4, 3) : '连接钱包'}
+          {authenticated ? (proxyAddress ? shortenAddress(proxyAddress, 4, 3) : displayIdentifier) : '连接钱包'}
         </button>
       </div>
 
