@@ -226,7 +226,7 @@ export function ChallengePage() {
 
   return (
     <div
-      className="pb-32 h-[100dvh] flex flex-col overflow-hidden relative"
+      className="fixed inset-0 w-full max-w-[480px] mx-auto pb-[90px] flex flex-col overflow-hidden z-0"
       style={{ background: '#0D0518', fontFamily: 'Inter, sans-serif' }}
     >
       {/* Global Header Injection */}

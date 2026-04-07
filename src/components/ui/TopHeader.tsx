@@ -16,7 +16,14 @@ export function TopHeader() {
 
   return (
     <>
-      <div className="flex items-center justify-between px-4 mb-4 pt-4">
+      <div 
+        className="flex items-center justify-between px-4 pb-3 pt-4 sticky top-0 z-40"
+        style={{ 
+          background: "rgba(13,5,24,0.85)", 
+          backdropFilter: "blur(12px)", 
+          WebkitBackdropFilter: "blur(12px)" 
+        }}
+      >
         <div className="flex items-center gap-1.5 flex-shrink-0">
           <div className="w-7 h-7 rounded-full flex items-center justify-center p-0.5 shadow-[0_0_10px_rgba(173,255,47,0.4)]" style={{ background: 'linear-gradient(135deg,#ADFF2F,#00F0FF)' }}>
             <div className="w-full h-full bg-[#0D0518] rounded-full flex items-center justify-center">
