@@ -1,78 +1,65 @@
 'use client';
 
-import { useRef, useState } from 'react';
-import { MATCH_SUB_TABS, OUTRIGHT_SUB_TABS, WORLD_CUP_GROUPS, WORLD_CUP_KNOCKOUTS } from '@/lib/mockMarkets';
-import { PrimaryTab, MatchSubTab, OutrightSubTab } from '@/types/sports';
+import { useState } from 'react';
+import { MATCH_SUB_TABS, WORLD_CUP_GROUPS, WORLD_CUP_KNOCKOUTS } from '@/lib/mockMarkets';
+import { MatchSubTab, PrimaryTab } from '@/types/sports';
 import { AnimatePresence, motion } from 'motion/react';
 
-interface SubTabsProps {
+export interface SubTabsProps {
   primaryTab: PrimaryTab;
-  activeMatchSub: MatchSubTab;
-  activeOutrightSub: OutrightSubTab;
+  matchSub: MatchSubTab;
+  onMatchSubChange: (tab: MatchSubTab) => void;
   selectedGroup: string;
-  selectedKnockout: string;
-  onMatchSubChange: (sub: MatchSubTab) => void;
-  onOutrightSubChange: (sub: OutrightSubTab) => void;
   onGroupChange: (group: string) => void;
+  selectedKnockout: string;
   onKnockoutChange: (knockout: string) => void;
 }
 
 export function SubTabs({
   primaryTab,
-  activeMatchSub,
-  activeOutrightSub,
+  matchSub,
+  onMatchSubChange,
   selectedGroup,
   selectedKnockout,
-  onMatchSubChange,
-  onOutrightSubChange,
   onGroupChange,
   onKnockoutChange,
 }: SubTabsProps) {
-  const scrollRef = useRef<HTMLDivElement>(null);
   const [showGroupPicker, setShowGroupPicker] = useState(false);
   const [showKnockoutPicker, setShowKnockoutPicker] = useState(false);
 
-  // Only render sub-tabs for matches & outrights
-  if (primaryTab !== 'matches' && primaryTab !== 'outrights') return null;
+  // Only render sub-tabs for matches
+  if (primaryTab !== 'matches') return null;
 
-  const tabs = primaryTab === 'matches' ? MATCH_SUB_TABS : OUTRIGHT_SUB_TABS;
-  const activeId = primaryTab === 'matches' ? activeMatchSub : activeOutrightSub;
-
-  const handleClick = (id: string) => {
-    if (primaryTab === 'matches') {
-      if (id === 'group') {
-        setShowGroupPicker((prev) => !prev);
-        setShowKnockoutPicker(false);
-        onMatchSubChange('group');
-      } else if (id === 'knockout') {
-        setShowKnockoutPicker((prev) => !prev);
-        setShowGroupPicker(false);
-        onMatchSubChange('knockout');
-      } else {
-        setShowGroupPicker(false);
-        setShowKnockoutPicker(false);
-        onMatchSubChange(id as MatchSubTab);
-      }
+  const handleClick = (id: MatchSubTab) => {
+    if (id === 'group') {
+      setShowGroupPicker((prev) => !prev);
+      setShowKnockoutPicker(false);
+      onMatchSubChange('group');
+    } else if (id === 'knockout') {
+      setShowKnockoutPicker((prev) => !prev);
+      setShowGroupPicker(false);
+      onMatchSubChange('knockout');
     } else {
-      onOutrightSubChange(id as OutrightSubTab);
+      setShowGroupPicker(false);
+      setShowKnockoutPicker(false);
+      onMatchSubChange(id as MatchSubTab);
     }
   };
 
   return (
     <div className="relative">
       <div
-        ref={scrollRef}
-        className="flex gap-2 overflow-x-auto px-4 py-1.5"
+        className="flex gap-2 overflow-x-auto px-4 py-1.5 no-scrollbar items-center"
         style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}
       >
-        {tabs.map((tab) => {
-          const isActive = activeId === tab.id;
-          const isGroupActive = tab.id === 'group' && activeMatchSub === 'group';
-          const isKnockoutActive = tab.id === 'knockout' && activeMatchSub === 'knockout';
+        {MATCH_SUB_TABS.map((tab) => {
+          const isActive = matchSub === tab.id;
+          const isGroupActive = tab.id === 'group' && matchSub === 'group';
+          const isKnockoutActive = tab.id === 'knockout' && matchSub === 'knockout';
           return (
             <button
               key={tab.id}
-              onClick={() => handleClick(tab.id)}
+              onClick={() => handleClick(tab.id as MatchSubTab)}
               className="flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full transition-all active:scale-95"
               style={{
                 fontFamily: 'Inter',

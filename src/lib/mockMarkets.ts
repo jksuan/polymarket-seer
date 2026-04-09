@@ -1,4 +1,4 @@
-import { PrimaryTab, MatchSubTab, OutrightSubTab } from '@/types/sports';
+import { PrimaryTab, MatchSubTab } from '@/types/sports';
 
 // ── Primary Tabs (Tier 1) ──
 export const PRIMARY_TABS: Array<{ id: PrimaryTab; label: string; emoji: string }> = [
@@ -13,14 +13,6 @@ export const MATCH_SUB_TABS: Array<{ id: MatchSubTab; label: string }> = [
   { id: 'hot',      label: '🔥 今日热门' },
   { id: 'group',    label: '小组赛 ▾' },
   { id: 'knockout', label: '淘汰赛 ▾' },
-];
-
-// ── Outright Sub-Tabs (Tier 2 when primaryTab === 'outrights') ──
-export const OUTRIGHT_SUB_TABS: Array<{ id: OutrightSubTab; label: string }> = [
-  { id: 'champion',     label: '🏆 冠军' },
-  { id: 'golden-boot',  label: '👟 金靴奖' },
-  { id: 'group-winner', label: '🥇 小组头名' },
-  { id: 'other',        label: '✨ 其它' },
 ];
 
 // ── World Cup 2026 Groups ──

@@ -3,7 +3,6 @@ export type PrimaryTab = 'matches' | 'outrights' | 'standings' | 'scorers';
 
 // ── Sub-Tabs (contextual per primary tab) ──
 export type MatchSubTab = 'hot' | 'group' | 'knockout';
-export type OutrightSubTab = 'champion' | 'golden-boot' | 'group-winner' | 'other';
 
 // Legacy alias kept for backward compatibility with other pages
 export type SportCategory = PrimaryTab;
@@ -22,6 +21,7 @@ export interface SportMarket {
   polymarketConditionId?: string;
   polymarketSlug?: string;
   question: string;
+  imageUrl?: string;
   sport: string;
   leagueCode: string;
   leagueName: string;
