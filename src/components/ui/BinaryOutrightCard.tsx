@@ -73,30 +73,52 @@ export function BinaryOutrightCard({ market, index = 0, onPlaceBet }: BinaryOutr
           </div>
 
           {/* Probability Arc */}
-          <div className="flex-shrink-0 relative w-12 h-12 flex flex-col items-center justify-center mt-1 mr-[-4px]">
-            <svg width="48" height="48" viewBox="0 0 48 48" className="-rotate-180 absolute inset-0">
-              <circle
-                cx="24" cy="24" r={r}
-                stroke="rgba(255,255,255,0.1)" strokeWidth="4" fill="none"
-                strokeDasharray={`${halfCirc} ${circ}`}
-                strokeLinecap="round"
-              />
-              <circle
-                cx="24" cy="24" r={r}
-                stroke="#00C85A" strokeWidth="4" fill="none"
-                strokeDasharray={`${halfCirc} ${circ}`}
-                strokeDashoffset={dashOffset}
-                strokeLinecap="round"
-                style={{ transition: 'stroke-dashoffset 0.5s ease-out' }}
-              />
-            </svg>
-            <div className="flex flex-col items-center justify-center z-10 -mt-1">
-              <span style={{ fontFamily: 'Inter', fontWeight: 800, fontSize: '13px', color: '#fff' }}>
-                {yesProb}%
-              </span>
-              <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.6)', marginTop: '-2px' }}>是</span>
-            </div>
-          </div>
+          {(() => {
+            const arcR = 28;
+            const arcCirc = 2 * Math.PI * arcR;
+            const arcHalf = arcCirc * 0.5;
+            // yes arc covers yesProb% of the half-circle
+            const yesDash  = (yesProb / 100) * arcHalf;
+            const noDash   = arcHalf - yesDash;
+            // No arc offset: starts right after yes arc
+            const noOffset = -(yesDash);
+            return (
+              <div className="flex-shrink-0 relative w-16 h-16 flex flex-col items-center justify-center mt-1">
+                <svg width="68" height="68" viewBox="0 0 68 68" className="-rotate-180 absolute inset-0">
+                  {/* Track */}
+                  <circle
+                    cx="34" cy="34" r={arcR}
+                    stroke="rgba(255,255,255,0.08)" strokeWidth="5" fill="none"
+                    strokeDasharray={`${arcHalf} ${arcCirc}`}
+                    strokeLinecap="butt"
+                  />
+                  {/* Green YES arc */}
+                  <circle
+                    cx="34" cy="34" r={arcR}
+                    stroke="#00C85A" strokeWidth="5" fill="none"
+                    strokeDasharray={`${yesDash} ${arcCirc}`}
+                    strokeLinecap="round"
+                    style={{ transition: 'stroke-dasharray 0.5s ease-out' }}
+                  />
+                  {/* Red NO arc */}
+                  <circle
+                    cx="34" cy="34" r={arcR}
+                    stroke="#E05050" strokeWidth="5" fill="none"
+                    strokeDasharray={`${noDash} ${arcCirc}`}
+                    strokeDashoffset={noOffset}
+                    strokeLinecap="round"
+                    style={{ transition: 'stroke-dasharray 0.5s ease-out' }}
+                  />
+                </svg>
+                <div className="flex flex-col items-center justify-center z-10">
+                  <span style={{ fontFamily: 'Inter', fontWeight: 800, fontSize: '13px', color: '#fff' }}>
+                    {yesProb}%
+                  </span>
+                  <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.6)', marginTop: '-2px' }}>是</span>
+                </div>
+              </div>
+            );
+          })()}
         </div>
 
         {/* ─── Yes/No Buttons ─── */}

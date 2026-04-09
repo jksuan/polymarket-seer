@@ -122,7 +122,7 @@ export function OutrightCard({ market, index = 0, onPlaceBet }: OutrightCardProp
                   }}
                 >
                   <span style={{ fontFamily: 'Inter', fontSize: '10px', fontWeight: 700, color: '#00C85A' }}>是</span>
-                  <span style={{ fontFamily: 'Inter', fontSize: '10px', fontWeight: 600, color: 'rgba(0,200,90,0.8)' }}>{yesCents}¢</span>
+                  <span style={{ fontFamily: 'Inter', fontSize: '10px', fontWeight: 600, color: 'rgba(0,200,90,0.8)' }}>{yesCents}%</span>
                 </button>
 
                 {/* No button */}
@@ -137,7 +137,7 @@ export function OutrightCard({ market, index = 0, onPlaceBet }: OutrightCardProp
                   }}
                 >
                   <span style={{ fontFamily: 'Inter', fontSize: '10px', fontWeight: 700, color: '#E05050' }}>否</span>
-                  <span style={{ fontFamily: 'Inter', fontSize: '10px', fontWeight: 600, color: 'rgba(220,60,60,0.8)' }}>{noCents}¢</span>
+                  <span style={{ fontFamily: 'Inter', fontSize: '10px', fontWeight: 600, color: 'rgba(220,60,60,0.8)' }}>{noCents}%</span>
                 </button>
               </div>
             );
