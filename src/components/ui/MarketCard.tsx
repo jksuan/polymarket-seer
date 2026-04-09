@@ -15,7 +15,8 @@ interface MarketCardProps {
 }
 
 export function MarketCard({ market, index = 0, onPlaceBet }: MarketCardProps) {
-  const [confirmSide, setConfirmSide] = useState<'home' | 'away' | null>(null);
+  const [confirmSide, setConfirmSide] = useState<'home' | 'away' | 'draw' | null>(null);
+  const is3Way = !!(market.drawTeam && market.drawOdds !== undefined);
 
   const GLOW_COLORS: Record<string, string> = {
     nba: 'rgba(253,185,39,0.12)',
@@ -148,20 +149,11 @@ export function MarketCard({ market, index = 0, onPlaceBet }: MarketCardProps) {
                 className="flex overflow-hidden"
                 style={{ width: '48px', height: '4px', borderRadius: '2px' }}
               >
-                <div
-                  style={{
-                    width: `${market.homeProbability}%`,
-                    background: market.homeTeam.accentColor,
-                    height: '100%',
-                  }}
-                />
-                <div
-                  style={{
-                    width: `${market.awayProbability}%`,
-                    background: market.awayTeam.accentColor,
-                    height: '100%',
-                  }}
-                />
+                <div style={{ width: `${market.homeProbability}%`, background: market.homeTeam.accentColor, height: '100%' }} />
+                {is3Way && market.drawTeam && (
+                  <div style={{ width: `${market.drawProbability || 0}%`, background: market.drawTeam.accentColor, height: '100%' }} />
+                )}
+                <div style={{ width: `${market.awayProbability}%`, background: market.awayTeam.accentColor, height: '100%' }} />
               </div>
             </div>
 
@@ -183,76 +175,63 @@ export function MarketCard({ market, index = 0, onPlaceBet }: MarketCardProps) {
           </div>
 
           {/* Bet Buttons */}
-          <div className="grid grid-cols-2 gap-3 mt-4">
+          <div className={`grid gap-3 mt-4 ${is3Way ? 'grid-cols-3' : 'grid-cols-2'}`}>
             <button
               onClick={() => setConfirmSide('home')}
-              className="py-3 rounded-2xl active:scale-95 transition-transform text-center"
+              className="py-3 rounded-2xl active:scale-95 transition-transform text-center flex flex-col items-center justify-center"
               style={{
-                background: 'linear-gradient(135deg, #FF6B00 0%, #FF2E00 100%)',
-                boxShadow: '0 4px 14px rgba(255,80,0,0.35)',
+                background: 'linear-gradient(135deg, rgba(255,107,0,0.85) 0%, rgba(255,46,0,0.85) 100%)',
+                boxShadow: '0 4px 14px rgba(255,80,0,0.25)',
               }}
             >
-              <div
-                style={{
-                  fontFamily: 'Inter',
-                  fontSize: '9px',
-                  fontWeight: 600,
-                  color: 'rgba(255,255,255,0.75)',
-                  textTransform: 'uppercase',
-                }}
-              >
-                支持 {market.homeTeam.displayName}
+              <div style={{ fontFamily: 'Inter', fontSize: is3Way ? '8px' : '9px', fontWeight: 600, color: 'rgba(255,255,255,0.75)', textTransform: 'uppercase' }}>
+                {is3Way ? '主胜' : '支持'} {market.homeTeam.displayName}
               </div>
-              <div
-                style={{
-                  fontFamily: 'Inter',
-                  fontSize: '23px',
-                  fontWeight: 900,
-                  fontStyle: 'italic',
-                  color: '#fff',
-                  lineHeight: 1,
-                }}
-              >
+              <div style={{ fontFamily: 'Inter', fontSize: is3Way ? '19px' : '23px', fontWeight: 900, fontStyle: 'italic', color: '#fff', lineHeight: 1, marginTop: '2px' }}>
                 {market.homeOdds.toFixed(2)}x
               </div>
-              <div style={{ fontFamily: 'Inter', fontSize: '9px', fontWeight: 600, color: 'rgba(255,255,255,0.75)', textTransform: 'uppercase', marginTop: '2px' }}>
-                胜率 {market.homeProbability}%
+              <div style={{ fontFamily: 'Inter', fontSize: '8px', fontWeight: 600, color: 'rgba(255,255,255,0.5)', marginTop: '2px' }}>
+                {market.homeProbability}%
               </div>
             </button>
 
+            {is3Way && market.drawTeam && market.drawOdds !== undefined && (
+              <button
+                onClick={() => setConfirmSide('draw')}
+                className="py-3 rounded-2xl active:scale-95 transition-transform text-center flex flex-col items-center justify-center"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(160,174,192,0.85) 0%, rgba(113,128,150,0.85) 100%)',
+                  boxShadow: '0 4px 14px rgba(160,174,192,0.2)',
+                }}
+              >
+                <div style={{ fontFamily: 'Inter', fontSize: '8px', fontWeight: 600, color: 'rgba(255,255,255,0.75)', textTransform: 'uppercase' }}>
+                  平局 DRAW
+                </div>
+                <div style={{ fontFamily: 'Inter', fontSize: '19px', fontWeight: 900, fontStyle: 'italic', color: '#fff', lineHeight: 1, marginTop: '2px' }}>
+                  {market.drawOdds.toFixed(2)}x
+                </div>
+                <div style={{ fontFamily: 'Inter', fontSize: '8px', fontWeight: 600, color: 'rgba(255,255,255,0.5)', marginTop: '2px' }}>
+                  {market.drawProbability || 0}%
+                </div>
+              </button>
+            )}
+
             <button
               onClick={() => setConfirmSide('away')}
-              className="py-3 rounded-2xl active:scale-95 transition-transform text-center"
+              className="py-3 rounded-2xl active:scale-95 transition-transform text-center flex flex-col items-center justify-center"
               style={{
-                background: 'linear-gradient(135deg, #007AFF 0%, #00F0FF 100%)',
-                boxShadow: '0 4px 14px rgba(0,180,255,0.35)',
+                background: 'linear-gradient(135deg, rgba(0,122,255,0.85) 0%, rgba(0,240,255,0.85) 100%)',
+                boxShadow: '0 4px 14px rgba(0,180,255,0.25)',
               }}
             >
-              <div
-                style={{
-                  fontFamily: 'Inter',
-                  fontSize: '9px',
-                  fontWeight: 600,
-                  color: 'rgba(255,255,255,0.75)',
-                  textTransform: 'uppercase',
-                }}
-              >
-                支持 {market.awayTeam.displayName}
+              <div style={{ fontFamily: 'Inter', fontSize: is3Way ? '8px' : '9px', fontWeight: 600, color: 'rgba(255,255,255,0.75)', textTransform: 'uppercase' }}>
+                {is3Way ? '客胜' : '支持'} {market.awayTeam.displayName}
               </div>
-              <div
-                style={{
-                  fontFamily: 'Inter',
-                  fontSize: '23px',
-                  fontWeight: 900,
-                  fontStyle: 'italic',
-                  color: '#fff',
-                  lineHeight: 1,
-                }}
-              >
+              <div style={{ fontFamily: 'Inter', fontSize: is3Way ? '19px' : '23px', fontWeight: 900, fontStyle: 'italic', color: '#fff', lineHeight: 1, marginTop: '2px' }}>
                 {market.awayOdds.toFixed(2)}x
               </div>
-              <div style={{ fontFamily: 'Inter', fontSize: '9px', fontWeight: 600, color: 'rgba(255,255,255,0.75)', textTransform: 'uppercase', marginTop: '2px' }}>
-                胜率 {market.awayProbability}%
+              <div style={{ fontFamily: 'Inter', fontSize: '8px', fontWeight: 600, color: 'rgba(255,255,255,0.5)', marginTop: '2px' }}>
+                {market.awayProbability}%
               </div>
             </button>
           </div>

@@ -9,7 +9,7 @@ import confetti from 'canvas-confetti';
 interface ConfirmModalProps {
   isOpen: boolean;
   market: SportMarket;
-  side: 'home' | 'away';
+  side: 'home' | 'away' | 'draw';
   onConfirm: (amount: number) => void;
   onCancel: () => void;
   amount?: number;
@@ -24,8 +24,8 @@ export function ConfirmModal({ isOpen, market, side, onConfirm, onCancel, amount
   // If component receives market as undefined, return null to avoid crashes
   if (!market) return null;
 
-  const team = side === 'home' ? market.homeTeam : market.awayTeam;
-  const odds = side === 'home' ? market.homeOdds : market.awayOdds;
+  const team = side === 'home' ? market.homeTeam : side === 'draw' && market.drawTeam ? market.drawTeam : market.awayTeam;
+  const odds = side === 'home' ? market.homeOdds : side === 'draw' && market.drawOdds !== undefined ? market.drawOdds : market.awayOdds;
   const expectedReturn = (amount * odds).toFixed(2);
   const profit = ((amount * odds) - amount).toFixed(2);
 

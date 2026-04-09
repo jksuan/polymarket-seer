@@ -1,12 +1,12 @@
-export type SportCategory =
-  | 'all'
-  | 'nba'
-  | 'ucl'
-  | 'premier-league'
-  | 'serie-a'
-  | 'la-liga'
-  | 'bundesliga'
-  | 'tennis';
+// ── World Cup 2026 Primary Tab ──
+export type PrimaryTab = 'matches' | 'outrights' | 'standings' | 'scorers';
+
+// ── Sub-Tabs (contextual per primary tab) ──
+export type MatchSubTab = 'hot' | 'group' | 'knockout';
+export type OutrightSubTab = 'champion' | 'golden-boot' | 'group-winner' | 'other';
+
+// Legacy alias kept for backward compatibility with other pages
+export type SportCategory = PrimaryTab;
 
 export interface TeamInfo {
   shortName: string;
@@ -22,7 +22,7 @@ export interface SportMarket {
   polymarketConditionId?: string;
   polymarketSlug?: string;
   question: string;
-  sport: SportCategory;
+  sport: string;
   leagueCode: string;
   leagueName: string;
   leagueNameEn: string;
@@ -31,10 +31,15 @@ export interface SportMarket {
   matchTimeISO: string;
   homeTeam: TeamInfo;
   awayTeam: TeamInfo;
+  drawTeam?: TeamInfo;
   homeProbability: number;
   awayProbability: number;
+  drawProbability?: number;
   homeOdds: number;
   awayOdds: number;
+  drawOdds?: number;
+  rawOutcomes?: string[];
+  rawPrices?: number[];
   volume: number;
   liquidity: number;
   supporters: number;
@@ -43,7 +48,7 @@ export interface SportMarket {
 }
 
 export interface Category {
-  id: SportCategory;
+  id: string;
   label: string;
   emoji: string;
 }

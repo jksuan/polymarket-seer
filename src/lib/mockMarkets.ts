@@ -1,167 +1,38 @@
-import { SportMarket } from '@/types/sports';
+import { PrimaryTab, MatchSubTab, OutrightSubTab } from '@/types/sports';
 
-export const MOCK_MARKETS: SportMarket[] = [
-  // ── NBA ─────────────────────────────────────────────
-  {
-    id: 'nba-lal-gsw-20260319',
-    polymarketConditionId: '0xabcdef1234567890',
-    polymarketSlug: 'lakers-warriors-2026-03-19',
-    question: 'Will the Los Angeles Lakers beat the Golden State Warriors on March 19?',
-    sport: 'nba',
-    leagueCode: 'NBA',
-    leagueName: 'NBA · 西部联盟',
-    leagueNameEn: 'NBA · Western Conference',
-    status: 'live',
-    matchTime: '直播中 Q3 08:12',
-    matchTimeISO: '2026-03-19T18:00:00Z',
-    homeTeam: {
-      shortName: 'LAL',
-      fullName: 'Los Angeles Lakers',
-      displayName: '湖人',
-      primaryColor: '#552583',
-      accentColor: '#FDB927',
-      glowColor: 'rgba(253,185,39,0.55)',
-    },
-    awayTeam: {
-      shortName: 'GSW',
-      fullName: 'Golden State Warriors',
-      displayName: '勇士',
-      primaryColor: '#1D428A',
-      accentColor: '#00F0FF',
-      glowColor: 'rgba(0,240,255,0.55)',
-    },
-    homeProbability: 52,
-    awayProbability: 48,
-    homeOdds: 1.92,
-    awayOdds: 2.08,
-    volume: 2_450_128,
-    liquidity: 580_000,
-    supporters: 12409,
-    isHot: true,
-    isFeatured: true,
-  },
-  {
-    id: 'nba-bos-mia-20260320',
-    polymarketSlug: 'celtics-heat-2026-03-20',
-    question: 'Will the Boston Celtics beat the Miami Heat on March 20?',
-    sport: 'nba',
-    leagueCode: 'NBA',
-    leagueName: 'NBA · 东部联盟',
-    leagueNameEn: 'NBA · Eastern Conference',
-    status: 'upcoming',
-    matchTime: '明日 08:30',
-    matchTimeISO: '2026-03-20T08:30:00Z',
-    homeTeam: {
-      shortName: 'BOS',
-      fullName: 'Boston Celtics',
-      displayName: '凯尔特人',
-      primaryColor: '#007A33',
-      accentColor: '#ADFF2F',
-      glowColor: 'rgba(0,200,80,0.55)',
-    },
-    awayTeam: {
-      shortName: 'MIA',
-      fullName: 'Miami Heat',
-      displayName: '热火',
-      primaryColor: '#98002E',
-      accentColor: '#FF6B00',
-      glowColor: 'rgba(255,107,0,0.55)',
-    },
-    homeProbability: 63,
-    awayProbability: 37,
-    homeOdds: 1.59,
-    awayOdds: 2.70,
-    volume: 1_200_400,
-    liquidity: 320_000,
-    supporters: 7832,
-    isHot: false,
-    isFeatured: false,
-  },
-  {
-    id: 'nba-den-okc-20260319',
-    polymarketSlug: 'nuggets-thunder-2026-03-19',
-    question: 'Will the Denver Nuggets beat the OKC Thunder on March 19?',
-    sport: 'nba',
-    leagueCode: 'NBA',
-    leagueName: 'NBA · 西部联盟',
-    leagueNameEn: 'NBA · Western Conference',
-    status: 'live',
-    matchTime: '直播中 Q2 05:41',
-    matchTimeISO: '2026-03-19T17:00:00Z',
-    homeTeam: {
-      shortName: 'DEN',
-      fullName: 'Denver Nuggets',
-      displayName: '掘金',
-      primaryColor: '#0E2240',
-      accentColor: '#FEC524',
-      glowColor: 'rgba(254,197,36,0.55)',
-    },
-    awayTeam: {
-      shortName: 'OKC',
-      fullName: 'OKC Thunder',
-      displayName: '雷霆',
-      primaryColor: '#007AC1',
-      accentColor: '#EF3B24',
-      glowColor: 'rgba(239,59,36,0.55)',
-    },
-    homeProbability: 45,
-    awayProbability: 55,
-    homeOdds: 2.22,
-    awayOdds: 1.82,
-    volume: 980_500,
-    liquidity: 210_000,
-    supporters: 5440,
-    isHot: true,
-    isFeatured: false,
-  },
-
-  // ── UCL and others truncated for brevity, we keep the main ones to avoid massive memory issues. ──
-  {
-    id: 'ucl-ars-fcb-20260319',
-    polymarketSlug: 'arsenal-barcelona-ucl-2026',
-    question: 'Will Arsenal beat FC Barcelona in the UCL Round of 16?',
-    sport: 'ucl',
-    leagueCode: 'UCL',
-    leagueName: '欧冠 · 16强',
-    leagueNameEn: 'Champions League · Round of 16',
-    status: 'upcoming',
-    matchTime: '今日 20:00',
-    matchTimeISO: '2026-03-19T20:00:00Z',
-    homeTeam: {
-      shortName: 'ARS',
-      fullName: 'Arsenal FC',
-      displayName: '阿森纳',
-      primaryColor: '#EF0107',
-      accentColor: '#FF6B6B',
-      glowColor: 'rgba(239,1,7,0.5)',
-    },
-    awayTeam: {
-      shortName: 'FCB',
-      fullName: 'FC Barcelona',
-      displayName: '巴塞罗那',
-      primaryColor: '#004D98',
-      accentColor: '#00F0FF',
-      glowColor: 'rgba(0,77,152,0.55)',
-    },
-    homeProbability: 47,
-    awayProbability: 53,
-    homeOdds: 2.13,
-    awayOdds: 1.89,
-    volume: 3_120_500,
-    liquidity: 720_000,
-    supporters: 18290,
-    isHot: true,
-    isFeatured: true,
-  }
+// ── Primary Tabs (Tier 1) ──
+export const PRIMARY_TABS: Array<{ id: PrimaryTab; label: string; emoji: string }> = [
+  { id: 'matches',    label: '比赛',     emoji: '⚽' },
+  { id: 'outrights',  label: '趣味投注', emoji: '🎯' },
+  { id: 'standings',  label: '积分榜',   emoji: '📊' },
+  { id: 'scorers',    label: '射手榜',   emoji: '👟' },
 ];
 
-export const CATEGORIES = [
-  { id: 'all', label: '全部', emoji: '🔥' },
-  { id: 'nba', label: 'NBA', emoji: '🏀' },
-  { id: 'ucl', label: '欧冠', emoji: '🏆' },
-  { id: 'premier-league', label: '英超', emoji: '⚽' },
-  { id: 'serie-a', label: '意甲', emoji: '⚽' },
-  { id: 'la-liga', label: '西甲', emoji: '⚽' },
-  { id: 'bundesliga', label: '德甲', emoji: '⚽' },
-  { id: 'tennis', label: '网球', emoji: '🎾' },
+// ── Match Sub-Tabs (Tier 2 when primaryTab === 'matches') ──
+export const MATCH_SUB_TABS: Array<{ id: MatchSubTab; label: string }> = [
+  { id: 'hot',      label: '🔥 今日热门' },
+  { id: 'group',    label: '小组赛 ▾' },
+  { id: 'knockout', label: '淘汰赛 ▾' },
+];
+
+// ── Outright Sub-Tabs (Tier 2 when primaryTab === 'outrights') ──
+export const OUTRIGHT_SUB_TABS: Array<{ id: OutrightSubTab; label: string }> = [
+  { id: 'champion',     label: '🏆 冠军' },
+  { id: 'golden-boot',  label: '👟 金靴奖' },
+  { id: 'group-winner', label: '🥇 小组头名' },
+  { id: 'other',        label: '✨ 其它' },
+];
+
+// ── World Cup 2026 Groups ──
+export const WORLD_CUP_GROUPS = [
+  'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L',
 ] as const;
+
+// ── World Cup 2026 Knockout Rounds ──
+export const WORLD_CUP_KNOCKOUTS = [
+  '32强', '16强', '1/8决赛', '1/4决赛', '半决赛', '决赛'
+] as const;
+
+// Legacy export for backward compatibility (old CategoryTabs imports this)
+export const CATEGORIES = PRIMARY_TABS;
+export const MOCK_MARKETS: any[] = [];
