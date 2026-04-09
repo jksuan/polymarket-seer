@@ -74,7 +74,9 @@ export function HomePage({ onPlaceBet }: { onPlaceBet?: (amount: string, tokenId
 
               if (evt.markets.length > 1) {
                 // Multi-market event (e.g. group winner: one market per team)
-                for (const m of evt.markets) {
+                // Skip resolved or closed sub-markets (e.g. Italy/Peru eliminated in qualifiers)
+                const activeMarkets = evt.markets.filter((m: any) => m.active !== false && m.closed !== true);
+                for (const m of activeMarkets) {
                   let name = m.groupItemTitle || m.title || m.question || 'Team';
                   name = name
                     .replace(/^will\s+/i, '')

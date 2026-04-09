@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { useState, useRef } from 'react';
+import { motion } from 'motion/react';
 import { SportMarket } from '@/types/sports';
 import { formatVolume } from '@/lib/utils';
 import { ConfirmModal } from './ConfirmModal';
@@ -57,13 +57,16 @@ function OutcomeRow({ opt, i, onBet }: {
     </div>
   );
 }
+const BATCH_SIZE = 10;
+
 export function OutrightCard({ market, index = 0, onPlaceBet }: OutrightCardProps) {
   const [confirmState, setConfirmState] = useState<{
     optionName: string;
     optionIndex: number;
     side: 'home' | 'away';
   } | null>(null);
-  const [expanded, setExpanded] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(2);
+  const cardRef = useRef<HTMLDivElement>(null);
 
   // Build sorted option list from rawOutcomes / rawPrices
   const options = (market.rawOutcomes || [])
@@ -76,8 +79,21 @@ export function OutrightCard({ market, index = 0, onPlaceBet }: OutrightCardProp
     .sort((a, b) => b.prob - a.prob);
 
   const hasMore = options.length > 2;
-  const visibleOptions = expanded ? options : options.slice(0, 2);
-  const hiddenOptions = options.slice(2);
+  const isExpanded = visibleCount > 2;
+  const shownOptions = options.slice(0, visibleCount);
+  const remaining = options.length - visibleCount;
+
+  const handleShowMore = () => {
+    setVisibleCount(prev => Math.min(prev + BATCH_SIZE, options.length));
+  };
+
+  const handleCollapse = () => {
+    setVisibleCount(2);
+    // Smooth scroll card header back into view
+    requestAnimationFrame(() => {
+      cardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    });
+  };
 
   const handleBet = (optionName: string, optionIndex: number, side: 'home' | 'away') => {
     setConfirmState({ optionName, optionIndex, side });
@@ -86,6 +102,7 @@ export function OutrightCard({ market, index = 0, onPlaceBet }: OutrightCardProp
   return (
     <>
       <motion.div
+        ref={cardRef}
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: index * 0.06, duration: 0.3, ease: 'easeOut' }}
@@ -129,50 +146,48 @@ export function OutrightCard({ market, index = 0, onPlaceBet }: OutrightCardProp
 
         {/* ─── Outcome Rows ─── */}
         <div className="px-4">
-          {/* Always-visible top 2 */}
-          {options.slice(0, 2).map((opt, i) => (
-            <OutcomeRow key={`${opt.name}-top-${i}`} opt={opt} i={i} onBet={handleBet} />
+          {/* Progressively revealed rows */}
+          {shownOptions.map((opt, i) => (
+            <OutcomeRow key={`${opt.name}-${i}`} opt={opt} i={i} onBet={handleBet} />
           ))}
 
-          {/* Expandable hidden rows */}
-          <AnimatePresence initial={false}>
-            {expanded && hiddenOptions.length > 0 && (
-              <motion.div
-                key="expanded-rows"
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.3, ease: 'easeInOut' }}
-                style={{ overflow: 'hidden' }}
-              >
-                {hiddenOptions.map((opt, i) => (
-                  <OutcomeRow key={`${opt.name}-exp-${i}`} opt={opt} i={i + 2} onBet={handleBet} />
-                ))}
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Expand / Collapse toggle */}
+          {/* Toggle buttons */}
           {hasMore && (
-            <button
-              onClick={() => setExpanded(!expanded)}
-              className="w-full flex items-center justify-center gap-1.5 py-2 active:scale-[0.98] transition-transform"
+            <div className="flex items-center justify-center gap-3 py-2"
               style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}
             >
-              <span style={{
-                fontFamily: 'Inter', fontSize: '12px', fontWeight: 700,
-                color: 'rgba(255,215,0,0.85)',
-              }}>
-                {expanded ? '收起' : `展开更多 (${hiddenOptions.length})`}
-              </span>
-              <motion.span
-                animate={{ rotate: expanded ? 180 : 0 }}
-                transition={{ duration: 0.25 }}
-                style={{ fontSize: '10px', color: 'rgba(255,215,0,0.85)', display: 'inline-block' }}
-              >
-                ▼
-              </motion.span>
-            </button>
+              {/* Show More button — visible when there are still hidden items */}
+              {remaining > 0 && (
+                <button
+                  onClick={handleShowMore}
+                  className="flex items-center gap-1.5 active:scale-[0.98] transition-transform"
+                >
+                  <span style={{
+                    fontFamily: 'Inter', fontSize: '12px', fontWeight: 700,
+                    color: 'rgba(255,215,0,0.85)',
+                  }}>
+                    展开更多 ({remaining})
+                  </span>
+                  <span style={{ fontSize: '10px', color: 'rgba(255,215,0,0.85)' }}>▼</span>
+                </button>
+              )}
+
+              {/* Collapse button — visible when expanded beyond default 2 */}
+              {isExpanded && (
+                <button
+                  onClick={handleCollapse}
+                  className="flex items-center gap-1.5 active:scale-[0.98] transition-transform"
+                >
+                  <span style={{
+                    fontFamily: 'Inter', fontSize: '12px', fontWeight: 700,
+                    color: 'rgba(255,255,255,0.5)',
+                  }}>
+                    收起
+                  </span>
+                  <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.5)' }}>▲</span>
+                </button>
+              )}
+            </div>
           )}
         </div>
 
