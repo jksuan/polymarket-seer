@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { SportMarket } from '@/types/sports';
 import { formatVolume } from '@/lib/utils';
 import { ConfirmModal } from './ConfirmModal';
@@ -12,12 +12,58 @@ interface OutrightCardProps {
   onPlaceBet?: (amount: string, tokenId: string) => Promise<void>;
 }
 
+/* ── Reusable row for a single outcome ── */
+function OutcomeRow({ opt, i, onBet }: {
+  opt: { name: string; prob: number; price: number };
+  i: number;
+  onBet: (name: string, idx: number, side: 'home' | 'away') => void;
+}) {
+  const yesCents = Math.round(opt.price * 100);
+  const noCents  = Math.round((1 - opt.price) * 100);
+
+  return (
+    <div
+      className="flex items-center py-2"
+      style={{ borderTop: i > 0 ? '1px solid rgba(255,255,255,0.05)' : 'none' }}
+    >
+      <span
+        className="flex-1 truncate"
+        style={{ fontFamily: 'Inter', fontSize: '13px', fontWeight: 600, color: 'rgba(255,255,255,0.85)' }}
+      >
+        {opt.name}
+      </span>
+      <span
+        className="mr-3 w-10 text-right"
+        style={{ fontFamily: 'Inter', fontSize: '13px', fontWeight: 700, color: 'rgba(255,255,255,0.9)' }}
+      >
+        {opt.prob}%
+      </span>
+      <button
+        onClick={() => onBet(opt.name, i, 'home')}
+        className="flex flex-col items-center justify-center rounded-lg mr-1.5 active:scale-95 transition-transform"
+        style={{ width: '48px', height: '36px', background: 'rgba(0,180,80,0.18)', border: '1px solid rgba(0,200,90,0.35)' }}
+      >
+        <span style={{ fontFamily: 'Inter', fontSize: '10px', fontWeight: 700, color: '#00C85A' }}>是</span>
+        <span style={{ fontFamily: 'Inter', fontSize: '10px', fontWeight: 600, color: 'rgba(0,200,90,0.8)' }}>{yesCents}%</span>
+      </button>
+      <button
+        onClick={() => onBet(opt.name, i, 'away')}
+        className="flex flex-col items-center justify-center rounded-lg active:scale-95 transition-transform"
+        style={{ width: '48px', height: '36px', background: 'rgba(220,40,40,0.18)', border: '1px solid rgba(220,60,60,0.35)' }}
+      >
+        <span style={{ fontFamily: 'Inter', fontSize: '10px', fontWeight: 700, color: '#E05050' }}>否</span>
+        <span style={{ fontFamily: 'Inter', fontSize: '10px', fontWeight: 600, color: 'rgba(220,60,60,0.8)' }}>{noCents}%</span>
+      </button>
+    </div>
+  );
+}
 export function OutrightCard({ market, index = 0, onPlaceBet }: OutrightCardProps) {
   const [confirmState, setConfirmState] = useState<{
     optionName: string;
     optionIndex: number;
     side: 'home' | 'away';
   } | null>(null);
+  const [expanded, setExpanded] = useState(false);
 
   // Build sorted option list from rawOutcomes / rawPrices
   const options = (market.rawOutcomes || [])
@@ -25,10 +71,13 @@ export function OutrightCard({ market, index = 0, onPlaceBet }: OutrightCardProp
       const price = market.rawPrices?.[i] ?? 0.001;
       return { name, prob: Math.round(price * 100), price };
     })
+    // Filter out Polymarket placeholder teams (e.g. "Team AG") and catch-all "Other"
+    .filter(opt => !/^Team\s+[A-Z]{1,3}$/i.test(opt.name) && opt.name !== 'Other')
     .sort((a, b) => b.prob - a.prob);
 
-  // Show top 2 by default (matching image reference)
-  const visibleOptions = options.slice(0, 2);
+  const hasMore = options.length > 2;
+  const visibleOptions = expanded ? options : options.slice(0, 2);
+  const hiddenOptions = options.slice(2);
 
   const handleBet = (optionName: string, optionIndex: number, side: 'home' | 'away') => {
     setConfirmState({ optionName, optionIndex, side });
@@ -80,68 +129,51 @@ export function OutrightCard({ market, index = 0, onPlaceBet }: OutrightCardProp
 
         {/* ─── Outcome Rows ─── */}
         <div className="px-4">
-          {visibleOptions.map((opt, i) => {
-            const yesPrice  = opt.price;
-            const noPrice   = 1 - yesPrice;
-            const yesCents  = Math.round(yesPrice * 100);
-            const noCents   = Math.round(noPrice * 100);
+          {/* Always-visible top 2 */}
+          {options.slice(0, 2).map((opt, i) => (
+            <OutcomeRow key={`${opt.name}-top-${i}`} opt={opt} i={i} onBet={handleBet} />
+          ))}
 
-            return (
-              <div
-                key={`${opt.name}-${i}`}
-                className="flex items-center py-2"
-                style={{
-                  borderTop: i > 0 ? '1px solid rgba(255,255,255,0.05)' : 'none',
-                }}
+          {/* Expandable hidden rows */}
+          <AnimatePresence initial={false}>
+            {expanded && hiddenOptions.length > 0 && (
+              <motion.div
+                key="expanded-rows"
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.3, ease: 'easeInOut' }}
+                style={{ overflow: 'hidden' }}
               >
-                {/* Country / Option name */}
-                <span
-                  className="flex-1 truncate"
-                  style={{ fontFamily: 'Inter', fontSize: '13px', fontWeight: 600, color: 'rgba(255,255,255,0.85)' }}
-                >
-                  {opt.name}
-                </span>
+                {hiddenOptions.map((opt, i) => (
+                  <OutcomeRow key={`${opt.name}-exp-${i}`} opt={opt} i={i + 2} onBet={handleBet} />
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-                {/* Probability */}
-                <span
-                  className="mr-3 w-10 text-right"
-                  style={{ fontFamily: 'Inter', fontSize: '13px', fontWeight: 700, color: 'rgba(255,255,255,0.9)' }}
-                >
-                  {opt.prob}%
-                </span>
-
-                {/* Yes button */}
-                <button
-                  onClick={() => handleBet(opt.name, i, 'home')}
-                  className="flex flex-col items-center justify-center rounded-lg mr-1.5 active:scale-95 transition-transform"
-                  style={{
-                    width: '48px',
-                    height: '36px',
-                    background: 'rgba(0,180,80,0.18)',
-                    border: '1px solid rgba(0,200,90,0.35)',
-                  }}
-                >
-                  <span style={{ fontFamily: 'Inter', fontSize: '10px', fontWeight: 700, color: '#00C85A' }}>是</span>
-                  <span style={{ fontFamily: 'Inter', fontSize: '10px', fontWeight: 600, color: 'rgba(0,200,90,0.8)' }}>{yesCents}%</span>
-                </button>
-
-                {/* No button */}
-                <button
-                  onClick={() => handleBet(opt.name, i, 'away')}
-                  className="flex flex-col items-center justify-center rounded-lg active:scale-95 transition-transform"
-                  style={{
-                    width: '48px',
-                    height: '36px',
-                    background: 'rgba(220,40,40,0.18)',
-                    border: '1px solid rgba(220,60,60,0.35)',
-                  }}
-                >
-                  <span style={{ fontFamily: 'Inter', fontSize: '10px', fontWeight: 700, color: '#E05050' }}>否</span>
-                  <span style={{ fontFamily: 'Inter', fontSize: '10px', fontWeight: 600, color: 'rgba(220,60,60,0.8)' }}>{noCents}%</span>
-                </button>
-              </div>
-            );
-          })}
+          {/* Expand / Collapse toggle */}
+          {hasMore && (
+            <button
+              onClick={() => setExpanded(!expanded)}
+              className="w-full flex items-center justify-center gap-1.5 py-2 active:scale-[0.98] transition-transform"
+              style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}
+            >
+              <span style={{
+                fontFamily: 'Inter', fontSize: '12px', fontWeight: 700,
+                color: 'rgba(255,215,0,0.85)',
+              }}>
+                {expanded ? '收起' : `展开更多 (${hiddenOptions.length})`}
+              </span>
+              <motion.span
+                animate={{ rotate: expanded ? 180 : 0 }}
+                transition={{ duration: 0.25 }}
+                style={{ fontSize: '10px', color: 'rgba(255,215,0,0.85)', display: 'inline-block' }}
+              >
+                ▼
+              </motion.span>
+            </button>
+          )}
         </div>
 
         {/* ─── Footer: volume ─── */}
