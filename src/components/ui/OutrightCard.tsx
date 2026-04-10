@@ -18,8 +18,8 @@ function OutcomeRow({ opt, i, onBet }: {
   i: number;
   onBet: (name: string, idx: number, side: 'home' | 'away') => void;
 }) {
-  const yesCents = Math.round(opt.price * 100);
-  const noCents  = Math.round((1 - opt.price) * 100);
+  const yesCents = Number((opt.price * 100).toFixed(1));
+  const noCents  = Number(((1 - opt.price) * 100).toFixed(1));
 
   return (
     <div
@@ -79,7 +79,7 @@ export function OutrightCard({ market, index = 0, onPlaceBet }: OutrightCardProp
     .map((name, i) => {
       const price = market.rawPrices?.[i] ?? 0.001;
       const icon = market.rawIcons?.[i] ?? '';
-      return { name, prob: Math.round(price * 100), price, icon };
+      return { name, prob: Number((price * 100).toFixed(1)), price, icon };
     })
     // Filter out Polymarket placeholder teams (e.g. "Team AG") and catch-all "Other"
     .filter(opt => !/^Team\s+[A-Z]{1,3}$/i.test(opt.name) && opt.name !== 'Other')
