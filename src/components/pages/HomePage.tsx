@@ -21,6 +21,7 @@ export function HomePage({ onPlaceBet }: { onPlaceBet?: (amount: string, tokenId
   const [liveMarkets, setLiveMarkets] = useState<SportMarket[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [skipAnimation, setSkipAnimation] = useState(false);
+  const [prevKeyword, setPrevKeyword] = useState<string>('');
 
   // ── Tab-level cache: keyword → { data, timestamp } ──
   const CACHE_TTL = 3 * 60 * 1000; // 3 minutes
@@ -42,24 +43,31 @@ export function HomePage({ onPlaceBet }: { onPlaceBet?: (amount: string, tokenId
     }
   })();
 
-  useEffect(() => {
-    // Standings & Scorers are placeholder — skip fetch
+  // ── Derived State (React 16.4+): Update state synchronously during render to PREVENT flashing ──
+  if (keyword !== prevKeyword) {
+    setPrevKeyword(keyword);
     if (primaryTab === 'standings' || primaryTab === 'scorers') {
       setIsLoading(false);
       setLiveMarkets([]);
-      return;
+    } else {
+      const cached = cacheRef.current.get(keyword);
+      if (cached) {
+        setSkipAnimation(true);
+        setLiveMarkets(cached.data);
+        setIsLoading(false);
+      } else {
+        setSkipAnimation(false);
+        setLiveMarkets([]);
+        setIsLoading(true);
+      }
     }
+  }
 
-    // ── Cache hit: render instantly, skip loading spinner ──
+  useEffect(() => {
+    if (primaryTab === 'standings' || primaryTab === 'scorers') return;
+
     const cached = cacheRef.current.get(keyword);
     const isFresh = cached && (Date.now() - cached.ts < CACHE_TTL);
-
-    if (cached) {
-      // Instantly show cached data (even if stale — we’ll refresh below)
-      setSkipAnimation(true);
-      setLiveMarkets(cached.data);
-      setIsLoading(false);
-    }
 
     // If cache is fresh enough, no need to re-fetch
     if (isFresh) return;
