@@ -21,23 +21,21 @@ export function HomePage({ onPlaceBet }: { onPlaceBet?: (amount: string, tokenId
   const [liveMarkets, setLiveMarkets] = useState<SportMarket[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // ── Build API keyword from two-tier state ──
-  const getSearchKeyword = () => {
+  // ── Computed keyword (derived directly in render scope to avoid stale closures) ──
+  const keyword = (() => {
     if (primaryTab === 'outrights') return 'FIFA World Cup';
-    
     switch (matchSub) {
       case 'hot': return 'World Cup';
       case 'group': return `World Cup Group ${selectedGroup}`;
-      case 'knockout': 
+      case 'knockout':
         if (selectedKnockout === '决赛') return 'World Cup Final';
         if (selectedKnockout === '半决赛') return 'World Cup Semi';
         if (selectedKnockout === '1/4决赛') return 'World Cup Quarter';
-        if (selectedKnockout === '1/8决赛') return 'World Cup Round of 16';
-        if (selectedKnockout === '16强') return 'World Cup Round of 16';
+        if (selectedKnockout === '1/8决赛' || selectedKnockout === '16强') return 'World Cup Round of 16';
         return 'World Cup';
       default: return 'World Cup';
     }
-  };
+  })();
 
   useEffect(() => {
     // Standings & Scorers are placeholder — skip fetch
@@ -47,11 +45,14 @@ export function HomePage({ onPlaceBet }: { onPlaceBet?: (amount: string, tokenId
       return;
     }
 
+    // AbortController cancels stale requests when keyword/tab changes
+    const controller = new AbortController();
+
     const fetchMarkets = async () => {
       try {
         setIsLoading(true);
-        let url = '/api/search?q=' + encodeURIComponent(getSearchKeyword());
-        const res = await fetch(url);
+        const url = '/api/search?q=' + encodeURIComponent(keyword);
+        const res = await fetch(url, { signal: controller.signal });
         if (!res.ok) throw new Error('API fetch failed');
         const events = await res.json();
 
@@ -187,15 +188,24 @@ export function HomePage({ onPlaceBet }: { onPlaceBet?: (amount: string, tokenId
         mapped.sort((a, b) => b.volume - a.volume);
 
         setLiveMarkets(mapped);
-      } catch (err) {
-        console.error('Error fetching markets:', err);
+      } catch (err: any) {
+        // Ignore abort errors — they are intentional cancellations
+        if (err.name !== 'AbortError') {
+          console.error('Error fetching markets:', err);
+        }
       } finally {
-        setIsLoading(false);
+        // Only update loading state if this request was not aborted
+        if (!controller.signal.aborted) {
+          setIsLoading(false);
+        }
       }
-    }
+    };
 
     fetchMarkets();
-  }, [primaryTab, matchSub, selectedGroup, selectedKnockout]);
+
+    // Cleanup: cancel in-flight request when keyword changes or component unmounts
+    return () => controller.abort();
+  }, [keyword, primaryTab]);
 
   // ── Placeholder Screens ──
   const PlaceholderScreen = ({ icon, title }: { icon: React.ReactNode; title: string }) => (
