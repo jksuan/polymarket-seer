@@ -14,7 +14,7 @@ interface OutrightCardProps {
 
 /* ── Reusable row for a single outcome ── */
 function OutcomeRow({ opt, i, onBet }: {
-  opt: { name: string; prob: number; price: number };
+  opt: { name: string; prob: number; price: number; icon: string };
   i: number;
   onBet: (name: string, idx: number, side: 'home' | 'away') => void;
 }) {
@@ -26,12 +26,18 @@ function OutcomeRow({ opt, i, onBet }: {
       className="flex items-center py-2"
       style={{ borderTop: i > 0 ? '1px solid rgba(255,255,255,0.05)' : 'none' }}
     >
-      <span
-        className="flex-1 truncate"
-        style={{ fontFamily: 'Inter', fontSize: '13px', fontWeight: 600, color: 'rgba(255,255,255,0.85)' }}
-      >
-        {opt.name}
-      </span>
+      <div className="flex flex-1 items-center gap-2.5 min-w-0 pr-2">
+        {opt.icon && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={opt.icon} alt="" className="w-7 h-7 rounded-md object-cover flex-shrink-0" />
+        )}
+        <span
+          className="truncate"
+          style={{ fontFamily: 'Inter', fontSize: '13px', fontWeight: 600, color: 'rgba(255,255,255,0.85)' }}
+        >
+          {opt.name}
+        </span>
+      </div>
       <span
         className="mr-3 w-10 text-right"
         style={{ fontFamily: 'Inter', fontSize: '13px', fontWeight: 700, color: 'rgba(255,255,255,0.9)' }}
@@ -72,7 +78,8 @@ export function OutrightCard({ market, index = 0, onPlaceBet }: OutrightCardProp
   const options = (market.rawOutcomes || [])
     .map((name, i) => {
       const price = market.rawPrices?.[i] ?? 0.001;
-      return { name, prob: Math.round(price * 100), price };
+      const icon = market.rawIcons?.[i] ?? '';
+      return { name, prob: Math.round(price * 100), price, icon };
     })
     // Filter out Polymarket placeholder teams (e.g. "Team AG") and catch-all "Other"
     .filter(opt => !/^Team\s+[A-Z]{1,3}$/i.test(opt.name) && opt.name !== 'Other')

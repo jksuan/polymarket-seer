@@ -1,9 +1,10 @@
-feat: 实现 Tab 级缓存秒开及阻断动画闪烁优化
+ui: 补全世界杯趣味投注列表中的专属子市场图标
 
-1. 引入 useRef 构建 Tab 级内存缓存：
-   - 为页面中变化频率不高的展示型数据（如“比赛”与“趣味投注”列表）添置了 TTL 为 3 分钟的轻量级 Map 缓存（Cache by Keyword）。
-   - 实现 SWR（Stale-While-Revalidate）前置体验：切回 Tab 时如果有缓存数据，先瞬间跳过 Loading 直接显示数据，然后在后台静默拉取更新无缝覆盖。做到 Tab 间相互切换的极致“秒开”。
+1. 提取并映射子市场图标（Data Fetching）：
+   - 解析 Polymarket 返回事件数据时，提取每个独立选单的图片/图标资源（如：参赛国国旗）。
+   - 增加防御性过滤：比对子项图片与其所处赛事的总封面，若两者资源重合，则判定它为无自带专属图标的条目并作清空处理，防止事件级封面被降级充当子项头像产生的累赘与界面拥挤（如"Which continent will win"的条目均不展出默认地球仪图）。
 
-2. 抹除缓存命中时的入场动画闪烁（Zero-Flash Transition）：
-   - 在 HomePage 识别数据是否源于缓存秒开。如果是，则向各卡片组件传递 index={-1} 标识。
-   - 分别调整 MarketCard、OutrightCard、BinaryOutrightCard 组件，在 index == -1 时使用 initial={false} 禁掉 Framer motion 的入场动效（透明度与 Y轴滑入动画），成功解决了从“趣味投注”秒切回“比赛”时的屏幕一闪而过的视觉落差痛点。
+2. 国旗与排版装帧增强（UI Enhancement）：
+   - 在 OutrightCard 组件提取并承接新传导进来的 rawIcons。
+   - 使用条件渲染：于 OutcomeRow 中的各个代表项左侧插入动态国旗。
+   - 尺寸控制与留白打磨：给予了专属图标 w-7 h-7 像素及 rounded-md 的设定。使得图像既具备张力与识别度，又恰好屈缩在单行的有效高内，主次井然。

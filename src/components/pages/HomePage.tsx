@@ -95,6 +95,8 @@ export function HomePage({ onPlaceBet }: { onPlaceBet?: (amount: string, tokenId
 
               const outrightOutcomes: string[] = [];
               const outrightPrices: number[] = [];
+              const outrightIcons: string[] = [];
+              const mainIcon = evt.image || evt.icon || '';
 
               if (evt.markets.length > 1) {
                 // Multi-market event (e.g. group winner: one market per team)
@@ -111,6 +113,8 @@ export function HomePage({ onPlaceBet }: { onPlaceBet?: (amount: string, tokenId
                   try { prices = JSON.parse(m.outcomePrices || '["0.05"]'); } catch {}
                   outrightOutcomes.push(name);
                   outrightPrices.push(parseFloat(prices[0]) || 0.01);
+                  const subIcon = m.image || m.icon || '';
+                  outrightIcons.push(subIcon === mainIcon ? '' : subIcon);
                 }
               } else {
                 // Single binary market (Yes / No) — expose both options as rows
@@ -122,13 +126,14 @@ export function HomePage({ onPlaceBet }: { onPlaceBet?: (amount: string, tokenId
                 outcomes.forEach((o: string, i: number) => {
                   outrightOutcomes.push(o);
                   outrightPrices.push(parseFloat(prices[i] || '0.5'));
+                  outrightIcons.push('');
                 });
               }
 
               mapped.push({
                 id: evt.id || `evt-${Date.now()}-${Math.random()}`,
                 question: evt.title || evt.markets[0]?.question || '世界杯专属预测',
-                imageUrl: evt.image || evt.icon || '',
+                imageUrl: mainIcon,
                 sport: 'matches',
                 leagueCode: 'WC',
                 leagueName: '世界杯 2026',
@@ -149,6 +154,7 @@ export function HomePage({ onPlaceBet }: { onPlaceBet?: (amount: string, tokenId
                 isFeatured: evt.markets.length > 10,
                 rawOutcomes: outrightOutcomes,
                 rawPrices: outrightPrices,
+                rawIcons: outrightIcons,
               });
 
             } else {

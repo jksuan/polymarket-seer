@@ -40,6 +40,7 @@ export interface SportMarket {
   drawOdds?: number;
   rawOutcomes?: string[];
   rawPrices?: number[];
+  rawIcons?: string[];
   volume: number;
   liquidity: number;
   supporters: number;
