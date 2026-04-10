@@ -276,7 +276,15 @@ export function HomePage({ onPlaceBet }: { onPlaceBet?: (amount: string, tokenId
 
       {/* ── Sticky Navigation Area ── */}
       <div className="sticky top-0 z-40 bg-[#0D0518]/90 backdrop-blur-xl border-b border-white/5">
-        <CategoryTabs active={primaryTab} onChange={setPrimaryTab} />
+        <CategoryTabs 
+          active={primaryTab} 
+          onChange={(tab) => {
+            setPrimaryTab(tab);
+            // Find the actual scrollable container (overflow-y-auto ancestor)
+            const scrollable = document.querySelector('.overflow-y-auto');
+            if (scrollable) scrollable.scrollTop = 0;
+          }} 
+        />
         <SubTabs 
           primaryTab={primaryTab}
           matchSub={matchSub}
