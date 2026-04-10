@@ -33,9 +33,9 @@ export function MarketCard({ market, index = 0, onPlaceBet }: MarketCardProps) {
   return (
     <>
       <motion.div
-        initial={{ opacity: 0, y: 24 }}
+        initial={index >= 0 ? { opacity: 0, y: 24 } : false}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: index * 0.07, duration: 0.35, ease: 'easeOut' }}
+        transition={index >= 0 ? { delay: index * 0.07, duration: 0.35, ease: 'easeOut' } : { duration: 0 }}
         className="relative overflow-hidden mx-4 mb-4"
         style={{
           borderRadius: '28px',

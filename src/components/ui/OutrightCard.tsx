@@ -103,9 +103,9 @@ export function OutrightCard({ market, index = 0, onPlaceBet }: OutrightCardProp
     <>
       <motion.div
         ref={cardRef}
-        initial={{ opacity: 0, y: 16 }}
+        initial={index >= 0 ? { opacity: 0, y: 16 } : false}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: index * 0.06, duration: 0.3, ease: 'easeOut' }}
+        transition={index >= 0 ? { delay: index * 0.06, duration: 0.3, ease: 'easeOut' } : { duration: 0 }}
         className="mx-4 mb-3 rounded-2xl overflow-hidden"
         style={{
           background: 'linear-gradient(160deg, rgba(30,18,55,0.97) 0%, rgba(18,10,35,0.97) 100%)',

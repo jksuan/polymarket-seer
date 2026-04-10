@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Loader2, Trophy, BarChart3 } from 'lucide-react';
 import { BannerCarousel } from '@/components/ui/BannerCarousel';
 import { CategoryTabs } from '@/components/ui/CategoryTabs';
@@ -20,6 +20,11 @@ export function HomePage({ onPlaceBet }: { onPlaceBet?: (amount: string, tokenId
 
   const [liveMarkets, setLiveMarkets] = useState<SportMarket[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [skipAnimation, setSkipAnimation] = useState(false);
+
+  // ── Tab-level cache: keyword → { data, timestamp } ──
+  const CACHE_TTL = 3 * 60 * 1000; // 3 minutes
+  const cacheRef = useRef<Map<string, { data: SportMarket[]; ts: number }>>(new Map());
 
   // ── Computed keyword (derived directly in render scope to avoid stale closures) ──
   const keyword = (() => {
@@ -45,12 +50,30 @@ export function HomePage({ onPlaceBet }: { onPlaceBet?: (amount: string, tokenId
       return;
     }
 
-    // AbortController cancels stale requests when keyword/tab changes
+    // ── Cache hit: render instantly, skip loading spinner ──
+    const cached = cacheRef.current.get(keyword);
+    const isFresh = cached && (Date.now() - cached.ts < CACHE_TTL);
+
+    if (cached) {
+      // Instantly show cached data (even if stale — we’ll refresh below)
+      setSkipAnimation(true);
+      setLiveMarkets(cached.data);
+      setIsLoading(false);
+    }
+
+    // If cache is fresh enough, no need to re-fetch
+    if (isFresh) return;
+
+    // ── Fetch (with AbortController for race-condition safety) ──
     const controller = new AbortController();
+    const isBgRefresh = !!cached; // background refresh = don’t show spinner
 
     const fetchMarkets = async () => {
       try {
-        setIsLoading(true);
+        if (!isBgRefresh) {
+          setSkipAnimation(false);
+          setIsLoading(true);
+        }
         const url = '/api/search?q=' + encodeURIComponent(keyword);
         const res = await fetch(url, { signal: controller.signal });
         if (!res.ok) throw new Error('API fetch failed');
@@ -187,6 +210,8 @@ export function HomePage({ onPlaceBet }: { onPlaceBet?: (amount: string, tokenId
         // Strictly sort by descending total volume purely for front-end presentation accuracy
         mapped.sort((a, b) => b.volume - a.volume);
 
+        // Update cache & render
+        cacheRef.current.set(keyword, { data: mapped, ts: Date.now() });
         setLiveMarkets(mapped);
       } catch (err: any) {
         // Ignore abort errors — they are intentional cancellations
@@ -260,12 +285,12 @@ export function HomePage({ onPlaceBet }: { onPlaceBet?: (amount: string, tokenId
           liveMarkets.map((market, i) =>
             primaryTab === 'outrights' ? (
               market.rawOutcomes && market.rawOutcomes.length > 2 ? (
-                <OutrightCard key={market.id} market={market} index={i} onPlaceBet={onPlaceBet} />
+                <OutrightCard key={market.id} market={market} index={skipAnimation ? -1 : i} onPlaceBet={onPlaceBet} />
               ) : (
-                <BinaryOutrightCard key={market.id} market={market} index={i} onPlaceBet={onPlaceBet} />
+                <BinaryOutrightCard key={market.id} market={market} index={skipAnimation ? -1 : i} onPlaceBet={onPlaceBet} />
               )
             ) : (
-              <MarketCard key={market.id} market={market} index={i} onPlaceBet={onPlaceBet} />
+              <MarketCard key={market.id} market={market} index={skipAnimation ? -1 : i} onPlaceBet={onPlaceBet} />
             )
           )
         ) : (
