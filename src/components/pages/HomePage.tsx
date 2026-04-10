@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Loader2, Trophy, BarChart3 } from 'lucide-react';
 import { BannerCarousel } from '@/components/ui/BannerCarousel';
 import { CategoryTabs } from '@/components/ui/CategoryTabs';
@@ -10,6 +10,9 @@ import { MarketCard } from '@/components/ui/MarketCard';
 import { OutrightCard } from '@/components/ui/OutrightCard';
 import { BinaryOutrightCard } from '@/components/ui/BinaryOutrightCard';
 import { PrimaryTab, MatchSubTab, SportMarket } from '@/types/sports';
+// ── Module-level cache: persists across page navigations (survives component unmount) ──
+const CACHE_TTL = 3 * 60 * 1000; // 3 minutes
+const marketCache = new Map<string, { data: SportMarket[]; ts: number }>();
 
 export function HomePage({ onPlaceBet }: { onPlaceBet?: (amount: string, tokenId: string) => Promise<void> }) {
   const [primaryTab, setPrimaryTab] = useState<PrimaryTab>('matches');
@@ -23,9 +26,7 @@ export function HomePage({ onPlaceBet }: { onPlaceBet?: (amount: string, tokenId
   const [skipAnimation, setSkipAnimation] = useState(false);
   const [prevKeyword, setPrevKeyword] = useState<string>('');
 
-  // ── Tab-level cache: keyword → { data, timestamp } ──
-  const CACHE_TTL = 3 * 60 * 1000; // 3 minutes
-  const cacheRef = useRef<Map<string, { data: SportMarket[]; ts: number }>>(new Map());
+
 
   // ── Computed keyword (derived directly in render scope to avoid stale closures) ──
   const keyword = (() => {
@@ -50,7 +51,7 @@ export function HomePage({ onPlaceBet }: { onPlaceBet?: (amount: string, tokenId
       setIsLoading(false);
       setLiveMarkets([]);
     } else {
-      const cached = cacheRef.current.get(keyword);
+      const cached = marketCache.get(keyword);
       if (cached) {
         setSkipAnimation(true);
         setLiveMarkets(cached.data);
@@ -66,7 +67,7 @@ export function HomePage({ onPlaceBet }: { onPlaceBet?: (amount: string, tokenId
   useEffect(() => {
     if (primaryTab === 'standings' || primaryTab === 'scorers') return;
 
-    const cached = cacheRef.current.get(keyword);
+    const cached = marketCache.get(keyword);
     const isFresh = cached && (Date.now() - cached.ts < CACHE_TTL);
 
     // If cache is fresh enough, no need to re-fetch
@@ -225,7 +226,7 @@ export function HomePage({ onPlaceBet }: { onPlaceBet?: (amount: string, tokenId
         mapped.sort((a, b) => b.volume - a.volume);
 
         // Update cache & render
-        cacheRef.current.set(keyword, { data: mapped, ts: Date.now() });
+        marketCache.set(keyword, { data: mapped, ts: Date.now() });
         setLiveMarkets(mapped);
       } catch (err: any) {
         // Ignore abort errors — they are intentional cancellations
