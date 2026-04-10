@@ -131,7 +131,7 @@ export function BinaryOutrightCard({ market, index = 0, onPlaceBet }: BinaryOutr
               border: '1px solid rgba(0,200,90,0.3)',
             }}
           >
-            <span style={{ fontFamily: 'Inter', fontSize: '15px', fontWeight: 800, color: '#00C85A' }}>是</span>
+            <span style={{ fontFamily: 'Inter', fontSize: '15px', fontWeight: 800, color: '#00C85A' }}>是 {yesProb}%</span>
           </button>
           
           <button
@@ -142,7 +142,7 @@ export function BinaryOutrightCard({ market, index = 0, onPlaceBet }: BinaryOutr
               border: '1px solid rgba(220,60,60,0.3)',
             }}
           >
-            <span style={{ fontFamily: 'Inter', fontSize: '15px', fontWeight: 800, color: '#E05050' }}>否</span>
+            <span style={{ fontFamily: 'Inter', fontSize: '15px', fontWeight: 800, color: '#E05050' }}>否 {noProb}%</span>
           </button>
         </div>
 
