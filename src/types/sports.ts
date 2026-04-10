@@ -41,6 +41,7 @@ export interface SportMarket {
   rawOutcomes?: string[];
   rawPrices?: number[];
   rawIcons?: string[];
+  rawVolumes?: number[];
   volume: number;
   liquidity: number;
   supporters: number;

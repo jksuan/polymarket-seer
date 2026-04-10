@@ -14,7 +14,7 @@ interface OutrightCardProps {
 
 /* ── Reusable row for a single outcome ── */
 function OutcomeRow({ opt, i, onBet }: {
-  opt: { name: string; prob: number; price: number; icon: string };
+  opt: { name: string; prob: number; price: number; icon: string; volume: number };
   i: number;
   onBet: (name: string, idx: number, side: 'home' | 'away') => void;
 }) {
@@ -31,12 +31,19 @@ function OutcomeRow({ opt, i, onBet }: {
           // eslint-disable-next-line @next/next/no-img-element
           <img src={opt.icon} alt="" className="w-7 h-7 rounded-md object-cover flex-shrink-0" />
         )}
-        <span
-          className="truncate"
-          style={{ fontFamily: 'Inter', fontSize: '13px', fontWeight: 600, color: 'rgba(255,255,255,0.85)' }}
-        >
-          {opt.name}
-        </span>
+        <div className="flex flex-col min-w-0">
+          <span
+            className="truncate"
+            style={{ fontFamily: 'Inter', fontSize: '13px', fontWeight: 600, color: 'rgba(255,255,255,0.85)' }}
+          >
+            {opt.name}
+          </span>
+          {opt.volume > 0 && (
+            <span style={{ fontFamily: 'Inter', fontSize: '10px', fontWeight: 500, color: 'rgba(255,255,255,0.35)', marginTop: '1px' }}>
+              {formatVolume(opt.volume)} 交易量
+            </span>
+          )}
+        </div>
       </div>
       <span
         className="mr-3 w-10 text-right"
@@ -79,7 +86,8 @@ export function OutrightCard({ market, index = 0, onPlaceBet }: OutrightCardProp
     .map((name, i) => {
       const price = market.rawPrices?.[i] ?? 0.001;
       const icon = market.rawIcons?.[i] ?? '';
-      return { name, prob: Number((price * 100).toFixed(1)), price, icon };
+      const volume = market.rawVolumes?.[i] ?? 0;
+      return { name, prob: Number((price * 100).toFixed(1)), price, icon, volume };
     })
     // Filter out Polymarket placeholder teams (e.g. "Team AG") and catch-all "Other"
     .filter(opt => !/^Team\s+[A-Z]{1,3}$/i.test(opt.name) && opt.name !== 'Other')
@@ -158,57 +166,51 @@ export function OutrightCard({ market, index = 0, onPlaceBet }: OutrightCardProp
             <OutcomeRow key={`${opt.name}-${i}`} opt={opt} i={i} onBet={handleBet} />
           ))}
 
-          {/* Toggle buttons */}
-          {hasMore && (
-            <div className="flex items-center justify-center gap-3 py-2"
-              style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}
-            >
-              {/* Show More button — visible when there are still hidden items */}
-              {remaining > 0 && (
-                <button
-                  onClick={handleShowMore}
-                  className="flex items-center gap-1.5 active:scale-[0.98] transition-transform"
-                >
-                  <span style={{
-                    fontFamily: 'Inter', fontSize: '12px', fontWeight: 700,
-                    color: 'rgba(255,215,0,0.85)',
-                  }}>
-                    展开更多 ({remaining})
-                  </span>
-                  <span style={{ fontSize: '10px', color: 'rgba(255,215,0,0.85)' }}>▼</span>
-                </button>
-              )}
-
-              {/* Collapse button — visible when expanded beyond default 2 */}
-              {isExpanded && (
-                <button
-                  onClick={handleCollapse}
-                  className="flex items-center gap-1.5 active:scale-[0.98] transition-transform"
-                >
-                  <span style={{
-                    fontFamily: 'Inter', fontSize: '12px', fontWeight: 700,
-                    color: 'rgba(255,255,255,0.5)',
-                  }}>
-                    收起
-                  </span>
-                  <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.5)' }}>▲</span>
-                </button>
-              )}
-            </div>
-          )}
         </div>
 
-        {/* ─── Footer: volume ─── */}
+        {/* ─── Bottom bar: volume | expand/collapse | [right reserved] ─── */}
         <div
-          className="flex items-center px-4 py-2.5 mt-1"
+          className="flex items-center justify-between px-4 py-2.5"
           style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}
         >
-          <span style={{ fontSize: '11px', fontFamily: 'Inter', fontWeight: 700, color: '#00C85A' }}>
-            {formatVolume(market.volume)}
-          </span>
-          <span style={{ fontSize: '11px', fontFamily: 'Inter', color: 'rgba(255,255,255,0.35)', marginLeft: '4px' }}>
-            交易量
-          </span>
+          {/* Left: total volume */}
+          <div className="flex items-center gap-1">
+            <span style={{ fontSize: '11px', fontFamily: 'Inter', fontWeight: 700, color: '#00C85A' }}>
+              {formatVolume(market.volume)}
+            </span>
+            <span style={{ fontSize: '11px', fontFamily: 'Inter', color: 'rgba(255,255,255,0.35)' }}>
+              交易量
+            </span>
+          </div>
+
+          {/* Center: show more / collapse */}
+          <div className="flex items-center gap-3">
+            {hasMore && remaining > 0 && (
+              <button
+                onClick={handleShowMore}
+                className="flex items-center gap-1.5 active:scale-[0.98] transition-transform"
+              >
+                <span style={{ fontFamily: 'Inter', fontSize: '12px', fontWeight: 700, color: 'rgba(255,215,0,0.85)' }}>
+                  展开更多 ({remaining})
+                </span>
+                <span style={{ fontSize: '10px', color: 'rgba(255,215,0,0.85)' }}>▼</span>
+              </button>
+            )}
+            {isExpanded && (
+              <button
+                onClick={handleCollapse}
+                className="flex items-center gap-1.5 active:scale-[0.98] transition-transform"
+              >
+                <span style={{ fontFamily: 'Inter', fontSize: '12px', fontWeight: 700, color: 'rgba(255,255,255,0.5)' }}>
+                  收起
+                </span>
+                <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.5)' }}>▲</span>
+              </button>
+            )}
+          </div>
+
+          {/* Right: reserved for future use */}
+          <div className="w-16" />
         </div>
       </motion.div>
 

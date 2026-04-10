@@ -105,6 +105,7 @@ export function HomePage({ onPlaceBet }: { onPlaceBet?: (amount: string, tokenId
               const outrightOutcomes: string[] = [];
               const outrightPrices: number[] = [];
               const outrightIcons: string[] = [];
+              const outrightVolumes: number[] = [];
               const mainIcon = evt.image || evt.icon || '';
 
               if (evt.markets.length > 1) {
@@ -124,6 +125,7 @@ export function HomePage({ onPlaceBet }: { onPlaceBet?: (amount: string, tokenId
                   outrightPrices.push(parseFloat(prices[0]) || 0.01);
                   const subIcon = m.image || m.icon || '';
                   outrightIcons.push(subIcon === mainIcon ? '' : subIcon);
+                  outrightVolumes.push(parseFloat(m.volume || '0') || 0);
                 }
               } else {
                 // Single binary market (Yes / No) — expose both options as rows
@@ -136,6 +138,7 @@ export function HomePage({ onPlaceBet }: { onPlaceBet?: (amount: string, tokenId
                   outrightOutcomes.push(o);
                   outrightPrices.push(parseFloat(prices[i] || '0.5'));
                   outrightIcons.push('');
+                  outrightVolumes.push(0);
                 });
               }
 
@@ -164,6 +167,7 @@ export function HomePage({ onPlaceBet }: { onPlaceBet?: (amount: string, tokenId
                 rawOutcomes: outrightOutcomes,
                 rawPrices: outrightPrices,
                 rawIcons: outrightIcons,
+                rawVolumes: outrightVolumes,
               });
 
             } else {
