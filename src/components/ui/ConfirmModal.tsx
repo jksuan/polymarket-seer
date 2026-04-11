@@ -337,14 +337,30 @@ export function ConfirmModal({
                           }}
                         />
                       </div>
-                      {((inputValue && amount < 1) || showError) && (
-                        <div className="flex items-center gap-1 mt-1 text-[#ff4d4f] opacity-90 animate-in fade-in slide-in-from-top-1">
-                          <AlertTriangle size={12} strokeWidth={2.5} />
-                          <span style={{ fontSize: '11px', fontFamily: 'Inter', fontWeight: 600 }}>
-                            投注金额必须大于等于$1
-                          </span>
-                        </div>
-                      )}
+                      {(() => {
+                        const maxAllowed = parseFloat(usdcBalance || '0');
+                        const isBelowMin = amount < 1;
+                        const isExceedingBalance = amount > maxAllowed;
+                        const hasError = (inputValue !== '' && (isBelowMin || isExceedingBalance)) || showError;
+                        
+                        if (!hasError) return null;
+
+                        let errorMessage = '';
+                        if (maxAllowed < 1 || isExceedingBalance) {
+                          errorMessage = `可用余额不足，当前最大可用 $${usdcBalance || '0'}`;
+                        } else if (isBelowMin) {
+                          errorMessage = '投注金额必须大于等于$1';
+                        }
+                        
+                        return (
+                          <div className="flex items-center gap-1 mt-1 text-[#ff4d4f] opacity-90 animate-in fade-in slide-in-from-top-1 whitespace-nowrap">
+                            <AlertTriangle size={12} strokeWidth={2.5} className="flex-shrink-0" />
+                            <span style={{ fontSize: '10px', fontFamily: 'Inter', fontWeight: 600 }}>
+                              {errorMessage}
+                            </span>
+                          </div>
+                        );
+                      })()}
                     </div>
                   </div>
                   
@@ -389,7 +405,8 @@ export function ConfirmModal({
                 {/* Confirm / Login button */}
                 <button
                   onClick={authenticated ? () => {
-                    if (amount < 1) {
+                    const maxAllowed = parseFloat(usdcBalance || '0');
+                    if (amount < 1 || amount > maxAllowed) {
                       setShowError(true);
                     } else {
                       handleConfirm();
