@@ -7,6 +7,7 @@ import { CheckCircle, X, Zap, ShieldCheck } from 'lucide-react';
 import { SportMarket } from '@/types/sports';
 import confetti from 'canvas-confetti';
 import { usePrivy } from '@privy-io/react-auth';
+import { usePolymarketAuth } from '@/contexts/PolymarketAuthContext';
 
 // ──────────────────────────────────────────────
 // OutrightInfo: data block for the "outright" / Yes-No panel
@@ -55,6 +56,7 @@ export function ConfirmModal({
   const [confirmed, setConfirmed] = useState(false);
   const [mounted, setMounted] = useState(false);
   const { authenticated, login } = usePrivy();
+  const { usdcBalance, isRefreshingBalance } = usePolymarketAuth();
 
   useEffect(() => {
     setMounted(true);
@@ -297,7 +299,7 @@ export function ConfirmModal({
                     </span>
                     {authenticated && (
                       <span style={{ fontSize: '11px', fontFamily: 'Inter', fontWeight: 600, color: primaryColor }}>
-                        钱包余额检测中...
+                        {isRefreshingBalance ? '钱包余额检测中...' : `可用余额: $${usdcBalance}`}
                       </span>
                     )}
                   </div>
