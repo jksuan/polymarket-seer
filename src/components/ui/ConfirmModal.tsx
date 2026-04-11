@@ -368,7 +368,7 @@ export function ConfirmModal({
                         textTransform: authenticated ? 'uppercase' : 'none'
                       }}
                     >
-                      {authenticated ? `买入 $${amount} USDC` : '登录'}
+                      {authenticated ? `买入 $${amount}` : '登录'}
                     </span>
                   </div>
                 </button>
