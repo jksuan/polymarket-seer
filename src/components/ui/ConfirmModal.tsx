@@ -357,7 +357,6 @@ export function ConfirmModal({
                   )}
                   
                   <div className="relative flex items-center justify-center gap-2">
-                    {authenticated && <Zap size={18} color="#0D0518" fill="currentColor" />}
                     <span 
                       style={{ 
                         fontFamily: 'Outfit, Inter', 
@@ -368,7 +367,7 @@ export function ConfirmModal({
                         textTransform: authenticated ? 'uppercase' : 'none'
                       }}
                     >
-                      {authenticated ? `买入 $${amount}` : '登录'}
+                      {authenticated ? `买入 ${badgeText} $${amount}` : '登录'}
                     </span>
                   </div>
                 </button>
