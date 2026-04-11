@@ -53,6 +53,7 @@ export function ConfirmModal({
   outrightInfo,
 }: ConfirmModalProps) {
   const [amount, setAmount] = useState(defaultAmount);
+  const [inputValue, setInputValue] = useState(defaultAmount.toString());
   const [confirmed, setConfirmed] = useState(false);
   const [mounted, setMounted] = useState(false);
   const { authenticated, login } = usePrivy();
@@ -293,15 +294,43 @@ export function ConfirmModal({
 
                 {/* Amount selector */}
                 <div className="mb-6">
-                  <div className="flex items-center justify-between mb-3">
-                    <span style={{ fontSize: '11px', fontFamily: 'Inter', fontWeight: 700, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                      注入资金
-                    </span>
-                    {authenticated && (
-                      <span style={{ fontSize: '11px', fontFamily: 'Inter', fontWeight: 600, color: primaryColor }}>
-                        {isRefreshingBalance ? '钱包余额检测中...' : `可用余额: $${usdcBalance}`}
+                  <div className="flex items-center justify-between mb-4 border-b border-white/5 pb-4">
+                    <div className="flex flex-col gap-1.5">
+                      <span style={{ fontSize: '13px', fontFamily: 'Inter', fontWeight: 700, color: '#fff', textTransform: 'uppercase', letterSpacing: '0.02em' }}>
+                        投注金额
                       </span>
-                    )}
+                      {authenticated && (
+                        <span style={{ fontSize: '11px', fontFamily: 'Inter', fontWeight: 500, color: 'rgba(255,255,255,0.4)' }}>
+                          {isRefreshingBalance ? '钱包余额...' : `可用余额: $${usdcBalance}`}
+                        </span>
+                      )}
+                    </div>
+                    
+                    <div className="flex items-baseline justify-end gap-0.5">
+                      <span style={{ fontSize: '24px', fontWeight: 900, fontFamily: 'Inter', color: inputValue ? '#fff' : 'rgba(255,255,255,0.2)' }}>$</span>
+                      <input 
+                        type="text" 
+                        inputMode="decimal"
+                        placeholder="1"
+                        value={inputValue}
+                        onChange={(e) => {
+                          let val = e.target.value.replace(/[^\d.]/g, '');
+                          const parts = val.split('.');
+                          if (parts.length > 2) val = parts[0] + '.' + parts.slice(1).join('');
+                          if (parts.length === 2 && parts[1].length > 2) val = parts[0] + '.' + parts[1].slice(0, 2);
+                          setInputValue(val);
+                          setAmount(val ? parseFloat(val) : 0);
+                        }}
+                        className="bg-transparent outline-none font-black transition-colors"
+                        style={{
+                          width: `${Math.min(Math.max((inputValue || '1').length, 1), 8)}ch`,
+                          fontSize: '36px',
+                          lineHeight: '1',
+                          fontFamily: 'Inter',
+                          color: inputValue ? '#fff' : 'rgba(255,255,255,0.2)',
+                        }}
+                      />
+                    </div>
                   </div>
                   
                   <div className="grid grid-cols-4 gap-2.5">
@@ -310,7 +339,10 @@ export function ConfirmModal({
                       return (
                         <button
                           key={a}
-                          onClick={() => setAmount(a)}
+                          onClick={() => {
+                            setAmount(a);
+                            setInputValue(a.toString());
+                          }}
                           className="relative py-2.5 rounded-xl active:scale-95 transition-all overflow-hidden"
                           style={{
                             fontFamily: 'Inter',
