@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { CheckCircle, X, Zap } from 'lucide-react';
+import { CheckCircle, X, Zap, ShieldCheck } from 'lucide-react';
 import { SportMarket } from '@/types/sports';
 import confetti from 'canvas-confetti';
 
@@ -119,202 +119,252 @@ export function ConfirmModal({
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-            className="relative w-full max-w-md rounded-t-[32px] p-6 pb-10"
+            className="relative w-full max-w-md rounded-t-[32px] p-6 pb-10 overflow-hidden"
             style={{
-              background: 'linear-gradient(160deg, rgba(30,15,55,0.98), rgba(18,9,36,0.98))',
-              border: '1px solid rgba(255,255,255,0.1)',
-              borderBottom: 'none',
-              boxShadow: '0 -20px 60px rgba(0,0,0,0.7)',
+              background: 'linear-gradient(160deg, #120A20, #08040C)',
+              borderTop: '1px solid rgba(255,255,255,0.1)',
+              boxShadow: '0 -20px 60px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.05)',
             }}
           >
+            {/* Ambient Background Glow matching the chosen option */}
+            <div 
+              className="absolute -top-32 -left-32 w-64 h-64 rounded-full blur-[90px] opacity-15 pointer-events-none"
+              style={{ background: primaryColor }} 
+            />
+            <div 
+              className="absolute -bottom-32 -right-32 w-64 h-64 rounded-full blur-[90px] opacity-10 pointer-events-none"
+              style={{ background: accentColor }} 
+            />
+
             {confirmed ? (
               <motion.div
                 initial={{ scale: 0.8, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
-                className="flex flex-col items-center py-8 gap-4"
+                className="flex flex-col items-center py-8 gap-4 relative z-10"
               >
                 <div
-                  className="w-16 h-16 rounded-full flex items-center justify-center"
+                  className="w-16 h-16 rounded-full flex items-center justify-center relative"
                   style={{
-                    background: 'linear-gradient(135deg, #ADFF2F, #00CC44)',
-                    boxShadow: '0 0 30px rgba(173,255,47,0.5)',
+                    background: `linear-gradient(135deg, ${primaryColor}, ${accentColor})`,
+                    boxShadow: `0 0 40px ${glowColor}`,
                   }}
                 >
+                  <div className="absolute inset-0 rounded-full border-2 border-white/20 scale-110 animate-ping opacity-20" />
                   <CheckCircle size={32} color="#0D0518" strokeWidth={3} />
                 </div>
                 <div style={{ textAlign: 'center' }}>
-                  <p style={{ fontFamily: 'Inter', fontWeight: 900, fontSize: '18px', color: '#fff' }}>
+                  <p style={{ fontFamily: 'Inter', fontWeight: 900, fontSize: '18px', color: '#fff', textShadow: '0 2px 10px rgba(255,255,255,0.2)' }}>
                     下单成功！🎉
                   </p>
-                  <p style={{ fontFamily: 'Inter', fontSize: '13px', color: 'rgba(255,255,255,0.5)', marginTop: '4px' }}>
-                    {isOutright ? outrightInfo!.directionLabel : `支持 ${displayTitle}`} · ${amount} USDC
+                  <p style={{ fontFamily: 'Inter', fontSize: '13px', color: 'rgba(255,255,255,0.6)', marginTop: '4px' }}>
+                    {isOutright ? outrightInfo!.directionLabel : `支持 ${displayTitle}`} · <span className="font-bold text-white">${amount}</span> USDC
                   </p>
                 </div>
               </motion.div>
             ) : (
-              <>
+              <div className="relative z-10">
                 {/* Header */}
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center gap-2">
-                    <Zap size={18} color="#ADFF2F" fill="#ADFF2F" />
-                    <span style={{ fontFamily: 'Inter', fontWeight: 900, fontSize: '17px', color: '#fff' }}>
-                      确认下单
+                    <div 
+                      className="w-6 h-6 rounded-lg flex items-center justify-center shadow-lg"
+                      style={{ background: 'rgba(173,255,47,0.15)', border: '1px solid rgba(173,255,47,0.3)' }}
+                    >
+                      <Zap size={14} color="#ADFF2F" fill="#ADFF2F" />
+                    </div>
+                    <span style={{ fontFamily: 'Outfit, Inter', fontWeight: 900, fontSize: '17px', color: '#fff', letterSpacing: '0.02em' }}>
+                      交易终端
                     </span>
                   </div>
                   <button
                     onClick={handleCancel}
                     className="w-8 h-8 rounded-full flex items-center justify-center active:scale-90 transition-transform"
-                    style={{ background: 'rgba(255,255,255,0.08)' }}
+                    style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}
                   >
-                    <X size={16} color="rgba(255,255,255,0.6)" />
+                    <X size={15} color="rgba(255,255,255,0.6)" />
                   </button>
                 </div>
 
-                {/* Market info card */}
+                {/* Cyberpunk Market info card */}
                 <div
-                  className="p-4 rounded-2xl mb-5"
+                  className="relative p-5 rounded-[20px] mb-5 overflow-hidden"
                   style={{
-                    background: 'rgba(0,0,0,0.35)',
-                    border: `1px solid ${accentColor}33`,
+                    background: 'rgba(0,0,0,0.4)',
+                    backdropFilter: 'blur(12px)',
+                    border: `1px solid rgba(255,255,255,0.06)`,
+                    boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.02), 0 8px 32px rgba(0,0,0,0.4)'
                   }}
                 >
+                  {/* Glowing top line indicating team color */}
+                  <div className="absolute top-0 left-0 right-0 h-[2px]" style={{ background: `linear-gradient(90deg, transparent, ${primaryColor}, transparent)` }} />
+
                   {/* Top row: badge + title + odds */}
-                  <div className="flex items-center gap-3 mb-3">
-                    {/* Badge */}
-                    <div
-                      className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
-                      style={{
-                        background: primaryColor,
-                        border: `2px solid ${accentColor}`,
-                        boxShadow: `0 0 12px ${glowColor}`,
-                        fontFamily: 'Inter',
-                        fontWeight: 900,
-                        fontSize: '11px',
-                        color: '#fff',
-                      }}
-                    >
-                      {badgeText}
+                  <div className="flex items-start gap-3.5 mb-5 mt-1">
+                    {/* Futuristic Badge */}
+                    <div className="relative">
+                      <div className="absolute -inset-1 rounded-full opacity-20 blur-sm" style={{ background: primaryColor }} />
+                      <div
+                        className="relative w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0"
+                        style={{
+                          background: `${primaryColor}22`,
+                          border: `1px solid ${primaryColor}55`,
+                          boxShadow: `inset 0 0 10px ${primaryColor}33`,
+                          fontFamily: 'Inter',
+                          fontWeight: 900,
+                          fontSize: '15px',
+                          color: primaryColor,
+                          textShadow: `0 0 6px ${primaryColor}88`
+                        }}
+                      >
+                        {badgeText}
+                      </div>
                     </div>
 
                     {/* Title + sub-label */}
-                    <div className="flex-1 min-w-0">
+                    <div className="flex-1 min-w-0 pt-0.5 flex flex-col justify-center min-h-[44px]">
                       <div
                         style={{
                           fontFamily: 'Inter',
-                          fontWeight: 700,
-                          fontSize: '14px',
+                          fontWeight: 800,
+                          fontSize: '15px',
                           color: '#ffffff',
                           lineHeight: 1.3,
                           wordBreak: 'break-word',
+                          textShadow: '0 2px 4px rgba(0,0,0,0.5)'
                         }}
                       >
                         {displayTitle}
                       </div>
-                      <div style={{ fontFamily: 'Inter', fontSize: '11px', color: 'rgba(255,255,255,0.4)', marginTop: '2px' }}>
-                        {displaySubLabel}
-                      </div>
+                      {!isOutright && (
+                        <div className="inline-flex items-center gap-1.5 mt-1.5 px-2 py-0.5 rounded-md self-start" style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.03)' }}>
+                          <div className="w-1.5 h-1.5 rounded-full" style={{ background: primaryColor }} />
+                          <span style={{ fontFamily: 'Inter', fontSize: '10px', fontWeight: 600, color: 'rgba(255,255,255,0.6)', letterSpacing: '0.02em', textTransform: 'uppercase' }}>
+                            {displaySubLabel}
+                          </span>
+                        </div>
+                      )}
                     </div>
 
-                    {/* Odds: label on top, value below */}
-                    <div className="text-right flex-shrink-0">
-                      <div style={{ fontFamily: 'Inter', fontSize: '10px', color: 'rgba(255,255,255,0.4)', marginBottom: '2px' }}>
-                        赔率
+                    {/* Probability */}
+                    <div className="text-right flex-shrink-0 pt-0.5">
+                      <div style={{ fontFamily: 'Inter', fontSize: '10px', fontWeight: 600, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', marginBottom: '1px' }}>
+                        获胜概率
                       </div>
-                      <div style={{ fontFamily: 'Inter', fontWeight: 900, fontStyle: 'italic', fontSize: '22px', color: '#fff' }}>
-                        {displayOdds.toFixed(2)}x
+                      <div style={{ fontFamily: 'Inter', fontWeight: 900, fontSize: '24px', color: '#fff', letterSpacing: '-0.03em', textShadow: '0 2px 8px rgba(255,255,255,0.2)' }}>
+                        {displayProbability.toFixed(1)}<span className="text-[14px]">%</span>
                       </div>
                     </div>
                   </div>
 
-                  <div
-                    className="h-px w-full my-2"
-                    style={{ background: 'rgba(255,255,255,0.08)' }}
-                  />
+                  {/* Division line */}
+                  <div className="relative h-px w-full my-4" style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent)' }} />
 
                   {/* Stats row: expected return + probability */}
-                  <div className="flex justify-between">
+                  <div className="flex justify-between items-end">
                     <div>
-                      <div style={{ fontSize: '10px', fontFamily: 'Inter', fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                        预计回报
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <div style={{ fontSize: '10px', fontFamily: 'Inter', fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                          预计可得
+                        </div>
                       </div>
-                      <div style={{ fontFamily: 'Inter', fontWeight: 900, fontSize: '20px', color: '#ADFF2F' }}>
-                        ${expectedReturn}
+                      <div className="flex items-baseline gap-1" style={{ fontFamily: 'Inter', fontWeight: 900, color: '#ADFF2F', textShadow: '0 0 16px rgba(173,255,47,0.3)' }}>
+                        <span className="text-[16px] leading-none">$</span>
+                        <span className="text-[26px] leading-none tracking-tight">{expectedReturn}</span>
                       </div>
-                      <div style={{ fontSize: '11px', fontFamily: 'Inter', color: 'rgba(173,255,47,0.6)' }}>
-                        +${profit} 利润
+                      <div style={{ fontSize: '11px', fontFamily: 'Inter', fontWeight: 600, color: 'rgba(173,255,47,0.8)', marginTop: '4px' }}>
+                        净利润 +${profit}
                       </div>
                     </div>
+                    
                     <div className="text-right">
-                      <div style={{ fontSize: '10px', fontFamily: 'Inter', fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                        胜率
+                      <div style={{ fontSize: '10px', flex: 1, fontFamily: 'Inter', fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '2px' }}>
+                        赔率
                       </div>
-                      <div style={{ fontFamily: 'Inter', fontWeight: 900, fontSize: '20px', color: '#fff' }}>
-                        {displayProbability.toFixed(1)}%
+                      <div style={{ fontFamily: 'Inter', fontWeight: 900, fontSize: '22px', color: '#fff', textShadow: '0 2px 8px rgba(0,0,0,0.5)' }}>
+                        {displayOdds.toFixed(2)}x
                       </div>
                     </div>
                   </div>
                 </div>
 
                 {/* Amount selector */}
-                <div className="mb-5">
-                  <div
-                    style={{ fontSize: '11px', fontFamily: 'Inter', fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '10px' }}
-                  >
-                    投注金额 (USDC)
+                <div className="mb-6">
+                  <div className="flex items-center justify-between mb-3">
+                    <span style={{ fontSize: '11px', fontFamily: 'Inter', fontWeight: 700, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      注入资金
+                    </span>
+                    <span style={{ fontSize: '11px', fontFamily: 'Inter', fontWeight: 600, color: primaryColor }}>
+                      钱包余额检测中...
+                    </span>
                   </div>
-                  <div className="grid grid-cols-4 gap-2">
-                    {AMOUNTS.map((a) => (
-                      <button
-                        key={a}
-                        onClick={() => setAmount(a)}
-                        className="py-2 rounded-xl active:scale-95 transition-transform"
-                        style={{
-                          fontFamily: 'Inter',
-                          fontWeight: 700,
-                          fontSize: '14px',
-                          background: amount === a
-                            ? `linear-gradient(135deg, ${primaryColor}, ${accentColor}44)`
-                            : 'rgba(255,255,255,0.07)',
-                          border: amount === a ? `1.5px solid ${accentColor}` : '1.5px solid rgba(255,255,255,0.08)',
-                          color: amount === a ? accentColor : 'rgba(255,255,255,0.5)',
-                          boxShadow: amount === a ? `0 0 12px ${glowColor}` : 'none',
-                        }}
-                      >
-                        ${a}
-                      </button>
-                    ))}
+                  
+                  <div className="grid grid-cols-4 gap-2.5">
+                    {AMOUNTS.map((a) => {
+                      const isActive = amount === a;
+                      return (
+                        <button
+                          key={a}
+                          onClick={() => setAmount(a)}
+                          className="relative py-2.5 rounded-xl active:scale-95 transition-all overflow-hidden"
+                          style={{
+                            fontFamily: 'Inter',
+                            fontWeight: 800,
+                            fontSize: '15px',
+                            background: isActive
+                              ? `linear-gradient(135deg, ${primaryColor}22, ${accentColor}11)`
+                              : 'rgba(255,255,255,0.03)',
+                            border: isActive ? `1.5px solid ${primaryColor}` : '1.5px solid rgba(255,255,255,0.06)',
+                            color: isActive ? '#fff' : 'rgba(255,255,255,0.4)',
+                            boxShadow: isActive ? `0 0 16px ${glowColor}, inset 0 0 8px ${glowColor}` : 'none',
+                          }}
+                        >
+                          ${a}
+                          {isActive && (
+                            <div className="absolute inset-0 bg-gradient-to-t from-white/10 to-transparent pointer-events-none" />
+                          )}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 
-                {/* Confirm button */}
+                {/* Confirm button - Tactical Launch Style */}
                 <button
                   onClick={handleConfirm}
-                  className="w-full py-4 rounded-2xl active:scale-97 transition-transform"
+                  className="relative w-full py-4 rounded-[16px] active:scale-[0.98] transition-transform overflow-hidden group"
                   style={{
-                    fontFamily: 'Inter',
-                    fontWeight: 900,
-                    fontSize: '16px',
-                    background: 'linear-gradient(135deg, #ADFF2F, #00CC44)',
-                    color: '#0D0518',
-                    boxShadow: '0 6px 24px rgba(173,255,47,0.4)',
-                    letterSpacing: '0.02em',
+                    background: 'linear-gradient(90deg, #ADFF2F 0%, #00F0FF 100%)',
+                    boxShadow: '0 8px 30px rgba(173,255,47,0.3)',
                   }}
                 >
-                  🚀 确认下注 ${amount} USDC
+                  <div className="absolute inset-0 bg-black/10 group-active:bg-black/20 transition-colors" />
+                  {/* Glossy overlay */}
+                  <div className="absolute top-0 left-0 right-0 h-1/2 bg-white/20 rounded-t-[16px] pointer-events-none" />
+                  
+                  <div className="relative flex items-center justify-center gap-2">
+                    <Zap size={18} color="#0D0518" fill="currentColor" />
+                    <span 
+                      style={{ 
+                        fontFamily: 'Outfit, Inter', 
+                        fontWeight: 900, 
+                        fontSize: '16px', 
+                        color: '#0D0518', 
+                        letterSpacing: '0.03em',
+                        textTransform: 'uppercase'
+                      }}
+                    >
+                      买入 ${amount} USDC
+                    </span>
+                  </div>
                 </button>
 
-                <p
-                  style={{
-                    fontSize: '10px',
-                    fontFamily: 'Inter',
-                    color: 'rgba(255,255,255,0.25)',
-                    textAlign: 'center',
-                    marginTop: '10px',
-                  }}
-                >
-                  由 Polymarket 提供预测市场 · 需要连接钱包
-                </p>
-              </>
+                <div className="flex items-center justify-center gap-1.5 mt-4 opacity-50">
+                  <ShieldCheck size={12} fill="currentColor" color="#0D0518" className="text-white/80" />
+                  <p style={{ fontSize: '10px', fontFamily: 'Inter', fontWeight: 500, color: '#ffffff', letterSpacing: '0.02em' }}>
+                    Secured by Polymarket Protocol
+                  </p>
+                </div>
+              </div>
             )}
           </motion.div>
         </div>
