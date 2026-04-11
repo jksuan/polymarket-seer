@@ -161,30 +161,37 @@ export function BinaryOutrightCard({ market, index = 0, onPlaceBet }: BinaryOutr
       </motion.div>
 
       {/* ─── Confirm Modal ─── */}
-      {confirmState && (
-        <ConfirmModal
-          isOpen={true}
-          market={{
-            ...market,
-            homeTeam: {
-              shortName: confirmState.side === 'home' ? 'YES' : 'NO',
-              fullName: confirmState.side === 'home' ? 'Yes' : 'No',
-              displayName: confirmState.side === 'home' ? '是' : '否',
-              primaryColor: confirmState.side === 'home' ? '#00C85A' : '#E05050',
-              accentColor: confirmState.side === 'home' ? '#00A040' : '#C03030',
-              glowColor: confirmState.side === 'home' ? 'rgba(0,200,90,0.4)' : 'rgba(220,40,40,0.4)',
-            },
-            homeProbability: confirmState.side === 'home' ? yesProb : noProb,
-            homeOdds: confirmState.side === 'home' ? market.homeOdds : market.awayOdds,
-          }}
-          side={confirmState.side}
-          onConfirm={async (amount) => {
-            setConfirmState(null);
-            if (onPlaceBet) await onPlaceBet(amount.toString(), market.polymarketConditionId || '');
-          }}
-          onCancel={() => setConfirmState(null)}
-        />
-      )}
+      {confirmState && (() => {
+        const isYes = confirmState.side === 'home';
+        // yesProb is market.homeProbability (already a %)
+        const yesProbPct = yesProb;   // e.g. 15.3
+        const noProbPct  = noProb;    // e.g. 84.7
+        const yesOdds    = yesProbPct > 0 ? 100 / yesProbPct : 0;
+        const noOdds     = noProbPct  > 0 ? 100 / noProbPct  : 0;
+
+        return (
+          <ConfirmModal
+            isOpen={true}
+            market={market}
+            side="home"
+            outrightInfo={{
+              title: market.question,
+              directionLabel: isYes ? '买入是' : '买入否',
+              probability: isYes ? yesProbPct : noProbPct,
+              odds:        isYes ? yesOdds    : noOdds,
+              primaryColor: isYes ? '#00C85A' : '#E05050',
+              accentColor:  isYes ? '#00A040' : '#C03030',
+              glowColor:    isYes ? 'rgba(0,200,90,0.4)' : 'rgba(220,40,40,0.4)',
+              badgeText:    isYes ? '是' : '否',
+            }}
+            onConfirm={async (amount) => {
+              setConfirmState(null);
+              if (onPlaceBet) await onPlaceBet(amount.toString(), market.polymarketConditionId || '');
+            }}
+            onCancel={() => setConfirmState(null)}
+          />
+        );
+      })()}
     </>
   );
 }
