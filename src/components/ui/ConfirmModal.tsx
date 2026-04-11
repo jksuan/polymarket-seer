@@ -255,7 +255,7 @@ export function ConfirmModal({
                       <div style={{ fontFamily: 'Inter', fontSize: '10px', fontWeight: 600, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', marginBottom: '1px' }}>
                         获胜概率
                       </div>
-                      <div style={{ fontFamily: 'Inter', fontWeight: 900, fontSize: '24px', color: '#fff', letterSpacing: '-0.03em', textShadow: '0 2px 8px rgba(255,255,255,0.2)' }}>
+                      <div style={{ fontFamily: 'Inter', fontWeight: 900, fontSize: '22px', color: '#fff', letterSpacing: '-0.03em', textShadow: '0 2px 8px rgba(255,255,255,0.2)' }}>
                         {displayProbability.toFixed(1)}<span className="text-[14px]">%</span>
                       </div>
                     </div>
@@ -273,7 +273,7 @@ export function ConfirmModal({
                         </div>
                       </div>
                       <div className="flex items-baseline gap-1" style={{ fontFamily: 'Inter', fontWeight: 900, color: '#ADFF2F', textShadow: '0 0 16px rgba(173,255,47,0.3)' }}>
-                        <span className="text-[16px] leading-none">$</span>
+                        <span className="text-[26px] leading-none">$</span>
                         <span className="text-[26px] leading-none tracking-tight">{expectedReturn}</span>
                       </div>
                       <div style={{ fontSize: '11px', fontFamily: 'Inter', fontWeight: 600, color: 'rgba(173,255,47,0.8)', marginTop: '4px' }}>
