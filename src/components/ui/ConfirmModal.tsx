@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { CheckCircle, X, Zap } from 'lucide-react';
 import { SportMarket } from '@/types/sports';
@@ -20,6 +21,11 @@ const AMOUNTS = [5, 10, 25, 50];
 export function ConfirmModal({ isOpen, market, side, onConfirm, onCancel, amount: defaultAmount = 10 }: ConfirmModalProps) {
   const [amount, setAmount] = useState(defaultAmount);
   const [confirmed, setConfirmed] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // If component receives market as undefined, return null to avoid crashes
   if (!market) return null;
@@ -48,7 +54,9 @@ export function ConfirmModal({ isOpen, market, side, onConfirm, onCancel, amount
       onCancel();
   };
 
-  return (
+  if (!mounted) return null;
+
+  return createPortal(
     <AnimatePresence>
       {isOpen && (
         <div className="fixed inset-0 z-[200] flex flex-col justify-end items-center">
@@ -254,6 +262,7 @@ export function ConfirmModal({ isOpen, market, side, onConfirm, onCancel, amount
           </motion.div>
         </div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 }
