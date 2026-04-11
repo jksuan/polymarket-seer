@@ -364,8 +364,8 @@ export function ConfirmModal({
                     </div>
                   </div>
                   
-                  <div className="grid grid-cols-6 gap-1.5">
-                    {PRESET_AMOUNTS.map((item) => {
+                  <div className={authenticated ? "grid grid-cols-6 gap-1.5" : "grid grid-cols-5 gap-1.5"}>
+                    {PRESET_AMOUNTS.filter(item => authenticated || item !== 'MAX').map((item) => {
                       const isMax = item === 'MAX';
                       const numVal = isMax ? parseFloat(usdcBalance || '0') : (item as number);
                       const isActive = amount === numVal && (!isMax || numVal > 0);
