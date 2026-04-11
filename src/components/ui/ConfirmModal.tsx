@@ -345,9 +345,8 @@ export function ConfirmModal({
                           boxShadow: '0 8px 30px rgba(173,255,47,0.3)',
                         }
                       : {
-                          background: 'rgba(255, 255, 255, 0.08)',
-                          border: '1px solid rgba(255, 255, 255, 0.15)',
-                          boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+                          background: '#2469F6', // Standard Web3 connect blue
+                          boxShadow: '0 4px 12px rgba(36, 105, 246, 0.3)',
                         }
                   }
                 >
@@ -365,11 +364,11 @@ export function ConfirmModal({
                         fontWeight: 900, 
                         fontSize: '16px', 
                         color: authenticated ? '#0D0518' : '#ffffff', 
-                        letterSpacing: '0.03em',
-                        textTransform: 'uppercase'
+                        letterSpacing: authenticated ? '0.03em' : '0.01em',
+                        textTransform: authenticated ? 'uppercase' : 'none'
                       }}
                     >
-                      {authenticated ? `买入 $${amount} USDC` : '登录'}
+                      {authenticated ? `买入 $${amount} USDC` : '连接 / 注册钱包'}
                     </span>
                   </div>
                 </button>
