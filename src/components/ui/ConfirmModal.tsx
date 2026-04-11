@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { CheckCircle, X, Zap, ShieldCheck } from 'lucide-react';
 import { SportMarket } from '@/types/sports';
 import confetti from 'canvas-confetti';
+import { usePrivy } from '@privy-io/react-auth';
 
 // ──────────────────────────────────────────────
 // OutrightInfo: data block for the "outright" / Yes-No panel
@@ -53,6 +54,7 @@ export function ConfirmModal({
   const [amount, setAmount] = useState(defaultAmount);
   const [confirmed, setConfirmed] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const { authenticated, login } = usePrivy();
 
   useEffect(() => {
     setMounted(true);
@@ -293,9 +295,11 @@ export function ConfirmModal({
                     <span style={{ fontSize: '11px', fontFamily: 'Inter', fontWeight: 700, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                       注入资金
                     </span>
-                    <span style={{ fontSize: '11px', fontFamily: 'Inter', fontWeight: 600, color: primaryColor }}>
-                      钱包余额检测中...
-                    </span>
+                    {authenticated && (
+                      <span style={{ fontSize: '11px', fontFamily: 'Inter', fontWeight: 600, color: primaryColor }}>
+                        钱包余额检测中...
+                      </span>
+                    )}
                   </div>
                   
                   <div className="grid grid-cols-4 gap-2.5">
@@ -328,32 +332,42 @@ export function ConfirmModal({
                   </div>
                 </div>
 
-                {/* Confirm button - Tactical Launch Style */}
+                {/* Confirm / Login button */}
                 <button
-                  onClick={handleConfirm}
-                  className="relative w-full py-4 rounded-[16px] active:scale-[0.98] transition-transform overflow-hidden group"
-                  style={{
-                    background: 'linear-gradient(90deg, #ADFF2F 0%, #00F0FF 100%)',
-                    boxShadow: '0 8px 30px rgba(173,255,47,0.3)',
-                  }}
+                  onClick={authenticated ? handleConfirm : login}
+                  className="relative w-full py-4 rounded-[16px] active:scale-[0.98] transition-all overflow-hidden group"
+                  style={
+                    authenticated 
+                      ? {
+                          background: 'linear-gradient(90deg, #ADFF2F 0%, #00F0FF 100%)',
+                          boxShadow: '0 8px 30px rgba(173,255,47,0.3)',
+                        }
+                      : {
+                          background: 'rgba(255, 255, 255, 0.08)',
+                          border: '1px solid rgba(255, 255, 255, 0.15)',
+                          boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+                        }
+                  }
                 >
-                  <div className="absolute inset-0 bg-black/10 group-active:bg-black/20 transition-colors" />
-                  {/* Glossy overlay */}
-                  <div className="absolute top-0 left-0 right-0 h-1/2 bg-white/20 rounded-t-[16px] pointer-events-none" />
+                  <div className={`absolute inset-0 bg-black/10 group-active:bg-black/20 transition-colors ${!authenticated && 'hidden'}`} />
+                  {/* Glossy overlay only for authenticated state */}
+                  {authenticated && (
+                    <div className="absolute top-0 left-0 right-0 h-1/2 bg-white/20 rounded-t-[16px] pointer-events-none" />
+                  )}
                   
                   <div className="relative flex items-center justify-center gap-2">
-                    <Zap size={18} color="#0D0518" fill="currentColor" />
+                    {authenticated && <Zap size={18} color="#0D0518" fill="currentColor" />}
                     <span 
                       style={{ 
                         fontFamily: 'Outfit, Inter', 
                         fontWeight: 900, 
                         fontSize: '16px', 
-                        color: '#0D0518', 
+                        color: authenticated ? '#0D0518' : '#ffffff', 
                         letterSpacing: '0.03em',
                         textTransform: 'uppercase'
                       }}
                     >
-                      买入 ${amount} USDC
+                      {authenticated ? `买入 $${amount} USDC` : '登录'}
                     </span>
                   </div>
                 </button>
