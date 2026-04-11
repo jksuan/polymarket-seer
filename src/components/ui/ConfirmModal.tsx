@@ -324,7 +324,7 @@ export function ConfirmModal({
                         className="bg-transparent outline-none font-black transition-colors"
                         style={{
                           width: `${Math.min(Math.max((inputValue || '1').length, 1), 8)}ch`,
-                          fontSize: '36px',
+                          fontSize: '24px',
                           lineHeight: '1',
                           fontFamily: 'Inter',
                           color: inputValue ? '#fff' : 'rgba(255,255,255,0.2)',
