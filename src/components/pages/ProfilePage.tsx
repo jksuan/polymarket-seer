@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect } from "react";
 import { motion } from "motion/react";
@@ -76,12 +76,12 @@ export function ProfilePage({
            <div className="w-20 h-20 bg-blue-600/20 rounded-full flex items-center justify-center mb-6">
               <Wallet size={36} className="text-blue-500" />
            </div>
-           <h1 className="text-2xl font-black italic text-white mb-2">连接进入预测�?/h1>
+           <h1 className="text-2xl font-black italic text-white mb-2">连接进入预测场</h1>
            <p className="text-white/50 text-sm text-center mb-8 max-w-[240px]">
-             登陆以查看您的跨链钱包余额、过往战绩和当前仓位�?
+             登陆以查看您的跨链钱包余额、过往战绩和当前仓位。
            </p>
            <button onClick={login} className="bg-blue-600 hover:bg-blue-500 text-white font-bold w-full max-w-[280px] py-4 rounded-2xl shadow-[0_0_20px_rgba(37,99,235,0.4)] active:scale-95 transition-all">
-             登录
+              登录
            </button>
         </div>
       </div>
