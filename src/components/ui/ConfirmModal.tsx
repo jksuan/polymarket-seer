@@ -340,13 +340,13 @@ export function ConfirmModal({
                       {(() => {
                         const maxAllowed = parseFloat(usdcBalance || '0');
                         const isBelowMin = amount < 1;
-                        const isExceedingBalance = amount > maxAllowed;
+                        const isExceedingBalance = authenticated ? amount > maxAllowed : false;
                         const hasError = (inputValue !== '' && (isBelowMin || isExceedingBalance)) || showError;
                         
                         if (!hasError) return null;
 
                         let errorMessage = '';
-                        if (maxAllowed < 1 || isExceedingBalance) {
+                        if (authenticated && (maxAllowed < 1 || isExceedingBalance)) {
                           errorMessage = `可用余额不足，当前最大可用 $${usdcBalance || '0'}`;
                         } else if (isBelowMin) {
                           errorMessage = '投注金额必须大于等于$1';
