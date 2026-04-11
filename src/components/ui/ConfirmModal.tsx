@@ -348,7 +348,7 @@ export function ConfirmModal({
                     </div>
                   </div>
                   
-                  <div className="grid grid-cols-3 gap-2.5">
+                  <div className="grid grid-cols-6 gap-1.5">
                     {PRESET_AMOUNTS.map((item) => {
                       const isMax = item === 'MAX';
                       const numVal = isMax ? parseFloat(usdcBalance || '0') : (item as number);
@@ -363,11 +363,11 @@ export function ConfirmModal({
                             const valStr = isMax ? (usdcBalance || '0') : numVal.toString();
                             setInputValue(valStr);
                           }}
-                          className="relative py-2.5 rounded-xl active:scale-95 transition-all overflow-hidden"
+                          className="relative py-2 rounded-lg active:scale-95 transition-all overflow-hidden"
                           style={{
                             fontFamily: 'Inter',
                             fontWeight: 800,
-                            fontSize: '15px',
+                            fontSize: '13px',
                             background: isActive
                               ? `linear-gradient(135deg, ${primaryColor}22, ${accentColor}11)`
                               : 'rgba(255,255,255,0.03)',
