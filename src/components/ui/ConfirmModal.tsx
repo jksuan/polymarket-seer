@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { CheckCircle, X, Zap, ShieldCheck } from 'lucide-react';
+import { CheckCircle, X, Zap, ShieldCheck, AlertTriangle } from 'lucide-react';
 import { SportMarket } from '@/types/sports';
 import confetti from 'canvas-confetti';
 import { usePrivy } from '@privy-io/react-auth';
@@ -54,6 +54,7 @@ export function ConfirmModal({
 }: ConfirmModalProps) {
   const [amount, setAmount] = useState(defaultAmount);
   const [inputValue, setInputValue] = useState(defaultAmount.toString());
+  const [showError, setShowError] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
   const [mounted, setMounted] = useState(false);
   const { authenticated, login } = usePrivy();
@@ -306,30 +307,45 @@ export function ConfirmModal({
                       )}
                     </div>
                     
-                    <div className="flex items-baseline justify-end gap-0.5">
-                      <span style={{ fontSize: '24px', fontWeight: 900, fontFamily: 'Inter', color: inputValue ? '#fff' : 'rgba(255,255,255,0.2)' }}>$</span>
-                      <input 
-                        type="text" 
-                        inputMode="decimal"
-                        placeholder="1"
-                        value={inputValue}
-                        onChange={(e) => {
-                          let val = e.target.value.replace(/[^\d.]/g, '');
-                          const parts = val.split('.');
-                          if (parts.length > 2) val = parts[0] + '.' + parts.slice(1).join('');
-                          if (parts.length === 2 && parts[1].length > 2) val = parts[0] + '.' + parts[1].slice(0, 2);
-                          setInputValue(val);
-                          setAmount(val ? parseFloat(val) : 0);
-                        }}
-                        className="bg-transparent outline-none font-black transition-colors"
-                        style={{
-                          width: `${Math.min(Math.max((inputValue || '1').length, 1), 8)}ch`,
-                          fontSize: '24px',
-                          lineHeight: '1',
-                          fontFamily: 'Inter',
-                          color: inputValue ? '#fff' : 'rgba(255,255,255,0.2)',
-                        }}
-                      />
+                    <div className="flex flex-col items-end gap-1">
+                      <div className="flex items-baseline justify-end gap-0.5">
+                        <span style={{ fontSize: '24px', fontWeight: 900, fontFamily: 'Inter', color: inputValue ? '#fff' : 'rgba(255,255,255,0.2)' }}>$</span>
+                        <input 
+                          type="text" 
+                          inputMode="decimal"
+                          placeholder="1"
+                          value={inputValue}
+                          onChange={(e) => {
+                            setShowError(false);
+                            let val = e.target.value.replace(/[^\d.]/g, '');
+                            if (val === '0') val = ''; // 阻止仅输入 0
+                            if (val.startsWith('0') && val.length > 1 && !val.startsWith('0.')) {
+                              val = val.replace(/^0+/, '');
+                            }
+                            const parts = val.split('.');
+                            if (parts.length > 2) val = parts[0] + '.' + parts.slice(1).join('');
+                            if (parts.length === 2 && parts[1].length > 2) val = parts[0] + '.' + parts[1].slice(0, 2);
+                            setInputValue(val);
+                            setAmount(val ? parseFloat(val) : 0);
+                          }}
+                          className="bg-transparent outline-none font-black transition-colors"
+                          style={{
+                            width: `${Math.min(Math.max((inputValue || '1').length, 1), 8)}ch`,
+                            fontSize: '24px',
+                            lineHeight: '1',
+                            fontFamily: 'Inter',
+                            color: inputValue ? '#fff' : 'rgba(255,255,255,0.2)',
+                          }}
+                        />
+                      </div>
+                      {((inputValue && amount < 1) || showError) && (
+                        <div className="flex items-center gap-1 mt-1 text-[#ff4d4f] opacity-90 animate-in fade-in slide-in-from-top-1">
+                          <AlertTriangle size={12} strokeWidth={2.5} />
+                          <span style={{ fontSize: '11px', fontFamily: 'Inter', fontWeight: 600 }}>
+                            投注金额必须大于等于$1
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
                   
@@ -340,6 +356,7 @@ export function ConfirmModal({
                         <button
                           key={a}
                           onClick={() => {
+                            setShowError(false);
                             setAmount(a);
                             setInputValue(a.toString());
                           }}
@@ -368,7 +385,13 @@ export function ConfirmModal({
 
                 {/* Confirm / Login button */}
                 <button
-                  onClick={authenticated ? handleConfirm : login}
+                  onClick={authenticated ? () => {
+                    if (amount < 1) {
+                      setShowError(true);
+                    } else {
+                      handleConfirm();
+                    }
+                  } : login}
                   className="relative w-full py-4 rounded-[16px] active:scale-[0.98] transition-all overflow-hidden group"
                   style={
                     authenticated 
