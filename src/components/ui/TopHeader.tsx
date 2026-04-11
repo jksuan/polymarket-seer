@@ -47,7 +47,7 @@ export function TopHeader({ isSticky = false }: TopHeaderProps = {}) {
             className="flex items-center gap-2 px-4 py-2 rounded-full active:scale-95 transition-all shadow-[0_0_12px_rgba(173,255,47,0.15)] bg-[#ADFF2F]/10 border border-[#ADFF2F]/50 text-[#ADFF2F] font-bold text-[12px]"
           >
             <Wallet size={14} />
-            连接钱包
+            登录
           </button>
         ) : (
           <div className="flex items-center gap-3">

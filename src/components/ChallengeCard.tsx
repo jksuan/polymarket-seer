@@ -211,7 +211,7 @@ export default function ChallengeCard({
             disabled={isGenerating || isGeneratingTx} 
             className={`w-full ${side === "YES" ? "bg-blue-600 hover:bg-blue-500 shadow-[0_10px_20px_rgba(37,99,235,0.3)]" : "bg-red-500 hover:bg-red-400 shadow-[0_10px_20px_rgba(239,68,68,0.3)]"} text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50`}
           >
-            <HandCoins size={22} strokeWidth={3} /> {authenticated ? "真金白银一键下注" : "立即连接钱包"}
+            <HandCoins size={22} strokeWidth={3} /> {authenticated ? "真金白银一键下注" : "立即登录"}
           </button>
           <div className="flex gap-3">
              <button onClick={handleGenerate} className="flex-1 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 py-4 rounded-2xl flex items-center justify-center gap-2 font-bold transition-all active:scale-95"><Download size={18}/> 保存图片</button>
