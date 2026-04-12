@@ -3,9 +3,8 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { CheckCircle, X, Zap, ShieldCheck, AlertTriangle } from 'lucide-react';
+import { X, Zap, ShieldCheck, AlertTriangle } from 'lucide-react';
 import { SportMarket } from '@/types/sports';
-import confetti from 'canvas-confetti';
 import { usePrivy } from '@privy-io/react-auth';
 import { usePolymarketAuth } from '@/contexts/PolymarketAuthContext';
 
@@ -54,7 +53,6 @@ export function ConfirmModal({
   const [amount, setAmount] = useState(defaultAmount);
   const [inputValue, setInputValue] = useState(defaultAmount.toString());
   const [showError, setShowError] = useState(false);
-  const [confirmed, setConfirmed] = useState(false);
   const [mounted, setMounted] = useState(false);
   const { authenticated, login } = usePrivy();
   const { usdcBalance, isRefreshingBalance } = usePolymarketAuth();
@@ -81,21 +79,10 @@ export function ConfirmModal({
   const profit         = ((amount * displayOdds) - amount).toFixed(2);
 
   const handleConfirm = () => {
-    setConfirmed(true);
-    confetti({
-      particleCount: 80,
-      spread: 70,
-      origin: { y: 0.6 },
-      colors: [accentColor, primaryColor, '#ADFF2F', '#00F0FF'],
-    });
-    setTimeout(() => {
-      onConfirm(amount);
-      setConfirmed(false);
-    }, 1800);
+    onConfirm(amount);
   };
 
   const handleCancel = () => {
-    setConfirmed(false);
     onCancel();
   };
 
@@ -141,32 +128,6 @@ export function ConfirmModal({
               style={{ background: accentColor }} 
             />
 
-            {confirmed ? (
-              <motion.div
-                initial={{ scale: 0.8, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                className="flex flex-col items-center py-8 gap-4 relative z-10"
-              >
-                <div
-                  className="w-16 h-16 rounded-full flex items-center justify-center relative"
-                  style={{
-                    background: `linear-gradient(135deg, ${primaryColor}, ${accentColor})`,
-                    boxShadow: `0 0 40px ${glowColor}`,
-                  }}
-                >
-                  <div className="absolute inset-0 rounded-full border-2 border-white/20 scale-110 animate-ping opacity-20" />
-                  <CheckCircle size={32} color="#0D0518" strokeWidth={3} />
-                </div>
-                <div style={{ textAlign: 'center' }}>
-                  <p style={{ fontFamily: 'Inter', fontWeight: 900, fontSize: '18px', color: '#fff', textShadow: '0 2px 10px rgba(255,255,255,0.2)' }}>
-                    下单成功！🎉
-                  </p>
-                  <p style={{ fontFamily: 'Inter', fontSize: '13px', color: 'rgba(255,255,255,0.6)', marginTop: '4px' }}>
-                    {isOutright ? outrightInfo!.directionLabel : `支持 ${displayTitle}`} · <span className="font-bold text-white">${amount}</span> USDC
-                  </p>
-                </div>
-              </motion.div>
-            ) : (
               <div className="relative z-10">
                 {/* Header */}
                 <div className="flex items-center justify-between mb-6">
@@ -454,7 +415,6 @@ export function ConfirmModal({
                   </p>
                 </div>
               </div>
-            )}
           </motion.div>
         </div>
       )}
