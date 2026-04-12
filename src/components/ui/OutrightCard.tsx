@@ -57,36 +57,36 @@ function OutcomeRow({ opt, i, onBet, positions, tokenIds }: {
       >
         {opt.prob}%
       </span>
-      <div className="flex flex-col items-center">
+      <div className="flex flex-col items-stretch mr-2.5">
         <button
           onClick={() => onBet(opt.name, opt.originalIndex, 'home')}
-          className="flex flex-col items-center justify-center rounded-lg mr-1.5 active:scale-95 transition-transform"
-          style={{ width: '48px', height: '36px', background: 'rgba(0,180,80,0.18)', border: '1px solid rgba(0,200,90,0.35)' }}
+          className="flex flex-col items-center justify-center rounded-lg active:scale-95 transition-transform"
+          style={{ minWidth: '68px', height: '36px', background: 'rgba(0,180,80,0.18)', border: '1px solid rgba(0,200,90,0.35)' }}
         >
           <span style={{ fontFamily: 'Inter', fontSize: '10px', fontWeight: 700, color: '#00C85A' }}>是</span>
           <span style={{ fontFamily: 'Inter', fontSize: '10px', fontWeight: 600, color: 'rgba(0,200,90,0.8)' }}>{yesCents}%</span>
         </button>
         {yesPos && (
-          <div className="mt-1 mr-1.5 flex items-center justify-center px-1 py-0.5 rounded shadow-sm" style={{ background: 'rgba(0,200,90,0.1)', border: '1px solid rgba(0,200,90,0.2)' }}>
+          <div className="mt-1 flex items-center justify-center px-1 py-0.5 rounded shadow-sm w-full" style={{ background: 'rgba(0,200,90,0.1)', border: '1px solid rgba(0,200,90,0.2)' }}>
             <span style={{ fontFamily: 'Inter', fontSize: '9px', fontWeight: 600, color: '#00C85A', lineHeight: 1 }}>
-              {Number(yesPos.size).toFixed(1)}·{(Number(yesPos.avgPrice) * 100).toFixed(1)}¢
+              {Number(yesPos.size).toFixed(1)}·{(Number(yesPos.avgPrice) * 100).toFixed(1)}%
             </span>
           </div>
         )}
       </div>
-      <div className="flex flex-col items-center">
+      <div className="flex flex-col items-stretch">
         <button
           onClick={() => onBet(opt.name, opt.originalIndex, 'away')}
           className="flex flex-col items-center justify-center rounded-lg active:scale-95 transition-transform"
-          style={{ width: '48px', height: '36px', background: 'rgba(220,40,40,0.18)', border: '1px solid rgba(220,60,60,0.35)' }}
+          style={{ minWidth: '68px', height: '36px', background: 'rgba(220,40,40,0.18)', border: '1px solid rgba(220,60,60,0.35)' }}
         >
           <span style={{ fontFamily: 'Inter', fontSize: '10px', fontWeight: 700, color: '#E05050' }}>否</span>
           <span style={{ fontFamily: 'Inter', fontSize: '10px', fontWeight: 600, color: 'rgba(220,60,60,0.8)' }}>{noCents}%</span>
         </button>
         {noPos && (
-          <div className="mt-1 flex items-center justify-center px-1 py-0.5 rounded shadow-sm" style={{ background: 'rgba(220,40,40,0.1)', border: '1px solid rgba(220,40,40,0.2)' }}>
+          <div className="mt-1 flex items-center justify-center px-1 py-0.5 rounded shadow-sm w-full" style={{ background: 'rgba(220,40,40,0.1)', border: '1px solid rgba(220,40,40,0.2)' }}>
             <span style={{ fontFamily: 'Inter', fontSize: '9px', fontWeight: 600, color: '#E05050', lineHeight: 1 }}>
-              {Number(noPos.size).toFixed(1)}·{(Number(noPos.avgPrice) * 100).toFixed(1)}¢
+              {Number(noPos.size).toFixed(1)}·{(Number(noPos.avgPrice) * 100).toFixed(1)}%
             </span>
           </div>
         )}

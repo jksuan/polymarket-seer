@@ -144,7 +144,7 @@ export function BinaryOutrightCard({ market, index = 0, onPlaceBet, positions }:
             {yesPos && (
               <div className="w-full flex justify-center py-0.5 mt-0.5 rounded shadow-sm" style={{ background: 'rgba(0,200,90,0.12)', border: '1px solid rgba(0,200,90,0.2)' }}>
                 <span style={{ fontFamily: 'Inter', fontSize: '10px', fontWeight: 600, color: '#00C85A' }}>
-                  是 {Number(yesPos.size).toFixed(1)} · {(Number(yesPos.avgPrice) * 100).toFixed(1)}¢
+                  是 {Number(yesPos.size).toFixed(1)} · {(Number(yesPos.avgPrice) * 100).toFixed(1)}%
                 </span>
               </div>
             )}
@@ -164,7 +164,7 @@ export function BinaryOutrightCard({ market, index = 0, onPlaceBet, positions }:
             {noPos && (
               <div className="w-full flex justify-center py-0.5 mt-0.5 rounded shadow-sm" style={{ background: 'rgba(220,40,40,0.12)', border: '1px solid rgba(220,40,40,0.2)' }}>
                 <span style={{ fontFamily: 'Inter', fontSize: '10px', fontWeight: 600, color: '#E05050' }}>
-                  否 {Number(noPos.size).toFixed(1)} · {(Number(noPos.avgPrice) * 100).toFixed(1)}¢
+                  否 {Number(noPos.size).toFixed(1)} · {(Number(noPos.avgPrice) * 100).toFixed(1)}%
                 </span>
               </div>
             )}

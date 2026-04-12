@@ -201,7 +201,7 @@ export function MarketCard({ market, index = 0, onPlaceBet, positions }: MarketC
                 return (
                   <div className="absolute -bottom-2 bg-[#180B2D] px-2 py-0.5 rounded shadow-sm border" style={{ borderColor: 'rgba(255,107,0,0.5)' }}>
                     <span style={{ fontFamily: 'Inter', fontSize: '9px', fontWeight: 700, color: '#FF5000' }}>
-                      {Number(pos.size).toFixed(1)} · {(Number(pos.avgPrice) * 100).toFixed(1)}¢
+                      {Number(pos.size).toFixed(1)} · {(Number(pos.avgPrice) * 100).toFixed(1)}%
                     </span>
                   </div>
                 );
@@ -253,7 +253,7 @@ export function MarketCard({ market, index = 0, onPlaceBet, positions }: MarketC
                 return (
                   <div className="absolute -bottom-2 bg-[#180B2D] px-2 py-0.5 rounded shadow-sm border" style={{ borderColor: 'rgba(0,180,255,0.5)' }}>
                     <span style={{ fontFamily: 'Inter', fontSize: '9px', fontWeight: 700, color: '#00B4FF' }}>
-                      {Number(pos.size).toFixed(1)} · {(Number(pos.avgPrice) * 100).toFixed(1)}¢
+                      {Number(pos.size).toFixed(1)} · {(Number(pos.avgPrice) * 100).toFixed(1)}%
                     </span>
                   </div>
                 );
