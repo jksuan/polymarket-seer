@@ -253,7 +253,7 @@ export function ConfirmModal({
                   {/* Unified Stats Row */}
                   <div className="flex items-center justify-between p-1">
                     <div className="flex flex-col items-center min-w-[60px]">
-                      <div style={{ fontFamily: 'Inter', fontSize: '10px', fontWeight: 600, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', marginBottom: '4px' }}>公允概率</div>
+                      <div style={{ fontFamily: 'Inter', fontSize: '10px', fontWeight: 600, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', marginBottom: '4px' }}>参考胜率</div>
                       <div style={{ fontFamily: 'Inter', fontWeight: 700, fontSize: '15px', color: '#fff' }}>
                         {displayProbability.toFixed(1)}<span className="text-[11px] text-white/70 ml-[1px]">%</span>
                       </div>
@@ -262,9 +262,9 @@ export function ConfirmModal({
                     <div className="w-[1px] h-6 bg-white/10" />
 
                     <div className="flex flex-col items-center min-w-[60px]">
-                      <div style={{ fontFamily: 'Inter', fontSize: '10px', fontWeight: 600, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', marginBottom: '4px' }}>吃单买价</div>
+                      <div style={{ fontFamily: 'Inter', fontSize: '10px', fontWeight: 600, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', marginBottom: '4px' }}>最优买入胜率</div>
                       <div style={{ fontFamily: 'Inter', fontWeight: 700, fontSize: '15px', color: '#fff' }}>
-                        {isFetchingBook ? <span className="opacity-50 text-[13px] animate-pulse">-- ¢</span> : executionPrice !== null ? <>{(executionPrice * 100).toFixed(1)}<span className="text-[11px] text-white/70 ml-[1px]">¢</span></> : <>{(activePrice * 100).toFixed(1)}<span className="text-[11px] text-white/70 ml-[1px]">¢</span></>}
+                        {isFetchingBook ? <span className="opacity-50 text-[13px] animate-pulse">-- %</span> : executionPrice !== null ? <>{(executionPrice * 100).toFixed(1)}<span className="text-[11px] text-white/70 ml-[1px]">%</span></> : <>{(activePrice * 100).toFixed(1)}<span className="text-[11px] text-white/70 ml-[1px]">%</span></>}
                       </div>
                     </div>
                     
@@ -281,9 +281,8 @@ export function ConfirmModal({
 
                     <div className="flex flex-col items-end min-w-[70px]">
                       <div style={{ fontFamily: 'Inter', fontSize: '10px', fontWeight: 700, color: 'rgba(173,255,47,0.8)', textTransform: 'uppercase', marginBottom: '4px' }}>预期回报</div>
-                      <div className="flex items-baseline gap-[1px]" style={{ fontFamily: 'Inter', fontWeight: 900, fontSize: '16px', color: '#ADFF2F', textShadow: '0 0 12px rgba(173,255,47,0.3)' }}>
-                        <span className="text-[12px]">$</span>
-                        <span>{expectedReturn}</span>
+                      <div className="flex items-baseline gap-[1px]" style={{ fontFamily: 'Inter', fontWeight: 900, fontSize: '19px', color: '#ADFF2F', textShadow: '0 0 12px rgba(173,255,47,0.3)', letterSpacing: '-0.02em' }}>
+                        <span>${expectedReturn}</span>
                       </div>
                     </div>
                   </div>
