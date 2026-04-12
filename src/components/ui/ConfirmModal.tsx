@@ -290,7 +290,7 @@ export function ConfirmModal({
 
                 {/* Amount selector */}
                 <div className="mb-6">
-                  <div className="flex items-center justify-between mb-4 border-b border-white/5 pb-4">
+                  <div className="flex items-center justify-between mb-4 border-b border-white/5 pb-4 px-5">
                     <div className="flex flex-col gap-1.5">
                       <span style={{ fontSize: '13px', fontFamily: 'Inter', fontWeight: 700, color: '#fff', textTransform: 'uppercase', letterSpacing: '0.02em' }}>
                         投注金额
@@ -302,7 +302,7 @@ export function ConfirmModal({
                       )}
                     </div>
                     
-                    <div className="flex flex-col items-end gap-1 pr-5">
+                    <div className="flex flex-col items-end gap-1">
                       <div className="flex items-baseline justify-end gap-0.5">
                         <span style={{ fontSize: '24px', fontWeight: 900, fontFamily: 'Inter', color: inputValue ? '#fff' : 'rgba(255,255,255,0.2)' }}>$</span>
                         <input 
