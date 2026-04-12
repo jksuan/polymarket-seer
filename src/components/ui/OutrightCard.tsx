@@ -230,6 +230,7 @@ export function OutrightCard({ market, index = 0, onPlaceBet }: OutrightCardProp
             isOpen={true}
             market={market}
             side="home"
+            tokenId={isYes ? (market.rawTokenIds?.[confirmState.optionIndex]?.[0] || '') : (market.rawTokenIds?.[confirmState.optionIndex]?.[1] || '')}
             outrightInfo={{
               title: `${market.question} - ${confirmState.optionName}`,
               directionLabel: isYes ? '买入是' : '买入否',
@@ -245,9 +246,9 @@ export function OutrightCard({ market, index = 0, onPlaceBet }: OutrightCardProp
               if (onPlaceBet) {
                 // Resolve the correct token ID for this outcome + direction
                 const tokenIds = market.rawTokenIds?.[confirmState.optionIndex] || [];
-                const isYes = confirmState.side === 'home';
+                const isYesSide = confirmState.side === 'home';
                 // tokenIds[0] = YES token, tokenIds[1] = NO token
-                const tokenId = isYes ? (tokenIds[0] || '') : (tokenIds[1] || '');
+                const tokenId = isYesSide ? (tokenIds[0] || '') : (tokenIds[1] || '');
                 await onPlaceBet(amount.toString(), tokenId);
               }
             }}

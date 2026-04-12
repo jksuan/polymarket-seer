@@ -38,6 +38,8 @@ interface ConfirmModalProps {
   amount?: number;
   /** When provided, renders the outright variant of the panel */
   outrightInfo?: OutrightInfo;
+  /** The specific token ID being traded, needed for real-time orderbook fetching */
+  tokenId?: string;
 }
 
 const PRESET_AMOUNTS = [10, 20, 50, 100, 200, 'MAX'];
@@ -49,13 +51,42 @@ export function ConfirmModal({
   onCancel,
   amount: defaultAmount = 10,
   outrightInfo,
+  tokenId,
 }: ConfirmModalProps) {
   const [amount, setAmount] = useState(defaultAmount);
   const [inputValue, setInputValue] = useState(defaultAmount.toString());
   const [showError, setShowError] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [executionPrice, setExecutionPrice] = useState<number | null>(null);
+  const [isFetchingBook, setIsFetchingBook] = useState(false);
+
   const { authenticated, login } = usePrivy();
   const { usdcBalance, isRefreshingBalance } = usePolymarketAuth();
+
+  useEffect(() => {
+    setMounted(true);
+    // Fetch live execution price directly from CLOB API
+    if (tokenId) {
+      setIsFetchingBook(true);
+      fetch(`https://clob.polymarket.com/book?token_id=${tokenId}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data && data.asks && data.asks.length > 0) {
+            // We want to buy, so we take the best ask (lowest price someone is willing to sell)
+            // Note: The API array might not be sorted lowest-first, so we explicitly find the minimum.
+            const minAsk = Math.min(...data.asks.map((a: any) => parseFloat(a.price)));
+            setExecutionPrice(minAsk);
+          } else {
+            setExecutionPrice(null);
+          }
+        })
+        .catch(err => {
+          console.error("Failed to fetch orderbook", err);
+          setExecutionPrice(null);
+        })
+        .finally(() => setIsFetchingBook(false));
+    }
+  }, [tokenId]);
 
   useEffect(() => {
     setMounted(true);
@@ -68,12 +99,16 @@ export function ConfirmModal({
 
   const displayTitle      = isOutright ? outrightInfo!.title       : `${(side === 'home' ? market.homeTeam : side === 'draw' && market.drawTeam ? market.drawTeam : market.awayTeam).displayName}`;
   const displaySubLabel   = isOutright ? outrightInfo!.directionLabel : (side === 'home' ? '主队' : side === 'draw' ? '平局' : '客队');
-  const displayOdds       = isOutright ? outrightInfo!.odds        : (side === 'home' ? market.homeOdds : side === 'draw' && market.drawOdds !== undefined ? market.drawOdds : market.awayOdds);
+  const baseOdds          = isOutright ? outrightInfo!.odds        : (side === 'home' ? market.homeOdds : side === 'draw' && market.drawOdds !== undefined ? market.drawOdds : market.awayOdds);
   const displayProbability = isOutright ? outrightInfo!.probability : (side === 'home' ? market.homeProbability : market.awayProbability);
   const primaryColor      = isOutright ? outrightInfo!.primaryColor : (side === 'home' ? market.homeTeam.primaryColor : market.awayTeam.primaryColor);
   const accentColor       = isOutright ? outrightInfo!.accentColor  : (side === 'home' ? market.homeTeam.accentColor  : market.awayTeam.accentColor);
   const glowColor         = isOutright ? outrightInfo!.glowColor    : (side === 'home' ? market.homeTeam.glowColor    : market.awayTeam.glowColor);
   const badgeText         = isOutright ? outrightInfo!.badgeText    : (side === 'home' ? market.homeTeam.shortName    : market.awayTeam.shortName);
+
+  // Overwrite odds / profit calculations if we successfully fetched the real CLOB execution price
+  const activePrice = executionPrice !== null ? executionPrice : (1 / baseOdds);
+  const displayOdds = 1 / activePrice;
 
   const expectedReturn = (amount * displayOdds).toFixed(2);
   const profit         = ((amount * displayOdds) - amount).toFixed(2);
@@ -211,13 +246,32 @@ export function ConfirmModal({
                       )}
                     </div>
 
-                    {/* Probability */}
+                    {/* Probability & Execution Ask */}
                     <div className="text-right flex-shrink-0 pt-0.5">
-                      <div style={{ fontFamily: 'Inter', fontSize: '10px', fontWeight: 600, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', marginBottom: '1px' }}>
-                        获胜概率
-                      </div>
-                      <div style={{ fontFamily: 'Inter', fontWeight: 900, fontSize: '22px', color: '#fff', letterSpacing: '-0.03em', textShadow: '0 2px 8px rgba(255,255,255,0.2)' }}>
-                        {displayProbability.toFixed(1)}<span className="text-[14px]">%</span>
+                      <div className="flex justify-end gap-3">
+                        <div className="flex flex-col items-end">
+                          <div style={{ fontFamily: 'Inter', fontSize: '9px', fontWeight: 600, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', marginBottom: '2px' }}>
+                            公允概率
+                          </div>
+                          <div style={{ fontFamily: 'Inter', fontWeight: 800, fontSize: '15px', color: 'rgba(255,255,255,0.6)' }}>
+                            {displayProbability.toFixed(1)}<span className="text-[11px]">%</span>
+                          </div>
+                        </div>
+                        
+                        <div className="flex flex-col items-end">
+                          <div style={{ fontFamily: 'Inter', fontSize: '10px', fontWeight: 600, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', marginBottom: '1px' }}>
+                            吃单买价
+                          </div>
+                          <div style={{ fontFamily: 'Inter', fontWeight: 900, fontSize: '22px', color: '#fff', letterSpacing: '-0.03em', textShadow: '0 2px 8px rgba(255,255,255,0.2)' }}>
+                            {isFetchingBook ? (
+                               <span className="text-[18px] opacity-50 animate-pulse">-- ¢</span>
+                            ) : executionPrice ? (
+                               <>{(executionPrice * 100).toFixed(1)}<span className="text-[14px]">¢</span></>
+                            ) : (
+                               <>{(activePrice * 100).toFixed(1)}<span className="text-[14px]">¢</span></>
+                            )}
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -247,7 +301,7 @@ export function ConfirmModal({
                         赔率
                       </div>
                       <div style={{ fontFamily: 'Inter', fontWeight: 900, fontSize: '22px', color: '#fff', textShadow: '0 2px 8px rgba(0,0,0,0.5)' }}>
-                        {displayOdds.toFixed(2)}x
+                        {isFetchingBook ? <span className="opacity-50 text-[18px]">加载中...</span> : `${displayOdds.toFixed(2)}x`}
                       </div>
                     </div>
                   </div>

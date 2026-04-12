@@ -174,6 +174,7 @@ export function BinaryOutrightCard({ market, index = 0, onPlaceBet }: BinaryOutr
             isOpen={true}
             market={market}
             side="home"
+            tokenId={isYes ? (market.rawTokenIds?.[0]?.[0] || '') : (market.rawTokenIds?.[0]?.[1] || '')}
             outrightInfo={{
               title: market.question,
               directionLabel: isYes ? '买入是' : '买入否',
@@ -189,8 +190,8 @@ export function BinaryOutrightCard({ market, index = 0, onPlaceBet }: BinaryOutr
               if (onPlaceBet) {
                 // Binary outright: rawTokenIds[0] = [yesTokenId, noTokenId]
                 const tokenIds = market.rawTokenIds?.[0] || [];
-                const isYes = confirmState.side === 'home';
-                const tokenId = isYes ? (tokenIds[0] || '') : (tokenIds[1] || '');
+                const isYesSide = confirmState.side === 'home';
+                const tokenId = isYesSide ? (tokenIds[0] || '') : (tokenIds[1] || '');
                 await onPlaceBet(amount.toString(), tokenId);
               }
             }}

@@ -276,6 +276,7 @@ export function MarketCard({ market, index = 0, onPlaceBet }: MarketCardProps) {
         isOpen={confirmSide !== null}
         market={market}
         side={confirmSide ?? 'home'}
+        tokenId={confirmSide === 'home' ? (market.rawTokenIds?.[0]?.[0] || '') : (market.rawTokenIds?.[0]?.[1] || '')}
         onConfirm={async (amount) => {
            setConfirmSide(null);
            if (onPlaceBet) {
