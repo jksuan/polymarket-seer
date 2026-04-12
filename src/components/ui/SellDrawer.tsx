@@ -192,6 +192,8 @@ function DrawerContent({ isOpen, onClose, position, onMarketSell, onLimitSell }:
   const [tab, setTab] = useState<"market" | "limit">("market");
   const [limitWinRate, setLimitWinRate] = useState<number | null>(50);
   const [fetchedTickSize, setFetchedTickSize] = useState<string | null>(null);
+  const [bestBidPrice, setBestBidPrice] = useState<number | null>(null);
+  const [isFetchingBook, setIsFetchingBook] = useState(false);
 
   const tickSize: string = fetchedTickSize || position?.tickSize || "0.01";
   const step = tickSizeToStep(tickSize);
@@ -209,33 +211,56 @@ function DrawerContent({ isOpen, onClose, position, onMarketSell, onLimitSell }:
         setLimitWinRate(bumped);
       };
 
-      // If tickSize is not bundled, fetch from market API to get precision
-      if (position.asset && !position.tickSize) {
-        fetch(`https://clob.polymarket.com/tick-size?token_id=${position.asset}`)
+      if (position.asset) {
+        setIsFetchingBook(true);
+        // Fetch orderbook for Highest Bid
+        fetch(`https://clob.polymarket.com/book?token_id=${position.asset}`)
           .then(res => res.json())
           .then(data => {
-            if (data && data.minimum_tick_size) {
-              const sz = String(data.minimum_tick_size);
-              setFetchedTickSize(sz);
-              setLimit(sz);
+            if (data && data.bids && data.bids.length > 0) {
+              const maxBid = Math.max(...data.bids.map((b: any) => parseFloat(b.price)));
+              setBestBidPrice(maxBid);
             } else {
-              setLimit(activeTickSize);
+              setBestBidPrice(null);
             }
           })
-          .catch(() => setLimit(activeTickSize));
+          .catch(err => {
+            console.error("Failed to fetch orderbook for SellDrawer", err);
+            setBestBidPrice(null);
+          })
+          .finally(() => setIsFetchingBook(false));
+
+        // Fetch tick-size if not provided
+        if (!position.tickSize) {
+          fetch(`https://clob.polymarket.com/tick-size?token_id=${position.asset}`)
+            .then(res => res.json())
+            .then(data => {
+              if (data && data.minimum_tick_size) {
+                const sz = String(data.minimum_tick_size);
+                setFetchedTickSize(sz);
+                setLimit(sz);
+              } else {
+                setLimit(activeTickSize);
+              }
+            })
+            .catch(() => setLimit(activeTickSize));
+        } else {
+           setLimit(activeTickSize);
+        }
       } else {
          setLimit(activeTickSize);
       }
     } else {
       setFetchedTickSize(null);
+      setBestBidPrice(null);
     }
   }, [isOpen, position]);
 
   if (!position) return null;
 
   const shares = Number(position.size || 0);
-  const curPrice: number = position.curPrice || 0;
-  const entryPrice: number = position.avgPrice || position.price || curPrice; // price at which user bought
+  const curPrice: number = bestBidPrice !== null ? bestBidPrice : (position.curPrice || 0);
+  const entryPrice: number = position.avgPrice || position.price || (position.curPrice || 0);
   const curWinRate = priceToWinRate(curPrice);
   const entryWinRate = priceToWinRate(entryPrice);
   // stepDecimals controls the stepper step precision (from tickSize)
