@@ -263,8 +263,8 @@ export function ConfirmModal({
 
                     <div className="flex flex-col items-center min-w-[60px]">
                       <div style={{ fontFamily: 'Inter', fontSize: '10px', fontWeight: 600, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', marginBottom: '4px' }}>最优买入胜率</div>
-                      <div style={{ fontFamily: 'Inter', fontWeight: 700, fontSize: '15px', color: '#fff' }}>
-                        {isFetchingBook ? <span className="opacity-50 text-[13px] animate-pulse">-- %</span> : executionPrice !== null ? <>{(executionPrice * 100).toFixed(1)}<span className="text-[11px] text-white/70 ml-[1px]">%</span></> : <>{(activePrice * 100).toFixed(1)}<span className="text-[11px] text-white/70 ml-[1px]">%</span></>}
+                      <div className={`transition-opacity duration-300 ${isFetchingBook ? 'animate-pulse opacity-70' : 'opacity-100'}`} style={{ fontFamily: 'Inter', fontWeight: 700, fontSize: '15px', color: '#fff' }}>
+                        {(activePrice * 100).toFixed(1)}<span className="text-[11px] text-white/70 ml-[1px]">%</span>
                       </div>
                     </div>
                     
@@ -272,8 +272,8 @@ export function ConfirmModal({
 
                     <div className="flex flex-col items-center min-w-[60px]">
                       <div style={{ fontFamily: 'Inter', fontSize: '10px', fontWeight: 600, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', marginBottom: '4px' }}>赔率</div>
-                      <div style={{ fontFamily: 'Inter', fontWeight: 700, fontSize: '15px', color: '#fff' }}>
-                        {isFetchingBook ? <span className="opacity-50 text-[13px] animate-pulse">-- x</span> : `${displayOdds.toFixed(2)}x`}
+                      <div className={`transition-opacity duration-300 ${isFetchingBook ? 'animate-pulse opacity-70' : 'opacity-100'}`} style={{ fontFamily: 'Inter', fontWeight: 700, fontSize: '15px', color: '#fff' }}>
+                        {displayOdds.toFixed(2)}x
                       </div>
                     </div>
                     
@@ -281,7 +281,7 @@ export function ConfirmModal({
 
                     <div className="flex flex-col items-end min-w-[70px]">
                       <div style={{ fontFamily: 'Inter', fontSize: '10px', fontWeight: 700, color: 'rgba(173,255,47,0.8)', textTransform: 'uppercase', marginBottom: '4px' }}>预期回报</div>
-                      <div className="flex items-baseline gap-[1px]" style={{ fontFamily: 'Inter', fontWeight: 900, fontSize: '19px', color: '#ADFF2F', textShadow: '0 0 12px rgba(173,255,47,0.3)', letterSpacing: '-0.02em' }}>
+                      <div className={`flex items-baseline gap-[1px] transition-opacity duration-300 ${isFetchingBook ? 'animate-pulse opacity-70' : 'opacity-100'}`} style={{ fontFamily: 'Inter', fontWeight: 900, fontSize: '19px', color: '#ADFF2F', textShadow: '0 0 12px rgba(173,255,47,0.3)', letterSpacing: '-0.02em' }}>
                         <span>${expectedReturn}</span>
                       </div>
                     </div>
