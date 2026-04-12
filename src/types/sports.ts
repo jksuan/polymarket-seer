@@ -49,6 +49,8 @@ export interface SportMarket {
   supporters: number;
   isHot: boolean;
   isFeatured: boolean;
+  /** Explicitly marks if this was natively a single-question Yes/No binary market from Polymarket API */
+  isBinaryOutright?: boolean;
 }
 
 export interface Category {

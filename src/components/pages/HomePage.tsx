@@ -187,6 +187,7 @@ export function HomePage({ onPlaceBet }: { onPlaceBet?: (amount: string, tokenId
                 rawIcons: outrightIcons,
                 rawVolumes: outrightVolumes,
                 rawTokenIds: outrightTokenIds,
+                isBinaryOutright: evt.markets.length === 1,
               });
 
             } else {
@@ -338,10 +339,10 @@ export function HomePage({ onPlaceBet }: { onPlaceBet?: (amount: string, tokenId
         ) : liveMarkets.length > 0 ? (
           liveMarkets.map((market, i) =>
             primaryTab === 'outrights' ? (
-              market.rawOutcomes && market.rawOutcomes.length > 2 ? (
-                <OutrightCard key={market.id} market={market} index={skipAnimation ? -1 : i} onPlaceBet={onPlaceBet} />
-              ) : (
+              market.isBinaryOutright ? (
                 <BinaryOutrightCard key={market.id} market={market} index={skipAnimation ? -1 : i} onPlaceBet={onPlaceBet} />
+              ) : (
+                <OutrightCard key={market.id} market={market} index={skipAnimation ? -1 : i} onPlaceBet={onPlaceBet} />
               )
             ) : (
               <MarketCard key={market.id} market={market} index={skipAnimation ? -1 : i} onPlaceBet={onPlaceBet} />
