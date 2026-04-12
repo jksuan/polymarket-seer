@@ -14,7 +14,7 @@ interface OutrightCardProps {
 
 /* ── Reusable row for a single outcome ── */
 function OutcomeRow({ opt, i, onBet }: {
-  opt: { name: string; prob: number; price: number; icon: string; volume: number };
+  opt: { name: string; prob: number; price: number; icon: string; volume: number; originalIndex: number };
   i: number;
   onBet: (name: string, idx: number, side: 'home' | 'away') => void;
 }) {
@@ -52,7 +52,7 @@ function OutcomeRow({ opt, i, onBet }: {
         {opt.prob}%
       </span>
       <button
-        onClick={() => onBet(opt.name, i, 'home')}
+        onClick={() => onBet(opt.name, opt.originalIndex, 'home')}
         className="flex flex-col items-center justify-center rounded-lg mr-1.5 active:scale-95 transition-transform"
         style={{ width: '48px', height: '36px', background: 'rgba(0,180,80,0.18)', border: '1px solid rgba(0,200,90,0.35)' }}
       >
@@ -60,7 +60,7 @@ function OutcomeRow({ opt, i, onBet }: {
         <span style={{ fontFamily: 'Inter', fontSize: '10px', fontWeight: 600, color: 'rgba(0,200,90,0.8)' }}>{yesCents}%</span>
       </button>
       <button
-        onClick={() => onBet(opt.name, i, 'away')}
+        onClick={() => onBet(opt.name, opt.originalIndex, 'away')}
         className="flex flex-col items-center justify-center rounded-lg active:scale-95 transition-transform"
         style={{ width: '48px', height: '36px', background: 'rgba(220,40,40,0.18)', border: '1px solid rgba(220,60,60,0.35)' }}
       >
@@ -87,7 +87,7 @@ export function OutrightCard({ market, index = 0, onPlaceBet }: OutrightCardProp
       const price = market.rawPrices?.[i] ?? 0.001;
       const icon = market.rawIcons?.[i] ?? '';
       const volume = market.rawVolumes?.[i] ?? 0;
-      return { name, prob: Number((price * 100).toFixed(1)), price, icon, volume };
+      return { name, prob: Number((price * 100).toFixed(1)), price, icon, volume, originalIndex: i };
     })
     // Filter out Polymarket placeholder teams (e.g. "Team AG") and catch-all "Other"
     .filter(opt => !/^Team\s+[A-Z]{1,3}$/i.test(opt.name) && opt.name !== 'Other')
