@@ -279,9 +279,13 @@ export function MarketCard({ market, index = 0, onPlaceBet }: MarketCardProps) {
         onConfirm={async (amount) => {
            setConfirmSide(null);
            if (onPlaceBet) {
-               // We need a real condition logic mapping to tokens.
-               // Currently we pass the polymarketConditionId as a placeholder.
-               await onPlaceBet(amount.toString(), market.polymarketConditionId || "");
+               // Resolve the correct token ID based on side selection
+               // rawTokenIds[0] = [yesTokenId, noTokenId] for this match market
+               const tokenIds = market.rawTokenIds?.[0] || [];
+               // home = YES (token[0]), away = NO (token[1])
+               // For 3-way markets, draw currently not supported by Polymarket CLOB
+               const tokenId = confirmSide === 'home' ? (tokenIds[0] || '') : (tokenIds[1] || '');
+               await onPlaceBet(amount.toString(), tokenId);
            }
         }}
         onCancel={() => setConfirmSide(null)}

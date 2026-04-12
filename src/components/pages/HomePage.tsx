@@ -106,6 +106,7 @@ export function HomePage({ onPlaceBet }: { onPlaceBet?: (amount: string, tokenId
               const outrightPrices: number[] = [];
               const outrightIcons: string[] = [];
               const outrightVolumes: number[] = [];
+              const outrightTokenIds: string[][] = [];
               const mainIcon = evt.image || evt.icon || '';
 
               if (evt.markets.length > 1) {
@@ -126,6 +127,13 @@ export function HomePage({ onPlaceBet }: { onPlaceBet?: (amount: string, tokenId
                   const subIcon = m.image || m.icon || '';
                   outrightIcons.push(subIcon === mainIcon ? '' : subIcon);
                   outrightVolumes.push(parseFloat(m.volume || '0') || 0);
+                  // Extract clobTokenIds [yesTokenId, noTokenId]
+                  let tokenIds: string[] = [];
+                  try {
+                    const raw = typeof m.clobTokenIds === 'string' ? JSON.parse(m.clobTokenIds) : m.clobTokenIds;
+                    if (Array.isArray(raw)) tokenIds = raw;
+                  } catch {}
+                  outrightTokenIds.push(tokenIds);
                 }
               } else {
                 // Single binary market (Yes / No) — expose both options as rows
@@ -139,6 +147,16 @@ export function HomePage({ onPlaceBet }: { onPlaceBet?: (amount: string, tokenId
                   outrightPrices.push(parseFloat(prices[i] || '0.5'));
                   outrightIcons.push('');
                   outrightVolumes.push(0);
+                });
+                // Single market: extract token IDs for each outcome
+                let tokenIds: string[] = [];
+                try {
+                  const raw = typeof m.clobTokenIds === 'string' ? JSON.parse(m.clobTokenIds) : m.clobTokenIds;
+                  if (Array.isArray(raw)) tokenIds = raw;
+                } catch {}
+                // For binary: outcome[0] = YES uses tokenIds[0], outcome[1] = NO uses tokenIds[1]
+                outcomes.forEach((_o: string, i: number) => {
+                  outrightTokenIds.push(i === 0 ? tokenIds : [...tokenIds].reverse());
                 });
               }
 
@@ -168,6 +186,7 @@ export function HomePage({ onPlaceBet }: { onPlaceBet?: (amount: string, tokenId
                 rawPrices: outrightPrices,
                 rawIcons: outrightIcons,
                 rawVolumes: outrightVolumes,
+                rawTokenIds: outrightTokenIds,
               });
 
             } else {
@@ -221,6 +240,14 @@ export function HomePage({ onPlaceBet }: { onPlaceBet?: (amount: string, tokenId
                 supporters: Math.floor(Math.random() * 5000) + 100,
                 isHot: parseFloat(m.volume) > 50000,
                 isFeatured: false,
+                // Extract clobTokenIds for match market
+                rawTokenIds: (() => {
+                  try {
+                    const raw = typeof m.clobTokenIds === 'string' ? JSON.parse(m.clobTokenIds) : m.clobTokenIds;
+                    if (Array.isArray(raw)) return [raw]; // wrap as single entry
+                  } catch {}
+                  return undefined;
+                })(),
               });
             }
           }

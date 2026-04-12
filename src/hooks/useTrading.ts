@@ -426,11 +426,7 @@ export function useTrading(
 
       setTxMessage(customTokenId ? "已关联目标市场..." : "正在获取活跃市场数据...");
       let finalTokenId = customTokenId;
-      if (!finalTokenId) {
-        const activeMarkets = await clobClientWithCreds.getSamplingSimplifiedMarkets();
-        finalTokenId = activeMarkets.data[0]?.tokens[0]?.token_id;
-      }
-      if (!finalTokenId) throw new Error("未获取到交易对，请重试");
+      if (!finalTokenId) throw new Error("未获取到有效的交易代币 ID，请从市场列表重新选择下注目标");
 
       // --- Step 2: Deploy Safe Wallet ---
       setTxStep("deploying");

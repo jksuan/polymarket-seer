@@ -242,7 +242,14 @@ export function OutrightCard({ market, index = 0, onPlaceBet }: OutrightCardProp
             }}
             onConfirm={async (amount) => {
               setConfirmState(null);
-              if (onPlaceBet) await onPlaceBet(amount.toString(), market.polymarketConditionId || '');
+              if (onPlaceBet) {
+                // Resolve the correct token ID for this outcome + direction
+                const tokenIds = market.rawTokenIds?.[confirmState.optionIndex] || [];
+                const isYes = confirmState.side === 'home';
+                // tokenIds[0] = YES token, tokenIds[1] = NO token
+                const tokenId = isYes ? (tokenIds[0] || '') : (tokenIds[1] || '');
+                await onPlaceBet(amount.toString(), tokenId);
+              }
             }}
             onCancel={() => setConfirmState(null)}
           />

@@ -186,7 +186,13 @@ export function BinaryOutrightCard({ market, index = 0, onPlaceBet }: BinaryOutr
             }}
             onConfirm={async (amount) => {
               setConfirmState(null);
-              if (onPlaceBet) await onPlaceBet(amount.toString(), market.polymarketConditionId || '');
+              if (onPlaceBet) {
+                // Binary outright: rawTokenIds[0] = [yesTokenId, noTokenId]
+                const tokenIds = market.rawTokenIds?.[0] || [];
+                const isYes = confirmState.side === 'home';
+                const tokenId = isYes ? (tokenIds[0] || '') : (tokenIds[1] || '');
+                await onPlaceBet(amount.toString(), tokenId);
+              }
             }}
             onCancel={() => setConfirmState(null)}
           />

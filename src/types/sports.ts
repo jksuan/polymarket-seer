@@ -42,6 +42,8 @@ export interface SportMarket {
   rawPrices?: number[];
   rawIcons?: string[];
   rawVolumes?: number[];
+  /** Each element is [yesTokenId, noTokenId] for the corresponding outcome */
+  rawTokenIds?: string[][];
   volume: number;
   liquidity: number;
   supporters: number;
