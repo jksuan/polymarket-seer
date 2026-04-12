@@ -245,63 +245,45 @@ export function ConfirmModal({
                         </div>
                       )}
                     </div>
-
-                    {/* Probability & Execution Ask */}
-                    <div className="text-right flex-shrink-0 pt-0.5">
-                      <div className="flex justify-end gap-3">
-                        <div className="flex flex-col items-end">
-                          <div style={{ fontFamily: 'Inter', fontSize: '9px', fontWeight: 600, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', marginBottom: '2px' }}>
-                            公允概率
-                          </div>
-                          <div style={{ fontFamily: 'Inter', fontWeight: 800, fontSize: '15px', color: 'rgba(255,255,255,0.6)' }}>
-                            {displayProbability.toFixed(1)}<span className="text-[11px]">%</span>
-                          </div>
-                        </div>
-                        
-                        <div className="flex flex-col items-end">
-                          <div style={{ fontFamily: 'Inter', fontSize: '10px', fontWeight: 600, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', marginBottom: '1px' }}>
-                            吃单买价
-                          </div>
-                          <div style={{ fontFamily: 'Inter', fontWeight: 900, fontSize: '22px', color: '#fff', letterSpacing: '-0.03em', textShadow: '0 2px 8px rgba(255,255,255,0.2)' }}>
-                            {isFetchingBook ? (
-                               <span className="text-[18px] opacity-50 animate-pulse">-- ¢</span>
-                            ) : executionPrice ? (
-                               <>{(executionPrice * 100).toFixed(1)}<span className="text-[14px]">¢</span></>
-                            ) : (
-                               <>{(activePrice * 100).toFixed(1)}<span className="text-[14px]">¢</span></>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
                   </div>
 
                   {/* Division line */}
-                  <div className="relative h-px w-full my-4" style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent)' }} />
+                  <div className="relative h-px w-full my-3" style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent)' }} />
 
-                  {/* Stats row: expected return + probability */}
-                  <div className="flex justify-between items-end">
-                    <div>
-                      <div className="flex items-center gap-1.5 mb-1">
-                        <div style={{ fontSize: '10px', fontFamily: 'Inter', fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                          预计可得
-                        </div>
-                      </div>
-                      <div className="flex items-baseline gap-1" style={{ fontFamily: 'Inter', fontWeight: 900, color: '#ADFF2F', textShadow: '0 0 16px rgba(173,255,47,0.3)' }}>
-                        <span className="text-[26px] leading-none">$</span>
-                        <span className="text-[26px] leading-none tracking-tight">{expectedReturn}</span>
-                      </div>
-                      <div style={{ fontSize: '11px', fontFamily: 'Inter', fontWeight: 600, color: 'rgba(173,255,47,0.8)', marginTop: '4px' }}>
-                        净利润 +${profit}
+                  {/* Unified Stats Row */}
+                  <div className="flex items-center justify-between p-1">
+                    <div className="flex flex-col items-center min-w-[60px]">
+                      <div style={{ fontFamily: 'Inter', fontSize: '10px', fontWeight: 600, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', marginBottom: '4px' }}>公允概率</div>
+                      <div style={{ fontFamily: 'Inter', fontWeight: 700, fontSize: '15px', color: '#fff' }}>
+                        {displayProbability.toFixed(1)}<span className="text-[11px] text-white/70 ml-[1px]">%</span>
                       </div>
                     </div>
                     
-                    <div className="text-right">
-                      <div style={{ fontSize: '10px', flex: 1, fontFamily: 'Inter', fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '2px' }}>
-                        赔率
+                    <div className="w-[1px] h-6 bg-white/10" />
+
+                    <div className="flex flex-col items-center min-w-[60px]">
+                      <div style={{ fontFamily: 'Inter', fontSize: '10px', fontWeight: 600, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', marginBottom: '4px' }}>吃单买价</div>
+                      <div style={{ fontFamily: 'Inter', fontWeight: 700, fontSize: '15px', color: '#fff' }}>
+                        {isFetchingBook ? <span className="opacity-50 text-[13px] animate-pulse">-- ¢</span> : executionPrice !== null ? <>{(executionPrice * 100).toFixed(1)}<span className="text-[11px] text-white/70 ml-[1px]">¢</span></> : <>{(activePrice * 100).toFixed(1)}<span className="text-[11px] text-white/70 ml-[1px]">¢</span></>}
                       </div>
-                      <div style={{ fontFamily: 'Inter', fontWeight: 900, fontSize: '22px', color: '#fff', textShadow: '0 2px 8px rgba(0,0,0,0.5)' }}>
-                        {isFetchingBook ? <span className="opacity-50 text-[18px]">加载中...</span> : `${displayOdds.toFixed(2)}x`}
+                    </div>
+                    
+                    <div className="w-[1px] h-6 bg-white/10" />
+
+                    <div className="flex flex-col items-center min-w-[60px]">
+                      <div style={{ fontFamily: 'Inter', fontSize: '10px', fontWeight: 600, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', marginBottom: '4px' }}>赔率</div>
+                      <div style={{ fontFamily: 'Inter', fontWeight: 700, fontSize: '15px', color: '#fff' }}>
+                        {isFetchingBook ? <span className="opacity-50 text-[13px] animate-pulse">-- x</span> : `${displayOdds.toFixed(2)}x`}
+                      </div>
+                    </div>
+                    
+                    <div className="w-[1px] h-6 bg-white/10" />
+
+                    <div className="flex flex-col items-end min-w-[70px]">
+                      <div style={{ fontFamily: 'Inter', fontSize: '10px', fontWeight: 700, color: 'rgba(173,255,47,0.8)', textTransform: 'uppercase', marginBottom: '4px' }}>预期回报</div>
+                      <div className="flex items-baseline gap-[1px]" style={{ fontFamily: 'Inter', fontWeight: 900, fontSize: '16px', color: '#ADFF2F', textShadow: '0 0 12px rgba(173,255,47,0.3)' }}>
+                        <span className="text-[12px]">$</span>
+                        <span>{expectedReturn}</span>
                       </div>
                     </div>
                   </div>
