@@ -383,7 +383,7 @@ function DrawerContent({ isOpen, onClose, position, onMarketSell, onLimitSell }:
                 {/* Common rows — no divider yet */}
                 <InfoRow label="投入本金" value={`$${principal}`} />
                 <InfoRow
-                  label="入场胜率"
+                  label="买入胜率"
                   value={`${entryWinRate.toFixed(displayDecimals)}%`}
                 />
 
@@ -391,7 +391,7 @@ function DrawerContent({ isOpen, onClose, position, onMarketSell, onLimitSell }:
                 {tab === "market" && (
                   <>
                     <InfoRow
-                      label="当前胜率"
+                      label="最优卖出胜率"
                       value={`${curWinRate.toFixed(displayDecimals)}%`}
                       highlight
                     />
