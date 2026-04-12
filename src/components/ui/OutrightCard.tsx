@@ -32,12 +32,12 @@ function OutcomeRow({ opt, i, onBet, positions, tokenIds }: {
       className="flex items-start py-2.5"
       style={{ borderTop: i > 0 ? '1px solid rgba(255,255,255,0.05)' : 'none' }}
     >
-      <div className="flex flex-1 items-center gap-2.5 min-w-0 pr-2">
+      <div className="flex flex-1 items-center gap-2.5 min-w-0 pr-2" style={{ height: '36px' }}>
         {opt.icon && (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={opt.icon} alt="" className="w-7 h-7 rounded-md object-cover flex-shrink-0" />
         )}
-        <div className="flex flex-col min-w-0">
+        <div className="flex flex-col min-w-0 justify-center">
           <span
             className="truncate"
             style={{ fontFamily: 'Inter', fontSize: '13px', fontWeight: 600, color: 'rgba(255,255,255,0.85)' }}
@@ -52,8 +52,8 @@ function OutcomeRow({ opt, i, onBet, positions, tokenIds }: {
         </div>
       </div>
       <span
-        className="mr-3 w-10 text-right"
-        style={{ fontFamily: 'Inter', fontSize: '13px', fontWeight: 700, color: 'rgba(255,255,255,0.9)' }}
+        className="mr-3 w-10 text-right flex flex-col justify-center"
+        style={{ fontFamily: 'Inter', fontSize: '13px', fontWeight: 700, color: 'rgba(255,255,255,0.9)', height: '36px' }}
       >
         {opt.prob}%
       </span>
