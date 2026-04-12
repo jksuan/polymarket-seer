@@ -216,7 +216,7 @@ export function OutrightCard({ market, index = 0, onPlaceBet }: OutrightCardProp
 
       {/* ─── Confirm Modal ─── */}
       {confirmState && (() => {
-        const opt = options[confirmState.optionIndex];
+        const opt = options.find(o => o.originalIndex === confirmState.optionIndex);
         const isYes = confirmState.side === 'home';
         const optOdds = isYes
           ? 1 / (opt?.price || 0.01)
