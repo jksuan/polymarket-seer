@@ -14,7 +14,7 @@ import { PrimaryTab, MatchSubTab, SportMarket } from '@/types/sports';
 const CACHE_TTL = 3 * 60 * 1000; // 3 minutes
 const marketCache = new Map<string, { data: SportMarket[]; ts: number }>();
 
-export function HomePage({ onPlaceBet }: { onPlaceBet?: (amount: string, tokenId: string) => Promise<void> }) {
+export function HomePage({ onPlaceBet, positions }: { onPlaceBet?: (amount: string, tokenId: string) => Promise<void>; positions?: any[] }) {
   const [primaryTab, setPrimaryTab] = useState<PrimaryTab>('matches');
   const [matchSub, setMatchSub] = useState<MatchSubTab>('hot');
   // Sub-navigation picker states (for matches)
@@ -340,12 +340,12 @@ export function HomePage({ onPlaceBet }: { onPlaceBet?: (amount: string, tokenId
           liveMarkets.map((market, i) =>
             primaryTab === 'outrights' ? (
               market.isBinaryOutright ? (
-                <BinaryOutrightCard key={market.id} market={market} index={skipAnimation ? -1 : i} onPlaceBet={onPlaceBet} />
+                <BinaryOutrightCard key={market.id} market={market} index={skipAnimation ? -1 : i} onPlaceBet={onPlaceBet} positions={positions} />
               ) : (
-                <OutrightCard key={market.id} market={market} index={skipAnimation ? -1 : i} onPlaceBet={onPlaceBet} />
+                <OutrightCard key={market.id} market={market} index={skipAnimation ? -1 : i} onPlaceBet={onPlaceBet} positions={positions} />
               )
             ) : (
-              <MarketCard key={market.id} market={market} index={skipAnimation ? -1 : i} onPlaceBet={onPlaceBet} />
+              <MarketCard key={market.id} market={market} index={skipAnimation ? -1 : i} onPlaceBet={onPlaceBet} positions={positions} />
             )
           )
         ) : (

@@ -79,7 +79,7 @@ function AppRouterContent() {
           style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}
         >
           {activeTab === 'home' && (
-             <HomePage onPlaceBet={handlePlaceBetWrap} />
+             <HomePage onPlaceBet={handlePlaceBetWrap} positions={positions} />
           )}
           {activeTab === 'search' && <SearchPage />}
           {activeTab === 'leaderboard' && <LeaderboardPage />}

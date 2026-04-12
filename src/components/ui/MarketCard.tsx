@@ -12,9 +12,10 @@ interface MarketCardProps {
   market: SportMarket;
   index?: number;
   onPlaceBet?: (amount: string, tokenId: string) => Promise<void>;
+  positions?: any[];
 }
 
-export function MarketCard({ market, index = 0, onPlaceBet }: MarketCardProps) {
+export function MarketCard({ market, index = 0, onPlaceBet, positions }: MarketCardProps) {
   const [confirmSide, setConfirmSide] = useState<'home' | 'away' | 'draw' | null>(null);
   const is3Way = !!(market.drawTeam && market.drawOdds !== undefined);
 
@@ -178,7 +179,7 @@ export function MarketCard({ market, index = 0, onPlaceBet }: MarketCardProps) {
           <div className={`grid gap-3 mt-4 ${is3Way ? 'grid-cols-3' : 'grid-cols-2'}`}>
             <button
               onClick={() => setConfirmSide('home')}
-              className="py-3 rounded-2xl active:scale-95 transition-transform text-center flex flex-col items-center justify-center"
+              className="py-3 rounded-2xl active:scale-95 transition-transform text-center flex flex-col items-center justify-center relative"
               style={{
                 background: 'linear-gradient(135deg, rgba(255,107,0,0.85) 0%, rgba(255,46,0,0.85) 100%)',
                 boxShadow: '0 4px 14px rgba(255,80,0,0.25)',
@@ -193,6 +194,18 @@ export function MarketCard({ market, index = 0, onPlaceBet }: MarketCardProps) {
               <div style={{ fontFamily: 'Inter', fontSize: '8px', fontWeight: 600, color: 'rgba(255,255,255,0.5)', marginTop: '2px' }}>
                 {market.homeProbability}%
               </div>
+              {(() => {
+                const tokenId = market.rawTokenIds?.[0]?.[0];
+                const pos = positions?.find((p: any) => p.asset === tokenId && Number(p.size) > 0.0001);
+                if (!pos) return null;
+                return (
+                  <div className="absolute -bottom-2 bg-[#180B2D] px-2 py-0.5 rounded shadow-sm border" style={{ borderColor: 'rgba(255,107,0,0.5)' }}>
+                    <span style={{ fontFamily: 'Inter', fontSize: '9px', fontWeight: 700, color: '#FF5000' }}>
+                      {Number(pos.size).toFixed(1)} · {(Number(pos.avgPrice) * 100).toFixed(1)}¢
+                    </span>
+                  </div>
+                );
+              })()}
             </button>
 
             {is3Way && market.drawTeam && market.drawOdds !== undefined && (
@@ -218,7 +231,7 @@ export function MarketCard({ market, index = 0, onPlaceBet }: MarketCardProps) {
 
             <button
               onClick={() => setConfirmSide('away')}
-              className="py-3 rounded-2xl active:scale-95 transition-transform text-center flex flex-col items-center justify-center"
+              className="py-3 rounded-2xl active:scale-95 transition-transform text-center flex flex-col items-center justify-center relative"
               style={{
                 background: 'linear-gradient(135deg, rgba(0,122,255,0.85) 0%, rgba(0,240,255,0.85) 100%)',
                 boxShadow: '0 4px 14px rgba(0,180,255,0.25)',
@@ -233,6 +246,18 @@ export function MarketCard({ market, index = 0, onPlaceBet }: MarketCardProps) {
               <div style={{ fontFamily: 'Inter', fontSize: '8px', fontWeight: 600, color: 'rgba(255,255,255,0.5)', marginTop: '2px' }}>
                 {market.awayProbability}%
               </div>
+              {(() => {
+                const tokenId = market.rawTokenIds?.[0]?.[1];
+                const pos = positions?.find((p: any) => p.asset === tokenId && Number(p.size) > 0.0001);
+                if (!pos) return null;
+                return (
+                  <div className="absolute -bottom-2 bg-[#180B2D] px-2 py-0.5 rounded shadow-sm border" style={{ borderColor: 'rgba(0,180,255,0.5)' }}>
+                    <span style={{ fontFamily: 'Inter', fontSize: '9px', fontWeight: 700, color: '#00B4FF' }}>
+                      {Number(pos.size).toFixed(1)} · {(Number(pos.avgPrice) * 100).toFixed(1)}¢
+                    </span>
+                  </div>
+                );
+              })()}
             </button>
           </div>
 

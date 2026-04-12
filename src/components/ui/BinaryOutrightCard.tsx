@@ -10,9 +10,10 @@ interface BinaryOutrightCardProps {
   market: SportMarket;
   index?: number;
   onPlaceBet?: (amount: string, tokenId: string) => Promise<void>;
+  positions?: any[];
 }
 
-export function BinaryOutrightCard({ market, index = 0, onPlaceBet }: BinaryOutrightCardProps) {
+export function BinaryOutrightCard({ market, index = 0, onPlaceBet, positions }: BinaryOutrightCardProps) {
   const [confirmState, setConfirmState] = useState<{
     optionName: string;
     side: 'home' | 'away';
@@ -25,6 +26,12 @@ export function BinaryOutrightCard({ market, index = 0, onPlaceBet }: BinaryOutr
   const handleBet = (optionName: string, side: 'home' | 'away') => {
     setConfirmState({ optionName, side });
   };
+
+  const yesTokenId = market.rawTokenIds?.[0]?.[0] || '';
+  const noTokenId = market.rawTokenIds?.[0]?.[1] || '';
+  
+  const yesPos = positions?.find((p: any) => p.asset === yesTokenId && Number(p.size) > 0.0001);
+  const noPos = positions?.find((p: any) => p.asset === noTokenId && Number(p.size) > 0.0001);
 
   // Arc math
   const r = 20;
@@ -122,28 +129,46 @@ export function BinaryOutrightCard({ market, index = 0, onPlaceBet }: BinaryOutr
         </div>
 
         {/* ─── Yes/No Buttons ─── */}
-        <div className="px-4 py-2 flex items-center justify-between gap-3">
-          <button
-            onClick={() => handleBet('Yes', 'home')}
-            className="flex-1 rounded-xl flex items-center justify-center py-2.5 active:scale-95 transition-transform"
-            style={{
-              background: 'rgba(0,180,80,0.18)',
-              border: '1px solid rgba(0,200,90,0.3)',
-            }}
-          >
-            <span style={{ fontFamily: 'Inter', fontSize: '15px', fontWeight: 800, color: '#00C85A' }}>是 {yesProb}%</span>
-          </button>
+        <div className="px-4 py-2 flex items-stretch justify-between gap-3">
+          <div className="flex-1 flex flex-col gap-1.5">
+            <button
+              onClick={() => handleBet('Yes', 'home')}
+              className="w-full rounded-xl flex items-center justify-center py-2.5 active:scale-95 transition-transform"
+              style={{
+                background: 'rgba(0,180,80,0.18)',
+                border: '1px solid rgba(0,200,90,0.3)',
+              }}
+            >
+              <span style={{ fontFamily: 'Inter', fontSize: '15px', fontWeight: 800, color: '#00C85A' }}>是 {yesProb}%</span>
+            </button>
+            {yesPos && (
+              <div className="w-full flex justify-center py-0.5 mt-0.5 rounded shadow-sm" style={{ background: 'rgba(0,200,90,0.12)', border: '1px solid rgba(0,200,90,0.2)' }}>
+                <span style={{ fontFamily: 'Inter', fontSize: '10px', fontWeight: 600, color: '#00C85A' }}>
+                  是 {Number(yesPos.size).toFixed(1)} · {(Number(yesPos.avgPrice) * 100).toFixed(1)}¢
+                </span>
+              </div>
+            )}
+          </div>
           
-          <button
-            onClick={() => handleBet('No', 'away')}
-            className="flex-1 rounded-xl flex items-center justify-center py-2.5 active:scale-95 transition-transform"
-            style={{
-              background: 'rgba(220,40,40,0.18)',
-              border: '1px solid rgba(220,60,60,0.3)',
-            }}
-          >
-            <span style={{ fontFamily: 'Inter', fontSize: '15px', fontWeight: 800, color: '#E05050' }}>否 {noProb}%</span>
-          </button>
+          <div className="flex-1 flex flex-col gap-1.5">
+            <button
+              onClick={() => handleBet('No', 'away')}
+              className="w-full rounded-xl flex items-center justify-center py-2.5 active:scale-95 transition-transform"
+              style={{
+                background: 'rgba(220,40,40,0.18)',
+                border: '1px solid rgba(220,60,60,0.3)',
+              }}
+            >
+              <span style={{ fontFamily: 'Inter', fontSize: '15px', fontWeight: 800, color: '#E05050' }}>否 {noProb}%</span>
+            </button>
+            {noPos && (
+              <div className="w-full flex justify-center py-0.5 mt-0.5 rounded shadow-sm" style={{ background: 'rgba(220,40,40,0.12)', border: '1px solid rgba(220,40,40,0.2)' }}>
+                <span style={{ fontFamily: 'Inter', fontSize: '10px', fontWeight: 600, color: '#E05050' }}>
+                  否 {Number(noPos.size).toFixed(1)} · {(Number(noPos.avgPrice) * 100).toFixed(1)}¢
+                </span>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* ─── Footer: Volume ─── */}

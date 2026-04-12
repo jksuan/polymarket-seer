@@ -10,20 +10,26 @@ interface OutrightCardProps {
   market: SportMarket;
   index?: number;
   onPlaceBet?: (amount: string, tokenId: string) => Promise<void>;
+  positions?: any[];
 }
 
 /* ── Reusable row for a single outcome ── */
-function OutcomeRow({ opt, i, onBet }: {
+function OutcomeRow({ opt, i, onBet, positions, tokenIds }: {
   opt: { name: string; prob: number; price: number; icon: string; volume: number; originalIndex: number };
   i: number;
   onBet: (name: string, idx: number, side: 'home' | 'away') => void;
+  positions?: any[];
+  tokenIds?: string[];
 }) {
   const yesCents = Number((opt.price * 100).toFixed(1));
   const noCents  = Number(((1 - opt.price) * 100).toFixed(1));
 
+  const yesPos = positions?.find((p: any) => p.asset === (tokenIds?.[0] || '') && Number(p.size) > 0.0001);
+  const noPos = positions?.find((p: any) => p.asset === (tokenIds?.[1] || '') && Number(p.size) > 0.0001);
+
   return (
     <div
-      className="flex items-center py-2"
+      className="flex items-start py-2.5"
       style={{ borderTop: i > 0 ? '1px solid rgba(255,255,255,0.05)' : 'none' }}
     >
       <div className="flex flex-1 items-center gap-2.5 min-w-0 pr-2">
@@ -51,28 +57,46 @@ function OutcomeRow({ opt, i, onBet }: {
       >
         {opt.prob}%
       </span>
-      <button
-        onClick={() => onBet(opt.name, opt.originalIndex, 'home')}
-        className="flex flex-col items-center justify-center rounded-lg mr-1.5 active:scale-95 transition-transform"
-        style={{ width: '48px', height: '36px', background: 'rgba(0,180,80,0.18)', border: '1px solid rgba(0,200,90,0.35)' }}
-      >
-        <span style={{ fontFamily: 'Inter', fontSize: '10px', fontWeight: 700, color: '#00C85A' }}>是</span>
-        <span style={{ fontFamily: 'Inter', fontSize: '10px', fontWeight: 600, color: 'rgba(0,200,90,0.8)' }}>{yesCents}%</span>
-      </button>
-      <button
-        onClick={() => onBet(opt.name, opt.originalIndex, 'away')}
-        className="flex flex-col items-center justify-center rounded-lg active:scale-95 transition-transform"
-        style={{ width: '48px', height: '36px', background: 'rgba(220,40,40,0.18)', border: '1px solid rgba(220,60,60,0.35)' }}
-      >
-        <span style={{ fontFamily: 'Inter', fontSize: '10px', fontWeight: 700, color: '#E05050' }}>否</span>
-        <span style={{ fontFamily: 'Inter', fontSize: '10px', fontWeight: 600, color: 'rgba(220,60,60,0.8)' }}>{noCents}%</span>
-      </button>
+      <div className="flex flex-col items-center">
+        <button
+          onClick={() => onBet(opt.name, opt.originalIndex, 'home')}
+          className="flex flex-col items-center justify-center rounded-lg mr-1.5 active:scale-95 transition-transform"
+          style={{ width: '48px', height: '36px', background: 'rgba(0,180,80,0.18)', border: '1px solid rgba(0,200,90,0.35)' }}
+        >
+          <span style={{ fontFamily: 'Inter', fontSize: '10px', fontWeight: 700, color: '#00C85A' }}>是</span>
+          <span style={{ fontFamily: 'Inter', fontSize: '10px', fontWeight: 600, color: 'rgba(0,200,90,0.8)' }}>{yesCents}%</span>
+        </button>
+        {yesPos && (
+          <div className="mt-1 mr-1.5 flex items-center justify-center px-1 py-0.5 rounded shadow-sm" style={{ background: 'rgba(0,200,90,0.1)', border: '1px solid rgba(0,200,90,0.2)' }}>
+            <span style={{ fontFamily: 'Inter', fontSize: '9px', fontWeight: 600, color: '#00C85A', lineHeight: 1 }}>
+              {Number(yesPos.size).toFixed(1)}·{(Number(yesPos.avgPrice) * 100).toFixed(1)}¢
+            </span>
+          </div>
+        )}
+      </div>
+      <div className="flex flex-col items-center">
+        <button
+          onClick={() => onBet(opt.name, opt.originalIndex, 'away')}
+          className="flex flex-col items-center justify-center rounded-lg active:scale-95 transition-transform"
+          style={{ width: '48px', height: '36px', background: 'rgba(220,40,40,0.18)', border: '1px solid rgba(220,60,60,0.35)' }}
+        >
+          <span style={{ fontFamily: 'Inter', fontSize: '10px', fontWeight: 700, color: '#E05050' }}>否</span>
+          <span style={{ fontFamily: 'Inter', fontSize: '10px', fontWeight: 600, color: 'rgba(220,60,60,0.8)' }}>{noCents}%</span>
+        </button>
+        {noPos && (
+          <div className="mt-1 flex items-center justify-center px-1 py-0.5 rounded shadow-sm" style={{ background: 'rgba(220,40,40,0.1)', border: '1px solid rgba(220,40,40,0.2)' }}>
+            <span style={{ fontFamily: 'Inter', fontSize: '9px', fontWeight: 600, color: '#E05050', lineHeight: 1 }}>
+              {Number(noPos.size).toFixed(1)}·{(Number(noPos.avgPrice) * 100).toFixed(1)}¢
+            </span>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
 const BATCH_SIZE = 10;
 
-export function OutrightCard({ market, index = 0, onPlaceBet }: OutrightCardProps) {
+export function OutrightCard({ market, index = 0, onPlaceBet, positions }: OutrightCardProps) {
   const [confirmState, setConfirmState] = useState<{
     optionName: string;
     optionIndex: number;
@@ -163,7 +187,14 @@ export function OutrightCard({ market, index = 0, onPlaceBet }: OutrightCardProp
         <div className="px-4">
           {/* Progressively revealed rows */}
           {shownOptions.map((opt, i) => (
-            <OutcomeRow key={`${opt.name}-${i}`} opt={opt} i={i} onBet={handleBet} />
+            <OutcomeRow 
+              key={`${opt.name}-${i}`} 
+              opt={opt} 
+              i={i} 
+              onBet={handleBet} 
+              positions={positions}
+              tokenIds={market.rawTokenIds?.[opt.originalIndex] || []}
+            />
           ))}
 
         </div>
