@@ -213,7 +213,7 @@ export function ChallengePage() {
     setPage((p) => p - 1);
   };
 
-  const handleConfirmSuccess = (amount: number) => {
+  const handleConfirmSuccess = (amount: number, executionPrice?: number) => {
     setBetAmount(amount);
     setConfirmSide(null);
     setCompletedCount((c) => c + 1);

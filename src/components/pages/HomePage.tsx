@@ -188,7 +188,7 @@ const marketsFetcher = async ([url, keyword, tab]: [string, string, PrimaryTab])
   return mapped;
 };
 
-export function HomePage({ onPlaceBet, positions }: { onPlaceBet?: (amount: string, tokenId: string) => Promise<void>; positions?: any[] }) {
+export function HomePage({ onPlaceBet, positions }: { onPlaceBet?: (amount: string, tokenId: string, executionPrice?: number) => Promise<void>; positions?: any[] }) {
   const [primaryTab, setPrimaryTab] = useState<PrimaryTab>('matches');
   const [matchSub, setMatchSub] = useState<MatchSubTab>('hot');
   // Sub-navigation picker states (for matches)

@@ -11,7 +11,7 @@ import { ConfirmModal } from './ConfirmModal';
 interface MarketCardProps {
   market: SportMarket;
   index?: number;
-  onPlaceBet?: (amount: string, tokenId: string) => Promise<void>;
+  onPlaceBet?: (amount: string, tokenId: string, executionPrice?: number) => Promise<void>;
   positions?: any[];
 }
 
@@ -302,16 +302,12 @@ export function MarketCard({ market, index = 0, onPlaceBet, positions }: MarketC
         market={market}
         side={confirmSide ?? 'home'}
         tokenId={confirmSide === 'home' ? (market.rawTokenIds?.[0]?.[0] || '') : (market.rawTokenIds?.[0]?.[1] || '')}
-        onConfirm={async (amount) => {
+        onConfirm={async (amount, executionPrice) => {
            setConfirmSide(null);
            if (onPlaceBet) {
-               // Resolve the correct token ID based on side selection
-               // rawTokenIds[0] = [yesTokenId, noTokenId] for this match market
                const tokenIds = market.rawTokenIds?.[0] || [];
-               // home = YES (token[0]), away = NO (token[1])
-               // For 3-way markets, draw currently not supported by Polymarket CLOB
                const tokenId = confirmSide === 'home' ? (tokenIds[0] || '') : (tokenIds[1] || '');
-               await onPlaceBet(amount.toString(), tokenId);
+               await onPlaceBet(amount.toString(), tokenId, executionPrice);
            }
         }}
         onCancel={() => setConfirmSide(null)}

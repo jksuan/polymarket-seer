@@ -34,7 +34,7 @@ interface ConfirmModalProps {
   isOpen: boolean;
   market: SportMarket;
   side: 'home' | 'away' | 'draw';
-  onConfirm: (amount: number) => void;
+  onConfirm: (amount: number, executionPrice?: number) => void;
   onCancel: () => void;
   amount?: number;
   /** When provided, renders the outright variant of the panel */
@@ -115,7 +115,7 @@ export function ConfirmModal({
   const profit         = ((amount * displayOdds) - amount).toFixed(2);
 
   const handleConfirm = () => {
-    onConfirm(amount);
+    onConfirm(amount, activePrice);
   };
 
   const handleCancel = () => {

@@ -9,7 +9,7 @@ import { ConfirmModal } from './ConfirmModal';
 interface OutrightCardProps {
   market: SportMarket;
   index?: number;
-  onPlaceBet?: (amount: string, tokenId: string) => Promise<void>;
+  onPlaceBet?: (amount: string, tokenId: string, executionPrice?: number) => Promise<void>;
   positions?: any[];
 }
 
@@ -272,7 +272,7 @@ export function OutrightCard({ market, index = 0, onPlaceBet, positions }: Outri
               glowColor:    isYes ? 'rgba(0,200,90,0.4)' : 'rgba(220,40,40,0.4)',
               badgeText:    isYes ? '是' : '否',
             }}
-            onConfirm={async (amount) => {
+            onConfirm={async (amount, executionPrice) => {
               setConfirmState(null);
               if (onPlaceBet) {
                 // Resolve the correct token ID for this outcome + direction
@@ -280,7 +280,7 @@ export function OutrightCard({ market, index = 0, onPlaceBet, positions }: Outri
                 const isYesSide = confirmState.side === 'home';
                 // tokenIds[0] = YES token, tokenIds[1] = NO token
                 const tokenId = isYesSide ? (tokenIds[0] || '') : (tokenIds[1] || '');
-                await onPlaceBet(amount.toString(), tokenId);
+                await onPlaceBet(amount.toString(), tokenId, executionPrice);
               }
             }}
             onCancel={() => setConfirmState(null)}
