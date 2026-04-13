@@ -59,8 +59,8 @@ function AppRouterContent() {
 
   const [lastBetAmount, setLastBetAmount] = useState("10");
 
-  const handlePlaceBetWrap = useCallback(async (amount: string, tokenId: string) => {
-    const action = () => handlePlaceRealBet(amount, tokenId);
+  const handlePlaceBetWrap = useCallback(async (amount: string, tokenId: string, executionPrice?: number) => {
+    const action = () => handlePlaceRealBet(amount, tokenId, executionPrice);
     lastActionRef.current = action;
     setLastBetAmount(amount);
     await action();

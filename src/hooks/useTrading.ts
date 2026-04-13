@@ -342,7 +342,7 @@ export function useTrading(
     }
   };
 
-  const handlePlaceRealBet = async (amount: string, customTokenId?: string) => {
+  const handlePlaceRealBet = async (amount: string, customTokenId?: string, executionPrice?: number) => {
     if (!authenticated || !wallets || wallets.length === 0) { login(); return; }
 
     setTxStep("preparing");
@@ -476,11 +476,21 @@ export function useTrading(
 
       // --- Step 3: Place Market Order ---
       setTxStep("placing");
-      setTxMessage("正在向 Polymarket 提交市价买入订单...");
+      setTxMessage("正在向 Polymarket 提交限制吃单保护(FOK)...");
       const parsedAmount = Number(amount);
       if (isNaN(parsedAmount) || parsedAmount <= 0) throw new Error("下注金额无效");
+
+      // Apply 1% implicit slippage
+      const limitPrice = executionPrice 
+          ? Math.min(Number((executionPrice + 0.01).toFixed(3)), 1.0) 
+          : undefined;
+
       const resp = await clobClientWithCreds.createAndPostMarketOrder({
-        tokenID: finalTokenId, amount: parsedAmount, side: "BUY" as any
+        tokenID: finalTokenId, 
+        amount: parsedAmount, 
+        side: "BUY" as any,
+        price: limitPrice,
+        orderType: "FOK" as any
       });
 
       if (resp && resp.success) {
