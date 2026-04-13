@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Zap, ShieldCheck, AlertTriangle } from 'lucide-react';
 import { SportMarket } from '@/types/sports';
 import { usePrivy } from '@privy-io/react-auth';
 import { usePolymarketAuth } from '@/contexts/PolymarketAuthContext';
+import useSWR from 'swr';
 
 // ──────────────────────────────────────────────
 // OutrightInfo: data block for the "outright" / Yes-No panel
@@ -42,6 +43,14 @@ interface ConfirmModalProps {
   tokenId?: string;
 }
 
+// ── SWR fetcher for the local /api/book proxy ──
+const bookFetcher = async (url: string) => {
+  const fetchUrl = url + `&_t=${Date.now()}`;
+  const res = await fetch(fetchUrl, { cache: 'no-store' });
+  if (!res.ok) throw new Error('Failed to fetch orderbook');
+  return res.json();
+};
+
 const PRESET_AMOUNTS = [10, 20, 50, 100, 200, 'MAX'];
 export function ConfirmModal({
   isOpen,
@@ -57,36 +66,28 @@ export function ConfirmModal({
   const [inputValue, setInputValue] = useState(defaultAmount.toString());
   const [showError, setShowError] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const [executionPrice, setExecutionPrice] = useState<number | null>(null);
-  const [isFetchingBook, setIsFetchingBook] = useState(false);
 
   const { authenticated, login } = usePrivy();
   const { usdcBalance, isRefreshingBalance } = usePolymarketAuth();
 
-  useEffect(() => {
-    setMounted(true);
-    // Fetch live execution price directly from CLOB API
-    if (tokenId) {
-      setIsFetchingBook(true);
-      fetch(`https://clob.polymarket.com/book?token_id=${tokenId}`)
-        .then(res => res.json())
-        .then(data => {
-          if (data && data.asks && data.asks.length > 0) {
-            // We want to buy, so we take the best ask (lowest price someone is willing to sell)
-            // Note: The API array might not be sorted lowest-first, so we explicitly find the minimum.
-            const minAsk = Math.min(...data.asks.map((a: any) => parseFloat(a.price)));
-            setExecutionPrice(minAsk);
-          } else {
-            setExecutionPrice(null);
-          }
-        })
-        .catch(err => {
-          console.error("Failed to fetch orderbook", err);
-          setExecutionPrice(null);
-        })
-        .finally(() => setIsFetchingBook(false));
-    }
-  }, [tokenId]);
+  // ── Ensure tokenId is a primitive string ──
+  const actualTokenId = Array.isArray(tokenId) ? tokenId[0] : tokenId;
+
+  // ── SWR: poll orderbook every 3s via server-side proxy (avoids GFW block) ──
+  const swrKey = isOpen && actualTokenId ? `/api/book?token_id=${actualTokenId}` : null;
+  const { data: bookData, isLoading: isFetchingBook } = useSWR(swrKey, bookFetcher, {
+    refreshInterval: 3000,        // 3-second polling for near-real-time pricing
+    revalidateOnFocus: true,
+    revalidateOnMount: true,       // always fetch fresh data when panel opens
+    dedupingInterval: 1000,        // allow more frequent dedup window
+    keepPreviousData: true,        // prevent UI flicker between refreshes
+  });
+
+  // ── Derive execution price (Best Ask) from orderbook data ──
+  const executionPrice = (() => {
+    if (!bookData || !bookData.asks || bookData.asks.length === 0) return null;
+    return Math.min(...bookData.asks.map((a: any) => parseFloat(a.price)));
+  })();
 
   useEffect(() => {
     setMounted(true);
