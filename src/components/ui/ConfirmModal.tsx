@@ -254,16 +254,7 @@ export function ConfirmModal({
                   {/* Unified Stats Row */}
                   <div className="flex items-center justify-between p-1">
                     <div className="flex flex-col items-center min-w-[60px]">
-                      <div style={{ fontFamily: 'Inter', fontSize: '10px', fontWeight: 600, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', marginBottom: '4px' }}>参考胜率</div>
-                      <div style={{ fontFamily: 'Inter', fontWeight: 700, fontSize: '15px', color: '#fff' }}>
-                        {displayProbability.toFixed(1)}<span className="text-[11px] text-white/70 ml-[1px]">%</span>
-                      </div>
-                    </div>
-                    
-                    <div className="w-[1px] h-6 bg-white/10" />
-
-                    <div className="flex flex-col items-center min-w-[60px]">
-                      <div style={{ fontFamily: 'Inter', fontSize: '10px', fontWeight: 600, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', marginBottom: '4px' }}>最优买入胜率</div>
+                      <div style={{ fontFamily: 'Inter', fontSize: '10px', fontWeight: 600, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', marginBottom: '4px' }}>最优买入概率</div>
                       <div className={`transition-opacity duration-300 ${isFetchingBook ? 'animate-pulse opacity-70' : 'opacity-100'}`} style={{ fontFamily: 'Inter', fontWeight: 700, fontSize: '15px', color: '#fff' }}>
                         {(activePrice * 100).toFixed(1)}<span className="text-[11px] text-white/70 ml-[1px]">%</span>
                       </div>
