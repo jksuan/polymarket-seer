@@ -80,7 +80,6 @@ export function ConfirmModal({
     revalidateOnFocus: true,
     revalidateOnMount: true,       // always fetch fresh data when panel opens
     dedupingInterval: 1000,        // allow more frequent dedup window
-    keepPreviousData: true,        // prevent UI flicker between refreshes
   });
 
   // ── Derive execution price (Best Ask) from orderbook data ──

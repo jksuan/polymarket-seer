@@ -192,73 +192,56 @@ function WinRateStepper({
 function DrawerContent({ isOpen, onClose, position, onMarketSell, onLimitSell }: SellDrawerProps) {
   const [tab, setTab] = useState<"market" | "limit">("market");
   const [limitWinRate, setLimitWinRate] = useState<number | null>(50);
-  const [fetchedTickSize, setFetchedTickSize] = useState<string | null>(null);
-  const [bestBidPrice, setBestBidPrice] = useState<number | null>(null);
-  const [isFetchingBook, setIsFetchingBook] = useState(false);
-
-  const tickSize: string = fetchedTickSize || position?.tickSize || "0.01";
-  const step = tickSizeToStep(tickSize);
+  const [hasSetDefaultLimit, setHasSetDefaultLimit] = useState(false);
 
   useEffect(() => {
     if (isOpen && position) {
       setTab("market");
-      const activeTickSize = position.tickSize || "0.01";
-      const curWr = priceToWinRate(position.curPrice || 0.5);
-
-      const setLimit = (tkSize: string) => {
-        const tempStep = tickSizeToStep(tkSize);
-        const tempDecimals = stepDecimals(tempStep);
-        const bumped = parseFloat(Math.min(99, curWr + tempStep).toFixed(tempDecimals));
-        setLimitWinRate(bumped);
-      };
-
-      if (position.asset) {
-        // Fetch tick-size if not provided
-        if (!position.tickSize) {
-          fetch(`https://clob.polymarket.com/tick-size?token_id=${position.asset}`)
-            .then(res => res.json())
-            .then(data => {
-              if (data && data.minimum_tick_size) {
-                const sz = String(data.minimum_tick_size);
-                setFetchedTickSize(sz);
-                setLimit(sz);
-              } else {
-                setLimit(activeTickSize);
-              }
-            })
-            .catch(() => setLimit(activeTickSize));
-        } else {
-           setLimit(activeTickSize);
-        }
-      } else {
-         setLimit(activeTickSize);
-      }
+      setHasSetDefaultLimit(false);
+      setLimitWinRate(null);
     } else {
-      setFetchedTickSize(null);
-      setBestBidPrice(null);
+      setHasSetDefaultLimit(false);
     }
-  }, [isOpen, position]);
+  }, [isOpen, position?.asset]);
 
   // ── SWR: poll orderbook every 3s via server-side proxy ──
+  // The /api/book proxy now returns BOTH orderbook AND tick-size in a single response
   const swrKey = isOpen && position?.asset ? `/api/book?token_id=${position.asset}` : null;
-  const { data: bookData } = useSWR(swrKey, async (url: string) => {
+  const { data: bookData, isValidating } = useSWR(swrKey, async (url: string) => {
     const fetchUrl = url + `&_t=${Date.now()}`;
     const res = await fetch(fetchUrl, { cache: 'no-store' });
     if (!res.ok) throw new Error('Failed to fetch orderbook');
     return res.json();
   }, {
-    refreshInterval: 3000,        // 3-second polling
+    refreshInterval: 3000,
     revalidateOnFocus: true,
     revalidateOnMount: true,
     dedupingInterval: 1000,
-    keepPreviousData: true,
   });
+
+  // ── Derive tick-size from the merged response ──
+  const tickSize: string = bookData?.minimum_tick_size
+    ? String(bookData.minimum_tick_size)
+    : (position?.tickSize || "0.01");
+  const step = tickSizeToStep(tickSize);
 
   // ── Derive execution price (Best Bid) from orderbook data ──
   const executionPrice = (() => {
     if (!bookData || !bookData.bids || bookData.bids.length === 0) return null;
     return Math.max(...bookData.bids.map((b: any) => parseFloat(b.price)));
   })();
+
+  const decimals = stepDecimals(step);
+
+  // Sync limitWinRate with real executionPrice once BOTH price and tick-size arrive together
+  useEffect(() => {
+    if (executionPrice !== null && !hasSetDefaultLimit) {
+      setLimitWinRate(parseFloat(priceToWinRate(executionPrice).toFixed(decimals)));
+      if (!isValidating) {
+        setHasSetDefaultLimit(true);
+      }
+    }
+  }, [executionPrice, hasSetDefaultLimit, decimals, isValidating]);
 
   if (!position) return null;
 
@@ -267,8 +250,6 @@ function DrawerContent({ isOpen, onClose, position, onMarketSell, onLimitSell }:
   const entryPrice: number = position.avgPrice || position.price || (position.curPrice || 0);
   const curWinRate = priceToWinRate(curPrice);
   const entryWinRate = priceToWinRate(entryPrice);
-  // stepDecimals controls the stepper step precision (from tickSize)
-  const decimals = stepDecimals(step);
   // displayDecimals: always show 1 decimal for win rate display (e.g. 14.3%)
   const displayDecimals = Math.max(1, decimals);
 
@@ -387,7 +368,7 @@ function DrawerContent({ isOpen, onClose, position, onMarketSell, onLimitSell }:
                 {/* Common rows — no divider yet */}
                 <InfoRow label="投入本金" value={`$${principal}`} />
                 <InfoRow
-                  label="买入胜率"
+                  label="买入概率"
                   value={`${entryWinRate.toFixed(displayDecimals)}%`}
                 />
 
@@ -395,7 +376,7 @@ function DrawerContent({ isOpen, onClose, position, onMarketSell, onLimitSell }:
                 {tab === "market" && (
                   <>
                     <InfoRow
-                      label="最优卖出胜率"
+                      label="最优卖出概率"
                       value={`${curWinRate.toFixed(displayDecimals)}%`}
                       highlight
                     />
@@ -416,8 +397,13 @@ function DrawerContent({ isOpen, onClose, position, onMarketSell, onLimitSell }:
                 {/* ── Limit Tab ── */}
                 {tab === "limit" && (
                   <>
-                    <div className="flex justify-between items-center">
-                      <span className="text-[#a3aac4] text-sm font-medium">目标胜率</span>
+                    <InfoRow
+                      label="最优卖出概率"
+                      value={`${curWinRate.toFixed(displayDecimals)}%`}
+                      highlight
+                    />
+                    <div className="flex justify-between items-center mt-1">
+                      <span className="text-[#a3aac4] text-sm font-medium">期望卖出概率</span>
                       <WinRateStepper
                         value={limitWinRate}
                         onChange={setLimitWinRate}

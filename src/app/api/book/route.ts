@@ -7,10 +7,8 @@ export const dynamic = 'force-dynamic';
  * GET /api/book?token_id=<TOKEN_ID>
  * 
  * Server-side proxy for the Polymarket CLOB orderbook API.
- * This is needed because the browser cannot directly connect to
- * clob.polymarket.com (and wss:// WebSocket) from within China.
- * The server-side route uses the HTTP_PROXY / HTTPS_PROXY env vars
- * via https-proxy-agent so the request can go through.
+ * Fetches BOTH the orderbook and tick-size in parallel, then merges
+ * them into a single response so the client never has a race condition.
  */
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -26,21 +24,36 @@ export async function GET(request: Request) {
     const { HttpsProxyAgent } = require('https-proxy-agent');
 
     const agent = proxyUrl ? new HttpsProxyAgent(proxyUrl) : undefined;
-    // Append a timestamp parameter to bust any Cloudflare/edge caches on Polymarket's side
-    const fetchUrl = `https://clob.polymarket.com/book?token_id=${encodeURIComponent(tokenId)}&_t=${Date.now()}`;
 
-    const data: any = await new Promise((resolve, reject) => {
-      https.get(fetchUrl, { agent }, (res: any) => {
-        let body = '';
-        res.on('data', (chunk: any) => body += chunk);
-        res.on('end', () => {
-          try { resolve(JSON.parse(body)); }
-          catch (e) { reject(new Error("Parse error: " + body)); }
-        });
-      }).on('error', reject);
-    });
+    // Helper: fetch a URL and parse JSON
+    const fetchJson = (url: string): Promise<any> =>
+      new Promise((resolve, reject) => {
+        https.get(url, { agent }, (res: any) => {
+          let body = '';
+          res.on('data', (chunk: any) => body += chunk);
+          res.on('end', () => {
+            try { resolve(JSON.parse(body)); }
+            catch (e) { reject(new Error("Parse error: " + body)); }
+          });
+        }).on('error', reject);
+      });
 
-    return NextResponse.json(data, {
+    const encodedId = encodeURIComponent(tokenId);
+    const ts = Date.now();
+
+    // Fire both requests in parallel
+    const [bookData, tickData] = await Promise.all([
+      fetchJson(`https://clob.polymarket.com/book?token_id=${encodedId}&_t=${ts}`),
+      fetchJson(`https://clob.polymarket.com/tick-size?token_id=${encodedId}`).catch(() => null),
+    ]);
+
+    // Merge tick-size into the book response
+    const merged = {
+      ...bookData,
+      minimum_tick_size: tickData?.minimum_tick_size ?? null,
+    };
+
+    return NextResponse.json(merged, {
       headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' },
     });
   } catch (error: any) {
