@@ -480,9 +480,9 @@ export function useTrading(
       const parsedAmount = Number(amount);
       if (isNaN(parsedAmount) || parsedAmount <= 0) throw new Error("下注金额无效");
 
-      // Apply 1% implicit slippage
+      // Apply 3% implicit slippage (increases FOK fill rate for large or low-liquidity orders)
       const limitPrice = executionPrice 
-          ? Math.min(Number((executionPrice + 0.01).toFixed(3)), 1.0) 
+          ? Math.min(Number((executionPrice + 0.03).toFixed(3)), 1.0) 
           : undefined;
 
       const resp = await clobClientWithCreds.createAndPostMarketOrder({
@@ -587,7 +587,7 @@ export function useTrading(
     }
   };
 
-  const handleSellPosition = async (tokenId: string, sharesToSell: string) => {
+  const handleSellPosition = async (tokenId: string, sharesToSell: string, executionPrice?: number) => {
     if (!authenticated || !wallets || wallets.length === 0 || !proxyAddress) return;
 
     setTxStep("preparing");
@@ -614,15 +614,22 @@ export function useTrading(
       }
 
       setTxStep("placing");
-      setTxMessage("正在向 Polygon 提交市价卖单...");
+      setTxMessage("正在向 Polymarket 提交限制卖单保护(FOK)...");
 
       const tickSize = await clobClient.getTickSize(tokenId).catch(() => "0.01") as "0.1" | "0.01" | "0.001" | "0.0001";
       const negRisk = await clobClient.getNegRisk(tokenId).catch(() => false);
 
+      // Apply 3% implicit slippage for SELL (we accept slightly lower sell price)
+      const limitPrice = executionPrice 
+          ? Math.max(Number((executionPrice - 0.03).toFixed(3)), 0.001) 
+          : undefined;
+
       const resp = await clobClient.createAndPostMarketOrder({
         tokenID: tokenId,
         amount: parsedShares,
-        side: "SELL" as any
+        side: "SELL" as any,
+        price: limitPrice,
+        orderType: "FOK" as any
       }, { tickSize, negRisk });
 
       if (resp && resp.success) {

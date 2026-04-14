@@ -4,12 +4,13 @@ import { useEffect, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "motion/react";
 import { X, Zap, Target, Minus, Plus } from "lucide-react";
+import useSWR from "swr";
 
 interface SellDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   position: any | null;
-  onMarketSell: (tokenId: string, shares: string) => void;
+  onMarketSell: (tokenId: string, shares: string, executionPrice?: number) => void;
   onLimitSell: (tokenId: string, shares: string, price: number) => void;
 }
 
@@ -212,24 +213,6 @@ function DrawerContent({ isOpen, onClose, position, onMarketSell, onLimitSell }:
       };
 
       if (position.asset) {
-        setIsFetchingBook(true);
-        // Fetch orderbook for Highest Bid
-        fetch(`https://clob.polymarket.com/book?token_id=${position.asset}`)
-          .then(res => res.json())
-          .then(data => {
-            if (data && data.bids && data.bids.length > 0) {
-              const maxBid = Math.max(...data.bids.map((b: any) => parseFloat(b.price)));
-              setBestBidPrice(maxBid);
-            } else {
-              setBestBidPrice(null);
-            }
-          })
-          .catch(err => {
-            console.error("Failed to fetch orderbook for SellDrawer", err);
-            setBestBidPrice(null);
-          })
-          .finally(() => setIsFetchingBook(false));
-
         // Fetch tick-size if not provided
         if (!position.tickSize) {
           fetch(`https://clob.polymarket.com/tick-size?token_id=${position.asset}`)
@@ -256,10 +239,31 @@ function DrawerContent({ isOpen, onClose, position, onMarketSell, onLimitSell }:
     }
   }, [isOpen, position]);
 
+  // ── SWR: poll orderbook every 3s via server-side proxy ──
+  const swrKey = isOpen && position?.asset ? `/api/book?token_id=${position.asset}` : null;
+  const { data: bookData } = useSWR(swrKey, async (url: string) => {
+    const fetchUrl = url + `&_t=${Date.now()}`;
+    const res = await fetch(fetchUrl, { cache: 'no-store' });
+    if (!res.ok) throw new Error('Failed to fetch orderbook');
+    return res.json();
+  }, {
+    refreshInterval: 3000,        // 3-second polling
+    revalidateOnFocus: true,
+    revalidateOnMount: true,
+    dedupingInterval: 1000,
+    keepPreviousData: true,
+  });
+
+  // ── Derive execution price (Best Bid) from orderbook data ──
+  const executionPrice = (() => {
+    if (!bookData || !bookData.bids || bookData.bids.length === 0) return null;
+    return Math.max(...bookData.bids.map((b: any) => parseFloat(b.price)));
+  })();
+
   if (!position) return null;
 
   const shares = Number(position.size || 0);
-  const curPrice: number = bestBidPrice !== null ? bestBidPrice : (position.curPrice || 0);
+  const curPrice: number = executionPrice !== null ? executionPrice : (position.curPrice || 0);
   const entryPrice: number = position.avgPrice || position.price || (position.curPrice || 0);
   const curWinRate = priceToWinRate(curPrice);
   const entryWinRate = priceToWinRate(entryPrice);
@@ -441,7 +445,7 @@ function DrawerContent({ isOpen, onClose, position, onMarketSell, onLimitSell }:
               <div className="mb-4">
                 {tab === "market" ? (
                   <button
-                    onClick={() => position.asset && onMarketSell(position.asset, String(shares))}
+                    onClick={() => position.asset && onMarketSell(position.asset, String(shares), executionPrice !== null ? executionPrice : undefined)}
                     className="w-full text-white font-bold py-3.5 rounded-2xl active:scale-95 transition-all text-base shadow-[0_0_20px_rgba(0,153,255,0.35)]"
                     style={{ background: "linear-gradient(90deg, #0099FF, #0060CC)" }}
                   >

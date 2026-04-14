@@ -105,8 +105,8 @@ function AppRouterContent() {
                 lastActionRef.current = action;
                 action();
               }}
-              onSell={async (tokenId, sharesText) => {
-                const action = () => handleSellPosition(tokenId, sharesText);
+              onSell={async (tokenId, sharesText, executionPrice?: number) => {
+                const action = () => handleSellPosition(tokenId, sharesText, executionPrice);
                 lastActionRef.current = action;
                 setLastBetAmount(sharesText);
                 await action();
