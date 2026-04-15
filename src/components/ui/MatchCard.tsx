@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { motion } from 'motion/react';
 import { SportMarket } from '@/types/sports';
 import { ConfirmModal } from './ConfirmModal';
-import { getCountryFlagUrl, getCountryShortCode, getCountryColor, TeamColors } from '@/lib/countryFlags';
+import { getCountryFlagUrl, getCountryShortCode, getCountryColor, getCountryGroup, isGroupStageMatch, TeamColors } from '@/lib/countryFlags';
 import { formatVolume } from '@/lib/utils';
 
 /**
@@ -54,6 +54,10 @@ export interface ParsedMatch {
     tokenId: string;
     conditionId: string;
   };
+  /** World Cup group letter (e.g. 'A') — only present for group-stage matches */
+  group?: string;
+  /** Whether this is a group stage match */
+  isGroupStage: boolean;
   /** Original market data for ConfirmModal */
   rawMarket: SportMarket;
 }
@@ -527,6 +531,8 @@ export function parseMatchEvents(events: any[]): ParsedMatch[] {
       dateISO,
       status: matchStatus,
       volume: parseFloat(evt.volume || '0'),
+      isGroupStage: isGroupStageMatch(homeName, awayName),
+      group: isGroupStageMatch(homeName, awayName) ? getCountryGroup(homeName) : undefined,
       home: {
         name: homeName,
         shortCode: getCountryShortCode(homeName),

@@ -70,16 +70,27 @@ const COUNTRY_CODE_MAP: Record<string, string> = {
 };
 
 /**
+ * Normalize country name to handle API inconsistencies.
+ * Polymarket may return "Côte D'Ivoire", "Côte d'Ivoire", or "Ivory Coast" — all mean the same team.
+ * This function maps all known variants to a single canonical key used in our dictionaries.
+ */
+function normalizeName(name: string): string {
+  // Handle Côte d'Ivoire variants (case-insensitive D/d, plus "Ivory Coast")
+  if (/c.te\s+d.ivoire/i.test(name) || name === 'Ivory Coast') return "Côte d'Ivoire";
+  // Handle Iran variants
+  if (name === 'Iran') return 'IR Iran';
+  return name;
+}
+
+/**
  * Get flag image URL for a country name
  * Uses flagcdn.com for high-quality SVG flags
  */
 export function getCountryFlagUrl(countryName: string, size: number = 40): string {
-  const code = COUNTRY_CODE_MAP[countryName];
+  const code = COUNTRY_CODE_MAP[normalizeName(countryName)];
   if (!code) {
-    // Fallback: try lowercase first word
     return `https://flagcdn.com/${size}x${Math.round(size * 0.75)}/un.png`;
   }
-  // flagcdn returns w×h PNGs — for 40px wide flag
   return `https://flagcdn.com/w${size}/${code}.png`;
 }
 
@@ -141,7 +152,45 @@ const COUNTRY_SHORT_MAP: Record<string, string> = {
 };
 
 export function getCountryShortCode(countryName: string): string {
-  return COUNTRY_SHORT_MAP[countryName] || countryName.slice(0, 3).toUpperCase();
+  return COUNTRY_SHORT_MAP[normalizeName(countryName)] || countryName.slice(0, 3).toUpperCase();
+}
+
+/**
+ * Country name → World Cup 2026 Group mapping (A–L)
+ * Used for front-end group stage filtering since Polymarket API has no group metadata.
+ * Once draw is done this data is frozen for the entire tournament.
+ */
+const COUNTRY_GROUP_MAP: Record<string, string> = {
+  'Mexico': 'A', 'South Africa': 'A', 'Korea Republic': 'A', 'Czechia': 'A',
+  'Canada': 'B', 'Bosnia and Herzegovina': 'B', 'Qatar': 'B', 'Switzerland': 'B',
+  'Brazil': 'C', 'Morocco': 'C', 'Haiti': 'C', 'Scotland': 'C',
+  'United States': 'D', 'Paraguay': 'D', 'Australia': 'D', 'Türkiye': 'D',
+  'Germany': 'E', 'Curaçao': 'E', "Côte d'Ivoire": 'E', 'Ecuador': 'E',
+  'Netherlands': 'F', 'Japan': 'F', 'Sweden': 'F', 'Tunisia': 'F',
+  'Belgium': 'G', 'Egypt': 'G', 'IR Iran': 'G', 'New Zealand': 'G',
+  'Spain': 'H', 'Cabo Verde': 'H', 'Saudi Arabia': 'H', 'Uruguay': 'H',
+  'France': 'I', 'Senegal': 'I', 'Iraq': 'I', 'Norway': 'I',
+  'Argentina': 'J', 'Algeria': 'J', 'Austria': 'J', 'Jordan': 'J',
+  'Portugal': 'K', 'DR Congo': 'K', 'Uzbekistan': 'K', 'Colombia': 'K',
+  'England': 'L', 'Croatia': 'L', 'Ghana': 'L', 'Panama': 'L',
+};
+
+/**
+ * Get the World Cup group letter for a country.
+ * Returns undefined if the country is not in any group (e.g. knockout-stage-only scenario).
+ */
+export function getCountryGroup(countryName: string): string | undefined {
+  return COUNTRY_GROUP_MAP[normalizeName(countryName)];
+}
+
+/**
+ * Determine if a match is a group-stage match.
+ * True when both teams are in the same group.
+ */
+export function isGroupStageMatch(homeName: string, awayName: string): boolean {
+  const hg = COUNTRY_GROUP_MAP[normalizeName(homeName)];
+  const ag = COUNTRY_GROUP_MAP[normalizeName(awayName)];
+  return !!hg && hg === ag;
 }
 
 /**
@@ -232,7 +281,7 @@ const COUNTRY_COLORS_MAP: Record<string, TeamColors> = {
 };
 
 export function getCountryColor(countryName: string, opponentColor?: TeamColors): TeamColors {
-  let color = COUNTRY_COLORS_MAP[countryName] || PALETTES.indigo; // Base color
+  let color = COUNTRY_COLORS_MAP[normalizeName(countryName)] || PALETTES.indigo; // Base color
 
   // Anti-collision fallback (if away team has identical color to home team)
   if (opponentColor && color.primary === opponentColor.primary) {

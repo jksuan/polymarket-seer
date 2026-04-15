@@ -1,12 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Loader2, Trophy, BarChart3 } from 'lucide-react';
 import { BannerCarousel } from '@/components/ui/BannerCarousel';
 import { CategoryTabs } from '@/components/ui/CategoryTabs';
 import { SubTabs } from '@/components/ui/SubTabs';
 import { TopHeader } from '@/components/ui/TopHeader';
-import { MatchCard } from '@/components/ui/MatchCard';
+import { MatchCard, groupMatchesByDate } from '@/components/ui/MatchCard';
 import { OutrightCard } from '@/components/ui/OutrightCard';
 import { BinaryOutrightCard } from '@/components/ui/BinaryOutrightCard';
 import { PlaceholderScreen } from '@/components/ui/PlaceholderScreen';
@@ -24,29 +24,41 @@ export function HomePage({ onPlaceBet, positions }: { onPlaceBet?: (amount: stri
   const [skipAnimation, setSkipAnimation] = useState(false);
   const [prevKeyword, setPrevKeyword] = useState<string>('');
 
-  // ── Computed keyword ──
+  // ── Computed keyword (for outrights only now) ──
   const keyword = (() => {
     if (primaryTab === 'outrights') return 'FIFA World Cup';
-    switch (matchSub) {
-      case 'hot': return 'World Cup';
-      case 'group': return `World Cup Group ${selectedGroup}`;
-      case 'knockout':
-        if (selectedKnockout === '决赛') return 'World Cup Final';
-        if (selectedKnockout === '半决赛') return 'World Cup Semi';
-        if (selectedKnockout === '1/4决赛') return 'World Cup Quarter';
-        if (selectedKnockout === '1/8决赛' || selectedKnockout === '16强') return 'World Cup Round of 16';
-        return 'World Cup';
-      default: return 'World Cup';
-    }
+    return 'World Cup';
   })();
 
   // ── Data Hooks ──
-  const { matchGroups, isLoading: isMatchLoading } = useMatchData(primaryTab === 'matches');
+  const { allMatches, matchGroups, isLoading: isMatchLoading } = useMatchData(primaryTab === 'matches');
   const { markets: liveMarkets, isLoading: isOutrightLoading } = useOutrightData(primaryTab === 'outrights', keyword);
 
   const isLoading = primaryTab === 'matches' ? isMatchLoading
     : primaryTab === 'outrights' ? isOutrightLoading
     : false;
+
+  // ── Filter matches based on the sub-tab selection ──
+  const filteredMatchGroups = useMemo(() => {
+    if (matchSub === 'hot') {
+      // "今日热门" — show all matches grouped by date
+      return matchGroups;
+    }
+
+    if (matchSub === 'group') {
+      // Filter to only group-stage matches in the selected group
+      const filtered = allMatches.filter(m => m.isGroupStage && m.group === selectedGroup);
+      return groupMatchesByDate(filtered);
+    }
+
+    if (matchSub === 'knockout') {
+      // Filter to only knockout-stage matches (not group stage)
+      const filtered = allMatches.filter(m => !m.isGroupStage);
+      return groupMatchesByDate(filtered);
+    }
+
+    return matchGroups;
+  }, [matchSub, selectedGroup, selectedKnockout, allMatches, matchGroups]);
 
   // ── Derived State: skip animation when SWR has cached data ──
   if (keyword !== prevKeyword) {
@@ -95,8 +107,8 @@ export function HomePage({ onPlaceBet, positions }: { onPlaceBet?: (amount: stri
           </div>
         ) : primaryTab === 'matches' ? (
           // ── MATCHES: Grouped by date with MatchCard ──
-          matchGroups.length > 0 ? (
-            matchGroups.map((group) => (
+          filteredMatchGroups.length > 0 ? (
+            filteredMatchGroups.map((group) => (
               <div key={group.dateISO}>
                 <div
                   className="px-5 pt-4 pb-2"
@@ -123,7 +135,9 @@ export function HomePage({ onPlaceBet, positions }: { onPlaceBet?: (amount: stri
             ))
           ) : (
             <div className="flex flex-col items-center justify-center h-48 opacity-50">
-              <div className="text-[12px] font-bold text-white/50 tracking-widest uppercase">暂无比赛数据</div>
+              <div className="text-[12px] font-bold text-white/50 tracking-widest uppercase">
+                {matchSub === 'group' ? `${selectedGroup}组暂无比赛数据` : matchSub === 'knockout' ? '暂无淘汰赛数据' : '暂无比赛数据'}
+              </div>
             </div>
           )
         ) : primaryTab === 'outrights' ? (
