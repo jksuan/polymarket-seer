@@ -1,201 +1,18 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import useSWR from 'swr';
+import { useState } from 'react';
 import { Loader2, Trophy, BarChart3 } from 'lucide-react';
 import { BannerCarousel } from '@/components/ui/BannerCarousel';
 import { CategoryTabs } from '@/components/ui/CategoryTabs';
 import { SubTabs } from '@/components/ui/SubTabs';
 import { TopHeader } from '@/components/ui/TopHeader';
-import { MarketCard } from '@/components/ui/MarketCard';
-import { MatchCard, parseMatchEvents, groupMatchesByDate } from '@/components/ui/MatchCard';
+import { MatchCard } from '@/components/ui/MatchCard';
 import { OutrightCard } from '@/components/ui/OutrightCard';
 import { BinaryOutrightCard } from '@/components/ui/BinaryOutrightCard';
-import { PrimaryTab, MatchSubTab, SportMarket } from '@/types/sports';
-
-// ── Raw events fetcher for the matches tab ──
-const rawEventsFetcher = async ([url, keyword]: [string, string]) => {
-  const res = await fetch(`${url}?q=${encodeURIComponent(keyword)}`);
-  if (!res.ok) throw new Error('API fetch failed');
-  const events = await res.json();
-  return Array.isArray(events) ? events : [];
-};
-
-const marketsFetcher = async ([url, keyword, tab]: [string, string, PrimaryTab]) => {
-  const res = await fetch(`${url}?q=${encodeURIComponent(keyword)}`);
-  if (!res.ok) throw new Error('API fetch failed');
-  const events = await res.json();
-
-  const mapped: SportMarket[] = [];
-
-  if (Array.isArray(events)) {
-    for (const evt of events) {
-      if (!evt.markets || evt.markets.length === 0) continue;
-
-      // ── OUTRIGHTS TAB: always render as OutrightCard ──
-      if (tab === 'outrights') {
-        // Filter out standard matches from the props feed
-        const titleLower = (evt.title || '').toLowerCase();
-        if (titleLower.includes(' vs ') || titleLower.includes(' vs.')) {
-          continue;
-        }
-
-        const outrightOutcomes: string[] = [];
-        const outrightPrices: number[] = [];
-        const outrightIcons: string[] = [];
-        const outrightVolumes: number[] = [];
-        const outrightTokenIds: string[][] = [];
-        const mainIcon = evt.image || evt.icon || '';
-
-        if (evt.markets.length > 1) {
-          // Multi-market event (e.g. group winner: one market per team)
-          // Skip resolved or closed sub-markets (e.g. Italy/Peru eliminated in qualifiers)
-          const activeMarkets = evt.markets.filter((m: any) => m.active !== false && m.closed !== true);
-          for (const m of activeMarkets) {
-            let name = m.groupItemTitle || m.title || m.question || 'Team';
-            name = name
-              .replace(/^will\s+/i, '')
-              .replace(/\s+win.*$/i, '')
-              .replace(/\s+advance.*$/i, '')
-              .trim();
-            let prices = ['0.05', '0.95'];
-            try { prices = JSON.parse(m.outcomePrices || '["0.05"]'); } catch {}
-            outrightOutcomes.push(name);
-            outrightPrices.push(parseFloat(prices[0]) || 0.01);
-            const subIcon = m.image || m.icon || '';
-            outrightIcons.push(subIcon === mainIcon ? '' : subIcon);
-            outrightVolumes.push(parseFloat(m.volume || '0') || 0);
-            // Extract clobTokenIds [yesTokenId, noTokenId]
-            let tokenIds: string[] = [];
-            try {
-              const raw = typeof m.clobTokenIds === 'string' ? JSON.parse(m.clobTokenIds) : m.clobTokenIds;
-              if (Array.isArray(raw)) tokenIds = raw;
-            } catch {}
-            outrightTokenIds.push(tokenIds);
-          }
-        } else {
-          // Single binary market (Yes / No) — expose both options as rows
-          const m = evt.markets[0];
-          let outcomes: string[] = ['Yes', 'No'];
-          let prices: string[] = ['0.5', '0.5'];
-          try { outcomes = JSON.parse(m.outcomes || '["Yes","No"]'); } catch {}
-          try { prices = JSON.parse(m.outcomePrices || '["0.5","0.5"]'); } catch {}
-          outcomes.forEach((o: string, i: number) => {
-            outrightOutcomes.push(o);
-            outrightPrices.push(parseFloat(prices[i] || '0.5'));
-            outrightIcons.push('');
-            outrightVolumes.push(0);
-          });
-          // Single market: extract token IDs for each outcome
-          let tokenIds: string[] = [];
-          try {
-            const raw = typeof m.clobTokenIds === 'string' ? JSON.parse(m.clobTokenIds) : m.clobTokenIds;
-            if (Array.isArray(raw)) tokenIds = raw;
-          } catch {}
-          // For binary: outcome[0] = YES uses tokenIds[0], outcome[1] = NO uses tokenIds[1]
-          outcomes.forEach((_o: string, i: number) => {
-            outrightTokenIds.push(i === 0 ? tokenIds : [...tokenIds].reverse());
-          });
-        }
-
-        mapped.push({
-          id: evt.id || `evt-${Date.now()}-${Math.random()}`,
-          question: evt.title || evt.markets[0]?.question || '世界杯专属预测',
-          imageUrl: mainIcon,
-          sport: 'matches',
-          leagueCode: 'WC',
-          leagueName: '世界杯 2026',
-          leagueNameEn: 'FIFA World Cup',
-          status: 'live',
-          matchTime: 'Outright',
-          matchTimeISO: new Date().toISOString(),
-          homeTeam: { shortName: '', fullName: '', displayName: '', primaryColor: '', accentColor: '', glowColor: '' },
-          awayTeam: { shortName: '', fullName: '', displayName: '', primaryColor: '', accentColor: '', glowColor: '' },
-          homeProbability: evt.markets.length === 1 ? Number(((outrightPrices[0] || 0.5) * 100).toFixed(1)) : 0,
-          awayProbability: evt.markets.length === 1 ? Number(((outrightPrices[1] || 0.5) * 100).toFixed(1)) : 0,
-          homeOdds: evt.markets.length === 1 ? 1 / (outrightPrices[0] || 0.5) : 0,
-          awayOdds: evt.markets.length === 1 ? 1 / (outrightPrices[1] || 0.5) : 0,
-          volume: parseFloat(evt.volume || '0') || parseFloat(evt.markets[0]?.volume || '0') || 0,
-          liquidity: 1000000,
-          supporters: Math.floor(Math.random() * 5000),
-          isHot: true,
-          isFeatured: evt.markets.length > 10,
-          rawOutcomes: outrightOutcomes,
-          rawPrices: outrightPrices,
-          rawIcons: outrightIcons,
-          rawVolumes: outrightVolumes,
-          rawTokenIds: outrightTokenIds,
-          isBinaryOutright: evt.markets.length === 1,
-        });
-
-      } else {
-        // ── MATCHES TAB: standard 2/3-way MarketCard ──
-        const m = evt.markets[0];
-        let outcomes = ['Yes', 'No'];
-        let prices = ['0.5', '0.5'];
-        try { outcomes = JSON.parse(m.outcomes || '["Yes","No"]'); } catch {}
-        try { prices = JSON.parse(m.outcomePrices || '["0.5","0.5"]'); } catch {}
-
-        const is3Way = outcomes.length === 3;
-        const awayIdx = is3Way ? 2 : 1;
-
-        mapped.push({
-          id: evt.id || m.id,
-          polymarketConditionId: m.conditionId,
-          question: evt.title || m.question,
-          imageUrl: evt.image || evt.icon || '',
-          sport: 'matches',
-          leagueName: '世界杯 2026',
-          leagueCode: 'WC',
-          leagueNameEn: 'FIFA',
-          status: m.closed ? 'ended' : 'live',
-          matchTime: 'Real-Time',
-          matchTimeISO: new Date().toISOString(),
-          homeTeam: {
-            shortName: outcomes[0]?.slice(0, 3).toUpperCase() || 'YES',
-            displayName: outcomes[0] || 'Yes',
-            fullName: outcomes[0] || 'Yes',
-            primaryColor: '#00F0FF', accentColor: '#0099FF', glowColor: 'rgba(0,153,255,0.4)',
-          },
-          awayTeam: {
-            shortName: (outcomes[awayIdx] || 'NO').slice(0, 3).toUpperCase(),
-            displayName: outcomes[awayIdx] || 'No',
-            fullName: outcomes[awayIdx] || 'No',
-            primaryColor: '#ADFF2F', accentColor: '#80E500', glowColor: 'rgba(173,255,47,0.4)',
-          },
-          drawTeam: is3Way ? {
-            shortName: 'DRW',
-            displayName: outcomes[1], fullName: outcomes[1],
-            primaryColor: '#A0AEC0', accentColor: '#718096', glowColor: 'rgba(160,174,192,0.4)',
-          } : undefined,
-          homeProbability: Number((parseFloat(prices[0] || '0.5') * 100).toFixed(1)),
-          awayProbability: Number((parseFloat(prices[awayIdx] || '0.5') * 100).toFixed(1)),
-          drawProbability: is3Way ? Number((parseFloat(prices[1] || '0') * 100).toFixed(1)) : undefined,
-          homeOdds: 1 / (parseFloat(prices[0]) || 0.01),
-          awayOdds: 1 / (parseFloat(prices[awayIdx]) || 0.01),
-          drawOdds: is3Way ? 1 / (parseFloat(prices[1]) || 0.01) : undefined,
-          volume: parseFloat(m.volume) || 0,
-          liquidity: parseFloat(m.liquidity) || 0,
-          supporters: Math.floor(Math.random() * 5000) + 100,
-          isHot: parseFloat(m.volume) > 50000,
-          isFeatured: false,
-          // Extract clobTokenIds for match market
-          rawTokenIds: (() => {
-            try {
-              const raw = typeof m.clobTokenIds === 'string' ? JSON.parse(m.clobTokenIds) : m.clobTokenIds;
-              if (Array.isArray(raw)) return [raw]; // wrap as single entry
-            } catch {}
-            return undefined;
-          })(),
-        });
-      }
-    }
-  }
-
-  // Strictly sort by descending total volume purely for front-end presentation accuracy
-  mapped.sort((a, b) => b.volume - a.volume);
-  return mapped;
-};
+import { PlaceholderScreen } from '@/components/ui/PlaceholderScreen';
+import { useMatchData } from '@/hooks/useMatchData';
+import { useOutrightData } from '@/hooks/useOutrightData';
+import { PrimaryTab, MatchSubTab } from '@/types/sports';
 
 export function HomePage({ onPlaceBet, positions }: { onPlaceBet?: (amount: string, tokenId: string, executionPrice?: number) => Promise<void>; positions?: any[] }) {
   const [primaryTab, setPrimaryTab] = useState<PrimaryTab>('matches');
@@ -207,9 +24,7 @@ export function HomePage({ onPlaceBet, positions }: { onPlaceBet?: (amount: stri
   const [skipAnimation, setSkipAnimation] = useState(false);
   const [prevKeyword, setPrevKeyword] = useState<string>('');
 
-
-
-  // ── Computed keyword (derived directly in render scope to avoid stale closures) ──
+  // ── Computed keyword ──
   const keyword = (() => {
     if (primaryTab === 'outrights') return 'FIFA World Cup';
     switch (matchSub) {
@@ -225,76 +40,21 @@ export function HomePage({ onPlaceBet, positions }: { onPlaceBet?: (amount: stri
     }
   })();
 
-  // ── Fetching Data via SWR (outrights tab) ──
-  const { data: swrMarkets, isLoading: isSwrLoading } = useSWR(
-    (primaryTab === 'outrights') 
-      ? ['/api/search', keyword, primaryTab] 
-      : null,
-    marketsFetcher,
-    {
-      refreshInterval: 5000,
-      revalidateOnFocus: true,
-      dedupingInterval: 3000,
-    }
-  );
+  // ── Data Hooks ──
+  const { matchGroups, isLoading: isMatchLoading } = useMatchData(primaryTab === 'matches');
+  const { markets: liveMarkets, isLoading: isOutrightLoading } = useOutrightData(primaryTab === 'outrights', keyword);
 
-  // ── Fetching Data via SWR (matches tab — raw events) ──
-  const { data: rawMatchEvents, isLoading: isMatchLoading } = useSWR(
-    (primaryTab === 'matches')
-      ? ['/api/search', 'FIFA World Cup']
-      : null,
-    rawEventsFetcher,
-    {
-      refreshInterval: 30000,  // Poll every 30s for match data
-      revalidateOnFocus: true,
-      dedupingInterval: 5000,
-    }
-  );
-
-  // ── Parse match events into grouped structure ──
-  const matchGroups = useMemo(() => {
-    if (!rawMatchEvents) return [];
-    const parsed = parseMatchEvents(rawMatchEvents);
-    return groupMatchesByDate(parsed);
-  }, [rawMatchEvents]);
-
-  const isLoading = primaryTab === 'matches' ? isMatchLoading 
-    : primaryTab === 'outrights' ? isSwrLoading 
+  const isLoading = primaryTab === 'matches' ? isMatchLoading
+    : primaryTab === 'outrights' ? isOutrightLoading
     : false;
-  const liveMarkets = swrMarkets || [];
 
-  // ── Derived State (React 16.4+): Update state synchronously during render to PREVENT flashing ──
+  // ── Derived State: skip animation when SWR has cached data ──
   if (keyword !== prevKeyword) {
     setPrevKeyword(keyword);
-    if (primaryTab === 'standings' || primaryTab === 'scorers') {
-      // Nothing needed
-    } else {
-      // If we switch keyword and SWR already has cached data synchronously, use it and skip animation
-      if (swrMarkets) {
-        setSkipAnimation(true);
-      } else {
-        setSkipAnimation(false);
-      }
+    if (primaryTab !== 'standings' && primaryTab !== 'scorers') {
+      setSkipAnimation(liveMarkets.length > 0);
     }
   }
-
-  // ── Placeholder Screens ──
-  const PlaceholderScreen = ({ icon, title }: { icon: React.ReactNode; title: string }) => (
-    <div className="flex flex-col items-center justify-center h-64 gap-4">
-      <div
-        className="w-16 h-16 rounded-full flex items-center justify-center"
-        style={{ background: 'rgba(255,215,0,0.1)', border: '1.5px solid rgba(255,215,0,0.2)' }}
-      >
-        {icon}
-      </div>
-      <div style={{ fontFamily: 'Inter', fontWeight: 800, fontSize: '15px', color: 'rgba(255,255,255,0.6)' }}>
-        {title}
-      </div>
-      <div style={{ fontFamily: 'Inter', fontSize: '12px', color: 'rgba(255,255,255,0.25)' }}>
-        敬请期待 · Coming Soon
-      </div>
-    </div>
-  );
 
   return (
     <div className="pb-32 min-h-[100dvh]">
@@ -303,16 +63,15 @@ export function HomePage({ onPlaceBet, positions }: { onPlaceBet?: (amount: stri
 
       {/* ── Sticky Navigation Area ── */}
       <div className="sticky top-0 z-40 bg-[#0D0518]/90 backdrop-blur-xl border-b border-white/5">
-        <CategoryTabs 
-          active={primaryTab} 
+        <CategoryTabs
+          active={primaryTab}
           onChange={(tab) => {
             setPrimaryTab(tab);
-            // Find the actual scrollable container (overflow-y-auto ancestor)
             const scrollable = document.querySelector('.overflow-y-auto');
             if (scrollable) scrollable.scrollTop = 0;
-          }} 
+          }}
         />
-        <SubTabs 
+        <SubTabs
           primaryTab={primaryTab}
           matchSub={matchSub}
           onMatchSubChange={setMatchSub}
@@ -325,7 +84,6 @@ export function HomePage({ onPlaceBet, positions }: { onPlaceBet?: (amount: stri
 
       {/* ── Content Area ── */}
       <div className="mt-4 flex flex-col gap-2 min-h-[300px]">
-        {/* Placeholder tabs */}
         {primaryTab === 'standings' ? (
           <PlaceholderScreen icon={<BarChart3 size={28} color="#FFD700" />} title="小组赛积分榜" />
         ) : primaryTab === 'scorers' ? (
@@ -340,7 +98,6 @@ export function HomePage({ onPlaceBet, positions }: { onPlaceBet?: (amount: stri
           matchGroups.length > 0 ? (
             matchGroups.map((group) => (
               <div key={group.dateISO}>
-                {/* Date group header */}
                 <div
                   className="px-5 pt-4 pb-2"
                   style={{
@@ -353,7 +110,6 @@ export function HomePage({ onPlaceBet, positions }: { onPlaceBet?: (amount: stri
                 >
                   {group.dateLabel}
                 </div>
-                {/* Match cards in this date group */}
                 {group.matches.map((match, i) => (
                   <MatchCard
                     key={match.id}

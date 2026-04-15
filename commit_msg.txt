@@ -1,3 +1,7 @@
-chore: 移除无用的临时文件和备份脚本
+refactor(homepage): 拆分首页组件，提取数据获取逻辑到自定义 Hooks
 
-清理开发过程中遗留的 test_api.js 测试脚本、orig.txt / orig_utils.txt 备份文件以及 patch_profile.py 热更脚本，保持代码仓库整洁。
+主要更新：
+1. 新建 src/hooks/useMatchData.ts，将比赛 Tab 专用的原始数据拉取、解析及按日期分组逻辑从首页剥离。
+2. 新建 src/hooks/useOutrightData.ts，将趣味投注 Tab 长达180行的数据转换逻辑（marketsFetcher）提取为独立 Hook。
+3. 新建 src/components/ui/PlaceholderScreen.tsx，将占位界面抽离为通用组件。
+4. 重构 src/components/pages/HomePage.tsx，代码行数从近400行精简至150行左右，将其转变为纯粹的页面编排与状态传递层，大幅提升可维护性与扩展性。
