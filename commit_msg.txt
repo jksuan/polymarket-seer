@@ -1,9 +1,3 @@
-feat(matches): 完成比赛 Tab 页面及 MatchCard 组件核心功能
+chore: 移除无用的临时文件和备份脚本
 
-主要更新内容：
-1. 建立 src/lib/countryFlags.ts 文件，支持48个世界杯参赛国国旗（基于 flagcdn）与3字母缩写映射。
-2. 新增 MatchCard 组件 (src/components/ui/MatchCard.tsx)，将 Polymarket 返回的 Moneyline 格式数据（包含主胜、客胜、平局三个二元市场）合并为一张高颜值的对阵列表卡片。
-3. 修改 HomePage 逻辑，为“比赛” Tab 增加专用的 SWR 数据获取链路，并将拉取间隔优化为30秒，降低性能消耗。
-4. 修正了时区差异（UTC与本地时间）导致的按日期分组错误，使同一天的比赛在同一个日期表头下渲染。
-5. 成功对接了交易弹窗 (ConfirmModal)，实现点击任意（主/平/客）按钮均可拉起对应 TokenID 的即时概率与回报计算。
-6. 根据需求移除原有的 比赛视图 链接。
+清理开发过程中遗留的 test_api.js 测试脚本、orig.txt / orig_utils.txt 备份文件以及 patch_profile.py 热更脚本，保持代码仓库整洁。
