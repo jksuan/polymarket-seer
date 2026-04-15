@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { motion } from 'motion/react';
 import { SportMarket } from '@/types/sports';
 import { ConfirmModal } from './ConfirmModal';
-import { getCountryFlagUrl, getCountryShortCode } from '@/lib/countryFlags';
+import { getCountryFlagUrl, getCountryShortCode, getCountryColor, TeamColors } from '@/lib/countryFlags';
 import { formatVolume } from '@/lib/utils';
 
 /**
@@ -35,6 +35,8 @@ export interface ParsedMatch {
     tokenId: string;
     /** Condition ID for the sub-market */
     conditionId: string;
+    /** Dynamic UI colors based on flag */
+    style: TeamColors;
   };
   /** Away team info */
   away: {
@@ -44,6 +46,7 @@ export interface ParsedMatch {
     probability: number;
     tokenId: string;
     conditionId: string;
+    style: TeamColors;
   };
   /** Draw info */
   draw: {
@@ -73,10 +76,8 @@ export function MatchCard({ match, index = 0, onPlaceBet, positions }: MatchCard
     return '';
   };
 
-  // Button color scheme
-  const homeColor = '#1a73e8';    // Blue
-  const drawColor = '#374151';     // Gray
-  const awayColor = '#dc2626';     // Red
+  // Static color for Draw, dynamic for teams
+  const drawColor = '#334155';     // Slate
 
   return (
     <>
@@ -254,8 +255,8 @@ export function MatchCard({ match, index = 0, onPlaceBet, positions }: MatchCard
               onClick={() => setConfirmSide('home')}
               className="py-2.5 rounded-xl active:scale-95 transition-transform text-center relative"
               style={{
-                background: homeColor,
-                boxShadow: `0 2px 8px ${homeColor}40`,
+                background: match.home.style.primary,
+                boxShadow: `0 2px 8px ${match.home.style.primary}40`,
               }}
             >
               <div className="flex items-baseline justify-center gap-1">
@@ -302,8 +303,8 @@ export function MatchCard({ match, index = 0, onPlaceBet, positions }: MatchCard
               onClick={() => setConfirmSide('away')}
               className="py-2.5 rounded-xl active:scale-95 transition-transform text-center relative"
               style={{
-                background: awayColor,
-                boxShadow: `0 2px 8px ${awayColor}40`,
+                background: match.away.style.primary,
+                boxShadow: `0 2px 8px ${match.away.style.primary}40`,
               }}
             >
               <div className="flex items-baseline justify-center gap-1">
@@ -352,9 +353,9 @@ export function MatchCard({ match, index = 0, onPlaceBet, positions }: MatchCard
             : confirmSide === 'home'
               ? 100 / match.home.probability
               : 100 / match.away.probability,
-          primaryColor: confirmSide === 'home' ? homeColor : confirmSide === 'draw' ? '#6B7280' : awayColor,
-          accentColor: confirmSide === 'home' ? '#3B82F6' : confirmSide === 'draw' ? '#9CA3AF' : '#EF4444',
-          glowColor: confirmSide === 'home' ? 'rgba(26,115,232,0.4)' : confirmSide === 'draw' ? 'rgba(107,114,128,0.4)' : 'rgba(220,38,38,0.4)',
+          primaryColor: confirmSide === 'home' ? match.home.style.primary : confirmSide === 'draw' ? drawColor : match.away.style.primary,
+          accentColor: confirmSide === 'home' ? match.home.style.accent : confirmSide === 'draw' ? '#475569' : match.away.style.accent,
+          glowColor: confirmSide === 'home' ? match.home.style.glow : confirmSide === 'draw' ? 'rgba(51,65,85,0.4)' : match.away.style.glow,
           badgeText: confirmSide === 'draw'
             ? 'DRW'
             : confirmSide === 'home'
@@ -411,6 +412,10 @@ export function parseMatchEvents(events: any[]): ParsedMatch[] {
       homeMarket = teamMarkets[0];
       awayMarket = teamMarkets[1];
     }
+
+    // Assign dynamically extracted colors
+    const homeStyle = getCountryColor(homeName);
+    const awayStyle = getCountryColor(awayName, homeStyle); // Pass homeStyle to prevent collision
 
     // Parse prices and token IDs
     const parsePrice = (m: any): number => {
@@ -481,25 +486,25 @@ export function parseMatchEvents(events: any[]): ParsedMatch[] {
         shortName: getCountryShortCode(homeName),
         fullName: homeName,
         displayName: homeName,
-        primaryColor: '#1a73e8',
-        accentColor: '#3B82F6',
-        glowColor: 'rgba(26,115,232,0.4)',
+        primaryColor: homeStyle.primary,
+        accentColor: homeStyle.accent,
+        glowColor: homeStyle.glow,
       },
       awayTeam: {
         shortName: getCountryShortCode(awayName),
         fullName: awayName,
         displayName: awayName,
-        primaryColor: '#dc2626',
-        accentColor: '#EF4444',
-        glowColor: 'rgba(220,38,38,0.4)',
+        primaryColor: awayStyle.primary,
+        accentColor: awayStyle.accent,
+        glowColor: awayStyle.glow,
       },
       drawTeam: {
         shortName: 'DRW',
         fullName: 'Draw',
         displayName: 'Draw',
-        primaryColor: '#6B7280',
-        accentColor: '#9CA3AF',
-        glowColor: 'rgba(107,114,128,0.4)',
+        primaryColor: '#334155',
+        accentColor: '#475569',
+        glowColor: 'rgba(51,65,85,0.4)',
       },
       homeProbability: homeProb,
       awayProbability: awayProb,
@@ -529,6 +534,7 @@ export function parseMatchEvents(events: any[]): ParsedMatch[] {
         probability: homeProb,
         tokenId: parseTokenId(homeMarket),
         conditionId: homeMarket.conditionId || '',
+        style: homeStyle,
       },
       away: {
         name: awayName,
@@ -537,6 +543,7 @@ export function parseMatchEvents(events: any[]): ParsedMatch[] {
         probability: awayProb,
         tokenId: parseTokenId(awayMarket),
         conditionId: awayMarket.conditionId || '',
+        style: awayStyle,
       },
       draw: {
         probability: drawProb,
