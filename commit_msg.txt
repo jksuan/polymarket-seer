@@ -1,7 +1,8 @@
-refactor(homepage): 拆分首页组件，提取数据获取逻辑到自定义 Hooks
+style(matches): 优化比赛卡片状态标签的视觉样式
 
 主要更新：
-1. 新建 src/hooks/useMatchData.ts，将比赛 Tab 专用的原始数据拉取、解析及按日期分组逻辑从首页剥离。
-2. 新建 src/hooks/useOutrightData.ts，将趣味投注 Tab 长达180行的数据转换逻辑（marketsFetcher）提取为独立 Hook。
-3. 新建 src/components/ui/PlaceholderScreen.tsx，将占位界面抽离为通用组件。
-4. 重构 src/components/pages/HomePage.tsx，代码行数从近400行精简至150行左右，将其转变为纯粹的页面编排与状态传递层，大幅提升可维护性与扩展性。
+1. 为右上角的比赛状态增加了带有荧光发光效果的药丸样式背景护盾。
+2. 针对 未开赛 状态，采用了青蓝色基调，兼顾空间平衡。
+3. 针对 实时 状态，采用了醒目的红粉色基调，结合了心跳呼吸动画与 ◉ 图标。
+4. 针对 已结束 状态，使用了半透明的低调灰白沉思样式。
+整体极大提升了 UI 的现代竞猜质感与视觉饱满度。

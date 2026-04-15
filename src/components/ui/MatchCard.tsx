@@ -21,6 +21,8 @@ export interface ParsedMatch {
   timeLabel: string;
   /** ISO date for grouping */
   dateISO: string;
+  /** Match status */
+  status: 'upcoming' | 'live' | 'ended';
   /** Total event volume in USD */
   volume: number;
   /** Home team info */
@@ -91,7 +93,7 @@ export function MatchCard({ match, index = 0, onPlaceBet, positions }: MatchCard
         }}
       >
         <div className="relative z-10 px-4 py-3">
-          {/* Header row: time + volume */}
+          {/* Header row: time + volume + status */}
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2.5">
               <span
@@ -115,6 +117,50 @@ export function MatchCard({ match, index = 0, onPlaceBet, positions }: MatchCard
               >
                 {formatVolume(match.volume)} 交易量
               </span>
+            </div>
+
+            {/* Status Badge in Top Right */}
+            <div className="flex items-center">
+              {match.status === 'live' ? (
+                <div 
+                  className="flex items-center gap-1 px-2.5 py-[2px] rounded-full text-[11px] font-bold"
+                  style={{ 
+                    fontFamily: 'Inter',
+                    color: '#FF2A55',
+                    background: 'rgba(255, 42, 85, 0.15)',
+                    border: '1px solid rgba(255, 42, 85, 0.3)',
+                    boxShadow: '0 0 10px rgba(255, 42, 85, 0.25)'
+                  }}
+                >
+                  <span className="text-[12px] animate-pulse">◉</span>
+                  <span>实时</span>
+                </div>
+              ) : match.status === 'ended' ? (
+                <div 
+                  className="px-2.5 py-[2px] rounded-full text-[11px] font-bold"
+                  style={{ 
+                    fontFamily: 'Inter',
+                    color: 'rgba(255, 255, 255, 0.5)',
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                  }}
+                >
+                  已结束
+                </div>
+              ) : (
+                <div 
+                  className="px-2.5 py-[2px] rounded-full text-[11px] font-bold tracking-wide"
+                  style={{ 
+                    fontFamily: 'Inter',
+                    color: '#00F0FF',
+                    background: 'rgba(0, 240, 255, 0.1)',
+                    border: '1px solid rgba(0, 240, 255, 0.25)',
+                    boxShadow: '0 0 8px rgba(0, 240, 255, 0.15)'
+                  }}
+                >
+                  未开赛
+                </div>
+              )}
             </div>
           </div>
 
@@ -406,6 +452,20 @@ export function parseMatchEvents(events: any[]): ParsedMatch[] {
     const awayProb = Number((parsePrice(awayMarket) * 100).toFixed(0));
     const drawProb = Number((parsePrice(drawMarket) * 100).toFixed(0));
 
+    // Determine status
+    const now = new Date().getTime();
+    const matchTimeMs = matchDate.getTime();
+    let matchStatus: 'upcoming' | 'live' | 'ended' = 'upcoming';
+    
+    if (homeMarket.closed || awayMarket.closed) {
+      matchStatus = 'ended';
+    } else if (now >= matchTimeMs && now < matchTimeMs + 120 * 60 * 1000) {
+      // Live if current time is within 120 minutes of start time
+      matchStatus = 'live';
+    } else if (now >= matchTimeMs + 120 * 60 * 1000) {
+      matchStatus = 'ended';
+    }
+
     // Build a SportMarket-compatible object for ConfirmModal
     const rawMarket: SportMarket = {
       id: evt.id || `match-${Date.now()}-${Math.random()}`,
@@ -460,6 +520,7 @@ export function parseMatchEvents(events: any[]): ParsedMatch[] {
       dateLabel,
       timeLabel,
       dateISO,
+      status: matchStatus,
       volume: parseFloat(evt.volume || '0'),
       home: {
         name: homeName,
