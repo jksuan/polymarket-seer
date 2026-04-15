@@ -258,7 +258,7 @@ export function MatchCard({ match, index = 0, onPlaceBet, positions }: MatchCard
                 boxShadow: `0 2px 8px ${homeColor}40`,
               }}
             >
-              <div className="flex items-center justify-center gap-1">
+              <div className="flex items-baseline justify-center gap-1">
                 <span style={{ fontFamily: 'Inter', fontSize: '11px', fontWeight: 800, color: '#fff', letterSpacing: '0.02em' }}>
                   {match.home.shortCode}
                 </span>
@@ -287,7 +287,7 @@ export function MatchCard({ match, index = 0, onPlaceBet, positions }: MatchCard
                 boxShadow: `0 2px 8px ${drawColor}40`,
               }}
             >
-              <div className="flex items-center justify-center gap-1">
+              <div className="flex items-baseline justify-center gap-1">
                 <span style={{ fontFamily: 'Inter', fontSize: '11px', fontWeight: 800, color: 'rgba(255,255,255,0.85)', letterSpacing: '0.02em' }}>
                   DRAW
                 </span>
@@ -306,7 +306,7 @@ export function MatchCard({ match, index = 0, onPlaceBet, positions }: MatchCard
                 boxShadow: `0 2px 8px ${awayColor}40`,
               }}
             >
-              <div className="flex items-center justify-center gap-1">
+              <div className="flex items-baseline justify-center gap-1">
                 <span style={{ fontFamily: 'Inter', fontSize: '11px', fontWeight: 800, color: '#fff', letterSpacing: '0.02em' }}>
                   {match.away.shortCode}
                 </span>
@@ -356,7 +356,7 @@ export function MatchCard({ match, index = 0, onPlaceBet, positions }: MatchCard
           accentColor: confirmSide === 'home' ? '#3B82F6' : confirmSide === 'draw' ? '#9CA3AF' : '#EF4444',
           glowColor: confirmSide === 'home' ? 'rgba(26,115,232,0.4)' : confirmSide === 'draw' ? 'rgba(107,114,128,0.4)' : 'rgba(220,38,38,0.4)',
           badgeText: confirmSide === 'draw'
-            ? 'DRAW'
+            ? 'DRW'
             : confirmSide === 'home'
               ? match.home.shortCode
               : match.away.shortCode,
