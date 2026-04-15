@@ -214,14 +214,14 @@ export function ConfirmModal({
                       <div
                         className="relative w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0"
                         style={{
-                          background: `${primaryColor}22`,
-                          border: `1px solid ${primaryColor}55`,
-                          boxShadow: `inset 0 0 10px ${primaryColor}33`,
+                          background: badgeText === 'DRW' ? 'rgba(100, 116, 139, 0.15)' : `${primaryColor}22`,
+                          border: badgeText === 'DRW' ? '1px solid rgba(100, 116, 139, 0.3)' : `1px solid ${primaryColor}55`,
+                          boxShadow: badgeText === 'DRW' ? 'inset 0 0 8px rgba(100, 116, 139, 0.2)' : `inset 0 0 10px ${primaryColor}33`,
                           fontFamily: 'Inter',
                           fontWeight: 900,
                           fontSize: '15px',
-                          color: primaryColor,
-                          textShadow: `0 0 6px ${primaryColor}88`
+                          color: badgeText === 'DRW' ? '#64748B' : primaryColor,
+                          textShadow: badgeText === 'DRW' ? 'none' : `0 0 6px ${primaryColor}88`
                         }}
                       >
                         {badgeText}
