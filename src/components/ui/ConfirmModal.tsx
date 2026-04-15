@@ -121,6 +121,13 @@ export function ConfirmModal({
     onCancel();
   };
 
+  const formatWithCommas = (val: string | number) => {
+    if (val === undefined || val === null || val === '') return '';
+    const parts = String(val).split('.');
+    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    return parts.join('.');
+  };
+
   if (!mounted) return null;
 
   return createPortal(
@@ -273,7 +280,7 @@ export function ConfirmModal({
                     <div className="flex flex-col items-end min-w-[70px]">
                       <div style={{ fontFamily: 'Inter', fontSize: '10px', fontWeight: 700, color: 'rgba(173,255,47,0.8)', textTransform: 'uppercase', marginBottom: '4px' }}>预期回报</div>
                       <div className={`flex items-baseline gap-[1px] transition-opacity duration-300 ${isFetchingBook ? 'animate-pulse opacity-70' : 'opacity-100'}`} style={{ fontFamily: 'Inter', fontWeight: 900, fontSize: '19px', color: '#ADFF2F', textShadow: '0 0 12px rgba(173,255,47,0.3)', letterSpacing: '-0.02em' }}>
-                        <span>${expectedReturn}</span>
+                        <span>${formatWithCommas(expectedReturn)}</span>
                       </div>
                     </div>
                   </div>
@@ -300,10 +307,10 @@ export function ConfirmModal({
                           type="text" 
                           inputMode="decimal"
                           placeholder="1"
-                          value={inputValue}
+                          value={formatWithCommas(inputValue)}
                           onChange={(e) => {
                             setShowError(false);
-                            let val = e.target.value.replace(/[^\d.]/g, '');
+                            let val = e.target.value.replace(/,/g, '').replace(/[^\d.]/g, '');
                             if (val === '0') val = ''; // 阻止仅输入 0
                             if (val.startsWith('0') && val.length > 1 && !val.startsWith('0.')) {
                               val = val.replace(/^0+/, '');
@@ -316,7 +323,7 @@ export function ConfirmModal({
                           }}
                           className="bg-transparent outline-none font-black transition-colors"
                           style={{
-                            width: `${Math.min(Math.max((inputValue || '1').length, 1), 8)}ch`,
+                            width: `${Math.min(Math.max((formatWithCommas(inputValue) || '1').length, 1), 12)}ch`,
                             fontSize: '24px',
                             lineHeight: '1',
                             fontFamily: 'Inter',
@@ -429,7 +436,7 @@ export function ConfirmModal({
                         textTransform: authenticated ? 'uppercase' : 'none'
                       }}
                     >
-                      {authenticated ? `买入 ${badgeText} $${amount}` : '登录'}
+                      {authenticated ? `买入 ${badgeText} $${formatWithCommas(amount)}` : '登录'}
                     </span>
                   </div>
                 </button>
