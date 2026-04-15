@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import useSWR from 'swr';
 import { Loader2, Trophy, BarChart3 } from 'lucide-react';
 import { BannerCarousel } from '@/components/ui/BannerCarousel';
@@ -8,9 +8,18 @@ import { CategoryTabs } from '@/components/ui/CategoryTabs';
 import { SubTabs } from '@/components/ui/SubTabs';
 import { TopHeader } from '@/components/ui/TopHeader';
 import { MarketCard } from '@/components/ui/MarketCard';
+import { MatchCard, parseMatchEvents, groupMatchesByDate } from '@/components/ui/MatchCard';
 import { OutrightCard } from '@/components/ui/OutrightCard';
 import { BinaryOutrightCard } from '@/components/ui/BinaryOutrightCard';
 import { PrimaryTab, MatchSubTab, SportMarket } from '@/types/sports';
+
+// ── Raw events fetcher for the matches tab ──
+const rawEventsFetcher = async ([url, keyword]: [string, string]) => {
+  const res = await fetch(`${url}?q=${encodeURIComponent(keyword)}`);
+  if (!res.ok) throw new Error('API fetch failed');
+  const events = await res.json();
+  return Array.isArray(events) ? events : [];
+};
 
 const marketsFetcher = async ([url, keyword, tab]: [string, string, PrimaryTab]) => {
   const res = await fetch(`${url}?q=${encodeURIComponent(keyword)}`);
@@ -216,21 +225,42 @@ export function HomePage({ onPlaceBet, positions }: { onPlaceBet?: (amount: stri
     }
   })();
 
-  // ── Fetching Data via SWR ──
+  // ── Fetching Data via SWR (outrights tab) ──
   const { data: swrMarkets, isLoading: isSwrLoading } = useSWR(
-    (primaryTab !== 'standings' && primaryTab !== 'scorers') 
+    (primaryTab === 'outrights') 
       ? ['/api/search', keyword, primaryTab] 
       : null,
     marketsFetcher,
     {
-      // Poll every 5s only for 'outrights' tab for now
-      refreshInterval: primaryTab === 'outrights' ? 5000 : 0,
+      refreshInterval: 5000,
       revalidateOnFocus: true,
       dedupingInterval: 3000,
     }
   );
 
-  const isLoading = (primaryTab !== 'standings' && primaryTab !== 'scorers') ? isSwrLoading : false;
+  // ── Fetching Data via SWR (matches tab — raw events) ──
+  const { data: rawMatchEvents, isLoading: isMatchLoading } = useSWR(
+    (primaryTab === 'matches')
+      ? ['/api/search', 'FIFA World Cup']
+      : null,
+    rawEventsFetcher,
+    {
+      refreshInterval: 30000,  // Poll every 30s for match data
+      revalidateOnFocus: true,
+      dedupingInterval: 5000,
+    }
+  );
+
+  // ── Parse match events into grouped structure ──
+  const matchGroups = useMemo(() => {
+    if (!rawMatchEvents) return [];
+    const parsed = parseMatchEvents(rawMatchEvents);
+    return groupMatchesByDate(parsed);
+  }, [rawMatchEvents]);
+
+  const isLoading = primaryTab === 'matches' ? isMatchLoading 
+    : primaryTab === 'outrights' ? isSwrLoading 
+    : false;
   const liveMarkets = swrMarkets || [];
 
   // ── Derived State (React 16.4+): Update state synchronously during render to PREVENT flashing ──
@@ -294,7 +324,7 @@ export function HomePage({ onPlaceBet, positions }: { onPlaceBet?: (amount: stri
       </div>
 
       {/* ── Content Area ── */}
-      <div className="mt-4 flex flex-col gap-4 min-h-[300px]">
+      <div className="mt-4 flex flex-col gap-2 min-h-[300px]">
         {/* Placeholder tabs */}
         {primaryTab === 'standings' ? (
           <PlaceholderScreen icon={<BarChart3 size={28} color="#FFD700" />} title="小组赛积分榜" />
@@ -305,17 +335,55 @@ export function HomePage({ onPlaceBet, positions }: { onPlaceBet?: (amount: stri
             <Loader2 size={32} className="animate-spin text-[#FFD700] mb-4" />
             <div className="text-[12px] font-bold text-[#FFD700] tracking-widest uppercase">加载中...</div>
           </div>
-        ) : liveMarkets.length > 0 ? (
-          liveMarkets.map((market, i) =>
-            primaryTab === 'outrights' ? (
+        ) : primaryTab === 'matches' ? (
+          // ── MATCHES: Grouped by date with MatchCard ──
+          matchGroups.length > 0 ? (
+            matchGroups.map((group) => (
+              <div key={group.dateISO}>
+                {/* Date group header */}
+                <div
+                  className="px-5 pt-4 pb-2"
+                  style={{
+                    fontFamily: 'Inter',
+                    fontSize: '15px',
+                    fontWeight: 800,
+                    color: '#fff',
+                    letterSpacing: '-0.01em',
+                  }}
+                >
+                  {group.dateLabel}
+                </div>
+                {/* Match cards in this date group */}
+                {group.matches.map((match, i) => (
+                  <MatchCard
+                    key={match.id}
+                    match={match}
+                    index={skipAnimation ? -1 : i}
+                    onPlaceBet={onPlaceBet}
+                    positions={positions}
+                  />
+                ))}
+              </div>
+            ))
+          ) : (
+            <div className="flex flex-col items-center justify-center h-48 opacity-50">
+              <div className="text-[12px] font-bold text-white/50 tracking-widest uppercase">暂无比赛数据</div>
+            </div>
+          )
+        ) : primaryTab === 'outrights' ? (
+          // ── OUTRIGHTS: Existing cards ──
+          liveMarkets.length > 0 ? (
+            liveMarkets.map((market, i) =>
               market.isBinaryOutright ? (
                 <BinaryOutrightCard key={market.id} market={market} index={skipAnimation ? -1 : i} onPlaceBet={onPlaceBet} positions={positions} />
               ) : (
                 <OutrightCard key={market.id} market={market} index={skipAnimation ? -1 : i} onPlaceBet={onPlaceBet} positions={positions} />
               )
-            ) : (
-              <MarketCard key={market.id} market={market} index={skipAnimation ? -1 : i} onPlaceBet={onPlaceBet} positions={positions} />
             )
+          ) : (
+            <div className="flex flex-col items-center justify-center h-48 opacity-50">
+              <div className="text-[12px] font-bold text-white/50 tracking-widest uppercase">暂无相关市场数据</div>
+            </div>
           )
         ) : (
           <div className="flex flex-col items-center justify-center h-48 opacity-50">
