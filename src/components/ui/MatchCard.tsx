@@ -447,11 +447,11 @@ export function parseMatchEvents(events: any[]): ParsedMatch[] {
       day: 'numeric',
     });
 
-    // Format time label in local timezone: "上午 3:00"
+    // Format time label in local timezone: "13:00", "9:00"
     const timeLabel = matchDate.toLocaleTimeString('zh-CN', {
       hour: 'numeric',
       minute: '2-digit',
-      hour12: true,
+      hour12: false,
     });
 
     // Date ISO for grouping — use LOCAL date (not UTC) to ensure correct grouping
