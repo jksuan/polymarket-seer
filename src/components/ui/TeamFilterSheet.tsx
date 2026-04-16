@@ -132,7 +132,7 @@ function TeamFilterSheetContent({ isOpen, onClose, onSelect, selectedTeam }: Tea
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 350 }}
-            className="fixed bottom-0 left-0 right-0 z-[1000] max-h-[85vh] overflow-hidden flex flex-col"
+            className="fixed bottom-0 left-0 right-0 z-[1000] h-[85dvh] overflow-hidden flex flex-col"
             style={{
               maxWidth: '480px',
               margin: '0 auto',
