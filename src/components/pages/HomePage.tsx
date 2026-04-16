@@ -118,7 +118,7 @@ export function HomePage({ onPlaceBet, positions }: { onPlaceBet?: (amount: stri
           >
             <button
               onClick={() => setSelectedDate('ALL')}
-              className="flex-shrink-0 px-3.5 py-1.5 rounded-full transition-all text-[12px] font-bold"
+              className="flex-shrink-0 px-3.5 py-1.5 rounded-full transition-all text-[11px] font-bold"
               style={{
                 fontFamily: 'Inter',
                 background: selectedDate === 'ALL' ? 'rgba(255,255,255,0.1)' : 'transparent',
@@ -139,7 +139,7 @@ export function HomePage({ onPlaceBet, positions }: { onPlaceBet?: (amount: stri
               }}
             >
               <Search size={13} className={selectedTeam ? 'text-[#FFD700]' : 'text-white/40'} />
-              <span className={`text-[12px] font-bold ${selectedTeam ? 'text-[#FFD700]' : 'text-white/60'}`}>
+              <span className={`text-[11px] font-bold ${selectedTeam ? 'text-[#FFD700]' : 'text-white/60'}`}>
                 球队
               </span>
             </button>
@@ -155,7 +155,7 @@ export function HomePage({ onPlaceBet, positions }: { onPlaceBet?: (amount: stri
                 <button
                   key={g.dateISO}
                   onClick={() => setSelectedDate(g.dateISO)}
-                  className="flex-shrink-0 px-3.5 py-1.5 rounded-full transition-all text-[12px] font-bold"
+                  className="flex-shrink-0 px-3.5 py-1.5 rounded-full transition-all text-[11px] font-bold"
                   style={{
                     fontFamily: 'Inter',
                     background: selectedDate === g.dateISO ? 'rgba(255,215,0,0.1)' : 'transparent',
