@@ -1,11 +1,12 @@
 import { PrimaryTab, MatchSubTab } from '@/types/sports';
+import { CalendarDays, Flame, BarChart3, Award } from 'lucide-react';
 
 // ── Primary Tabs (Tier 1) ──
-export const PRIMARY_TABS: Array<{ id: PrimaryTab; label: string; emoji: string }> = [
-  { id: 'matches',    label: '赛程',     emoji: '⚽' },
-  { id: 'outrights',  label: '趣味投注', emoji: '🎯' },
-  { id: 'standings',  label: '积分榜',   emoji: '📊' },
-  { id: 'scorers',    label: '射手榜',   emoji: '👟' },
+export const PRIMARY_TABS: Array<{ id: PrimaryTab; label: string; icon: any }> = [
+  { id: 'matches',    label: '赛程',     icon: CalendarDays },
+  { id: 'outrights',  label: '趣味投注', icon: Flame },
+  { id: 'standings',  label: '积分榜',   icon: BarChart3 },
+  { id: 'scorers',    label: '射手榜',   icon: Award },
 ];
 
 // ── Match Sub-Tabs (Tier 2 when primaryTab === 'matches') ──

@@ -34,7 +34,13 @@ export function CategoryTabs({ active, onChange }: CategoryTabsProps) {
               borderBottom: isActive ? '2.5px solid #FFD700' : '2.5px solid transparent',
             }}
           >
-            <span style={{ fontSize: '14px' }}>{tab.emoji}</span>
+            <tab.icon 
+              size={15} 
+              style={{ 
+                color: isActive ? '#FFD700' : 'rgba(255,255,255,0.4)', 
+                strokeWidth: isActive ? 2.5 : 2
+              }} 
+            />
             {tab.label}
           </button>
         );
