@@ -10,7 +10,7 @@ export const PRIMARY_TABS: Array<{ id: PrimaryTab; label: string; emoji: string 
 
 // ── Match Sub-Tabs (Tier 2 when primaryTab === 'matches') ──
 export const MATCH_SUB_TABS: Array<{ id: MatchSubTab; label: string }> = [
-  { id: 'hot',      label: '🔥 今日热门' },
+  { id: 'hot',      label: '全部' },
   { id: 'group',    label: '小组赛 ▾' },
   { id: 'knockout', label: '淘汰赛 ▾' },
 ];
