@@ -186,7 +186,7 @@ function TeamFilterSheetContent({ isOpen, onClose, onSelect, selectedTeam }: Tea
                   placeholder="搜索球队..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="bg-transparent outline-none text-[13px] font-bold text-white placeholder:text-white/25 w-full"
+                  className="bg-transparent outline-none text-[16px] font-bold text-white placeholder:text-white/25 w-full"
                   style={{ fontFamily: 'Inter' }}
                 />
               </div>
@@ -199,7 +199,7 @@ function TeamFilterSheetContent({ isOpen, onClose, onSelect, selectedTeam }: Tea
                   <div className="text-[10px] font-black text-white/30 tracking-widest uppercase mb-2">
                     {group}组
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-4 gap-2">
                     {teams.map((team) => {
                       const isSelected = selectedTeam === team;
                       const displayName = DISPLAY_NAMES[team] || team;
@@ -207,7 +207,7 @@ function TeamFilterSheetContent({ isOpen, onClose, onSelect, selectedTeam }: Tea
                         <button
                           key={team}
                           onClick={() => handleSelect(team)}
-                          className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition-all active:scale-95"
+                          className="flex flex-col items-center justify-center gap-1.5 px-1 py-2.5 rounded-xl transition-all active:scale-95"
                           style={{
                             background: isSelected
                               ? 'linear-gradient(135deg, rgba(255,215,0,0.15), rgba(255,165,0,0.1))'
@@ -221,11 +221,11 @@ function TeamFilterSheetContent({ isOpen, onClose, onSelect, selectedTeam }: Tea
                           <img
                             src={getCountryFlagUrl(team, 40)}
                             alt={team}
-                            width={22}
-                            height={16}
+                            width={24}
+                            height={18}
                             style={{
-                              width: '22px',
-                              height: '16px',
+                              width: '24px',
+                              height: '18px',
                               objectFit: 'cover',
                               borderRadius: '2px',
                               border: '1px solid rgba(255,255,255,0.15)',
@@ -234,7 +234,7 @@ function TeamFilterSheetContent({ isOpen, onClose, onSelect, selectedTeam }: Tea
                             loading="lazy"
                           />
                           <span
-                            className="text-[12px] font-bold truncate"
+                            className="text-[11px] font-bold w-full text-center truncate px-0.5"
                             style={{
                               fontFamily: 'Inter',
                               color: isSelected ? '#FFD700' : 'rgba(255,255,255,0.7)',
