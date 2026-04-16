@@ -212,7 +212,7 @@ export function ConfirmModal({
                     <div className="relative">
                       <div className="absolute -inset-1 rounded-full opacity-20 blur-sm" style={{ background: primaryColor }} />
                       <div
-                        className="relative w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0"
+                        className={`relative flex items-center justify-center flex-shrink-0 rounded-full ${badgeText === 'DRW' ? 'w-12 h-12' : 'w-11 h-11'}`}
                         style={{
                           background: badgeText === 'DRW' ? 'rgba(100, 116, 139, 0.15)' : `${primaryColor}22`,
                           border: badgeText === 'DRW' ? '1px solid rgba(100, 116, 139, 0.3)' : `1px solid ${primaryColor}55`,
