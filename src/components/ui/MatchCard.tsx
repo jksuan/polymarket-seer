@@ -114,6 +114,16 @@ export function MatchCard({ match, index = 0, onPlaceBet, positions }: MatchCard
               >
                 <Clock size={12} /> 开赛 {match.timeLabel}
               </div>
+              <div
+                className="px-1.5 py-[1px] rounded-[4px] text-[10px] font-black"
+                style={{
+                  background: match.isGroupStage ? 'rgba(255,215,0,0.15)' : 'rgba(173,255,47,0.15)',
+                  color: match.isGroupStage ? '#FFD700' : '#ADFF2F',
+                  border: match.isGroupStage ? '1px solid rgba(255,215,0,0.3)' : '1px solid rgba(173,255,47,0.3)'
+                }}
+              >
+                {match.isGroupStage ? `${match.group}组` : '淘汰赛'}
+              </div>
               <span
                 style={{
                   fontFamily: 'Inter',

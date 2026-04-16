@@ -20,6 +20,7 @@ export function HomePage({ onPlaceBet, positions }: { onPlaceBet?: (amount: stri
   // Sub-navigation picker states (for matches)
   const [selectedGroup, setSelectedGroup] = useState('A');
   const [selectedKnockout, setSelectedKnockout] = useState('16强');
+  const [selectedDate, setSelectedDate] = useState<string>('ALL');
 
   const [skipAnimation, setSkipAnimation] = useState(false);
   const [prevKeyword, setPrevKeyword] = useState<string>('');
@@ -41,8 +42,11 @@ export function HomePage({ onPlaceBet, positions }: { onPlaceBet?: (amount: stri
   // ── Filter matches based on the sub-tab selection ──
   const filteredMatchGroups = useMemo(() => {
     if (matchSub === 'hot') {
-      // "今日热门" — show all matches grouped by date
-      return matchGroups;
+      // "全部" — show all matches grouped by date, filtered by selected date
+      if (selectedDate === 'ALL') {
+        return matchGroups;
+      }
+      return matchGroups.filter(g => g.dateISO === selectedDate);
     }
 
     if (matchSub === 'group') {
@@ -58,7 +62,7 @@ export function HomePage({ onPlaceBet, positions }: { onPlaceBet?: (amount: stri
     }
 
     return matchGroups;
-  }, [matchSub, selectedGroup, selectedKnockout, allMatches, matchGroups]);
+  }, [matchSub, selectedGroup, selectedKnockout, selectedDate, allMatches, matchGroups]);
 
   // ── Derived State: skip animation when SWR has cached data ──
   if (keyword !== prevKeyword) {
@@ -92,6 +96,51 @@ export function HomePage({ onPlaceBet, positions }: { onPlaceBet?: (amount: stri
           selectedKnockout={selectedKnockout}
           onKnockoutChange={setSelectedKnockout}
         />
+        
+        {/* ── Date Ribbon (Only visible in '全部' tab) ── */}
+        {primaryTab === 'matches' && matchSub === 'hot' && matchGroups.length > 0 && (
+          <div 
+            className="flex gap-2 overflow-x-auto px-4 py-2 no-scrollbar items-center border-t border-white/5 bg-[#0D0518]/60"
+            style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}
+          >
+            <button
+              onClick={() => setSelectedDate('ALL')}
+              className="flex-shrink-0 px-3.5 py-1.5 rounded-full transition-all text-[12px] font-bold"
+              style={{
+                fontFamily: 'Inter',
+                background: selectedDate === 'ALL' ? 'rgba(255,255,255,0.1)' : 'transparent',
+                color: selectedDate === 'ALL' ? '#fff' : 'rgba(255,255,255,0.4)',
+                border: selectedDate === 'ALL' ? '1px solid rgba(255,255,255,0.2)' : '1px solid transparent'
+              }}
+            >
+              所有日期
+            </button>
+            {matchGroups.map(g => {
+              // Parse '2026-06-12' to '6.12'
+              const parts = g.dateISO.split('-');
+              let shortDate = g.dateISO;
+              if (parts.length === 3) {
+                shortDate = `${parseInt(parts[1], 10)}.${parseInt(parts[2], 10)}`;
+              }
+              
+              return (
+                <button
+                  key={g.dateISO}
+                  onClick={() => setSelectedDate(g.dateISO)}
+                  className="flex-shrink-0 px-3.5 py-1.5 rounded-full transition-all text-[12px] font-bold"
+                  style={{
+                    fontFamily: 'Inter',
+                    background: selectedDate === g.dateISO ? 'rgba(255,215,0,0.1)' : 'transparent',
+                    color: selectedDate === g.dateISO ? '#FFD700' : 'rgba(255,255,255,0.4)',
+                    border: selectedDate === g.dateISO ? '1px solid rgba(255,215,0,0.3)' : '1px solid rgba(255,255,255,0.05)'
+                  }}
+                >
+                  {shortDate}
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* ── Content Area ── */}
