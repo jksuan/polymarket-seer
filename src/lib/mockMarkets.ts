@@ -2,7 +2,7 @@ import { PrimaryTab, MatchSubTab } from '@/types/sports';
 
 // ── Primary Tabs (Tier 1) ──
 export const PRIMARY_TABS: Array<{ id: PrimaryTab; label: string; emoji: string }> = [
-  { id: 'matches',    label: '比赛',     emoji: '⚽' },
+  { id: 'matches',    label: '赛程',     emoji: '⚽' },
   { id: 'outrights',  label: '趣味投注', emoji: '🎯' },
   { id: 'standings',  label: '积分榜',   emoji: '📊' },
   { id: 'scorers',    label: '射手榜',   emoji: '👟' },
@@ -10,7 +10,7 @@ export const PRIMARY_TABS: Array<{ id: PrimaryTab; label: string; emoji: string 
 
 // ── Match Sub-Tabs (Tier 2 when primaryTab === 'matches') ──
 export const MATCH_SUB_TABS: Array<{ id: MatchSubTab; label: string }> = [
-  { id: 'hot',      label: '全部' },
+  { id: 'hot',      label: '总览' },
   { id: 'group',    label: '小组赛 ▾' },
   { id: 'knockout', label: '淘汰赛 ▾' },
 ];

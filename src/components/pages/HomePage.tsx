@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Loader2, Trophy, BarChart3, Swords, Flame, ShieldQuestion, Lock } from 'lucide-react';
+import { Loader2, Trophy, BarChart3, Swords, Flame, ShieldQuestion, Lock, Search, X } from 'lucide-react';
 import { BannerCarousel } from '@/components/ui/BannerCarousel';
 import { CategoryTabs } from '@/components/ui/CategoryTabs';
 import { SubTabs } from '@/components/ui/SubTabs';
@@ -13,6 +13,8 @@ import { PlaceholderScreen } from '@/components/ui/PlaceholderScreen';
 import { useMatchData } from '@/hooks/useMatchData';
 import { useOutrightData } from '@/hooks/useOutrightData';
 import { PrimaryTab, MatchSubTab } from '@/types/sports';
+import { TeamFilterSheet } from '@/components/ui/TeamFilterSheet';
+import { getCountryFlagUrl } from '@/lib/countryFlags';
 
 export function HomePage({ onPlaceBet, positions }: { onPlaceBet?: (amount: string, tokenId: string, executionPrice?: number) => Promise<void>; positions?: any[] }) {
   const [primaryTab, setPrimaryTab] = useState<PrimaryTab>('matches');
@@ -21,6 +23,8 @@ export function HomePage({ onPlaceBet, positions }: { onPlaceBet?: (amount: stri
   const [selectedGroup, setSelectedGroup] = useState('A');
   const [selectedKnockout, setSelectedKnockout] = useState('16强');
   const [selectedDate, setSelectedDate] = useState<string>('ALL');
+  const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
+  const [showTeamFilter, setShowTeamFilter] = useState(false);
 
   const [skipAnimation, setSkipAnimation] = useState(false);
   const [prevKeyword, setPrevKeyword] = useState<string>('');
@@ -41,28 +45,36 @@ export function HomePage({ onPlaceBet, positions }: { onPlaceBet?: (amount: stri
 
   // ── Filter matches based on the sub-tab selection ──
   const filteredMatchGroups = useMemo(() => {
+    let baseMatches = allMatches;
+
+    // Apply team filter globally across all sub-tabs
+    if (selectedTeam) {
+      baseMatches = baseMatches.filter(
+        m => m.home.name === selectedTeam || m.away.name === selectedTeam
+      );
+    }
+
     if (matchSub === 'hot') {
       // "全部" — show all matches grouped by date, filtered by selected date
+      const groups = groupMatchesByDate(baseMatches);
       if (selectedDate === 'ALL') {
-        return matchGroups;
+        return groups;
       }
-      return matchGroups.filter(g => g.dateISO === selectedDate);
+      return groups.filter(g => g.dateISO === selectedDate);
     }
 
     if (matchSub === 'group') {
-      // Filter to only group-stage matches in the selected group
-      const filtered = allMatches.filter(m => m.isGroupStage && m.group === selectedGroup);
+      const filtered = baseMatches.filter(m => m.isGroupStage && m.group === selectedGroup);
       return groupMatchesByDate(filtered);
     }
 
     if (matchSub === 'knockout') {
-      // Filter to only knockout-stage matches (not group stage)
-      const filtered = allMatches.filter(m => !m.isGroupStage);
+      const filtered = baseMatches.filter(m => !m.isGroupStage);
       return groupMatchesByDate(filtered);
     }
 
-    return matchGroups;
-  }, [matchSub, selectedGroup, selectedKnockout, selectedDate, allMatches, matchGroups]);
+    return groupMatchesByDate(baseMatches);
+  }, [matchSub, selectedGroup, selectedKnockout, selectedDate, selectedTeam, allMatches, matchGroups]);
 
   // ── Derived State: skip animation when SWR has cached data ──
   if (keyword !== prevKeyword) {
@@ -73,6 +85,7 @@ export function HomePage({ onPlaceBet, positions }: { onPlaceBet?: (amount: stri
   }
 
   return (
+    <>
     <div className="pb-32 min-h-[100dvh]">
       <TopHeader />
       <BannerCarousel />
@@ -113,10 +126,22 @@ export function HomePage({ onPlaceBet, positions }: { onPlaceBet?: (amount: stri
                 border: selectedDate === 'ALL' ? '1px solid rgba(255,255,255,0.2)' : '1px solid transparent'
               }}
             >
-              所有日期
+              全部
             </button>
-            {matchGroups.map(g => {
-              // Parse '2026-06-12' to '6.12'
+
+            {/* Search Team icon */}
+            <button
+              onClick={() => setShowTeamFilter(true)}
+              className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center active:scale-90 transition-all mr-1"
+              style={{
+                background: selectedTeam ? 'rgba(255,215,0,0.15)' : 'rgba(255,255,255,0.06)',
+                border: selectedTeam ? '1px solid rgba(255,215,0,0.4)' : '1px solid rgba(255,255,255,0.08)',
+              }}
+            >
+              <Search size={14} className={selectedTeam ? 'text-[#FFD700]' : 'text-white/40'} />
+            </button>
+
+             {matchGroups.map(g => {
               const parts = g.dateISO.split('-');
               let shortDate = g.dateISO;
               if (parts.length === 3) {
@@ -142,6 +167,30 @@ export function HomePage({ onPlaceBet, positions }: { onPlaceBet?: (amount: stri
           </div>
         )}
       </div>
+
+      {/* ── Active Team Filter Tag ── */}
+      {primaryTab === 'matches' && selectedTeam && (
+        <div className="flex items-center gap-2 px-4 py-2">
+          <div
+            className="flex items-center gap-2 px-3 py-1.5 rounded-full active:scale-95 transition-all cursor-pointer"
+            onClick={() => setSelectedTeam(null)}
+            style={{
+              background: 'linear-gradient(135deg, rgba(255,215,0,0.12), rgba(255,165,0,0.08))',
+              border: '1px solid rgba(255,215,0,0.35)',
+            }}
+          >
+            <img
+              src={getCountryFlagUrl(selectedTeam, 40)}
+              alt={selectedTeam}
+              width={18}
+              height={13}
+              style={{ width: '18px', height: '13px', objectFit: 'cover', borderRadius: '2px', border: '1px solid rgba(255,255,255,0.15)' }}
+            />
+            <span className="text-[12px] font-bold text-[#FFD700]">{selectedTeam}</span>
+            <X size={12} className="text-[#FFD700]/60" />
+          </div>
+        </div>
+      )}
 
       {/* ── Content Area ── */}
       <div className="mt-4 flex flex-col gap-2 min-h-[300px]">
@@ -268,5 +317,14 @@ export function HomePage({ onPlaceBet, positions }: { onPlaceBet?: (amount: stri
         )}
       </div>
     </div>
+
+    {/* ── Team Filter Bottom Sheet ── */}
+    <TeamFilterSheet
+      isOpen={showTeamFilter}
+      onClose={() => setShowTeamFilter(false)}
+      onSelect={setSelectedTeam}
+      selectedTeam={selectedTeam}
+    />
+    </>
   );
 }
