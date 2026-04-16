@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { motion } from 'motion/react';
+import { Clock } from 'lucide-react';
 import { SportMarket } from '@/types/sports';
 import { ConfirmModal } from './ConfirmModal';
 import { getCountryFlagUrl, getCountryShortCode, getCountryColor, getCountryGroup, isGroupStageMatch, TeamColors } from '@/lib/countryFlags';
@@ -101,7 +102,8 @@ export function MatchCard({ match, index = 0, onPlaceBet, positions }: MatchCard
           {/* Header row: time + volume + status */}
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2.5">
-              <span
+              <div
+                className="flex items-center gap-1"
                 style={{
                   fontFamily: 'Inter',
                   fontSize: '12px',
@@ -110,8 +112,8 @@ export function MatchCard({ match, index = 0, onPlaceBet, positions }: MatchCard
                   letterSpacing: '0.01em',
                 }}
               >
-                {match.timeLabel}
-              </span>
+                <Clock size={12} /> 开赛 {match.timeLabel}
+              </div>
               <span
                 style={{
                   fontFamily: 'Inter',
