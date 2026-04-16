@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { MATCH_SUB_TABS, WORLD_CUP_GROUPS, WORLD_CUP_KNOCKOUTS } from '@/lib/mockMarkets';
 import { MatchSubTab, PrimaryTab } from '@/types/sports';
 import { AnimatePresence, motion } from 'motion/react';
@@ -26,6 +26,22 @@ export function SubTabs({
 }: SubTabsProps) {
   const [showGroupPicker, setShowGroupPicker] = useState(false);
   const [showKnockoutPicker, setShowKnockoutPicker] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setShowGroupPicker(false);
+        setShowKnockoutPicker(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, []);
 
   // Only render sub-tabs for matches
   if (primaryTab !== 'matches') return null;
@@ -47,7 +63,7 @@ export function SubTabs({
   };
 
   return (
-    <div className="relative">
+    <div className="relative" ref={containerRef}>
       <div
         className="flex gap-2 overflow-x-auto px-4 py-1.5 no-scrollbar items-center"
         style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}
