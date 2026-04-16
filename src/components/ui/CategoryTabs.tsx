@@ -31,7 +31,7 @@ export function CategoryTabs({ active, onChange }: CategoryTabsProps) {
               fontWeight: isActive ? 800 : 600,
               color: isActive ? '#fff' : 'rgba(255,255,255,0.4)',
               background: 'transparent',
-              borderBottom: isActive ? '2.5px solid #FFD700' : '2.5px solid transparent',
+              borderBottom: '2.5px solid transparent',
             }}
           >
             <tab.icon 
@@ -42,6 +42,14 @@ export function CategoryTabs({ active, onChange }: CategoryTabsProps) {
               }} 
             />
             {tab.label}
+            
+            {/* Strict content-width underline */}
+            {isActive && (
+              <div 
+                className="absolute left-1/2 -translate-x-1/2 h-[2.5px] bg-[#FFD700] rounded-t-sm" 
+                style={{ width: 'calc(100% - 32px)', bottom: '-2.5px' }}
+              />
+            )}
           </button>
         );
       })}

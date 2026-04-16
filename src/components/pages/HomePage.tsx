@@ -121,9 +121,9 @@ export function HomePage({ onPlaceBet, positions }: { onPlaceBet?: (amount: stri
               className="flex-shrink-0 px-3.5 py-1.5 rounded-full transition-all text-[11px] font-bold"
               style={{
                 fontFamily: 'Inter',
-                background: selectedDate === 'ALL' ? 'rgba(255,255,255,0.1)' : 'transparent',
-                color: selectedDate === 'ALL' ? '#fff' : 'rgba(255,255,255,0.4)',
-                border: selectedDate === 'ALL' ? '1px solid rgba(255,255,255,0.2)' : '1px solid transparent'
+                background: selectedDate === 'ALL' ? 'rgba(255,215,0,0.1)' : 'rgba(255,255,255,0.06)',
+                color: selectedDate === 'ALL' ? '#FFD700' : 'rgba(255,255,255,0.6)',
+                border: selectedDate === 'ALL' ? '1px solid rgba(255,215,0,0.3)' : '1px solid rgba(255,255,255,0.08)'
               }}
             >
               全部
@@ -158,9 +158,9 @@ export function HomePage({ onPlaceBet, positions }: { onPlaceBet?: (amount: stri
                   className="flex-shrink-0 px-3.5 py-1.5 rounded-full transition-all text-[11px] font-bold"
                   style={{
                     fontFamily: 'Inter',
-                    background: selectedDate === g.dateISO ? 'rgba(255,215,0,0.1)' : 'transparent',
-                    color: selectedDate === g.dateISO ? '#FFD700' : 'rgba(255,255,255,0.4)',
-                    border: selectedDate === g.dateISO ? '1px solid rgba(255,215,0,0.3)' : '1px solid rgba(255,255,255,0.05)'
+                    background: selectedDate === g.dateISO ? 'rgba(255,215,0,0.1)' : 'rgba(255,255,255,0.06)',
+                    color: selectedDate === g.dateISO ? '#FFD700' : 'rgba(255,255,255,0.6)',
+                    border: selectedDate === g.dateISO ? '1px solid rgba(255,215,0,0.3)' : '1px solid rgba(255,255,255,0.08)'
                   }}
                 >
                   {shortDate}

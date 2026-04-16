@@ -65,7 +65,7 @@ export function SubTabs({
             <button
               key={tab.id}
               onClick={() => handleClick(tab.id as MatchSubTab)}
-              className="flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full transition-all active:scale-95"
+              className="flex-shrink-0 flex items-center gap-1 px-3.5 py-1.5 rounded-full transition-all active:scale-95"
               style={{
                 fontFamily: 'Inter',
                 fontSize: '11px',
