@@ -129,16 +129,19 @@ export function HomePage({ onPlaceBet, positions }: { onPlaceBet?: (amount: stri
               全部
             </button>
 
-            {/* Search Team icon */}
+            {/* Search Team Button */}
             <button
               onClick={() => setShowTeamFilter(true)}
-              className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center active:scale-90 transition-all mr-1"
+              className="flex-shrink-0 px-3.5 py-1.5 rounded-full flex items-center gap-1.5 active:scale-95 transition-all mr-1"
               style={{
                 background: selectedTeam ? 'rgba(255,215,0,0.15)' : 'rgba(255,255,255,0.06)',
                 border: selectedTeam ? '1px solid rgba(255,215,0,0.4)' : '1px solid rgba(255,255,255,0.08)',
               }}
             >
-              <Search size={14} className={selectedTeam ? 'text-[#FFD700]' : 'text-white/40'} />
+              <Search size={13} className={selectedTeam ? 'text-[#FFD700]' : 'text-white/40'} />
+              <span className={`text-[12px] font-bold ${selectedTeam ? 'text-[#FFD700]' : 'text-white/60'}`}>
+                球队
+              </span>
             </button>
 
              {matchGroups.map(g => {
