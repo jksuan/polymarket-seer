@@ -15,7 +15,7 @@ export function CategoryTabs({ active, onChange }: CategoryTabsProps) {
   return (
     <div
       ref={scrollRef}
-      className="flex gap-1 overflow-x-auto px-4 py-1"
+      className="flex gap-1 overflow-x-auto pl-1.5 pr-4 py-1"
       style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}
     >
       {PRIMARY_TABS.map((tab) => {
@@ -24,7 +24,7 @@ export function CategoryTabs({ active, onChange }: CategoryTabsProps) {
           <button
             key={tab.id}
             onClick={() => onChange(tab.id)}
-            className="flex-shrink-0 flex items-center gap-1.5 px-4 py-2 transition-all active:scale-95 relative"
+            className="flex-shrink-0 flex items-center gap-1.5 px-2.5 py-2 transition-all active:scale-95 relative"
             style={{
               fontFamily: 'Inter',
               fontSize: '13px',
@@ -47,7 +47,7 @@ export function CategoryTabs({ active, onChange }: CategoryTabsProps) {
             {isActive && (
               <div 
                 className="absolute left-1/2 -translate-x-1/2 h-[2.5px] bg-[#FFD700] rounded-t-sm" 
-                style={{ width: 'calc(100% - 32px)', bottom: '-2.5px' }}
+                style={{ width: 'calc(100% - 20px)', bottom: '-2.5px' }}
               />
             )}
           </button>
