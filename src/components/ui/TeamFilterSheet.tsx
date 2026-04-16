@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import { X, Search } from 'lucide-react';
 import { getCountryFlagUrl } from '@/lib/countryFlags';
@@ -8,17 +9,17 @@ import { getCountryFlagUrl } from '@/lib/countryFlags';
 // 48 teams grouped by World Cup 2026 groups
 const TEAMS_BY_GROUP: Record<string, string[]> = {
   A: ['Mexico', 'South Africa', 'Korea Republic', 'Czechia'],
-  B: ['United States', 'Paraguay', 'Türkiye', 'Australia'],
-  C: ['Brazil', 'Morocco', 'Scotland', 'Haiti'],
-  D: ['Switzerland', 'Qatar', 'Bosnia and Herzegovina', 'Canada'],
-  E: ['Germany', 'Curaçao', 'Ecuador', "Côte d'Ivoire"],
-  F: ['Japan', 'Netherlands', 'Sweden', 'Tunisia'],
+  B: ['Canada', 'Bosnia and Herzegovina', 'Qatar', 'Switzerland'],
+  C: ['Brazil', 'Morocco', 'Haiti', 'Scotland'],
+  D: ['United States', 'Paraguay', 'Australia', 'Türkiye'],
+  E: ['Germany', 'Curaçao', "Côte d'Ivoire", 'Ecuador'],
+  F: ['Netherlands', 'Japan', 'Sweden', 'Tunisia'],
   G: ['Belgium', 'Egypt', 'IR Iran', 'New Zealand'],
   H: ['Spain', 'Cabo Verde', 'Saudi Arabia', 'Uruguay'],
   I: ['France', 'Senegal', 'Iraq', 'Norway'],
   J: ['Argentina', 'Algeria', 'Austria', 'Jordan'],
-  K: ['Portugal', 'DR Congo', 'Croatia', 'England'],
-  L: ['Colombia', 'Uzbekistan', 'Ghana', 'Panama'],
+  K: ['Portugal', 'DR Congo', 'Uzbekistan', 'Colombia'],
+  L: ['England', 'Croatia', 'Ghana', 'Panama'],
 };
 
 // Display name overrides for cleaner UI
@@ -80,7 +81,7 @@ interface TeamFilterSheetProps {
   selectedTeam: string | null;
 }
 
-export function TeamFilterSheet({ isOpen, onClose, onSelect, selectedTeam }: TeamFilterSheetProps) {
+function TeamFilterSheetContent({ isOpen, onClose, onSelect, selectedTeam }: TeamFilterSheetProps) {
   const [searchQuery, setSearchQuery] = useState('');
 
   // Filter groups/teams based on search query
@@ -131,7 +132,7 @@ export function TeamFilterSheet({ isOpen, onClose, onSelect, selectedTeam }: Tea
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 350 }}
-            className="fixed bottom-0 left-0 right-0 z-[1000] max-h-[75vh] overflow-hidden flex flex-col"
+            className="fixed bottom-0 left-0 right-0 z-[1000] max-h-[85vh] overflow-hidden flex flex-col"
             style={{
               maxWidth: '480px',
               margin: '0 auto',
@@ -258,5 +259,20 @@ export function TeamFilterSheet({ isOpen, onClose, onSelect, selectedTeam }: Tea
         </>
       )}
     </AnimatePresence>
+  );
+}
+
+export function TeamFilterSheet(props: TeamFilterSheetProps) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) return null;
+
+  return createPortal(
+    <TeamFilterSheetContent {...props} />,
+    document.body
   );
 }
