@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Loader2, Trophy, BarChart3 } from 'lucide-react';
+import { Loader2, Trophy, BarChart3, Swords, Flame } from 'lucide-react';
 import { BannerCarousel } from '@/components/ui/BannerCarousel';
 import { CategoryTabs } from '@/components/ui/CategoryTabs';
 import { SubTabs } from '@/components/ui/SubTabs';
@@ -133,10 +133,49 @@ export function HomePage({ onPlaceBet, positions }: { onPlaceBet?: (amount: stri
                 ))}
               </div>
             ))
+          ) : matchSub === 'knockout' ? (
+            <div 
+              className="flex flex-col items-center justify-center mt-6 mx-4 p-8 rounded-[24px]" 
+              style={{
+                background: 'linear-gradient(145deg, rgba(30,20,50,0.6), rgba(18,10,32,0.6))',
+                border: '1px dashed rgba(255,255,255,0.1)',
+                boxShadow: 'inset 0 0 40px rgba(0,0,0,0.5)',
+              }}
+            >
+              <Swords 
+                size={48} 
+                className="text-[#00F0FF] mb-5 opacity-80" 
+                strokeWidth={1.5} 
+                style={{ filter: 'drop-shadow(0 0 16px rgba(0,240,255,0.6))' }} 
+              />
+              <div 
+                className="text-[16px] font-black tracking-widest text-white mb-2 text-center" 
+                style={{ textShadow: '0 2px 10px rgba(255,255,255,0.2)' }}
+              >
+                淘汰赛对阵，虚位以待
+              </div>
+              <div className="text-[12px] font-bold text-white/40 tracking-wider text-center mb-8">
+                32强名单激烈争夺中，敬请期待
+              </div>
+              
+              <button 
+                onClick={() => setMatchSub('group')}
+                className="px-6 py-3.5 rounded-xl active:scale-95 transition-all w-full max-w-[280px]"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(173, 255, 47, 0.15), rgba(173, 255, 47, 0.05))',
+                  border: '1px solid rgba(173, 255, 47, 0.4)',
+                  boxShadow: '0 0 20px rgba(173, 255, 47, 0.1)',
+                }}
+              >
+                <div className="text-[13px] font-black text-[#ADFF2F] tracking-wider text-center flex items-center justify-center gap-2">
+                  <Flame size={16} /> 去预测谁能小组出线
+                </div>
+              </button>
+            </div>
           ) : (
-            <div className="flex flex-col items-center justify-center h-48 opacity-50">
+            <div className="flex flex-col items-center justify-center h-48 opacity-40">
               <div className="text-[12px] font-bold text-white/50 tracking-widest uppercase">
-                {matchSub === 'group' ? `${selectedGroup}组暂无比赛数据` : matchSub === 'knockout' ? '暂无淘汰赛数据' : '暂无比赛数据'}
+                {matchSub === 'group' ? `${selectedGroup}组暂无赛事公开` : '暂无比赛数据'}
               </div>
             </div>
           )
