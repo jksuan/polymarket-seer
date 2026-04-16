@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { MATCH_SUB_TABS, WORLD_CUP_GROUPS, WORLD_CUP_KNOCKOUTS } from '@/lib/mockMarkets';
 import { MatchSubTab, PrimaryTab } from '@/types/sports';
 import { AnimatePresence, motion } from 'motion/react';
@@ -28,20 +29,8 @@ export function SubTabs({
   const [showKnockoutPicker, setShowKnockoutPicker] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setShowGroupPicker(false);
-        setShowKnockoutPicker(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    document.addEventListener('touchstart', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('touchstart', handleClickOutside);
-    };
-  }, []);
+  // The BottomSheet portal components now handle their own click-outside via full-screen backdrops,
+  // so we safely removed the document-level mousedown listener that was causing click interceptions.
 
   // Only render sub-tabs for matches
   if (primaryTab !== 'matches') return null;
@@ -101,125 +90,185 @@ export function SubTabs({
         })}
       </div>
 
-      {/* Group Picker Popover */}
-      <AnimatePresence>
-        {showGroupPicker && primaryTab === 'matches' && (
-          <motion.div
-            initial={{ opacity: 0, y: -8, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -8, scale: 0.95 }}
-            transition={{ duration: 0.2, ease: 'easeOut' }}
-            className="absolute left-4 right-4 z-50 mt-1 p-3 rounded-2xl"
-            style={{
-              background: 'linear-gradient(160deg, rgba(35,20,60,0.98), rgba(20,12,38,0.98))',
-              border: '1px solid rgba(255,215,0,0.2)',
-              boxShadow: '0 12px 40px rgba(0,0,0,0.7)',
-            }}
-          >
-            <div
-              style={{
-                fontFamily: 'Inter',
-                fontSize: '10px',
-                fontWeight: 700,
-                color: 'rgba(255,255,255,0.35)',
-                textTransform: 'uppercase',
-                letterSpacing: '0.08em',
-                marginBottom: '8px',
-              }}
-            >
-              选择小组
-            </div>
-            <div className="grid grid-cols-6 gap-2">
-              {WORLD_CUP_GROUPS.map((g) => {
-                const isSelected = selectedGroup === g;
-                return (
-                  <button
-                    key={g}
-                    onClick={() => {
-                      onGroupChange(g);
-                      setShowGroupPicker(false);
-                    }}
-                    className="py-2 rounded-xl active:scale-90 transition-all"
-                    style={{
-                      fontFamily: 'Inter',
-                      fontWeight: 800,
-                      fontSize: '13px',
-                      background: isSelected
-                        ? 'linear-gradient(135deg, rgba(255,215,0,0.3), rgba(255,165,0,0.2))'
-                        : 'rgba(255,255,255,0.06)',
-                      border: isSelected ? '1.5px solid rgba(255,215,0,0.6)' : '1.5px solid rgba(255,255,255,0.06)',
-                      color: isSelected ? '#FFD700' : 'rgba(255,255,255,0.5)',
-                      boxShadow: isSelected ? '0 0 8px rgba(255,215,0,0.2)' : 'none',
-                    }}
-                  >
-                    {g}
-                  </button>
-                );
-              })}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Group Picker Bottom Sheet */}
+      <GroupFilterSheet
+        isOpen={showGroupPicker && primaryTab === 'matches'}
+        onClose={() => setShowGroupPicker(false)}
+        selectedGroup={selectedGroup}
+        onSelect={onGroupChange}
+      />
 
-      {/* Knockout Picker Popover */}
-      <AnimatePresence>
-        {showKnockoutPicker && primaryTab === 'matches' && (
-          <motion.div
-            initial={{ opacity: 0, y: -8, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -8, scale: 0.95 }}
-            transition={{ duration: 0.2, ease: 'easeOut' }}
-            className="absolute left-4 right-4 z-50 mt-1 p-3 rounded-2xl"
-            style={{
-              background: 'linear-gradient(160deg, rgba(35,20,60,0.98), rgba(20,12,38,0.98))',
-              border: '1px solid rgba(255,215,0,0.2)',
-              boxShadow: '0 12px 40px rgba(0,0,0,0.7)',
-            }}
-          >
-            <div
-              style={{
-                fontFamily: 'Inter',
-                fontSize: '10px',
-                fontWeight: 700,
-                color: 'rgba(255,255,255,0.35)',
-                textTransform: 'uppercase',
-                letterSpacing: '0.08em',
-                marginBottom: '8px',
-              }}
-            >
-              选择淘汰赛轮次
-            </div>
-            <div className="grid grid-cols-3 gap-2">
-              {WORLD_CUP_KNOCKOUTS.map((k) => {
-                const isSelected = selectedKnockout === k;
-                return (
-                  <button
-                    key={k}
-                    onClick={() => {
-                      onKnockoutChange(k);
-                      setShowKnockoutPicker(false);
-                    }}
-                    className="py-2 rounded-xl active:scale-95 transition-all text-center"
-                    style={{
-                      fontFamily: 'Inter',
-                      fontWeight: 800,
-                      fontSize: '12px',
-                      background: isSelected
-                        ? 'linear-gradient(135deg, rgba(255,215,0,0.3), rgba(255,165,0,0.2))'
-                        : 'rgba(255,255,255,0.06)',
-                      border: isSelected ? '1.5px solid rgba(255,215,0,0.6)' : '1.5px solid rgba(255,255,255,0.06)',
-                      color: isSelected ? '#FFD700' : 'rgba(255,255,255,0.5)',
-                      boxShadow: isSelected ? '0 0 8px rgba(255,215,0,0.2)' : 'none',
-                    }}
-                  >
-                    {k}
-                  </button>
-                );
-              })}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Knockout Picker Bottom Sheet */}
+      <KnockoutFilterSheet
+        isOpen={showKnockoutPicker && primaryTab === 'matches'}
+        onClose={() => setShowKnockoutPicker(false)}
+        selectedKnockout={selectedKnockout}
+        onSelect={onKnockoutChange}
+      />
     </div>
   );
+}
+
+// ── Group Filter Bottom Sheet ──
+function GroupFilterSheetContent({ isOpen, onClose, selectedGroup, onSelect }: any) {
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-[999] bg-black/60 backdrop-blur-sm"
+            onClick={onClose}
+          />
+          <motion.div
+            initial={{ y: '100%' }}
+            animate={{ y: 0 }}
+            exit={{ y: '100%' }}
+            transition={{ type: 'spring', damping: 30, stiffness: 350 }}
+            className="fixed bottom-0 left-0 right-0 z-[1000] overflow-hidden flex flex-col"
+            style={{
+              maxWidth: '480px',
+              margin: '0 auto',
+              borderRadius: '24px 24px 0 0',
+              background: 'linear-gradient(180deg, rgba(30,20,55,0.98), rgba(12,6,24,0.99))',
+              border: '1px solid rgba(255,255,255,0.08)',
+              borderBottom: 'none',
+              boxShadow: '0 -8px 40px rgba(0,0,0,0.6)',
+              maxHeight: '85vh',
+            }}
+          >
+            <div className="flex justify-center pt-3 pb-1 shrink-0">
+              <div className="w-10 h-1 rounded-full bg-white/20"></div>
+            </div>
+            <div className="px-5 py-3 shrink-0">
+              <div className="text-[16px] font-black text-white tracking-wider">选择小组</div>
+            </div>
+            <div className="overflow-y-auto px-5 pb-8 flex-1" style={{ scrollbarWidth: 'none' }}>
+              <div className="grid grid-cols-4 gap-3">
+                {WORLD_CUP_GROUPS.map((g) => {
+                  const isSelected = selectedGroup === g;
+                  return (
+                    <button
+                      key={g}
+                      onClick={() => {
+                        onSelect(g);
+                        onClose();
+                      }}
+                      className="py-4 rounded-2xl active:scale-95 transition-all text-center flex items-center justify-center"
+                      style={{
+                        fontFamily: 'Inter',
+                        background: isSelected
+                          ? 'linear-gradient(135deg, rgba(255,215,0,0.15), rgba(255,165,0,0.1))'
+                          : 'rgba(255,255,255,0.04)',
+                        border: isSelected
+                          ? '1.5px solid rgba(255,215,0,0.5)'
+                          : '1px solid rgba(255,255,255,0.06)',
+                        boxShadow: isSelected ? '0 0 12px rgba(255,215,0,0.15)' : 'none',
+                      }}
+                    >
+                      <span className="text-[16px] font-black" style={{ color: isSelected ? '#FFD700' : 'rgba(255,255,255,0.7)' }}>
+                        {g}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
+  );
+}
+
+function GroupFilterSheet(props: any) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  if (!mounted) return null;
+  return createPortal(<GroupFilterSheetContent {...props} />, document.body);
+}
+
+// ── Knockout Filter Bottom Sheet ──
+function KnockoutFilterSheetContent({ isOpen, onClose, selectedKnockout, onSelect }: any) {
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-[999] bg-black/60 backdrop-blur-sm"
+            onClick={onClose}
+          />
+          <motion.div
+            initial={{ y: '100%' }}
+            animate={{ y: 0 }}
+            exit={{ y: '100%' }}
+            transition={{ type: 'spring', damping: 30, stiffness: 350 }}
+            className="fixed bottom-0 left-0 right-0 z-[1000] overflow-hidden flex flex-col"
+            style={{
+              maxWidth: '480px',
+              margin: '0 auto',
+              borderRadius: '24px 24px 0 0',
+              background: 'linear-gradient(180deg, rgba(30,20,55,0.98), rgba(12,6,24,0.99))',
+              border: '1px solid rgba(255,255,255,0.08)',
+              borderBottom: 'none',
+              boxShadow: '0 -8px 40px rgba(0,0,0,0.6)',
+              maxHeight: '85vh',
+            }}
+          >
+            <div className="flex justify-center pt-3 pb-1 shrink-0">
+              <div className="w-10 h-1 rounded-full bg-white/20"></div>
+            </div>
+            <div className="px-5 py-3 shrink-0">
+              <div className="text-[16px] font-black text-white tracking-wider">选择淘汰赛阶段</div>
+            </div>
+            <div className="overflow-y-auto px-5 pb-8 flex-1" style={{ scrollbarWidth: 'none' }}>
+              <div className="grid grid-cols-2 gap-3">
+                {WORLD_CUP_KNOCKOUTS.map((k) => {
+                  const isSelected = selectedKnockout === k;
+                  return (
+                    <button
+                      key={k}
+                      onClick={() => {
+                        onSelect(k);
+                        onClose();
+                      }}
+                      className="py-4 rounded-2xl active:scale-95 transition-all text-center flex items-center justify-center"
+                      style={{
+                        fontFamily: 'Inter',
+                        background: isSelected
+                          ? 'linear-gradient(135deg, rgba(255,215,0,0.15), rgba(255,165,0,0.1))'
+                          : 'rgba(255,255,255,0.04)',
+                        border: isSelected
+                          ? '1.5px solid rgba(255,215,0,0.5)'
+                          : '1px solid rgba(255,255,255,0.06)',
+                        boxShadow: isSelected ? '0 0 12px rgba(255,215,0,0.15)' : 'none',
+                      }}
+                    >
+                      <span className="text-[14px] font-bold" style={{ color: isSelected ? '#FFD700' : 'rgba(255,255,255,0.7)' }}>
+                        {k}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
+  );
+}
+
+function KnockoutFilterSheet(props: any) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  if (!mounted) return null;
+  return createPortal(<KnockoutFilterSheetContent {...props} />, document.body);
 }
