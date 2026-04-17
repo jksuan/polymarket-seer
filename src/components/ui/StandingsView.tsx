@@ -151,10 +151,9 @@ function HistoricStandingsView({ year }: { year: Exclude<HistoricYear, '2026'> }
           }}
         >
           {/* Group Header */}
-          <div className="px-4 py-3 flex items-center gap-2 border-b border-white/5" style={{ background: 'rgba(255,255,255,0.01)' }}>
-            <div className="w-1 h-3.5 rounded-full bg-[#FFD700]" />
+          <div className="px-4 py-3 flex items-center border-b border-white/5" style={{ background: 'rgba(255,255,255,0.01)' }}>
             <span style={{ fontFamily: 'Inter', fontSize: '14px', fontWeight: 800, color: '#fff' }}>
-              {group.groupName}
+              {group.groupName.split(' ')[0]}
             </span>
           </div>
 

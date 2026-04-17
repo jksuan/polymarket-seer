@@ -83,6 +83,7 @@ const COUNTRY_CODE_MAP: Record<string, string> = {
   'Greece': 'gr',
   'Honduras': 'hn',
   'Italy': 'it',
+  'Chile': 'cl',
 };
 
 /**
