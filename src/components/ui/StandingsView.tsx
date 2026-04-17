@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Lock, Trophy, BarChart3, Clock, AlertTriangle } from 'lucide-react';
 import { HistoricYear, HISTORIC_STANDINGS } from '@/lib/mockStandings';
 import { getCountryFlagUrl } from '@/lib/countryFlags';
+import { KnockoutBracketView } from '@/components/ui/KnockoutBracketView';
 
 const YEARS: Array<{ id: HistoricYear; label: string; locked?: boolean }> = [
   { id: '2026', label: '2026 🏆', locked: true },
@@ -15,13 +16,14 @@ const YEARS: Array<{ id: HistoricYear; label: string; locked?: boolean }> = [
 
 export function StandingsView() {
   const [selectedYear, setSelectedYear] = useState<HistoricYear>('2022');
+  const [viewMode, setViewMode] = useState<'groups' | 'knockout'>('groups');
 
   return (
     <div className="flex flex-col w-full h-full pb-20">
       {/* ── SubTabs for Years ── */}
       <div className="relative">
         <div
-          className="flex gap-2 overflow-x-auto px-4 py-3 no-scrollbar items-center border-b border-white/5"
+          className="flex gap-2 overflow-x-auto px-4 pt-3 pb-2 no-scrollbar items-center"
           style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}
         >
           {YEARS.map((y) => {
@@ -61,18 +63,38 @@ export function StandingsView() {
         </div>
       </div>
 
+      {/* ── Segmented Control: Groups vs Knockout ── */}
+      <div className="px-4 mb-2 pb-3 border-b border-white/5">
+        <div className="flex p-1 bg-[#0A0D14] rounded-[10px] border border-white/5 relative z-10 shadow-inner">
+          <button 
+            onClick={() => setViewMode('groups')} 
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-[13px] rounded-[6px] transition-all duration-300 ${viewMode === 'groups' ? 'bg-white/10 text-white shadow-[0_2px_8px_rgba(0,0,0,0.5)] font-bold' : 'text-white/40 font-medium hover:text-white/70'}`}
+          >
+            <BarChart3 size={14} /> 小组赛排位
+          </button>
+          <button 
+            onClick={() => setViewMode('knockout')} 
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-[13px] rounded-[6px] transition-all duration-300 ${viewMode === 'knockout' ? 'bg-gradient-to-br from-[#00F0FF]/20 to-[#00F0FF]/5 text-[#00F0FF] shadow-[0_0_12px_rgba(0,240,255,0.1)] font-bold border border-[#00F0FF]/20' : 'text-white/40 font-medium hover:text-white/70'}`}
+          >
+            <Trophy size={14} /> 淘汰赛晋级树
+          </button>
+        </div>
+      </div>
+
       {/* ── Content Area ── */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 no-scrollbar" style={{ scrollbarWidth: 'none' }}>
+      <div className="flex-1 overflow-y-auto overflow-x-hidden no-scrollbar px-4" style={{ scrollbarWidth: 'none' }}>
         <AnimatePresence mode="wait">
           <motion.div
-            key={selectedYear}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.2 }}
+            key={`${selectedYear}-${viewMode}`}
+            initial={{ opacity: 0, scale: 0.98, filter: 'blur(4px)' }}
+            animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+            exit={{ opacity: 0, scale: 1.02, filter: 'blur(4px)' }}
+            transition={{ duration: 0.3, ease: 'easeInOut' }}
           >
             {selectedYear === '2026' ? (
               <Locked2026State />
+            ) : viewMode === 'knockout' ? (
+              <KnockoutBracketView year={selectedYear} />
             ) : (
               <HistoricStandingsView year={selectedYear} />
             )}
