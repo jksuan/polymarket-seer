@@ -52,7 +52,7 @@ export function SubTabs({
   };
 
   return (
-    <div className="relative" ref={containerRef}>
+    <div className="relative pt-2.5" ref={containerRef}>
       <div
         className="flex gap-2 overflow-x-auto px-4 py-1.5 no-scrollbar items-center"
         style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}

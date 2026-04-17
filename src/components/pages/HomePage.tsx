@@ -15,6 +15,8 @@ import { useOutrightData } from '@/hooks/useOutrightData';
 import { PrimaryTab, MatchSubTab } from '@/types/sports';
 import { TeamFilterSheet } from '@/components/ui/TeamFilterSheet';
 import { StandingsView } from '@/components/ui/StandingsView';
+import { StandingsNav } from '@/components/ui/StandingsNav';
+import { HistoricYear } from '@/lib/mockStandings';
 import { getCountryFlagUrl } from '@/lib/countryFlags';
 
 export function HomePage({ onPlaceBet, positions }: { onPlaceBet?: (amount: string, tokenId: string, executionPrice?: number) => Promise<void>; positions?: any[] }) {
@@ -26,6 +28,10 @@ export function HomePage({ onPlaceBet, positions }: { onPlaceBet?: (amount: stri
   const [selectedDate, setSelectedDate] = useState<string>('ALL');
   const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
   const [showTeamFilter, setShowTeamFilter] = useState(false);
+
+  // Sub-navigation picker states (for standings)
+  const [standingsYear, setStandingsYear] = useState<HistoricYear>('2022');
+  const [standingsMode, setStandingsMode] = useState<'groups' | 'knockout'>('groups');
 
   const [skipAnimation, setSkipAnimation] = useState(false);
   const [prevKeyword, setPrevKeyword] = useState<string>('');
@@ -92,7 +98,7 @@ export function HomePage({ onPlaceBet, positions }: { onPlaceBet?: (amount: stri
       <BannerCarousel />
 
       {/* ── Sticky Navigation Area ── */}
-      <div className="sticky top-0 z-40 bg-[#0D0518]/90 backdrop-blur-xl border-b border-white/5">
+      <div className="sticky top-0 z-40 bg-[#0D0518]/90 backdrop-blur-xl">
         <CategoryTabs
           active={primaryTab}
           onChange={(tab) => {
@@ -101,6 +107,10 @@ export function HomePage({ onPlaceBet, positions }: { onPlaceBet?: (amount: stri
             if (scrollable) scrollable.scrollTop = 0;
           }}
         />
+
+        {/* Universal Divider below Category Tabs */}
+        <div className="h-[1px] bg-white/5 w-full" />
+
         <SubTabs
           primaryTab={primaryTab}
           matchSub={matchSub}
@@ -110,11 +120,12 @@ export function HomePage({ onPlaceBet, positions }: { onPlaceBet?: (amount: stri
           selectedKnockout={selectedKnockout}
           onKnockoutChange={setSelectedKnockout}
         />
+
         
         {/* ── Date Ribbon (Only visible in '全部' tab) ── */}
         {primaryTab === 'matches' && matchSub === 'hot' && matchGroups.length > 0 && (
           <div 
-            className="flex gap-2 overflow-x-auto px-4 py-2 no-scrollbar items-center border-t border-white/5 bg-[#0D0518]/60"
+            className="flex gap-2 overflow-x-auto px-4 py-2 no-scrollbar items-center bg-[#0D0518]/60"
             style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}
           >
             <button
@@ -170,6 +181,21 @@ export function HomePage({ onPlaceBet, positions }: { onPlaceBet?: (amount: stri
             })}
           </div>
         )}
+
+        {/* ── Standings Sub-Navigation ── */}
+        {primaryTab === 'standings' && (
+          <StandingsNav 
+            selectedYear={standingsYear} 
+            onYearChange={setStandingsYear} 
+            viewMode={standingsMode} 
+            onViewModeChange={setStandingsMode} 
+          />
+        )}
+
+        {/* Global Bottom Divider for the entire sticky area ONLY if it has sub-navs */}
+        {(primaryTab === 'matches' || primaryTab === 'standings') && (
+            <div className="h-[1px] bg-white/5 w-full" />
+        )}
       </div>
 
       {/* ── Active Team Filter Tag ── */}
@@ -199,7 +225,7 @@ export function HomePage({ onPlaceBet, positions }: { onPlaceBet?: (amount: stri
       {/* ── Content Area ── */}
       <div className="mt-4 flex flex-col gap-2 min-h-[300px]">
         {primaryTab === 'standings' ? (
-          <StandingsView />
+          <StandingsView selectedYear={standingsYear} viewMode={standingsMode} />
         ) : primaryTab === 'scorers' ? (
           <PlaceholderScreen icon={<Trophy size={28} color="#FFD700" />} title="射手榜" />
         ) : isLoading ? (
@@ -210,10 +236,10 @@ export function HomePage({ onPlaceBet, positions }: { onPlaceBet?: (amount: stri
         ) : primaryTab === 'matches' ? (
           // ── MATCHES: Grouped by date with MatchCard ──
           filteredMatchGroups.length > 0 ? (
-            filteredMatchGroups.map((group) => (
+            filteredMatchGroups.map((group, index) => (
               <div key={group.dateISO}>
                 <div
-                  className="px-5 pt-4 pb-2"
+                  className={`px-5 pb-2 ${index === 0 ? 'pt-0' : 'pt-4'}`}
                   style={{
                     fontFamily: 'Inter',
                     fontSize: '15px',
