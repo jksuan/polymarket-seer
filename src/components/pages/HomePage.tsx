@@ -14,6 +14,7 @@ import { useMatchData } from '@/hooks/useMatchData';
 import { useOutrightData } from '@/hooks/useOutrightData';
 import { PrimaryTab, MatchSubTab } from '@/types/sports';
 import { TeamFilterSheet } from '@/components/ui/TeamFilterSheet';
+import { StandingsView } from '@/components/ui/StandingsView';
 import { getCountryFlagUrl } from '@/lib/countryFlags';
 
 export function HomePage({ onPlaceBet, positions }: { onPlaceBet?: (amount: string, tokenId: string, executionPrice?: number) => Promise<void>; positions?: any[] }) {
@@ -198,7 +199,7 @@ export function HomePage({ onPlaceBet, positions }: { onPlaceBet?: (amount: stri
       {/* ── Content Area ── */}
       <div className="mt-4 flex flex-col gap-2 min-h-[300px]">
         {primaryTab === 'standings' ? (
-          <PlaceholderScreen icon={<BarChart3 size={28} color="#FFD700" />} title="小组赛积分榜" />
+          <StandingsView />
         ) : primaryTab === 'scorers' ? (
           <PlaceholderScreen icon={<Trophy size={28} color="#FFD700" />} title="射手榜" />
         ) : isLoading ? (

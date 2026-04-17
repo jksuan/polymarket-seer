@@ -67,6 +67,22 @@ const COUNTRY_CODE_MAP: Record<string, string> = {
   'Uzbekistan': 'uz',
   'Ghana': 'gh',
   'Panama': 'pa',
+  // Historic 2022 & Aliases
+  'Wales': 'gb-wls',
+  'Poland': 'pl',
+  'Denmark': 'dk',
+  'Costa Rica': 'cr',
+  'Cameroon': 'cm',
+  'Serbia': 'rs',
+  'South Korea': 'kr',
+  // Historic 2018 & 2014
+  'Russia': 'ru',
+  'Peru': 'pe',
+  'Nigeria': 'ng',
+  'Iceland': 'is',
+  'Greece': 'gr',
+  'Honduras': 'hn',
+  'Italy': 'it',
 };
 
 /**
