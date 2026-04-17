@@ -17,6 +17,9 @@ import { TeamFilterSheet } from '@/components/ui/TeamFilterSheet';
 import { StandingsView } from '@/components/ui/StandingsView';
 import { StandingsNav } from '@/components/ui/StandingsNav';
 import { HistoricYear } from '@/lib/mockStandings';
+import { ScorersView } from '@/components/ui/ScorersView';
+import { ScorersNav } from '@/components/ui/ScorersNav';
+import { HistoricYear as ScorersYear } from '@/lib/mockScorers';
 import { getCountryFlagUrl } from '@/lib/countryFlags';
 
 export function HomePage({ onPlaceBet, positions }: { onPlaceBet?: (amount: string, tokenId: string, executionPrice?: number) => Promise<void>; positions?: any[] }) {
@@ -32,6 +35,9 @@ export function HomePage({ onPlaceBet, positions }: { onPlaceBet?: (amount: stri
   // Sub-navigation picker states (for standings)
   const [standingsYear, setStandingsYear] = useState<HistoricYear>('2022');
   const [standingsMode, setStandingsMode] = useState<'groups' | 'knockout'>('groups');
+
+  // Sub-navigation picker states (for scorers)
+  const [scorersYear, setScorersYear] = useState<ScorersYear>('2022');
 
   const [skipAnimation, setSkipAnimation] = useState(false);
   const [prevKeyword, setPrevKeyword] = useState<string>('');
@@ -192,8 +198,16 @@ export function HomePage({ onPlaceBet, positions }: { onPlaceBet?: (amount: stri
           />
         )}
 
+        {/* ── Scorers Sub-Navigation ── */}
+        {primaryTab === 'scorers' && (
+          <ScorersNav 
+            selectedYear={scorersYear} 
+            onYearChange={setScorersYear} 
+          />
+        )}
+
         {/* Global Bottom Divider for the entire sticky area ONLY if it has sub-navs */}
-        {(primaryTab === 'matches' || primaryTab === 'standings') && (
+        {(primaryTab === 'matches' || primaryTab === 'standings' || primaryTab === 'scorers') && (
             <div className="h-[1px] bg-white/5 w-full" />
         )}
       </div>
@@ -227,7 +241,7 @@ export function HomePage({ onPlaceBet, positions }: { onPlaceBet?: (amount: stri
         {primaryTab === 'standings' ? (
           <StandingsView selectedYear={standingsYear} viewMode={standingsMode} />
         ) : primaryTab === 'scorers' ? (
-          <PlaceholderScreen icon={<Trophy size={28} color="#FFD700" />} title="射手榜" />
+          <ScorersView selectedYear={scorersYear} />
         ) : isLoading ? (
           <div className="flex flex-col items-center justify-center h-48 opacity-50">
             <Loader2 size={32} className="animate-spin text-[#FFD700] mb-4" />
