@@ -90,8 +90,8 @@ function HistoricScorersView({ year }: { year: Exclude<HistoricYear, '2026'> }) 
   return (
     <div className="flex flex-col gap-6 pt-2 pb-8">
       {scorers.map((scorer, index) => {
-        const isTop = index === 0;
-        const rankColor = isTop ? 'text-[#FFD700]' : index === 1 ? 'text-[#E0E0E0]' : index === 2 ? 'text-[#CD7F32]' : 'text-white/30';
+        const isTop = scorer.rank === 1;
+        const rankColor = isTop ? 'text-[#FFD700]' : scorer.rank === 2 ? 'text-[#E0E0E0]' : scorer.rank === 3 ? 'text-[#CD7F32]' : 'text-white/30';
         const rankGlow = isTop ? 'drop-shadow-[0_0_8px_rgba(255,215,0,0.5)]' : '';
 
         return (
@@ -105,22 +105,13 @@ function HistoricScorersView({ year }: { year: Exclude<HistoricYear, '2026'> }) 
                 {scorer.rank}
               </div>
               
-              {/* 2. Avatar with Flag Overlay */}
+              {/* 2. Avatar */}
               <div className="relative flex-shrink-0 w-11 h-11">
                 <AvatarImage 
                    url={scorer.avatarUrl} 
                    fallbackInitials={getInitials(scorer.name)} 
                    isTop={isTop} 
                 />
-                
-                {/* Embedded Country Flag */}
-                <div className="absolute -bottom-0.5 -right-0.5 shadow-md border-[1.5px] border-[#0A0D14] rounded-[2px] overflow-hidden bg-[#0A0D14]">
-                  <img 
-                    src={getCountryFlagUrl(scorer.countryCode, 40)} 
-                    alt={scorer.countryCode} 
-                    className="w-[18px] h-[13px] object-cover"
-                  />
-                </div>
               </div>
 
               {/* 3. Player Name & Stats */}
@@ -139,16 +130,18 @@ function HistoricScorersView({ year }: { year: Exclude<HistoricYear, '2026'> }) 
                   </span>
                 </div>
                 
-                <div className="flex items-center justify-between mt-[1px]">
-                  {/* Additional stats (e.g. assists) */}
-                  <span className="text-white/40 font-medium tracking-wide flex items-center gap-2" style={{ fontSize: '11px' }}>
-                    {scorer.assists !== undefined && (
-                      <span>{scorer.assists} 助攻</span>
-                    )}
-                    {scorer.matchesPlayed !== undefined && (
-                      <span className="opacity-50">· {scorer.matchesPlayed} 场</span>
-                    )}
-                  </span>
+                <div className="flex items-center justify-between mt-[2px]">
+                  {/* Country Flag and Name */}
+                  <div className="flex items-center gap-1.5 opacity-80">
+                    <img 
+                      src={getCountryFlagUrl(scorer.countryCode, 40)} 
+                      alt={scorer.countryCode} 
+                      className="w-[20px] h-[14px] shadow-sm rounded-[2px] object-cover"
+                    />
+                    <span className="text-white/50 text-[12px] font-medium tracking-wide">
+                      {scorer.countryCode}
+                    </span>
+                  </div>
                   {/* Label */}
                   <span className={`text-[10px] font-bold tracking-widest uppercase ${isTop ? 'text-[#FFD700]/60' : 'text-white/30'}`}>
                     GOALS
@@ -165,9 +158,9 @@ function HistoricScorersView({ year }: { year: Exclude<HistoricYear, '2026'> }) 
                 className={`absolute inset-y-0 left-0 rounded-full ${
                   isTop 
                     ? 'bg-gradient-to-r from-[#FFD700]/60 via-[#FFD700]/90 to-[#FFFFFF] shadow-[0_0_12px_rgba(255,215,0,0.8)]' 
-                    : index === 1 
+                    : scorer.rank === 2 
                       ? 'bg-gradient-to-r from-[#E0E0E0]/60 to-[#FFFFFF] shadow-[0_0_8px_rgba(224,224,224,0.5)]'
-                      : index === 2
+                      : scorer.rank === 3
                         ? 'bg-gradient-to-r from-[#CD7F32]/60 to-[#FFAE6E] shadow-[0_0_8px_rgba(205,127,50,0.5)]'
                         : 'bg-gradient-to-r from-[#00F0FF]/40 to-[#00F0FF]/80 shadow-[0_0_8px_rgba(0,240,255,0.3)]'
                 }`}
