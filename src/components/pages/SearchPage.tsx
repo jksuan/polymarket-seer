@@ -274,12 +274,9 @@ export function SearchPage({ onPlaceBet, positions }: SearchPageProps) {
     setLoading(true);
     setSearched(true);
     try {
-      // 检查是否属于热门关键词 (国家名 / 热门话题)
-      const isHotKeyword = [...HOT_COUNTRIES.map(c => c.name), ...HOT_TOPICS.map(t => t.keyword)]
-        .some(k => k.toLowerCase() === searchQuery.toLowerCase());
-      
-      const wcParam = isHotKeyword ? '&wc=1' : '';
-      const res = await fetch(`/api/search?q=${encodeURIComponent(searchQuery)}${wcParam}`);
+      // 为了保证应用调性纯粹，所有的搜索全部强制挂载 wc=1，
+      // 让后端直接打到世界杯专有 TAG 接口进行客户端级别的纯净度过滤
+      const res = await fetch(`/api/search?q=${encodeURIComponent(searchQuery)}&wc=1`);
       const events = await res.json();
       if (Array.isArray(events)) {
         setResults(classifyAndTransform(events));
@@ -352,7 +349,7 @@ export function SearchPage({ onPlaceBet, positions }: SearchPageProps) {
             className="w-full rounded-2xl py-4 pl-12 pr-12 focus:outline-none transition-all"
             style={{
               fontFamily: 'Inter',
-              fontSize: '14px',
+              fontSize: '16px',
               fontWeight: 500,
               color: '#fff',
               background: 'rgba(25, 37, 64, 0.6)',
