@@ -514,14 +514,14 @@ export function SearchPage({ onPlaceBet, positions }: SearchPageProps) {
             </span>
           </div>
 
-          {/* ── 比赛对阵 Section ── */}
+          {/* ── 赛程 (Matches) Section ── */}
           {results.matches.length > 0 && (
             <div>
               <div className="px-5 pb-2 pt-1">
                 <div className="flex items-center gap-1.5">
                   <div className="w-1.5 h-1.5 rounded-full bg-[#FF2A55]" />
                   <span style={{ fontFamily: 'Inter', fontSize: '13px', fontWeight: 800, color: '#fff', letterSpacing: '-0.01em' }}>
-                    比赛对阵
+                    赛程
                   </span>
                   <span style={{ fontFamily: 'Inter', fontSize: '11px', fontWeight: 600, color: 'rgba(255,255,255,0.3)', marginLeft: '4px' }}>
                     {results.matches.length}
@@ -540,8 +540,8 @@ export function SearchPage({ onPlaceBet, positions }: SearchPageProps) {
             </div>
           )}
 
-          {/* ── 趣味投注 Section ── */}
-          {results.outrights.length > 0 && (
+          {/* ── 趣味投注 (Outrights & Binaries) Section ── */}
+          {(results.outrights.length > 0 || results.binaries.length > 0) && (
             <div>
               <div className="px-5 pb-2 pt-3">
                 <div className="flex items-center gap-1.5">
@@ -550,10 +550,12 @@ export function SearchPage({ onPlaceBet, positions }: SearchPageProps) {
                     趣味投注
                   </span>
                   <span style={{ fontFamily: 'Inter', fontSize: '11px', fontWeight: 600, color: 'rgba(255,255,255,0.3)', marginLeft: '4px' }}>
-                    {results.outrights.length}
+                    {results.outrights.length + results.binaries.length}
                   </span>
                 </div>
               </div>
+              
+              {/* 先展示长线预测 */}
               {results.outrights.map((market, i) => (
                 <OutrightCard
                   key={market.id}
@@ -563,23 +565,8 @@ export function SearchPage({ onPlaceBet, positions }: SearchPageProps) {
                   positions={positions}
                 />
               ))}
-            </div>
-          )}
-
-          {/* ── 是否预测 Section ── */}
-          {results.binaries.length > 0 && (
-            <div>
-              <div className="px-5 pb-2 pt-3">
-                <div className="flex items-center gap-1.5">
-                  <div className="w-1.5 h-1.5 rounded-full bg-[#00F0FF]" />
-                  <span style={{ fontFamily: 'Inter', fontSize: '13px', fontWeight: 800, color: '#fff', letterSpacing: '-0.01em' }}>
-                    是否预测
-                  </span>
-                  <span style={{ fontFamily: 'Inter', fontSize: '11px', fontWeight: 600, color: 'rgba(255,255,255,0.3)', marginLeft: '4px' }}>
-                    {results.binaries.length}
-                  </span>
-                </div>
-              </div>
+              
+              {/* 再展示是否预测(二元) */}
               {results.binaries.map((market, i) => (
                 <BinaryOutrightCard
                   key={market.id}
