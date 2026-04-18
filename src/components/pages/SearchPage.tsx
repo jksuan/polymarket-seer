@@ -144,7 +144,7 @@ interface ClassifiedResults {
 }
 
 function classifyAndTransform(events: any[]): ClassifiedResults {
-  // 第一步: 用首页同款解析器提取比赛对阵 (严格: 3 子市场 + moneyline)
+  // 第一步: 用首页同款解析器提取比赛对阵 (基于 sportsMarketType === 'moneyline')
   const matches = parseMatchEvents(events);
   const matchEventIds = new Set(matches.map(m => m.id));
 
@@ -161,10 +161,22 @@ function classifyAndTransform(events: any[]): ClassifiedResults {
     const titleLower = (evt.title || '').toLowerCase();
     if (titleLower.includes(' vs ') || titleLower.includes(' vs.')) continue;
 
+    // 过滤掉 moneyline 类型的子市场 (它们属于比赛对阵, 不应出现在趣味投注)
+    const nonMoneylineMarkets = evt.markets.filter((m: any) =>
+      (m.sportsMarketType || '').toLowerCase() !== 'moneyline'
+    );
+    // 如果过滤后没有剩余市场且原始有 moneyline, 说明这个事件纯粹是比赛, 跳过
+    if (nonMoneylineMarkets.length === 0 && evt.markets.some((m: any) =>
+      (m.sportsMarketType || '').toLowerCase() === 'moneyline'
+    )) continue;
+
+    // 用原始 markets 做 transform (保持完整数据), 但用过滤后的数量做分类判断
     const market = transformOutrightEvent(evt);
     if (!market) continue;
 
-    if (evt.markets.length === 1) {
+    // 判断非 moneyline 子市场的数量来决定分类
+    const effectiveMarkets = nonMoneylineMarkets.length > 0 ? nonMoneylineMarkets : evt.markets;
+    if (effectiveMarkets.length === 1) {
       binaries.push(market);
     } else {
       outrights.push(market);

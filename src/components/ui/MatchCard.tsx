@@ -397,11 +397,19 @@ export function parseMatchEvents(events: any[]): ParsedMatch[] {
   const matches: ParsedMatch[] = [];
 
   for (const evt of events) {
-    if (!evt.markets || evt.markets.length !== 3) continue;
-    // Must be moneyline type
-    if (!evt.markets.some((m: any) => m.sportsMarketType === 'moneyline')) continue;
+    if (!evt.markets || evt.markets.length === 0) continue;
 
-    const markets = evt.markets;
+    // ── 核心防御: 用官方 sportsMarketType 字段精确筛出 Moneyline 子市场 ──
+    // 这样即使 Polymarket 未来新增 spread/total/btts 等盘口类型，
+    // 本函数也只会「摘取」moneyline 的那几个 market，其余静默忽略。
+    const moneylineMarkets = evt.markets.filter((m: any) =>
+      (m.sportsMarketType || '').toLowerCase() === 'moneyline'
+    );
+    
+    // Moneyline 必须恰好 3 个子市场 (Home / Away / Draw)
+    if (moneylineMarkets.length !== 3) continue;
+
+    const markets = moneylineMarkets;
     
     // Identify draw vs team markets by groupItemTitle pattern
     const drawMarket = markets.find((m: any) => 
