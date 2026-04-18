@@ -276,61 +276,48 @@ export function HomePage({ onPlaceBet, positions }: { onPlaceBet?: (amount: stri
               </div>
             ))
           ) : matchSub === 'knockout' ? (
-            <div className="mt-2 flex flex-col gap-3 pb-8">
-              {/* Header title */}
-              <div className="flex items-center justify-between px-5 pt-3 pb-1">
-                <div style={{ fontFamily: 'Inter', fontSize: '15px', fontWeight: 800, color: '#fff', letterSpacing: '-0.01em' }}>
-                  淘汰赛晋级路径
-                </div>
+            <div className="flex flex-col items-center justify-center pt-8 pb-12">
+              {/* Locked Header */}
+              <div className="relative mb-8">
+                <div className="absolute inset-0 bg-[#00F0FF] blur-[40px] opacity-20 rounded-full animate-pulse" />
                 <div 
-                  className="flex items-center gap-1 text-[11px] font-black px-2.5 py-0.5 rounded-md tracking-widest" 
-                  style={{ color: '#00F0FF', background: 'rgba(0, 240, 255, 0.1)', border: '1px solid rgba(0, 240, 255, 0.2)' }}
+                  className="w-16 h-16 rounded-2xl flex items-center justify-center relative z-10"
+                  style={{ background: 'rgba(0, 240, 255, 0.1)', border: '1px solid rgba(0, 240, 255, 0.3)' }}
                 >
-                  <Lock size={10} /> 锁定中
+                  <Lock size={28} color="#00F0FF" strokeWidth={2} />
                 </div>
               </div>
-              
-              {/* Skeleton Cards */}
-              {[1, 2, 3].map((item) => (
-                <div key={item} className="mx-4 p-4 rounded-[16px] relative overflow-hidden" style={{
-                  background: 'linear-gradient(145deg, rgba(30,20,50,0.5), rgba(18,10,32,0.5))',
-                  border: '1px solid rgba(255,255,255,0.05)',
-                  opacity: 1 - (item - 1) * 0.2, // 制造向下的渐隐淡出效果
-                }}>
-                  {/* Glass shimmer overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/[0.03] to-transparent -translate-x-full animate-pulse" />
-                  
-                  {/* Team rows sketch */}
-                  <div className="flex flex-col gap-3 mb-4">
-                    <div className="flex items-center gap-3 opacity-60">
-                      <div className="w-6 h-6 rounded bg-white/5 flex items-center justify-center border border-white/10 shrink-0 shadow-inner">
-                        <ShieldQuestion size={14} className="text-white/40" />
-                      </div>
-                      <div className="h-4 w-24 bg-white/10 rounded-sm"></div>
-                    </div>
-                    
-                    <div className="flex items-center gap-3 opacity-60">
-                      <div className="w-6 h-6 rounded bg-white/5 flex items-center justify-center border border-white/10 shrink-0 shadow-inner">
-                        <ShieldQuestion size={14} className="text-white/40" />
-                      </div>
-                      <div className="h-4 w-20 bg-white/10 rounded-sm"></div>
-                    </div>
-                  </div>
-                  
-                  {/* Buttons skeleton */}
-                  <div className="grid grid-cols-3 gap-2 opacity-50">
-                    <div className="h-10 bg-white/5 rounded-xl border border-white/10 flex items-center justify-center shadow-inner">
-                       <Lock size={14} className="text-white/30" />
-                    </div>
-                    <div className="h-10 bg-white/5 rounded-xl border border-white/10 flex items-center justify-center shadow-inner">
-                       <span className="text-[12px] font-black text-white/30 tracking-widest">TBD</span>
-                    </div>
-                    <div className="h-10 bg-white/5 rounded-xl border border-white/10 flex items-center justify-center shadow-inner">
-                       <Lock size={14} className="text-white/30" />
-                    </div>
-                  </div>
+
+              <h3 style={{ fontFamily: 'Inter', fontSize: '18px', fontWeight: 900, color: '#fff', letterSpacing: '0.02em', marginBottom: '8px' }}>
+                赛事数据尚未解锁
+              </h3>
+              <p style={{ fontFamily: 'Inter', fontSize: '12px', color: 'rgba(255,255,255,0.4)', textAlign: 'center', maxWidth: '280px', marginBottom: '32px' }}>
+                2026 美加墨世界杯淘汰赛数据引擎挂起中，待小组赛结束后将实时同步注入系统。
+              </p>
+
+              {/* Placeholder Skeleton Rows */}
+              <div className="w-full max-w-sm rounded-xl p-4" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                <div className="flex items-center justify-between mb-4 border-b border-white/5 pb-2">
+                  <div className="h-4 w-16 bg-white/10 rounded animate-pulse" />
+                  <div className="h-4 w-32 bg-white/5 rounded animate-pulse" />
                 </div>
-              ))}
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="flex items-center justify-between py-2.5">
+                    <div className="flex items-center gap-3">
+                      <div className="w-5 h-5 rounded-md bg-white/5 flex items-center justify-center">
+                        <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.2)', fontWeight: 800 }}>{i}</span>
+                      </div>
+                      <div className="w-6 h-6 rounded-full bg-white/10 animate-pulse" />
+                      <div className="h-4 w-20 bg-white/10 rounded animate-pulse" />
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="h-4 w-6 bg-white/5 rounded" />
+                      <div className="h-4 w-6 bg-white/5 rounded" />
+                      <div className="h-4 w-8 bg-white/10 rounded" />
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center h-48 opacity-40">
