@@ -4,6 +4,7 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const q = searchParams.get("q")?.trim() || "";
   const slug = searchParams.get("slug")?.trim() || "";
+  const wcOnly = searchParams.get("wc") === "1";
 
   if (!q && !slug) {
     return NextResponse.json([]);
@@ -13,17 +14,17 @@ export async function GET(request: Request) {
     let events: any[] = [];
     const proxyUrl = process.env.HTTPS_PROXY || process.env.HTTP_PROXY;
     
-    // We use a custom fetch implementation using https to ensure proxy agent works.
     const https = require('https');
     const { HttpsProxyAgent } = require('https-proxy-agent');
-    
     const agent = proxyUrl ? new HttpsProxyAgent(proxyUrl) : undefined;
+    
     let fetchUrl = '';
     const isFIFAQuery = q.toLowerCase().includes('fifa world cup');
+    const fetchWCAll = wcOnly || isFIFAQuery;
 
     if (slug) {
       fetchUrl = `https://gamma-api.polymarket.com/events?slug=${encodeURIComponent(slug)}`;
-    } else if (isFIFAQuery) {
+    } else if (fetchWCAll) {
       // 102232 is the specific tag_id for '2026 FIFA World Cup' events
       fetchUrl = `https://gamma-api.polymarket.com/events?tag_id=102232&active=true&closed=false&limit=100&order=volume&ascending=false`;
     } else {
@@ -45,6 +46,15 @@ export async function GET(request: Request) {
       events = Array.isArray(data) ? data : (data.events || [data]);
     } else {
       events = Array.isArray(data) ? data : (data.events || []);
+    }
+
+    // Local filtering for World Cup targeted queries
+    if (fetchWCAll && q && !isFIFAQuery) {
+      const lowerQ = q.toLowerCase();
+      events = events.filter(e => 
+        (e.title && e.title.toLowerCase().includes(lowerQ)) || 
+        (e.description && e.description.toLowerCase().includes(lowerQ))
+      );
     }
 
     return NextResponse.json(events);

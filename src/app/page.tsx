@@ -81,7 +81,7 @@ function AppRouterContent() {
           {activeTab === 'home' && (
              <HomePage onPlaceBet={handlePlaceBetWrap} positions={positions} />
           )}
-          {activeTab === 'search' && <SearchPage />}
+          {activeTab === 'search' && <SearchPage onPlaceBet={handlePlaceBetWrap} positions={positions} />}
           {activeTab === 'leaderboard' && <LeaderboardPage />}
           {activeTab === 'profile' && (
             <ProfilePage 
