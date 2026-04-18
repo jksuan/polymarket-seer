@@ -333,10 +333,20 @@ export function SearchPage({ onPlaceBet, positions }: SearchPageProps) {
 
       {/* ── 搜索框区域 ── */}
       <div className="px-4 mb-5 mt-2">
-        <div className="relative">
-          <div className="absolute left-4 top-1/2 -translate-y-1/2 z-10">
+        <div
+          className="flex items-center w-full rounded-full p-1.5 transition-all"
+          style={{
+            background: 'rgba(25, 37, 64, 0.6)',
+            border: query ? '1px solid rgba(0, 240, 255, 0.5)' : '1px solid rgba(0, 240, 255, 0.2)',
+            boxShadow: query ? '0 0 20px rgba(0, 240, 255, 0.15)' : 'none',
+          }}
+        >
+          {/* 左侧放大镜 */}
+          <div className="pl-3 pr-2 flex-shrink-0">
             <Search size={18} className="text-[#00F0FF]" />
           </div>
+
+          {/* 输入框主控 */}
           <input
             ref={inputRef}
             type="text"
@@ -347,20 +357,18 @@ export function SearchPage({ onPlaceBet, positions }: SearchPageProps) {
                 executeSearch(query);
               }
             }}
-            placeholder="搜寻队伍、赛事或话题..."
-            className="w-full rounded-2xl py-4 pl-12 pr-[90px] focus:outline-none transition-all"
+            placeholder="搜寻队、赛事或话题..."
+            className="flex-1 bg-transparent py-2.5 min-w-0 focus:outline-none"
             style={{
               fontFamily: 'Inter',
               fontSize: '16px',
               fontWeight: 500,
               color: '#fff',
-              background: 'rgba(25, 37, 64, 0.6)',
-              border: query ? '1px solid rgba(0, 240, 255, 0.5)' : '1px solid rgba(0, 240, 255, 0.2)',
-              boxShadow: query ? '0 0 20px rgba(0, 240, 255, 0.15)' : 'none',
             }}
           />
-          
-          <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2 z-10">
+
+          {/* 右侧动作区：清除按钮 + 搜索按钮 */}
+          <div className="flex items-center gap-1.5 flex-shrink-0 ml-1">
             {query && (
               <button
                 onClick={handleClear}
@@ -370,13 +378,15 @@ export function SearchPage({ onPlaceBet, positions }: SearchPageProps) {
                 <X size={14} color="rgba(255,255,255,0.6)" />
               </button>
             )}
+            
+            {/* 紧贴外框的大胶囊搜索按钮 (Meituan Style) */}
             <button
               onClick={() => executeSearch(query)}
-              className="px-4 py-2 rounded-xl active:scale-95 transition-transform truncate"
+              className="px-5 py-2.5 rounded-full active:scale-95 transition-transform"
               style={{
                 fontFamily: 'Inter',
                 fontWeight: 700,
-                fontSize: '13px',
+                fontSize: '14px',
                 color: '#00F0FF',
                 background: 'rgba(0, 240, 255, 0.15)',
                 border: '1px solid rgba(0, 240, 255, 0.3)',
