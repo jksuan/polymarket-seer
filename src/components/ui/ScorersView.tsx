@@ -196,10 +196,7 @@ function AvatarImage({ url, fallbackInitials, isTop }: { url: string | null, fal
         alt="avatar"
         onError={() => setHasError(true)}
         className="w-full h-full object-cover object-top scale-110" 
-        style={{ filter: 'drop-shadow(0 4px 4px rgba(0,0,0,0.3))' }}
       />
-      {/* Subtle bottom gradient to blend the portrait neck into the circle */}
-      <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-[#0A0D14]/80 to-transparent pointer-events-none" />
     </div>
   );
 }
