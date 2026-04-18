@@ -303,24 +303,9 @@ export function SearchPage({ onPlaceBet, positions }: SearchPageProps) {
     }
   }, []);
 
-  // ── 400ms 防抖: 输入即搜 ──
-  useEffect(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-
-    if (!query.trim()) {
-      setResults(null);
-      setSearched(false);
-      return;
-    }
-
-    debounceRef.current = setTimeout(() => {
-      executeSearch(query);
-    }, 400);
-
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
-  }, [query, executeSearch]);
+  // ── 取消防抖，改为手动搜索 ──
+  // debounceRef 等不需要再用于触发搜索，保留 ref 防止未来有使用
+  // 当用户在输入框回车或者点击搜索按钮时才发起请求
 
   // ── Quick Filter 点击 ──
   const handleQuickFilter = (keyword: string) => {
@@ -357,8 +342,13 @@ export function SearchPage({ onPlaceBet, positions }: SearchPageProps) {
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                executeSearch(query);
+              }
+            }}
             placeholder="搜寻队伍、赛事或话题..."
-            className="w-full rounded-2xl py-4 pl-12 pr-12 focus:outline-none transition-all"
+            className="w-full rounded-2xl py-4 pl-12 pr-[90px] focus:outline-none transition-all"
             style={{
               fontFamily: 'Inter',
               fontSize: '16px',
@@ -369,15 +359,33 @@ export function SearchPage({ onPlaceBet, positions }: SearchPageProps) {
               boxShadow: query ? '0 0 20px rgba(0, 240, 255, 0.15)' : 'none',
             }}
           />
-          {query && (
+          
+          <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2 z-10">
+            {query && (
+              <button
+                onClick={handleClear}
+                className="w-6 h-6 rounded-full flex items-center justify-center active:scale-90 transition-transform"
+                style={{ background: 'rgba(255,255,255,0.1)' }}
+              >
+                <X size={14} color="rgba(255,255,255,0.6)" />
+              </button>
+            )}
             <button
-              onClick={handleClear}
-              className="absolute right-4 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full flex items-center justify-center active:scale-90 transition-transform"
-              style={{ background: 'rgba(255,255,255,0.1)' }}
+              onClick={() => executeSearch(query)}
+              className="px-4 py-2 rounded-xl active:scale-95 transition-transform truncate"
+              style={{
+                fontFamily: 'Inter',
+                fontWeight: 700,
+                fontSize: '13px',
+                color: '#00F0FF',
+                background: 'rgba(0, 240, 255, 0.15)',
+                border: '1px solid rgba(0, 240, 255, 0.3)',
+                boxShadow: '0 2px 10px rgba(0, 240, 255, 0.1)',
+              }}
             >
-              <X size={14} color="rgba(255,255,255,0.6)" />
+              搜索
             </button>
-          )}
+          </div>
         </div>
       </div>
 
