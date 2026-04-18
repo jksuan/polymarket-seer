@@ -402,8 +402,8 @@ export function SearchPage({ onPlaceBet, positions }: SearchPageProps) {
           {/* 热门球队 */}
           <div className="mb-6">
             <div className="flex items-center gap-2 mb-3">
-              <Flame size={16} color="#FFD700" />
-              <span style={{ fontFamily: 'Inter', fontSize: '13px', fontWeight: 800, color: '#FFD700', letterSpacing: '0.02em' }}>
+              <Flame size={16} color="#FF3B30" />
+              <span style={{ fontFamily: 'Inter', fontSize: '13px', fontWeight: 800, color: '#FFF', letterSpacing: '0.02em' }}>
                 世界杯 · 热门球队
               </span>
             </div>
@@ -443,8 +443,8 @@ export function SearchPage({ onPlaceBet, positions }: SearchPageProps) {
           {/* 热门话题 */}
           <div className="mb-6">
             <div className="flex items-center gap-2 mb-3">
-              <Zap size={16} color="#00F0FF" />
-              <span style={{ fontFamily: 'Inter', fontSize: '13px', fontWeight: 800, color: '#00F0FF', letterSpacing: '0.02em' }}>
+              <Zap size={16} color="#FF9500" />
+              <span style={{ fontFamily: 'Inter', fontSize: '13px', fontWeight: 800, color: '#FFF', letterSpacing: '0.02em' }}>
                 世界杯 · 热门话题
               </span>
             </div>
@@ -455,14 +455,14 @@ export function SearchPage({ onPlaceBet, positions }: SearchPageProps) {
                   <button
                     key={topic.keyword}
                     onClick={() => handleQuickFilter(topic.keyword)}
-                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl active:scale-95 transition-all"
+                    className="flex items-center gap-2 px-3 py-2 rounded-xl active:scale-95 transition-all"
                     style={{
-                      background: 'rgba(0, 240, 255, 0.06)',
-                      border: '1px solid rgba(0, 240, 255, 0.15)',
+                      background: 'rgba(255,255,255,0.04)',
+                      border: '1px solid rgba(255,255,255,0.08)',
                     }}
                   >
-                    <Icon size={14} color="#00F0FF" />
-                    <span style={{ fontFamily: 'Inter', fontSize: '12px', fontWeight: 700, color: '#00F0FF' }}>
+                    <Icon size={14} color="rgba(255,255,255,0.7)" />
+                    <span style={{ fontFamily: 'Inter', fontSize: '12px', fontWeight: 600, color: 'rgba(255,255,255,0.7)' }}>
                       {topic.label}
                     </span>
                   </button>
