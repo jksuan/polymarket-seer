@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useCallback } from 'react';
-import { motion, useMotionValue, useTransform, AnimatePresence } from 'motion/react';
+import { useState, useCallback, useRef, memo } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { ChevronLeft, ChevronRight, Zap, Loader2, Share2, Activity } from 'lucide-react';
 import { useMatchData } from '@/hooks/useMatchData';
 import { ParsedMatch } from '@/components/ui/MatchCard';
@@ -104,323 +104,255 @@ function FlagBadge({
 }
 
 // ═══════════════════════════════════════════════════
-// SwipeableCard — 可滑动挑战卡片
+// CarouselCard — 丝滑原生滑动卡片
 // ═══════════════════════════════════════════════════
 
-function SwipeableCard({
-  match,
-  onSwipeLeft,
-  onSwipeRight,
-  isTop,
-  stackOffset,
-}: {
-  match: ParsedMatch;
-  onSwipeLeft: () => void;
-  onSwipeRight: () => void;
-  isTop: boolean;
-  stackOffset: number;
-}) {
-  const x = useMotionValue(0);
-  const rotate = useTransform(x, [-220, 220], [-18, 18]);
-  const nextOpacity = useTransform(x, [0, 100], [0, 1]);
-  const prevOpacity = useTransform(x, [-100, 0], [1, 0]);
-  const cardOpacity = useTransform(x, [-300, 0, 300], [0.6, 1, 0.6]);
-
-  const handleDragEnd = (_: unknown, info: { offset: { x: number } }) => {
-    if (info.offset.x > 40) onSwipeRight();
-    else if (info.offset.x < -40) onSwipeLeft();
-  };
-
+const CarouselCard = memo(function CarouselCard({ match, positions }: { match: ParsedMatch, positions?: any[] }) {
   const isLive = match.status === 'live';
 
-  // ── 非顶层卡片：堆叠幽灵 ──
-  if (!isTop) {
-    return (
+  // ── 计算该场比赛的用户持仓 ──
+  const homePos = positions?.find(p => p.asset === match.home.tokenId && parseFloat(p.size) > 0);
+  const drawPos = positions?.find(p => p.asset === match.draw.tokenId && parseFloat(p.size) > 0);
+  const awayPos = positions?.find(p => p.asset === match.away.tokenId && parseFloat(p.size) > 0);
+
+  const hasAnyPosition = homePos || drawPos || awayPos;
+
+  return (
+    <div className="w-full h-full flex flex-col px-1 shrink-0 snap-center pb-2">
       <div
-        className="absolute inset-0 w-full pointer-events-none"
+        className="w-full relative flex-1"
         style={{
           borderRadius: '36px',
-          background: 'linear-gradient(160deg, rgba(15,25,50,0.9), rgba(8,14,30,0.9))',
-          border: '1.5px solid rgba(255,255,255,0.06)',
-          transform: `scale(${0.92 - stackOffset * 0.06}) translateY(${20 + stackOffset * 18}px)`,
-          opacity: 0.4 - stackOffset * 0.15,
-          zIndex: -1 - stackOffset,
+          background: 'linear-gradient(160deg, rgba(15,25,50,0.97), rgba(8,14,30,0.97))',
+          border: '2px solid rgba(255,255,255,0.1)',
+          boxShadow: '0 20px 50px rgba(0,0,0,0.8), inset 0 0 20px rgba(0,240,255,0.06)',
+          overflow: 'hidden',
+          transform: 'translateZ(0)',
+          willChange: 'transform',
         }}
-      />
-    );
-  }
-
-  // ── 顶层可拖拽卡片 ──
-  return (
-    <motion.div
-      drag="x"
-      dragConstraints={{ left: 0, right: 0 }}
-      dragElastic={0.85}
-      onDragEnd={handleDragEnd}
-      style={{
-        x,
-        rotate,
-        opacity: cardOpacity,
-        position: 'absolute',
-        inset: 0,
-        width: '100%',
-        borderRadius: '36px',
-        background: 'linear-gradient(160deg, rgba(15,25,50,0.97), rgba(8,14,30,0.97))',
-        border: '2px solid rgba(255,255,255,0.1)',
-        boxShadow: '0 20px 50px rgba(0,0,0,0.8), inset 0 0 20px rgba(0,240,255,0.06)',
-        cursor: 'grab',
-        touchAction: 'none',
-        overflow: 'hidden',
-        zIndex: 10,
-      }}
-      whileTap={{ cursor: 'grabbing' }}
-    >
-      {/* ── 滑动方向提示 — 右划（下一场）── */}
-      <motion.div
-        style={{ opacity: nextOpacity }}
-        className="absolute inset-0 rounded-[36px] pointer-events-none z-20 flex items-center justify-start pl-8"
       >
-        <div style={{ background: 'rgba(0,240,255,0.2)', borderRadius: '36px', position: 'absolute', inset: 0 }} />
-        <div style={{ background: 'linear-gradient(135deg, #00F0FF, #007AFF)', borderRadius: '16px', padding: '8px 16px', zIndex: 1, position: 'relative' }}>
-          <span style={{ fontFamily: 'Inter', fontWeight: 900, fontSize: '18px', color: '#fff' }}>下一场 →</span>
-        </div>
-      </motion.div>
+        {/* ── 动态背景辉光 ── */}
+        <div style={{ position: 'absolute', top: '-40px', left: '-40px', width: '200px', height: '200px', borderRadius: '50%', background: match.home.style.glow, filter: 'blur(70px)', opacity: 0.35, pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', bottom: '-40px', right: '-40px', width: '200px', height: '200px', borderRadius: '50%', background: match.away.style.glow, filter: 'blur(70px)', opacity: 0.35, pointerEvents: 'none' }} />
 
-      {/* ── 滑动方向提示 — 左划（上一场）── */}
-      <motion.div
-        style={{ opacity: prevOpacity }}
-        className="absolute inset-0 rounded-[36px] pointer-events-none z-20 flex items-center justify-end pr-8"
-      >
-        <div style={{ background: 'rgba(255,59,48,0.2)', borderRadius: '36px', position: 'absolute', inset: 0 }} />
-        <div style={{ background: 'linear-gradient(135deg, #FF3B30, #FF6B00)', borderRadius: '16px', padding: '8px 16px', zIndex: 1, position: 'relative' }}>
-          <span style={{ fontFamily: 'Inter', fontWeight: 900, fontSize: '18px', color: '#fff' }}>← 上一场</span>
-        </div>
-      </motion.div>
+        {/* ── 卡片正文 ── */}
+        <div className="relative z-10 flex flex-col items-center h-full p-5 pb-4" style={{ gap: '10px' }}>
 
-      {/* ── 动态背景辉光 ── */}
-      <div style={{ position: 'absolute', top: '-40px', left: '-40px', width: '200px', height: '200px', borderRadius: '50%', background: match.home.style.glow, filter: 'blur(70px)', opacity: 0.35, pointerEvents: 'none' }} />
-      <div style={{ position: 'absolute', bottom: '-40px', right: '-40px', width: '200px', height: '200px', borderRadius: '50%', background: match.away.style.glow, filter: 'blur(70px)', opacity: 0.35, pointerEvents: 'none' }} />
-
-      {/* ── 卡片正文 ── */}
-      <div className="relative z-10 flex flex-col items-center h-full p-5 pb-4" style={{ gap: '10px' }}>
-
-        {/* 1. 顶部状态 */}
-        <div className="flex flex-col items-center gap-2 mt-1">
-          {isLive && (
-            <motion.div
-              animate={{ opacity: [1, 0.5, 1] }}
-              transition={{ duration: 1.2, repeat: Infinity }}
-              style={{
-                background: 'linear-gradient(135deg, #FF2E00, #FF6B00)',
+          {/* 1. 顶部状态 */}
+          <div className="flex flex-col items-center gap-2 mt-1">
+            {isLive && (
+              <motion.div
+                animate={{ opacity: [1, 0.5, 1] }}
+                transition={{ duration: 1.2, repeat: Infinity }}
+                style={{
+                  background: 'linear-gradient(135deg, #FF2E00, #FF6B00)',
+                  borderRadius: '8px',
+                  padding: '3px 12px',
+                  fontFamily: 'Inter',
+                  fontWeight: 900,
+                  fontSize: '10px',
+                  color: '#fff',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.08em',
+                  boxShadow: '0 0 12px rgba(255,80,0,0.5)',
+                }}
+              >
+                🔴 LIVE NOW
+              </motion.div>
+            )}
+            {match.status === 'upcoming' && (
+              <div style={{
+                background: 'rgba(173,255,47,0.15)',
+                border: '1px solid rgba(173,255,47,0.4)',
                 borderRadius: '8px',
                 padding: '3px 12px',
                 fontFamily: 'Inter',
                 fontWeight: 900,
                 fontSize: '10px',
-                color: '#fff',
+                color: '#ADFF2F',
                 textTransform: 'uppercase',
                 letterSpacing: '0.08em',
-                boxShadow: '0 0 12px rgba(255,80,0,0.5)',
+              }}>
+                开赛 {match.timeLabel} · {match.dateLabel}
+              </div>
+            )}
+          </div>
+
+          {/* 2. 赛事名称 + 分组 */}
+          <div className="flex items-center gap-2">
+            <span style={{ fontFamily: 'Inter', fontWeight: 700, fontSize: '12px', color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              FIFA World Cup 2026
+            </span>
+            <div
+              className="px-1.5 py-[1px] rounded-[4px] text-[10px] font-black"
+              style={{
+                background: match.isGroupStage ? 'rgba(255,215,0,0.15)' : 'rgba(173,255,47,0.15)',
+                color: match.isGroupStage ? '#FFD700' : '#ADFF2F',
+                border: match.isGroupStage ? '1px solid rgba(255,215,0,0.3)' : '1px solid rgba(173,255,47,0.3)',
               }}
             >
-              🔴 LIVE NOW
-            </motion.div>
-          )}
-          {match.status === 'upcoming' && (
-            <div style={{
-              background: 'rgba(173,255,47,0.15)',
-              border: '1px solid rgba(173,255,47,0.4)',
-              borderRadius: '8px',
-              padding: '3px 12px',
-              fontFamily: 'Inter',
-              fontWeight: 900,
-              fontSize: '10px',
-              color: '#ADFF2F',
-              textTransform: 'uppercase',
-              letterSpacing: '0.08em',
-            }}>
-              开赛 {match.timeLabel}  ·  {match.dateLabel}
+              {match.isGroupStage ? `${match.group}组` : '淘汰赛'}
             </div>
-          )}
-        </div>
+          </div>
 
-        {/* 2. 赛事名称 + 分组 */}
-        <div className="flex items-center gap-2">
-          <span style={{ fontFamily: 'Inter', fontWeight: 700, fontSize: '12px', color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-            FIFA World Cup 2026
-          </span>
+          {/* 3. 大圆圈对阵区 */}
+          <div className="w-full flex justify-between items-center" style={{ padding: '0 4px', flex: 1, minHeight: 0 }}>
+            {/* 主队圆圈 */}
+            <div className="flex flex-col items-center gap-2 w-[40%]">
+              <FlagBadge
+                flagUrl={match.home.flagUrl}
+                teamName={match.home.name}
+                primaryColor={match.home.style.primary}
+                accentColor={match.home.style.accent}
+                glowColor={match.home.style.glow}
+                isLive={isLive}
+              />
+              <div className="text-center">
+                <div style={{ fontFamily: 'Inter', fontWeight: 700, fontSize: '13px', color: 'rgba(255,255,255,0.9)', marginBottom: '4px' }}>
+                  {match.home.name}
+                </div>
+                <div style={{
+                  fontFamily: 'Inter',
+                  fontWeight: 900,
+                  fontStyle: 'italic',
+                  fontSize: '26px',
+                  color: match.home.style.accent,
+                  textShadow: `0 0 16px ${match.home.style.glow}`,
+                  lineHeight: 1,
+                }}>
+                  {(100 / match.home.probability).toFixed(2)}x
+                </div>
+                <div style={{ fontFamily: 'Inter', fontSize: '11px', color: 'rgba(255,255,255,0.4)', marginTop: '2px' }}>
+                  {match.home.probability}% 胜率
+                </div>
+              </div>
+            </div>
+
+            {/* VS 闪电中央 */}
+            <div className="flex flex-col items-center justify-center">
+              <Zap size={28} color="#ADFF2F" fill="#ADFF2F" style={{ filter: 'drop-shadow(0 0 8px #ADFF2F)' }} />
+              <span style={{ fontFamily: 'Inter', fontWeight: 900, fontStyle: 'italic', fontSize: '16px', color: 'rgba(255,255,255,0.15)', marginTop: '4px' }}>VS</span>
+              <div
+                className="mt-3 px-3 py-1.5 rounded-lg"
+                style={{
+                  background: 'rgba(255,255,255,0.04)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                }}
+              >
+                <div style={{ fontFamily: 'Inter', fontSize: '10px', fontWeight: 700, color: 'rgba(255,255,255,0.35)', textAlign: 'center' }}>平局</div>
+                <div style={{ fontFamily: 'Inter', fontSize: '14px', fontWeight: 900, fontStyle: 'italic', color: 'rgba(255,255,255,0.7)', textAlign: 'center', lineHeight: 1, marginTop: '1px' }}>
+                  {(100 / match.draw.probability).toFixed(2)}x
+                </div>
+                <div style={{ fontFamily: 'Inter', fontSize: '9px', color: 'rgba(255,255,255,0.3)', textAlign: 'center', marginTop: '1px' }}>
+                  {match.draw.probability}%
+                </div>
+              </div>
+            </div>
+
+            {/* 客队圆圈 */}
+            <div className="flex flex-col items-center gap-2 w-[40%]">
+              <FlagBadge
+                flagUrl={match.away.flagUrl}
+                teamName={match.away.name}
+                primaryColor={match.away.style.primary}
+                accentColor={match.away.style.accent}
+                glowColor={match.away.style.glow}
+                isLive={isLive}
+              />
+              <div className="text-center">
+                <div style={{ fontFamily: 'Inter', fontWeight: 700, fontSize: '13px', color: 'rgba(255,255,255,0.9)', marginBottom: '4px' }}>
+                  {match.away.name}
+                </div>
+                <div style={{
+                  fontFamily: 'Inter',
+                  fontWeight: 900,
+                  fontStyle: 'italic',
+                  fontSize: '26px',
+                  color: match.away.style.accent,
+                  textShadow: `0 0 16px ${match.away.style.glow}`,
+                  lineHeight: 1,
+                }}>
+                  {(100 / match.away.probability).toFixed(2)}x
+                </div>
+                <div style={{ fontFamily: 'Inter', fontSize: '11px', color: 'rgba(255,255,255,0.4)', marginTop: '2px' }}>
+                  {match.away.probability}% 胜率
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 7. 底部精调毛玻璃信息栏 */}
           <div
-            className="px-1.5 py-[1px] rounded-[4px] text-[10px] font-black"
+            className="w-full flex justify-between items-center px-5 py-3.5 rounded-[20px]"
             style={{
-              background: match.isGroupStage ? 'rgba(255,215,0,0.15)' : 'rgba(173,255,47,0.15)',
-              color: match.isGroupStage ? '#FFD700' : '#ADFF2F',
-              border: match.isGroupStage ? '1px solid rgba(255,215,0,0.3)' : '1px solid rgba(173,255,47,0.3)',
+              background: 'rgba(255,255,255,0.03)',
+              backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)',
+              borderTop: '1px solid rgba(255,255,255,0.08)',
+              borderBottom: '1px solid rgba(0,0,0,0.3)',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.2)'
             }}
           >
-            {match.isGroupStage ? `${match.group}组` : '淘汰赛'}
-          </div>
-        </div>
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: 'rgba(0,255,0,0.1)', boxShadow: 'inset 0 0 8px rgba(0,255,0,0.2)' }}>
+                <Activity size={16} color="#00FF00" />
+              </div>
+              <div>
+                <div style={{ fontSize: '10px', fontFamily: 'Inter', fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  市场交易池
+                </div>
+                <div style={{ fontFamily: 'Inter', fontWeight: 900, fontSize: '16px', color: '#fff', marginTop: '1px' }}>
+                  {formatVolume(match.volume)}
+                </div>
+              </div>
+            </div>
 
-        {/* 3. 大圆圈对阵区 */}
-        <div className="w-full flex justify-between items-center" style={{ padding: '0 4px', flex: 1, minHeight: 0 }}>
-          {/* 主队圆圈 */}
-          <div className="flex flex-col items-center gap-2 w-[40%]">
-            <FlagBadge
-              flagUrl={match.home.flagUrl}
-              teamName={match.home.name}
-              primaryColor={match.home.style.primary}
-              accentColor={match.home.style.accent}
-              glowColor={match.home.style.glow}
-              isLive={isLive}
-            />
-            {/* 4. 球队名称 */}
-            <div className="text-center">
-              <div style={{ fontFamily: 'Inter', fontWeight: 700, fontSize: '13px', color: 'rgba(255,255,255,0.9)', marginBottom: '4px' }}>
-                {match.home.name}
-              </div>
-              {/* 5. 赔率 */}
-              <div style={{
-                fontFamily: 'Inter',
-                fontWeight: 900,
-                fontStyle: 'italic',
-                fontSize: '26px',
-                color: match.home.style.accent,
-                textShadow: `0 0 16px ${match.home.style.glow}`,
-                lineHeight: 1,
-              }}>
-                {(100 / match.home.probability).toFixed(2)}x
-              </div>
-              {/* 6. 胜率 */}
-              <div style={{ fontFamily: 'Inter', fontSize: '11px', color: 'rgba(255,255,255,0.4)', marginTop: '2px' }}>
-                {match.home.probability}% 胜率
-              </div>
+            {/* 我的持仓 */}
+            <div className="flex-1 flex justify-center">
+              {hasAnyPosition && (
+                <div 
+                  className="px-3 py-1.5 rounded-lg flex items-center gap-1.5"
+                  style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)' }}
+                >
+                  <div className="w-1.5 h-1.5 rounded-full bg-[#00F0FF] animate-pulse" />
+                  <span style={{ fontFamily: 'Inter', fontSize: '11px', fontWeight: 600, color: '#00F0FF' }}>
+                    已持仓
+                  </span>
+                  <span style={{ fontFamily: 'Inter', fontSize: '12px', fontWeight: 800, color: '#fff', marginLeft: '2px' }}>
+                    {homePos ? `${match.home.name} ${parseFloat(homePos.size).toFixed(1)} 股` : 
+                     awayPos ? `${match.away.name} ${parseFloat(awayPos.size).toFixed(1)} 股` : 
+                     `平局 ${parseFloat(drawPos!.size).toFixed(1)} 股`}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                className="w-10 h-10 rounded-full flex items-center justify-center active:scale-90 transition-transform"
+                style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.05)' }}
+                onClick={() => {
+                  // TODO: 分享功能 — 阶段 2
+                }}
+              >
+                <Share2 size={16} color="rgba(255,255,255,0.7)" />
+              </button>
             </div>
           </div>
 
-          {/* VS 闪电中央 */}
-          <div className="flex flex-col items-center justify-center">
-            <Zap size={28} color="#ADFF2F" fill="#ADFF2F" style={{ filter: 'drop-shadow(0 0 8px #ADFF2F)' }} />
-            <span style={{ fontFamily: 'Inter', fontWeight: 900, fontStyle: 'italic', fontSize: '16px', color: 'rgba(255,255,255,0.15)', marginTop: '4px' }}>VS</span>
-            {/* 平局胶囊 */}
-            <div
-              className="mt-3 px-3 py-1.5 rounded-lg"
-              style={{
-                background: 'rgba(255,255,255,0.04)',
-                border: '1px solid rgba(255,255,255,0.08)',
-              }}
-            >
-              <div style={{ fontFamily: 'Inter', fontSize: '10px', fontWeight: 700, color: 'rgba(255,255,255,0.35)', textAlign: 'center' }}>平局</div>
-              <div style={{ fontFamily: 'Inter', fontSize: '14px', fontWeight: 900, fontStyle: 'italic', color: 'rgba(255,255,255,0.7)', textAlign: 'center', lineHeight: 1, marginTop: '1px' }}>
-                {(100 / match.draw.probability).toFixed(2)}x
-              </div>
-              <div style={{ fontFamily: 'Inter', fontSize: '9px', color: 'rgba(255,255,255,0.3)', textAlign: 'center', marginTop: '1px' }}>
-                {match.draw.probability}%
-              </div>
-            </div>
-          </div>
-
-          {/* 客队圆圈 */}
-          <div className="flex flex-col items-center gap-2 w-[40%]">
-            <FlagBadge
-              flagUrl={match.away.flagUrl}
-              teamName={match.away.name}
-              primaryColor={match.away.style.primary}
-              accentColor={match.away.style.accent}
-              glowColor={match.away.style.glow}
-              isLive={isLive}
-            />
-            <div className="text-center">
-              <div style={{ fontFamily: 'Inter', fontWeight: 700, fontSize: '13px', color: 'rgba(255,255,255,0.9)', marginBottom: '4px' }}>
-                {match.away.name}
-              </div>
-              <div style={{
-                fontFamily: 'Inter',
-                fontWeight: 900,
-                fontStyle: 'italic',
-                fontSize: '26px',
-                color: match.away.style.accent,
-                textShadow: `0 0 16px ${match.away.style.glow}`,
-                lineHeight: 1,
-              }}>
-                {(100 / match.away.probability).toFixed(2)}x
-              </div>
-              <div style={{ fontFamily: 'Inter', fontSize: '11px', color: 'rgba(255,255,255,0.4)', marginTop: '2px' }}>
-                {match.away.probability}% 胜率
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* 7. 底部精调毛玻璃信息栏 */}
-        <div 
-          className="w-full flex justify-between items-center px-5 py-3.5 rounded-[20px]"
-          style={{ 
-            background: 'rgba(255,255,255,0.03)', 
-            backdropFilter: 'blur(12px)',
-            WebkitBackdropFilter: 'blur(12px)',
-            borderTop: '1px solid rgba(255,255,255,0.08)',
-            borderBottom: '1px solid rgba(0,0,0,0.3)',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.2)'
-          }}
-        >
-          {/* 交易热度 */}
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: 'rgba(0,255,0,0.1)', boxShadow: 'inset 0 0 8px rgba(0,255,0,0.2)' }}>
-              <Activity size={16} color="#00FF00" />
-            </div>
-            <div>
-              <div style={{ fontSize: '10px', fontFamily: 'Inter', fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                市场交易池
-              </div>
-              <div style={{ fontFamily: 'Inter', fontWeight: 900, fontSize: '16px', color: '#fff', marginTop: '1px' }}>
-                {formatVolume(match.volume)}
-              </div>
-            </div>
-          </div>
-
-          {/* 操作组 */}
-          <div className="flex items-center gap-2">
-            <button 
-              className="w-10 h-10 rounded-full flex items-center justify-center active:scale-90 transition-transform" 
-              style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.05)' }}
-              onClick={() => {
-                // TODO: 分享功能 — 阶段 2
-              }}
-            >
-              <Share2 size={16} color="rgba(255,255,255,0.7)" />
-            </button>
-          </div>
         </div>
       </div>
-    </motion.div>
+    </div>
   );
-}
+});
 
 // ═══════════════════════════════════════════════════
 // 主页面组件
 // ═══════════════════════════════════════════════════
 
-const swipeVariants = {
-  enter: (dir: number) => ({
-    scale: 0.85,
-    opacity: 0,
-    x: dir > 0 ? -400 : 400,
-  }),
-  center: {
-    scale: 1,
-    opacity: 1,
-    x: 0,
-  },
-  exit: (dir: number) => ({
-    scale: 0.85,
-    opacity: 0,
-    x: dir > 0 ? 400 : -400,
-  }),
-};
-
 export function ChallengePage({ onPlaceBet, positions }: ChallengePageProps) {
-  const [page, setPage] = useState(0);
-  const [direction, setDirection] = useState<1 | -1>(1);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [currentIndex, setCurrentIndex] = useState(0);
   const [confirmSide, setConfirmSide] = useState<'home' | 'away' | 'draw' | null>(null);
 
   // ── 接入真实数据管线 ──
@@ -428,21 +360,32 @@ export function ChallengePage({ onPlaceBet, positions }: ChallengePageProps) {
 
   // 只取未结束的比赛
   const swipeMatches = allMatches.filter(m => m.status !== 'ended');
-
-  const currentIndex = swipeMatches.length > 0
-    ? ((page % swipeMatches.length) + swipeMatches.length) % swipeMatches.length
-    : 0;
   const match = swipeMatches[currentIndex] || null;
 
+  // 监听滚动更新 index
+  const handleScroll = useCallback(() => {
+    if (!scrollRef.current) return;
+    const scrollX = scrollRef.current.scrollLeft;
+    const width = scrollRef.current.clientWidth;
+    const newIndex = Math.round(scrollX / width);
+    if (newIndex !== currentIndex) {
+      setCurrentIndex(newIndex);
+    }
+  }, [currentIndex]);
+
   const goNext = useCallback(() => {
-    setDirection(1);
-    setPage(p => p + 1);
-  }, []);
+    if (!scrollRef.current) return;
+    const newIndex = Math.min(currentIndex + 1, swipeMatches.length - 1);
+    const width = scrollRef.current.clientWidth;
+    scrollRef.current.scrollTo({ left: newIndex * width, behavior: 'smooth' });
+  }, [currentIndex, swipeMatches.length]);
 
   const goPrev = useCallback(() => {
-    setDirection(-1);
-    setPage(p => p - 1);
-  }, []);
+    if (!scrollRef.current) return;
+    const newIndex = Math.max(currentIndex - 1, 0);
+    const width = scrollRef.current.clientWidth;
+    scrollRef.current.scrollTo({ left: newIndex * width, behavior: 'smooth' });
+  }, [currentIndex]);
 
   // ── 获取选中方向的 tokenId ──
   const getSelectedTokenId = () => {
@@ -458,6 +401,16 @@ export function ChallengePage({ onPlaceBet, positions }: ChallengePageProps) {
       className="fixed inset-0 w-full max-w-[480px] mx-auto pb-[90px] flex flex-col overflow-hidden z-0"
       style={{ background: '#060e1e', fontFamily: 'Inter, sans-serif' }}
     >
+      {/* 隐藏滚动条样式 */}
+      <style>{`
+        .hide-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+        .hide-scrollbar {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+      `}</style>
       {/* 全局顶部栏 */}
       <div className="z-30 relative">
         <TopHeader />
@@ -486,78 +439,33 @@ export function ChallengePage({ onPlaceBet, positions }: ChallengePageProps) {
       {/* ── 正常内容 ── */}
       {!isLoading && swipeMatches.length > 0 && match && (
         <>
-          {/* 进度条 */}
-          <div className="flex gap-1.5 px-4 pb-3 z-20">
-            {swipeMatches.map((_, i) => (
-              <div key={i} className="flex-1 rounded-full overflow-hidden" style={{ height: '3px', background: 'rgba(255,255,255,0.15)' }}>
-                {i < currentIndex && (
-                  <div style={{ width: '100%', height: '100%', background: '#00F0FF', boxShadow: '0 0 6px #00F0FF' }} />
-                )}
-                {i === currentIndex && (
-                  <motion.div
-                    key={`prog-${page}`}
-                    initial={{ width: '0%' }}
-                    animate={{ width: '100%' }}
-                    transition={{ duration: 8, ease: 'linear' }}
-                    style={{ height: '100%', background: '#00F0FF', boxShadow: '0 0 6px #00F0FF' }}
-                  />
-                )}
-              </div>
-            ))}
-          </div>
 
-          {/* ── 卡片区域 ── */}
-          <main className="flex-1 flex flex-col px-4 relative" style={{ minHeight: 0 }}>
-            <div className="relative flex-1">
-              {/* 背景堆叠卡 */}
-              {[1, 2].map(offset => {
-                const idx = (currentIndex + offset) % swipeMatches.length;
-                const stackMatch = swipeMatches[idx];
-                return stackMatch ? (
-                  <SwipeableCard
-                    key={`stack-${offset}`}
-                    match={stackMatch}
-                    onSwipeLeft={() => {}}
-                    onSwipeRight={() => {}}
-                    isTop={false}
-                    stackOffset={offset - 1}
-                  />
-                ) : null;
-              })}
 
-              {/* 顶层可交互卡 */}
-              <AnimatePresence custom={direction}>
-                <motion.div
-                  key={page}
-                  custom={direction}
-                  variants={swipeVariants}
-                  initial="enter"
-                  animate="center"
-                  exit="exit"
-                  transition={{ type: 'spring', damping: 26, stiffness: 280 }}
-                  className="absolute inset-0"
-                >
-                  <SwipeableCard
-                    match={match}
-                    onSwipeLeft={goPrev}
-                    onSwipeRight={goNext}
-                    isTop={true}
-                    stackOffset={0}
-                  />
-                </motion.div>
-              </AnimatePresence>
+          {/* ── 原生轮播区域 ── */}
+          <main className="flex-1 flex flex-col relative w-full pt-1" style={{ minHeight: 0 }}>
+            <div 
+              ref={scrollRef}
+              onScroll={handleScroll}
+              className="flex-1 w-full flex overflow-x-auto snap-x snap-mandatory hide-scrollbar"
+              style={{ scrollBehavior: 'smooth' }}
+            >
+              {swipeMatches.map((m) => (
+                <CarouselCard key={m.id} match={m} positions={positions} />
+              ))}
             </div>
 
             {/* 滑动提示文字 */}
             <div className="flex items-center justify-center gap-4 py-2 z-20">
-              <div className="flex items-center gap-1.5">
-                <div style={{ width: '24px', height: '2px', background: 'linear-gradient(to left, #FF3B30, transparent)', borderRadius: '1px' }} />
-                <span style={{ fontSize: '10px', fontFamily: 'Inter', fontWeight: 600, color: 'rgba(255,255,255,0.3)' }}>左划上一场</span>
+              <div className="flex items-center gap-1.5 opacity-60">
+                <div style={{ width: '24px', height: '2px', background: 'linear-gradient(to left, #fff, transparent)', borderRadius: '1px' }} />
+                <span style={{ fontSize: '10px', fontFamily: 'Inter', fontWeight: 600, color: 'rgba(255,255,255,0.6)' }}>左拉</span>
               </div>
-              <div style={{ width: '4px', height: '4px', borderRadius: '50%', background: 'rgba(255,255,255,0.2)' }} />
-              <div className="flex items-center gap-1.5">
-                <span style={{ fontSize: '10px', fontFamily: 'Inter', fontWeight: 600, color: 'rgba(255,255,255,0.3)' }}>右划下一场</span>
-                <div style={{ width: '24px', height: '2px', background: 'linear-gradient(to right, #00F0FF, transparent)', borderRadius: '1px' }} />
+              <span style={{ fontFamily: 'Inter', fontWeight: 900, color: '#00F0FF', textShadow: '0 0 8px #00F0FF', fontSize: '14px' }}>
+                {currentIndex + 1} / {swipeMatches.length}
+              </span>
+              <div className="flex items-center gap-1.5 opacity-60">
+                <span style={{ fontSize: '10px', fontFamily: 'Inter', fontWeight: 600, color: 'rgba(255,255,255,0.6)' }}>右拉</span>
+                <div style={{ width: '24px', height: '2px', background: 'linear-gradient(to right, #fff, transparent)', borderRadius: '1px' }} />
               </div>
             </div>
 
@@ -699,7 +607,10 @@ export function ChallengePage({ onPlaceBet, positions }: ChallengePageProps) {
                 if (onPlaceBet) {
                   await onPlaceBet(amount.toString(), getSelectedTokenId(), executionPrice);
                 }
-                goNext();
+                const isLast = currentIndex === swipeMatches.length - 1;
+                if (!isLast) {
+                  goNext();
+                }
               }}
               onCancel={() => setConfirmSide(null)}
             />
