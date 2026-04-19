@@ -169,18 +169,34 @@ const CarouselCard = memo(function CarouselCard({ match, positions, onShare }: C
             )}
             {match.status === 'upcoming' && (
               <div style={{
-                background: 'rgba(173,255,47,0.15)',
-                border: '1px solid rgba(173,255,47,0.4)',
+                background: 'rgba(0,240,255,0.1)',
+                border: '1px solid rgba(0,240,255,0.35)',
                 borderRadius: '8px',
                 padding: '3px 12px',
                 fontFamily: 'Inter',
-                fontWeight: 900,
+                fontWeight: 700,
                 fontSize: '10px',
-                color: '#ADFF2F',
+                color: '#00F0FF',
                 textTransform: 'uppercase',
                 letterSpacing: '0.08em',
               }}>
                 开赛 {match.timeLabel} · {match.dateLabel}
+              </div>
+            )}
+            {match.status === 'ended' && (
+              <div style={{
+                background: 'rgba(150,150,150,0.12)',
+                border: '1px solid rgba(150,150,150,0.3)',
+                borderRadius: '8px',
+                padding: '3px 12px',
+                fontFamily: 'Inter',
+                fontWeight: 700,
+                fontSize: '10px',
+                color: 'rgba(180,180,180,0.7)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.08em',
+              }}>
+                已结束 · ENDED
               </div>
             )}
           </div>

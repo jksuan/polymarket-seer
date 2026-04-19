@@ -209,15 +209,6 @@ export function ShareModal({ isOpen, onClose, match, positions }: ShareModalProp
             <div className="w-full mt-6 flex flex-col gap-3">
               {dataUrl && (
                 <>
-                  <div className="text-center mb-1 flex flex-col gap-1">
-                    <span style={{ fontSize: '13px', color: '#00F0FF', fontWeight: 800 }}>
-                      🎁 邀请朋友扫码参战，持续赚取 Polymarket 推荐返佣
-                    </span>
-                    <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)' }}>
-                      {isMobile ? '长按上方图片也可直接保存或发送给朋友' : '右键图片可另存为本地文件'}
-                    </span>
-                  </div>
-                  
                   <div className="flex gap-3 w-full">
                     {/* 一键分享（手机: 原生面板带图+文，桌面: Twitter Intent） */}
                     <button
@@ -248,6 +239,15 @@ export function ShareModal({ isOpen, onClose, match, positions }: ShareModalProp
                     className="hidden"
                     aria-hidden="true"
                   />
+
+                  <div className="text-center mt-1 flex flex-col gap-1">
+                    <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.85)', fontWeight: 600 }}>
+                      点击「保存卡片」下载图片
+                    </span>
+                    <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', lineHeight: '1.6' }}>
+                      请手动将图片附加到 Instagram、Facebook、Telegram 等社交媒体的帖子中
+                    </span>
+                  </div>
                 </>
               )}
             </div>
