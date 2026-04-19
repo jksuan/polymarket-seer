@@ -6,6 +6,7 @@ import { ChevronLeft, ChevronRight, Zap, Loader2, Share2, Activity } from 'lucid
 import { useMatchData } from '@/hooks/useMatchData';
 import { ParsedMatch } from '@/components/ui/MatchCard';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
+import { ShareModal } from '@/components/ui/ShareModal';
 import { TopHeader } from '@/components/ui/TopHeader';
 import { formatVolume } from '@/lib/utils';
 
@@ -107,7 +108,13 @@ function FlagBadge({
 // CarouselCard — 丝滑原生滑动卡片
 // ═══════════════════════════════════════════════════
 
-const CarouselCard = memo(function CarouselCard({ match, positions }: { match: ParsedMatch, positions?: any[] }) {
+interface CarouselCardProps {
+  match: ParsedMatch;
+  positions?: any[];
+  onShare: (match: ParsedMatch) => void;
+}
+
+const CarouselCard = memo(function CarouselCard({ match, positions, onShare }: CarouselCardProps) {
   const isLive = match.status === 'live';
 
   // ── 计算该场比赛的用户持仓 ──
@@ -332,7 +339,7 @@ const CarouselCard = memo(function CarouselCard({ match, positions }: { match: P
                 className="w-10 h-10 rounded-full flex items-center justify-center active:scale-90 transition-transform"
                 style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.05)' }}
                 onClick={() => {
-                  // TODO: 分享功能 — 阶段 2
+                  onShare(match);
                 }}
               >
                 <Share2 size={16} color="rgba(255,255,255,0.7)" />
@@ -354,6 +361,7 @@ export function ChallengePage({ onPlaceBet, positions }: ChallengePageProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [confirmSide, setConfirmSide] = useState<'home' | 'away' | 'draw' | null>(null);
+  const [sharingMatch, setSharingMatch] = useState<ParsedMatch | null>(null);
 
   // ── 接入真实数据管线 ──
   const { allMatches, isLoading } = useMatchData(true);
@@ -450,7 +458,7 @@ export function ChallengePage({ onPlaceBet, positions }: ChallengePageProps) {
               style={{ scrollBehavior: 'smooth' }}
             >
               {swipeMatches.map((m) => (
-                <CarouselCard key={m.id} match={m} positions={positions} />
+                <CarouselCard key={m.id} match={m} positions={positions} onShare={setSharingMatch} />
               ))}
             </div>
 
@@ -615,6 +623,14 @@ export function ChallengePage({ onPlaceBet, positions }: ChallengePageProps) {
               onCancel={() => setConfirmSide(null)}
             />
           )}
+
+          {/* ── 海报分享弹窗 ── */}
+          <ShareModal 
+            isOpen={!!sharingMatch}
+            onClose={() => setSharingMatch(null)}
+            match={sharingMatch}
+            positions={positions}
+          />
         </>
       )}
     </div>
