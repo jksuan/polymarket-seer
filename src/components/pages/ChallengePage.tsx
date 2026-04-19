@@ -9,6 +9,7 @@ import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { ShareModal } from '@/components/ui/ShareModal';
 import { TopHeader } from '@/components/ui/TopHeader';
 import { formatVolume } from '@/lib/utils';
+import { getCountryFlagUrl } from '@/lib/countryFlags';
 
 // ═══════════════════════════════════════════════════
 // 类型 & 常量
@@ -223,7 +224,7 @@ const CarouselCard = memo(function CarouselCard({ match, positions, onShare }: C
             {/* 主队圆圈 */}
             <div className="flex flex-col items-center gap-2 w-[40%]">
               <FlagBadge
-                flagUrl={match.home.flagUrl}
+                flagUrl={getCountryFlagUrl(match.home.name, 'svg')}
                 teamName={match.home.name}
                 primaryColor={match.home.style.primary}
                 accentColor={match.home.style.accent}
@@ -275,7 +276,7 @@ const CarouselCard = memo(function CarouselCard({ match, positions, onShare }: C
             {/* 客队圆圈 */}
             <div className="flex flex-col items-center gap-2 w-[40%]">
               <FlagBadge
-                flagUrl={match.away.flagUrl}
+                flagUrl={getCountryFlagUrl(match.away.name, 'svg')}
                 teamName={match.away.name}
                 primaryColor={match.away.style.primary}
                 accentColor={match.away.style.accent}

@@ -103,10 +103,16 @@ function normalizeName(name: string): string {
  * Get flag image URL for a country name
  * Uses flagcdn.com for high-quality SVG flags
  */
-export function getCountryFlagUrl(countryName: string, size: number = 40): string {
+export function getCountryFlagUrl(countryName: string, size: number | 'svg' = 40): string {
   const code = COUNTRY_CODE_MAP[normalizeName(countryName)];
+  
+  if (size === 'svg') {
+    if (!code) return `https://flagcdn.com/un.svg`;
+    return `https://flagcdn.com/${code}.svg`;
+  }
+
   if (!code) {
-    return `https://flagcdn.com/${size}x${Math.round(size * 0.75)}/un.png`;
+    return `https://flagcdn.com/${size}x${Math.round(size as number * 0.75)}/un.png`;
   }
   return `https://flagcdn.com/w${size}/${code}.png`;
 }

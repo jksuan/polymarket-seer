@@ -2,6 +2,7 @@ import React, { forwardRef } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { ParsedMatch } from './MatchCard';
 import { Share2, Zap, TrendingUp, DollarSign } from 'lucide-react';
+import { getCountryFlagUrl } from '@/lib/countryFlags';
 
 export interface SharePosterProps {
   match: ParsedMatch;
@@ -112,7 +113,7 @@ export const SharePoster = forwardRef<HTMLDivElement, SharePosterProps>(
                 transition: 'all 0.5s',
               }}>
                 <img 
-                  src={match.home.flagUrl} 
+                  src={getCountryFlagUrl(match.home.name, 'svg')} 
                   style={{ width: '400px', height: '400px', borderRadius: '50%', objectFit: 'cover', border: `8px solid ${match.home.style.accent}`, boxShadow: `0 0 100px ${match.home.style.glow}` }}
                   alt={match.home.name}
                   crossOrigin="anonymous"
@@ -140,7 +141,7 @@ export const SharePoster = forwardRef<HTMLDivElement, SharePosterProps>(
                 transition: 'all 0.5s',
               }}>
                 <img 
-                  src={match.away.flagUrl} 
+                  src={getCountryFlagUrl(match.away.name, 'svg')} 
                   style={{ width: '400px', height: '400px', borderRadius: '50%', objectFit: 'cover', border: `8px solid ${match.away.style.accent}`, boxShadow: `0 0 100px ${match.away.style.glow}` }}
                   alt={match.away.name}
                   crossOrigin="anonymous"
