@@ -125,7 +125,17 @@ function AppRouterContent() {
               }}
             />
           )}
-          {activeTab === 'challenge' && <ChallengePage />}
+          {activeTab === 'challenge' && (
+            <ChallengePage
+              onPlaceBet={async (amount, tokenId, executionPrice) => {
+                const action = () => handlePlaceRealBet(amount, tokenId, executionPrice);
+                lastActionRef.current = action;
+                setLastBetAmount(amount);
+                await action();
+              }}
+              positions={positions}
+            />
+          )}
         </motion.div>
       </AnimatePresence>
       <BottomNav activeTab={activeTab} onChange={setActiveTab} />
