@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useRef, memo } from 'react';
+import { useState, useCallback, useRef, memo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ChevronLeft, ChevronRight, Zap, Loader2, Share2, Activity } from 'lucide-react';
 import { useMatchData } from '@/hooks/useMatchData';
@@ -376,7 +376,23 @@ const CarouselCard = memo(function CarouselCard({ match, positions, onShare }: C
 
 export function ChallengePage({ onPlaceBet, positions }: ChallengePageProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const hasRestoredScroll = useRef(false);
+
+  // ── Session Storage 状态记忆 ──
+  const [currentIndex, setCurrentIndex] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = sessionStorage.getItem('challenge_swipe_index');
+      if (saved !== null) return parseInt(saved, 10);
+    }
+    return 0;
+  });
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('challenge_swipe_index', currentIndex.toString());
+    }
+  }, [currentIndex]);
+
   const [confirmSide, setConfirmSide] = useState<'home' | 'away' | 'draw' | null>(null);
   const [sharingMatch, setSharingMatch] = useState<ParsedMatch | null>(null);
 
@@ -385,6 +401,22 @@ export function ChallengePage({ onPlaceBet, positions }: ChallengePageProps) {
 
   // 只取未结束的比赛
   const swipeMatches = allMatches.filter(m => m.status !== 'ended');
+
+  // 当加载完成时，立刻把容器滑动到记忆卡片的位置
+  useEffect(() => {
+    if (!isLoading && swipeMatches.length > 0 && !hasRestoredScroll.current) {
+      hasRestoredScroll.current = true;
+      if (currentIndex > 0 && scrollRef.current) {
+        // 利用 requestAnimationFrame 确保 DOM 已经渲染完毕
+        requestAnimationFrame(() => {
+          if (scrollRef.current) {
+            const width = scrollRef.current.clientWidth;
+            scrollRef.current.scrollTo({ left: currentIndex * width, behavior: 'instant' });
+          }
+        });
+      }
+    }
+  }, [isLoading, swipeMatches.length, currentIndex]);
   const match = swipeMatches[currentIndex] || null;
 
   // 监听滚动更新 index
