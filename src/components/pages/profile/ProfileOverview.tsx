@@ -3,12 +3,15 @@ import { useProfileStats } from "./useProfileStats";
 import { CategoryPnlChart } from "./CategoryPnlChart";
 import { useSportCategories } from "@/hooks/useSportCategories";
 
+import { Skeleton } from "@/components/ui/Skeleton";
+
 export interface ProfileOverviewProps {
+  portfolioLoading: boolean;
   trades: any[];
   positions: any[];
 }
 
-export function ProfileOverview({ trades, positions }: ProfileOverviewProps) {
+export function ProfileOverview({ portfolioLoading, trades, positions }: ProfileOverviewProps) {
   const { leagueToSport, keywords, iconToCategory } = useSportCategories();
 
   const {
@@ -24,6 +27,18 @@ export function ProfileOverview({ trades, positions }: ProfileOverviewProps) {
   } = useProfileStats(trades, positions, leagueToSport, keywords, iconToCategory);
 
   const hasCategoryData = categoryPnlData && categoryPnlData.length > 0;
+
+  if (portfolioLoading) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, x: -10 }}
+        animate={{ opacity: 1, x: 0 }}
+        exit={{ opacity: 0, x: 10 }}
+      >
+        <ProfileOverviewSkeleton />
+      </motion.div>
+    );
+  }
 
   return (
     <motion.div
@@ -161,5 +176,95 @@ export function ProfileOverview({ trades, positions }: ProfileOverviewProps) {
         </div>
       </div>
     </motion.div>
+  );
+}
+
+function ProfileOverviewSkeleton() {
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-3 w-full relative z-20">
+        {/* Top Card Skeleton */}
+        <div
+          className="p-4 rounded-3xl flex flex-col justify-between gap-4 h-[146px]"
+          style={{
+            background: "linear-gradient(160deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01))",
+            border: "1px solid rgba(255,255,255,0.06)",
+          }}
+        >
+          <div className="flex flex-col h-full">
+            <Skeleton className="w-24 h-[11px] rounded mb-1" />
+            <Skeleton className="w-36 h-[32px] rounded-lg mt-2" />
+            <div className="flex justify-between items-end border-t border-white/10 pt-3 mt-auto">
+              <div>
+                <Skeleton className="w-20 h-[10px] rounded mb-1.5" />
+                <Skeleton className="w-16 h-[13px] rounded" />
+              </div>
+              <div className="items-end text-right">
+                <Skeleton className="w-24 h-[10px] rounded mb-1.5" />
+                <Skeleton className="w-16 h-[13px] rounded ml-auto" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Middle Card Skeleton */}
+        <div
+          className="p-4 rounded-3xl flex flex-col gap-3 w-full"
+          style={{
+            background: "linear-gradient(160deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01))",
+            border: "1px solid rgba(255,255,255,0.06)",
+          }}
+        >
+          <div className="border-b border-white/10 pb-3 mb-1">
+            <Skeleton className="w-16 h-[11px] rounded" />
+          </div>
+          <div className="flex w-full">
+            <div className="flex-1 flex flex-col items-center border-r border-white/10">
+              <Skeleton className="w-12 h-[10px] rounded mb-2" />
+              <Skeleton className="w-16 h-[16px] rounded" />
+            </div>
+            <div className="flex-1 flex flex-col items-center border-r border-white/10">
+              <Skeleton className="w-12 h-[10px] rounded mb-2" />
+              <Skeleton className="w-16 h-[16px] rounded" />
+            </div>
+            <div className="flex-1 flex flex-col items-center justify-center">
+              <Skeleton className="w-16 h-[10px] rounded mb-2" />
+              <div className="flex flex-col items-center">
+                 <Skeleton className="w-16 h-[15px] rounded" />
+                 <Skeleton className="w-12 h-[10px] rounded mt-2" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Bottom Chart Skeleton */}
+      <div className="w-full mb-6 relative z-20">
+        <div
+          className="p-4 rounded-3xl h-[160px]"
+          style={{
+            background: "linear-gradient(160deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01))",
+            border: "1px solid rgba(255,255,255,0.06)",
+          }}
+        >
+          <div className="flex items-center justify-between mb-5">
+            <Skeleton className="w-32 h-[11px] rounded" />
+            <Skeleton className="w-24 h-[10px] rounded" />
+          </div>
+          <div className="w-full flex flex-col gap-4">
+            <div className="flex items-center gap-3">
+              <Skeleton className="w-8 h-[12px] rounded" />
+              <Skeleton className="h-[24px] rounded-md w-1/2" />
+              <Skeleton className="w-10 h-[10px] rounded" />
+            </div>
+            <div className="flex items-center gap-3">
+              <Skeleton className="w-8 h-[12px] rounded" />
+              <Skeleton className="h-[24px] rounded-md w-1/4" />
+              <Skeleton className="w-10 h-[10px] rounded" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

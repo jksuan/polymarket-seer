@@ -177,7 +177,7 @@ export function ProfilePage({
 
       <div className="px-4 mt-6">
         {activeTab === "stats" && (
-          <ProfileOverview trades={trades} positions={positions} />
+          <ProfileOverview portfolioLoading={portfolioLoading} trades={trades} positions={positions} />
         )}
         {activeTab === "active" && (
           <ProfilePositions portfolioLoading={portfolioLoading} positions={positions} onSell={onSell} onLimitSell={onLimitSell} onRedeem={onRedeem} />
