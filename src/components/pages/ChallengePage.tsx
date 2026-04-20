@@ -473,13 +473,58 @@ export function ChallengePage({ onPlaceBet, positions }: ChallengePageProps) {
         <TopHeader />
       </div>
 
-      {/* ── Loading ── */}
+      {/* ── Loading Skeleton (骨架屏) ── */}
       {isLoading && (
-        <div className="flex-1 flex flex-col items-center justify-center gap-4">
-          <Loader2 size={32} className="animate-spin text-[#00F0FF]" />
-          <span style={{ fontFamily: 'Inter', fontSize: '13px', fontWeight: 700, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
-            Loading Matches...
-          </span>
+        <div className="flex-1 flex flex-col w-full relative px-1 sm:px-2 animate-pulse mt-1 pb-[18px]">
+          {/* 主卡片占位 */}
+          <div className="w-full flex flex-col rounded-[32px] overflow-hidden p-6 relative" 
+               style={{ flex: 1, minHeight: 0, background: 'linear-gradient(to bottom, rgba(30,41,59,0.5), rgba(15,23,42,0.8))', border: '1px solid rgba(255,255,255,0.03)' }}>
+            
+            {/* 顶部标签 */}
+            <div className="flex justify-between items-center mb-8">
+              <div className="w-20 h-5 rounded bg-white/5" />
+              <div className="w-24 h-5 rounded bg-white/5" />
+            </div>
+
+            {/* 对阵队伍 */}
+            <div className="flex justify-between items-center mt-2">
+              <div className="flex flex-col items-center w-[40%] gap-3">
+                <div className="rounded-full bg-white/5" style={{ width: 'min(24vw, 100px)', height: 'min(24vw, 100px)' }} />
+                <div className="w-16 h-4 rounded bg-white/5 mt-1" />
+                <div className="w-24 h-8 rounded bg-white/5" />
+              </div>
+              
+              {/* VS 占位 */}
+              <div className="w-8 h-8 rounded-full bg-white/5" />
+
+              <div className="flex flex-col items-center w-[40%] gap-3">
+                <div className="rounded-full bg-white/5" style={{ width: 'min(24vw, 100px)', height: 'min(24vw, 100px)' }} />
+                <div className="w-16 h-4 rounded bg-white/5 mt-1" />
+                <div className="w-24 h-8 rounded bg-white/5" />
+              </div>
+            </div>
+
+            <div className="flex-1" />
+
+            {/* 底部长条占位 */}
+            <div className="w-full h-[60px] rounded-[20px] bg-white/5 mt-auto" />
+          </div>
+
+          {/* 轮播指示器占位 */}
+          <div className="flex items-center justify-center gap-4 py-2 my-1">
+             <div className="w-12 h-1 rounded-full bg-white/5" />
+             <div className="w-12 h-4 rounded bg-white/10" />
+             <div className="w-12 h-1 rounded-full bg-white/5" />
+          </div>
+
+          {/* 底部三大金刚操作栏占位 */}
+          <div className="flex justify-between items-center mb-4 mt-1" style={{ gap: 'clamp(6px, 1.5vw, 12px)', padding: '0 clamp(0px, 1vw, 4px)' }}>
+            <div className="rounded-full bg-white/5" style={{ width: 'clamp(44px, 12vw, 56px)', height: 'clamp(44px, 12vw, 56px)' }} />
+            <div className="flex-1 rounded-2xl bg-white/5" style={{ height: 'clamp(48px, 13vw, 56px)' }} />
+            <div className="rounded-2xl bg-white/5" style={{ height: 'clamp(48px, 13vw, 56px)', minWidth: 'clamp(52px, 14vw, 66px)' }} />
+            <div className="flex-1 rounded-2xl bg-white/5" style={{ height: 'clamp(48px, 13vw, 56px)' }} />
+            <div className="rounded-full bg-white/5" style={{ width: 'clamp(44px, 12vw, 56px)', height: 'clamp(44px, 12vw, 56px)' }} />
+          </div>
         </div>
       )}
 
