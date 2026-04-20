@@ -5,6 +5,7 @@ import { motion } from 'motion/react';
 import { SportMarket } from '@/types/sports';
 import { formatVolume } from '@/lib/utils';
 import { ConfirmModal } from './ConfirmModal';
+import { Skeleton } from './Skeleton';
 
 interface OutrightCardProps {
   market: SportMarket;
@@ -288,5 +289,51 @@ export function OutrightCard({ market, index = 0, onPlaceBet, positions }: Outri
         );
       })()}
     </>
+  );
+}
+
+export function OutrightCardSkeleton() {
+  return (
+    <div
+      className="mx-4 mb-3 rounded-2xl overflow-hidden"
+      style={{
+        background: 'linear-gradient(160deg, rgba(30,18,55,0.5) 0%, rgba(18,10,35,0.5) 100%)',
+        border: '1px solid rgba(255,255,255,0.05)',
+      }}
+    >
+      <div className="flex items-center gap-3 px-4 pt-4 pb-3 border-b border-white/5">
+        <Skeleton className="w-10 h-10 rounded-xl shrink-0" />
+        <div className="flex flex-col gap-2 w-full">
+          <Skeleton className="h-4 w-3/4 rounded" />
+          <Skeleton className="h-4 w-1/2 rounded" />
+        </div>
+      </div>
+      <div className="px-4 pb-2">
+        {/* 第一行占位 */}
+        <div className="flex items-center py-2.5">
+          <div className="flex flex-1 items-center gap-2.5 min-w-0 pr-2">
+            <Skeleton className="w-7 h-7 rounded-md shrink-0" />
+            <Skeleton className="w-24 h-4 rounded" />
+          </div>
+          <Skeleton className="w-8 h-4 rounded mr-3 shrink-0" />
+          <div className="flex gap-1.5 shrink-0">
+            <Skeleton className="w-[68px] h-[36px] rounded-lg" />
+            <Skeleton className="w-[68px] h-[36px] rounded-lg" />
+          </div>
+        </div>
+        {/* 第二行占位 */}
+        <div className="flex items-center py-2.5 border-t border-white/5">
+          <div className="flex flex-1 items-center gap-2.5 min-w-0 pr-2">
+            <Skeleton className="w-7 h-7 rounded-md shrink-0" />
+            <Skeleton className="w-24 h-4 rounded" />
+          </div>
+          <Skeleton className="w-8 h-4 rounded mr-3 shrink-0" />
+          <div className="flex gap-1.5 shrink-0">
+            <Skeleton className="w-[68px] h-[36px] rounded-lg" />
+            <Skeleton className="w-[68px] h-[36px] rounded-lg" />
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

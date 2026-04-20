@@ -6,8 +6,8 @@ import { BannerCarousel } from '@/components/ui/BannerCarousel';
 import { CategoryTabs } from '@/components/ui/CategoryTabs';
 import { SubTabs } from '@/components/ui/SubTabs';
 import { TopHeader } from '@/components/ui/TopHeader';
-import { MatchCard, groupMatchesByDate } from '@/components/ui/MatchCard';
-import { OutrightCard } from '@/components/ui/OutrightCard';
+import { MatchCard, groupMatchesByDate, MatchCardSkeleton } from '@/components/ui/MatchCard';
+import { OutrightCard, OutrightCardSkeleton } from '@/components/ui/OutrightCard';
 import { BinaryOutrightCard } from '@/components/ui/BinaryOutrightCard';
 import { PlaceholderScreen } from '@/components/ui/PlaceholderScreen';
 import { useMatchData } from '@/hooks/useMatchData';
@@ -243,9 +243,28 @@ export function HomePage({ onPlaceBet, positions }: { onPlaceBet?: (amount: stri
         ) : primaryTab === 'scorers' ? (
           <ScorersView selectedYear={scorersYear} />
         ) : isLoading ? (
-          <div className="flex flex-col items-center justify-center h-48 opacity-50">
-            <Loader2 size={32} className="animate-spin text-[#FFD700] mb-4" />
-            <div className="text-[12px] font-bold text-[#FFD700] tracking-widest uppercase">加载中...</div>
+          <div className="flex flex-col gap-3 shrink-0" style={{ paddingBottom: '20px' }}>
+            {primaryTab === 'matches' && (
+              <>
+                <MatchCardSkeleton />
+                <MatchCardSkeleton />
+                <MatchCardSkeleton />
+              </>
+            )}
+            {primaryTab === 'outrights' && (
+              <>
+                <OutrightCardSkeleton />
+                <OutrightCardSkeleton />
+                <OutrightCardSkeleton />
+              </>
+            )}
+            {primaryTab !== 'matches' && primaryTab !== 'outrights' && (
+              <>
+                <MatchCardSkeleton />
+                <MatchCardSkeleton />
+                <MatchCardSkeleton />
+              </>
+            )}
           </div>
         ) : primaryTab === 'matches' ? (
           // ── MATCHES: Grouped by date with MatchCard ──

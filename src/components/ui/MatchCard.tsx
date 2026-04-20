@@ -7,6 +7,7 @@ import { SportMarket } from '@/types/sports';
 import { ConfirmModal } from './ConfirmModal';
 import { getCountryFlagUrl, getCountryShortCode, getCountryColor, getCountryGroup, isGroupStageMatch, TeamColors } from '@/lib/countryFlags';
 import { formatVolume } from '@/lib/utils';
+import { Skeleton } from './Skeleton';
 
 /**
  * Parsed match data — derived from the raw SportMarket structure
@@ -615,4 +616,48 @@ export function groupMatchesByDate(matches: ParsedMatch[]): MatchGroup[] {
   }
 
   return Object.values(groups).sort((a, b) => a.dateISO.localeCompare(b.dateISO));
+}
+
+export function MatchCardSkeleton() {
+  return (
+    <div
+      className="mx-4 mb-3 rounded-2xl p-4 border border-white/5"
+      style={{
+        background: 'linear-gradient(145deg, rgba(30,20,50,0.5), rgba(18,10,32,0.5))',
+      }}
+    >
+      {/* 顶部状态占位 */}
+      <div className="flex justify-between items-center mb-4">
+        <div className="flex gap-3 items-center">
+          <Skeleton className="w-16 h-4 rounded" />
+          <Skeleton className="w-10 h-4 rounded" />
+          <Skeleton className="w-14 h-3 rounded" />
+        </div>
+        <Skeleton className="w-12 h-5 rounded-full" />
+      </div>
+
+      {/* 两行比赛队伍占位 */}
+      <div className="flex flex-col gap-3 mb-4">
+        <div className="flex gap-3 items-center">
+          <Skeleton className="w-[24px] h-[18px] rounded-sm shrink-0" />
+          <Skeleton className="w-24 h-4 rounded" />
+          <div className="flex-1" />
+          <Skeleton className="w-6 h-4 rounded" />
+        </div>
+        <div className="flex gap-3 items-center">
+          <Skeleton className="w-[24px] h-[18px] rounded-sm shrink-0" />
+          <Skeleton className="w-24 h-4 rounded" />
+          <div className="flex-1" />
+          <Skeleton className="w-6 h-4 rounded" />
+        </div>
+      </div>
+
+      {/* 底部按钮占位 */}
+      <div className="flex gap-1.5 mt-4 pt-3 border-t border-white/5">
+        <Skeleton className="flex-1 h-9 rounded-lg" />
+        <Skeleton className="w-16 h-9 rounded-lg shrink-0" />
+        <Skeleton className="flex-1 h-9 rounded-lg" />
+      </div>
+    </div>
+  );
 }

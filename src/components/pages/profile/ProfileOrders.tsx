@@ -2,6 +2,7 @@ import { motion } from "motion/react";
 import { GlassCard } from "./components/GlassCard";
 import { OutcomePill } from "./components/OutcomePill";
 import { ProfileEmptyState } from "./components/ProfileEmptyState";
+import { ProfileCardSkeleton } from "./ProfilePositions";
 
 export interface ProfileOrdersProps {
   portfolioLoading: boolean;
@@ -18,7 +19,11 @@ export function ProfileOrders({ portfolioLoading, openOrders, onCancelOrder }: P
       className="flex flex-col gap-3"
     >
       {portfolioLoading && (!openOrders || openOrders.length === 0) ? (
-        <ProfileEmptyState loading={true} loadingText="加载挂单中..." />
+        <>
+          <ProfileCardSkeleton />
+          <ProfileCardSkeleton />
+          <ProfileCardSkeleton />
+        </>
       ) : (!openOrders || openOrders.length === 0) ? (
         <ProfileEmptyState loading={false} emptyText="暂无未成交的订单" />
       ) : (
