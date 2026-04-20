@@ -519,11 +519,11 @@ export function ChallengePage({ onPlaceBet, positions }: ChallengePageProps) {
 
           {/* 底部三大金刚操作栏占位 */}
           <div className="flex justify-between items-center mb-4 mt-1" style={{ gap: 'clamp(6px, 1.5vw, 12px)', padding: '0 clamp(0px, 1vw, 4px)' }}>
-            <div className="rounded-full bg-white/5" style={{ width: 'clamp(44px, 12vw, 56px)', height: 'clamp(44px, 12vw, 56px)' }} />
-            <div className="flex-1 rounded-2xl bg-white/5" style={{ height: 'clamp(48px, 13vw, 56px)' }} />
-            <div className="rounded-2xl bg-white/5" style={{ height: 'clamp(48px, 13vw, 56px)', minWidth: 'clamp(52px, 14vw, 66px)' }} />
-            <div className="flex-1 rounded-2xl bg-white/5" style={{ height: 'clamp(48px, 13vw, 56px)' }} />
-            <div className="rounded-full bg-white/5" style={{ width: 'clamp(44px, 12vw, 56px)', height: 'clamp(44px, 12vw, 56px)' }} />
+            <div className="rounded-full bg-white/5 shrink-0" style={{ width: 'clamp(44px, 12vw, 56px)', height: 'clamp(44px, 12vw, 56px)' }} />
+            <div className="rounded-2xl bg-white/5" style={{ flex: 1.2, height: 'clamp(48px, 13vw, 56px)' }} />
+            <div className="rounded-2xl bg-white/5" style={{ flex: 0.9, height: 'clamp(48px, 13vw, 56px)' }} />
+            <div className="rounded-2xl bg-white/5" style={{ flex: 1.2, height: 'clamp(48px, 13vw, 56px)' }} />
+            <div className="rounded-full bg-white/5 shrink-0" style={{ width: 'clamp(44px, 12vw, 56px)', height: 'clamp(44px, 12vw, 56px)' }} />
           </div>
         </div>
       )}
@@ -586,8 +586,9 @@ export function ChallengePage({ onPlaceBet, positions }: ChallengePageProps) {
               {/* 主队胜 */}
               <button
                 onClick={() => setConfirmSide('home')}
-                className="flex flex-1 flex-col justify-center items-center rounded-2xl active:scale-95 transition-transform text-center overflow-hidden"
+                className="flex flex-col justify-center items-center rounded-2xl active:scale-95 transition-transform text-center overflow-hidden"
                 style={{
+                  flex: 1.2,
                   height: 'clamp(48px, 13vw, 56px)',
                   background: `linear-gradient(135deg, ${match.home.style.primary}, ${match.home.style.accent})`,
                   boxShadow: `0 8px 24px ${match.home.style.glow}`,
@@ -603,10 +604,10 @@ export function ChallengePage({ onPlaceBet, positions }: ChallengePageProps) {
                 onClick={() => setConfirmSide('draw')}
                 className="flex flex-col justify-center items-center px-1 rounded-2xl active:scale-95 transition-transform text-center overflow-hidden"
                 style={{
+                  flex: 0.9,
                   height: 'clamp(48px, 13vw, 56px)',
                   background: 'linear-gradient(135deg, #334155, #475569)',
                   boxShadow: '0 8px 24px rgba(51,65,85,0.4)',
-                  minWidth: 'clamp(52px, 14vw, 66px)',
                 }}
               >
                 <div className="truncate w-full px-1" style={{ fontFamily: 'Inter', fontSize: 'clamp(13px, 3.5vw, 16px)', fontWeight: 900, color: 'rgba(255,255,255,0.95)', letterSpacing: '0.03em' }}>买平局</div>
@@ -615,8 +616,9 @@ export function ChallengePage({ onPlaceBet, positions }: ChallengePageProps) {
               {/* 客队胜 */}
               <button
                 onClick={() => setConfirmSide('away')}
-                className="flex flex-1 flex-col justify-center items-center rounded-2xl active:scale-95 transition-transform text-center overflow-hidden"
+                className="flex flex-col justify-center items-center rounded-2xl active:scale-95 transition-transform text-center overflow-hidden"
                 style={{
+                  flex: 1.2,
                   height: 'clamp(48px, 13vw, 56px)',
                   background: `linear-gradient(135deg, ${match.away.style.primary}, ${match.away.style.accent})`,
                   boxShadow: `0 8px 24px ${match.away.style.glow}`,
