@@ -594,7 +594,7 @@ export function ChallengePage({ onPlaceBet, positions }: ChallengePageProps) {
                 }}
               >
                 <div className="truncate w-full px-1" style={{ fontFamily: 'Inter', fontSize: 'clamp(13px, 3.5vw, 16px)', fontWeight: 900, color: '#fff', letterSpacing: '0.03em' }}>
-                  买{match.home.shortCode} 胜
+                  买{match.home.shortCode}胜
                 </div>
               </button>
 
@@ -609,7 +609,7 @@ export function ChallengePage({ onPlaceBet, positions }: ChallengePageProps) {
                   minWidth: 'clamp(52px, 14vw, 66px)',
                 }}
               >
-                <div className="truncate w-full px-1" style={{ fontFamily: 'Inter', fontSize: 'clamp(13px, 3.5vw, 16px)', fontWeight: 900, color: 'rgba(255,255,255,0.95)', letterSpacing: '0.03em' }}>买 平局</div>
+                <div className="truncate w-full px-1" style={{ fontFamily: 'Inter', fontSize: 'clamp(13px, 3.5vw, 16px)', fontWeight: 900, color: 'rgba(255,255,255,0.95)', letterSpacing: '0.03em' }}>买平局</div>
               </button>
 
               {/* 客队胜 */}
@@ -623,7 +623,7 @@ export function ChallengePage({ onPlaceBet, positions }: ChallengePageProps) {
                 }}
               >
                 <div className="truncate w-full px-1" style={{ fontFamily: 'Inter', fontSize: 'clamp(13px, 3.5vw, 16px)', fontWeight: 900, color: '#fff', letterSpacing: '0.03em' }}>
-                  买{match.away.shortCode} 胜
+                  买{match.away.shortCode}胜
                 </div>
               </button>
 
