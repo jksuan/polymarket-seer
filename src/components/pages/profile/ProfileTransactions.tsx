@@ -3,6 +3,7 @@ import { useProfileTransactions } from "./useProfileTransactions";
 import { GlassCard } from "./components/GlassCard";
 import { OutcomePill } from "./components/OutcomePill";
 import { ProfileEmptyState } from "./components/ProfileEmptyState";
+import { ProfileCardSkeleton } from "./ProfilePositions";
 
 export interface ProfileTransactionsProps {
   portfolioLoading: boolean;
@@ -20,7 +21,11 @@ export function ProfileTransactions({ portfolioLoading, trades }: ProfileTransac
       className="flex flex-col gap-3"
     >
       {portfolioLoading ? (
-        <ProfileEmptyState loading={true} loadingText="正在同步交易记录..." />
+        <>
+          <ProfileCardSkeleton />
+          <ProfileCardSkeleton />
+          <ProfileCardSkeleton />
+        </>
       ) : transactionData.length === 0 ? (
         <ProfileEmptyState loading={false} emptyText="暂无交易记录" />
       ) : (

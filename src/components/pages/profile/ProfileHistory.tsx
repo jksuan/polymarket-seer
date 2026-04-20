@@ -5,6 +5,7 @@ import { useShareCard } from "@/hooks/useShareCard";
 import { GlassCard } from "./components/GlassCard";
 import { OutcomePill } from "./components/OutcomePill";
 import { ProfileEmptyState } from "./components/ProfileEmptyState";
+import { ProfileCardSkeleton } from "./ProfilePositions";
 
 export interface ProfileHistoryProps {
   portfolioLoading: boolean;
@@ -52,7 +53,11 @@ export function ProfileHistory({ portfolioLoading, trades }: ProfileHistoryProps
         className="flex flex-col gap-3"
       >
         {portfolioLoading ? (
-          <ProfileEmptyState loading={true} loadingText="正在同步历史数据..." />
+          <>
+            <ProfileCardSkeleton />
+            <ProfileCardSkeleton />
+            <ProfileCardSkeleton />
+          </>
         ) : historyData.length === 0 ? (
           <ProfileEmptyState loading={false} emptyText="暂无历史战绩" />
         ) : (
