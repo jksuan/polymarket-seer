@@ -527,34 +527,34 @@ export function ChallengePage({ onPlaceBet, positions }: ChallengePageProps) {
             </div>
 
             {/* ── 底部操作按钮区 ── */}
-            <div className="flex justify-between items-center gap-3 pb-4 z-20">
+            <div className="flex justify-between items-center pb-4 z-20" style={{ gap: 'clamp(6px, 1.5vw, 12px)', padding: '0 clamp(0px, 1vw, 4px)' }}>
               {/* 往右滑 (看下一张) */}
               <button
                 onClick={goNext}
                 disabled={currentIndex === swipeMatches.length - 1}
                 className={`flex items-center justify-center rounded-full transition-all flex-shrink-0 ${currentIndex === swipeMatches.length - 1 ? 'opacity-30 cursor-not-allowed' : 'active:scale-90'}`}
-                style={{ width: '56px', height: '56px', background: 'rgba(15,25,50,0.9)', border: '2px solid rgba(255,255,255,0.12)' }}
+                style={{ width: 'clamp(44px, 12vw, 56px)', height: 'clamp(44px, 12vw, 56px)', background: 'rgba(15,25,50,0.9)', border: '2px solid rgba(255,255,255,0.12)' }}
               >
-                <ChevronLeft size={24} color="rgba(255,255,255,0.6)" />
+                <ChevronLeft size={24} color="rgba(255,255,255,0.6)" className="scale-75 sm:scale-100" />
               </button>
 
               {/* 主队胜 */}
               <button
                 onClick={() => setConfirmSide('home')}
-                className="flex flex-1 flex-col justify-center items-center rounded-2xl active:scale-95 transition-transform text-center"
+                className="flex flex-1 flex-col justify-center items-center rounded-2xl active:scale-95 transition-transform text-center overflow-hidden"
                 style={{
-                  height: '56px',
+                  height: 'clamp(48px, 13vw, 56px)',
                   background: `linear-gradient(135deg, ${match.home.style.primary}, ${match.home.style.accent})`,
                   boxShadow: `0 8px 24px ${match.home.style.glow}`,
                 }}
               >
-                <div style={{ fontFamily: 'Inter', fontSize: '9px', fontWeight: 600, color: 'rgba(255,255,255,0.85)', textTransform: 'uppercase' }}>
+                <div className="truncate w-full px-1" style={{ fontFamily: 'Inter', fontSize: 'clamp(8px, 2.2vw, 9px)', fontWeight: 600, color: 'rgba(255,255,255,0.85)', textTransform: 'uppercase' }}>
                   支持 {match.home.shortCode}
                 </div>
-                <div style={{ fontFamily: 'Inter', fontSize: '20px', fontWeight: 900, fontStyle: 'italic', color: '#fff', lineHeight: 1, marginTop: '1px' }}>
+                <div style={{ fontFamily: 'Inter', fontSize: 'clamp(16px, 5vw, 20px)', fontWeight: 900, fontStyle: 'italic', color: '#fff', lineHeight: 1, marginTop: '2px' }}>
                   {(100 / match.home.probability).toFixed(2)}x
                 </div>
-                <div style={{ fontFamily: 'Inter', fontSize: '9px', fontWeight: 600, color: 'rgba(255,255,255,0.85)', textTransform: 'uppercase', marginTop: '2px' }}>
+                <div style={{ fontFamily: 'Inter', fontSize: 'clamp(8px, 2.2vw, 9px)', fontWeight: 600, color: 'rgba(255,255,255,0.85)', textTransform: 'uppercase', marginTop: '2px' }}>
                   胜率 {match.home.probability}%
                 </div>
               </button>
@@ -562,19 +562,19 @@ export function ChallengePage({ onPlaceBet, positions }: ChallengePageProps) {
               {/* 平局 */}
               <button
                 onClick={() => setConfirmSide('draw')}
-                className="flex flex-col justify-center items-center px-1.5 rounded-2xl active:scale-95 transition-transform text-center"
+                className="flex flex-col justify-center items-center px-1 rounded-2xl active:scale-95 transition-transform text-center"
                 style={{
-                  height: '56px',
+                  height: 'clamp(48px, 13vw, 56px)',
                   background: 'linear-gradient(135deg, #334155, #475569)',
                   boxShadow: '0 8px 24px rgba(51,65,85,0.4)',
-                  minWidth: '66px',
+                  minWidth: 'clamp(52px, 14vw, 66px)',
                 }}
               >
-                <div style={{ fontFamily: 'Inter', fontSize: '9px', fontWeight: 600, color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase' }}>平局</div>
-                <div style={{ fontFamily: 'Inter', fontSize: '20px', fontWeight: 900, fontStyle: 'italic', color: '#fff', lineHeight: 1, marginTop: '1px' }}>
+                <div style={{ fontFamily: 'Inter', fontSize: 'clamp(8px, 2.2vw, 9px)', fontWeight: 600, color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase' }}>平局</div>
+                <div style={{ fontFamily: 'Inter', fontSize: 'clamp(16px, 5vw, 20px)', fontWeight: 900, fontStyle: 'italic', color: '#fff', lineHeight: 1, marginTop: '2px' }}>
                   {(100 / match.draw.probability).toFixed(2)}x
                 </div>
-                <div style={{ fontFamily: 'Inter', fontSize: '9px', fontWeight: 600, color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', marginTop: '2px' }}>
+                <div style={{ fontFamily: 'Inter', fontSize: 'clamp(8px, 2.2vw, 9px)', fontWeight: 600, color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', marginTop: '2px' }}>
                   {match.draw.probability}%
                 </div>
               </button>
@@ -582,20 +582,20 @@ export function ChallengePage({ onPlaceBet, positions }: ChallengePageProps) {
               {/* 客队胜 */}
               <button
                 onClick={() => setConfirmSide('away')}
-                className="flex flex-1 flex-col justify-center items-center rounded-2xl active:scale-95 transition-transform text-center"
+                className="flex flex-1 flex-col justify-center items-center rounded-2xl active:scale-95 transition-transform text-center overflow-hidden"
                 style={{
-                  height: '56px',
+                  height: 'clamp(48px, 13vw, 56px)',
                   background: `linear-gradient(135deg, ${match.away.style.primary}, ${match.away.style.accent})`,
                   boxShadow: `0 8px 24px ${match.away.style.glow}`,
                 }}
               >
-                <div style={{ fontFamily: 'Inter', fontSize: '9px', fontWeight: 600, color: 'rgba(255,255,255,0.85)', textTransform: 'uppercase' }}>
+                <div className="truncate w-full px-1" style={{ fontFamily: 'Inter', fontSize: 'clamp(8px, 2.2vw, 9px)', fontWeight: 600, color: 'rgba(255,255,255,0.85)', textTransform: 'uppercase' }}>
                   支持 {match.away.shortCode}
                 </div>
-                <div style={{ fontFamily: 'Inter', fontSize: '20px', fontWeight: 900, fontStyle: 'italic', color: '#fff', lineHeight: 1, marginTop: '1px' }}>
+                <div style={{ fontFamily: 'Inter', fontSize: 'clamp(16px, 5vw, 20px)', fontWeight: 900, fontStyle: 'italic', color: '#fff', lineHeight: 1, marginTop: '2px' }}>
                   {(100 / match.away.probability).toFixed(2)}x
                 </div>
-                <div style={{ fontFamily: 'Inter', fontSize: '9px', fontWeight: 600, color: 'rgba(255,255,255,0.85)', textTransform: 'uppercase', marginTop: '2px' }}>
+                <div style={{ fontFamily: 'Inter', fontSize: 'clamp(8px, 2.2vw, 9px)', fontWeight: 600, color: 'rgba(255,255,255,0.85)', textTransform: 'uppercase', marginTop: '2px' }}>
                   胜率 {match.away.probability}%
                 </div>
               </button>
@@ -605,9 +605,9 @@ export function ChallengePage({ onPlaceBet, positions }: ChallengePageProps) {
                 onClick={goPrev}
                 disabled={currentIndex === 0}
                 className={`flex items-center justify-center rounded-full transition-all flex-shrink-0 ${currentIndex === 0 ? 'opacity-30 cursor-not-allowed' : 'active:scale-90'}`}
-                style={{ width: '56px', height: '56px', background: 'rgba(15,25,50,0.9)', border: '2px solid rgba(255,255,255,0.12)' }}
+                style={{ width: 'clamp(44px, 12vw, 56px)', height: 'clamp(44px, 12vw, 56px)', background: 'rgba(15,25,50,0.9)', border: '2px solid rgba(255,255,255,0.12)' }}
               >
-                <ChevronRight size={24} color="rgba(255,255,255,0.6)" />
+                <ChevronRight size={24} color="rgba(255,255,255,0.6)" className="scale-75 sm:scale-100" />
               </button>
             </div>
           </main>
