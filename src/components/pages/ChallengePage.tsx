@@ -496,10 +496,11 @@ export function ChallengePage({ onPlaceBet, positions }: ChallengePageProps) {
 
             {/* ── 底部操作按钮区 ── */}
             <div className="flex justify-between items-center gap-3 pb-4 z-20">
-              {/* 上一场 */}
+              {/* 往右滑 (看下一张) */}
               <button
                 onClick={goNext}
-                className="flex items-center justify-center rounded-full active:scale-90 transition-transform flex-shrink-0"
+                disabled={currentIndex === swipeMatches.length - 1}
+                className={`flex items-center justify-center rounded-full transition-all flex-shrink-0 ${currentIndex === swipeMatches.length - 1 ? 'opacity-30 cursor-not-allowed' : 'active:scale-90'}`}
                 style={{ width: '56px', height: '56px', background: 'rgba(15,25,50,0.9)', border: '2px solid rgba(255,255,255,0.12)' }}
               >
                 <ChevronLeft size={24} color="rgba(255,255,255,0.6)" />
@@ -567,10 +568,11 @@ export function ChallengePage({ onPlaceBet, positions }: ChallengePageProps) {
                 </div>
               </button>
 
-              {/* 下一场 */}
+              {/* 往左滑 (看上一张) */}
               <button
                 onClick={goPrev}
-                className="flex items-center justify-center rounded-full active:scale-90 transition-transform flex-shrink-0"
+                disabled={currentIndex === 0}
+                className={`flex items-center justify-center rounded-full transition-all flex-shrink-0 ${currentIndex === 0 ? 'opacity-30 cursor-not-allowed' : 'active:scale-90'}`}
                 style={{ width: '56px', height: '56px', background: 'rgba(15,25,50,0.9)', border: '2px solid rgba(255,255,255,0.12)' }}
               >
                 <ChevronRight size={24} color="rgba(255,255,255,0.6)" />
