@@ -498,7 +498,7 @@ export function ChallengePage({ onPlaceBet, positions }: ChallengePageProps) {
             <div className="flex justify-between items-center gap-3 pb-4 z-20">
               {/* 上一场 */}
               <button
-                onClick={goPrev}
+                onClick={goNext}
                 className="flex items-center justify-center rounded-full active:scale-90 transition-transform flex-shrink-0"
                 style={{ width: '56px', height: '56px', background: 'rgba(15,25,50,0.9)', border: '2px solid rgba(255,255,255,0.12)' }}
               >
@@ -569,7 +569,7 @@ export function ChallengePage({ onPlaceBet, positions }: ChallengePageProps) {
 
               {/* 下一场 */}
               <button
-                onClick={goNext}
+                onClick={goPrev}
                 className="flex items-center justify-center rounded-full active:scale-90 transition-transform flex-shrink-0"
                 style={{ width: '56px', height: '56px', background: 'rgba(15,25,50,0.9)', border: '2px solid rgba(255,255,255,0.12)' }}
               >
