@@ -9,7 +9,7 @@ import { useTrading } from "@/hooks/useTrading";
 import { BottomNav } from '@/components/ui/BottomNav';
 import { HomePage } from '@/components/pages/HomePage';
 import { SearchPage } from '@/components/pages/SearchPage';
-import { LeaderboardPage } from '@/components/pages/LeaderboardPage';
+import { DiscoverPage } from '@/components/pages/DiscoverPage';
 import { ProfilePage } from '@/components/pages/ProfilePage';
 import { ChallengePage } from '@/components/pages/ChallengePage';
 import TxOverlay from "@/components/TxOverlay";
@@ -82,7 +82,7 @@ function AppRouterContent() {
              <HomePage onPlaceBet={handlePlaceBetWrap} positions={positions} />
           )}
           {activeTab === 'search' && <SearchPage onPlaceBet={handlePlaceBetWrap} positions={positions} />}
-          {activeTab === 'leaderboard' && <LeaderboardPage />}
+          {activeTab === 'discover' && <DiscoverPage />}
           {activeTab === 'profile' && (
             <ProfilePage 
               authenticated={authenticated}

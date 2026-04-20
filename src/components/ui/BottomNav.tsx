@@ -1,6 +1,6 @@
 'use client';
 
-import { Home, Search, BarChart2, User } from 'lucide-react';
+import { Home, Search, Compass, User } from 'lucide-react';
 
 interface BottomNavProps {
   activeTab: string;
@@ -15,7 +15,7 @@ export function BottomNav({ activeTab, onChange }: BottomNavProps) {
     { path: 'search', icon: Search, label: '搜索' },
   ];
   const rightItems = [
-    { path: 'leaderboard', icon: BarChart2, label: '排行' },
+    { path: 'discover', icon: Compass, label: '发现' },
     { path: 'profile', icon: User, label: '我的' },
   ];
 
