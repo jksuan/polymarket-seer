@@ -255,3 +255,60 @@ export function ClosingSoonCard({ match, onClick }: { match?: ParsedMatch; onCli
     </motion.div>
   );
 }
+
+// ── Horizontal Row: 横滑小卡补充列 ──────────────────────────────
+interface HorizontalMatchRowProps {
+  label: string;
+  matches: ParsedMatch[];
+  onClick?: (match: ParsedMatch) => void;
+  accentColor?: string;
+}
+
+export function HorizontalMatchRow({ label, matches, onClick, accentColor = '#6bff8f' }: HorizontalMatchRowProps) {
+  if (!matches || matches.length === 0) return null;
+
+  return (
+    <div className="w-full -mt-2">
+
+
+      <div
+        className="flex gap-3 overflow-x-auto pb-2"
+        style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}
+      >
+        {matches.map((match) => {
+          const homeColor = match.home.style.primary || '#6bff8f';
+          const awayColor = match.away.style.primary || '#00F0FF';
+
+          return (
+            <motion.button
+              key={match.id}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => onClick?.(match)}
+              className="flex-shrink-0 w-[168px] rounded-2xl overflow-hidden border border-white/[0.08] bg-[#0D0518] relative cursor-pointer"
+              style={{ boxShadow: '0 4px 16px rgba(0,0,0,0.4)' }}
+            >
+              {/* Color stripe at top */}
+              <div className="h-[3px] w-full" style={{ background: `linear-gradient(to right, ${homeColor}, ${awayColor})` }} />
+              <div className="p-3 flex flex-col gap-2">
+                <div className="flex flex-col gap-0.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-white text-[11px] font-bold truncate max-w-[80px]">{match.home.name}</span>
+                    <span className="text-[11px] font-black font-mono" style={{ color: homeColor }}>{match.home.probability}%</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-white/50 text-[11px] font-bold truncate max-w-[80px]">{match.away.name}</span>
+                    <span className="text-[11px] font-black font-mono" style={{ color: awayColor }}>{match.away.probability}%</span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between border-t border-white/5 pt-2">
+                  <span className="text-white/30 text-[9px] font-mono uppercase tracking-widest">VOL</span>
+                  <span className="text-white/70 text-[10px] font-bold font-mono">{formatVolume(match.volume)}</span>
+                </div>
+              </div>
+            </motion.button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}

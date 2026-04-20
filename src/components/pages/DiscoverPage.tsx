@@ -6,7 +6,8 @@ import {
   DiscoverCardsContainer,
   TrendingCard,
   SplitCard,
-  ClosingSoonCard
+  ClosingSoonCard,
+  HorizontalMatchRow
 } from '@/components/ui/DiscoverCard';
 import { useMatchData } from '@/hooks/useMatchData';
 import { useState, useMemo, useEffect } from 'react';
@@ -31,14 +32,14 @@ export function DiscoverPage({ onPlaceBet, positions }: DiscoverPageProps) {
   const [confirmAction, setConfirmAction] = useState<{match: ParsedMatch, side: 'home'|'away'|'draw'} | null>(null);
 
   // Compute dynamic discovering matches
-  const { trendingMatch, splitMatch, closingSoonMatch } = useMemo(() => {
+  const { trendingMatch, splitMatch, closingSoonMatch, trendingRest, splitRest, closingRest } = useMemo(() => {
     if (!allMatches || allMatches.length === 0) return {};
 
     // 1. Trending: simply highest volume
     const sortedByVolume = [...allMatches].sort((a, b) => b.volume - a.volume);
     const trending = sortedByVolume[0];
 
-    // 2. Split: tightest probability difference (e.g., closest to 0 diff), filtering out the exact same match as trending if possible
+    // 2. Split: tightest probability difference, filtering out trending
     const splitMatches = allMatches.filter(m => Math.abs(m.home.probability - m.away.probability) <= 15);
     splitMatches.sort((a, b) => Math.abs(a.home.probability - a.away.probability) - Math.abs(b.home.probability - b.away.probability));
     const split = splitMatches.find(m => m.id !== trending?.id) || splitMatches[0] || sortedByVolume[1];
@@ -48,7 +49,17 @@ export function DiscoverPage({ onPlaceBet, positions }: DiscoverPageProps) {
     upcoming.sort((a, b) => new Date(a.rawMarket.matchTimeISO).getTime() - new Date(b.rawMarket.matchTimeISO).getTime());
     const closing = upcoming.find(m => m.id !== trending?.id && m.id !== split?.id) || upcoming[0] || sortedByVolume[2];
 
-    return { trendingMatch: trending, splitMatch: split, closingSoonMatch: closing };
+    // Secondary horizontal row lists (exclude the hero card itself)
+    // trendingRest: Vol 2-6 by volume, skip the trending hero
+    const trendingRest = sortedByVolume.filter(m => m.id !== trending?.id).slice(0, 6);
+
+    // splitRest: other deathmatch candidates, skip hero; sorted by tightness
+    const splitRest = splitMatches.filter(m => m.id !== split?.id && m.id !== trending?.id).slice(0, 6);
+
+    // closingRest: other upcoming matches near the same time window (next 2 within same day)
+    const closingRest = upcoming.filter(m => m.id !== closing?.id && m.id !== trending?.id).slice(0, 6);
+
+    return { trendingMatch: trending, splitMatch: split, closingSoonMatch: closing, trendingRest, splitRest, closingRest };
   }, [allMatches]);
 
   // Helper handling QuickPick interaction
@@ -68,8 +79,28 @@ export function DiscoverPage({ onPlaceBet, positions }: DiscoverPageProps) {
         ) : (
           <DiscoverCardsContainer>
             {trendingMatch && <TrendingCard match={trendingMatch} onClick={() => handleCardClick(trendingMatch)} />}
+            <HorizontalMatchRow
+              label="热门赛事"
+              matches={trendingRest ?? []}
+              onClick={handleCardClick}
+              accentColor="#ff6b35"
+            />
             {splitMatch && <SplitCard match={splitMatch} onClick={() => handleCardClick(splitMatch)} />}
+            <HorizontalMatchRow
+              label="剃刀边缘"
+              matches={splitRest ?? []}
+              onClick={handleCardClick}
+              accentColor="#a855f7"
+            />
             {closingSoonMatch && <ClosingSoonCard match={closingSoonMatch} onClick={() => handleCardClick(closingSoonMatch)} />}
+            {(closingRest ?? []).length >= 2 && (
+              <HorizontalMatchRow
+                label="即将开赛"
+                matches={closingRest ?? []}
+                onClick={handleCardClick}
+                accentColor="#00F0FF"
+              />
+            )}
           </DiscoverCardsContainer>
         )}
       </div>
