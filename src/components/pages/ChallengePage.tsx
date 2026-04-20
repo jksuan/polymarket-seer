@@ -548,21 +548,15 @@ export function ChallengePage({ onPlaceBet, positions }: ChallengePageProps) {
                   boxShadow: `0 8px 24px ${match.home.style.glow}`,
                 }}
               >
-                <div className="truncate w-full px-1" style={{ fontFamily: 'Inter', fontSize: 'clamp(8px, 2.2vw, 9px)', fontWeight: 600, color: 'rgba(255,255,255,0.85)', textTransform: 'uppercase' }}>
-                  支持 {match.home.shortCode}
-                </div>
-                <div style={{ fontFamily: 'Inter', fontSize: 'clamp(16px, 5vw, 20px)', fontWeight: 900, fontStyle: 'italic', color: '#fff', lineHeight: 1, marginTop: '2px' }}>
-                  {(100 / match.home.probability).toFixed(2)}x
-                </div>
-                <div style={{ fontFamily: 'Inter', fontSize: 'clamp(8px, 2.2vw, 9px)', fontWeight: 600, color: 'rgba(255,255,255,0.85)', textTransform: 'uppercase', marginTop: '2px' }}>
-                  胜率 {match.home.probability}%
+                <div className="truncate w-full px-1" style={{ fontFamily: 'Inter', fontSize: 'clamp(13px, 3.5vw, 16px)', fontWeight: 900, color: '#fff', letterSpacing: '0.03em' }}>
+                  买{match.home.shortCode} 胜
                 </div>
               </button>
 
               {/* 平局 */}
               <button
                 onClick={() => setConfirmSide('draw')}
-                className="flex flex-col justify-center items-center px-1 rounded-2xl active:scale-95 transition-transform text-center"
+                className="flex flex-col justify-center items-center px-1 rounded-2xl active:scale-95 transition-transform text-center overflow-hidden"
                 style={{
                   height: 'clamp(48px, 13vw, 56px)',
                   background: 'linear-gradient(135deg, #334155, #475569)',
@@ -570,13 +564,7 @@ export function ChallengePage({ onPlaceBet, positions }: ChallengePageProps) {
                   minWidth: 'clamp(52px, 14vw, 66px)',
                 }}
               >
-                <div style={{ fontFamily: 'Inter', fontSize: 'clamp(8px, 2.2vw, 9px)', fontWeight: 600, color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase' }}>平局</div>
-                <div style={{ fontFamily: 'Inter', fontSize: 'clamp(16px, 5vw, 20px)', fontWeight: 900, fontStyle: 'italic', color: '#fff', lineHeight: 1, marginTop: '2px' }}>
-                  {(100 / match.draw.probability).toFixed(2)}x
-                </div>
-                <div style={{ fontFamily: 'Inter', fontSize: 'clamp(8px, 2.2vw, 9px)', fontWeight: 600, color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', marginTop: '2px' }}>
-                  {match.draw.probability}%
-                </div>
+                <div className="truncate w-full px-1" style={{ fontFamily: 'Inter', fontSize: 'clamp(13px, 3.5vw, 16px)', fontWeight: 900, color: 'rgba(255,255,255,0.95)', letterSpacing: '0.03em' }}>买 平局</div>
               </button>
 
               {/* 客队胜 */}
@@ -589,14 +577,8 @@ export function ChallengePage({ onPlaceBet, positions }: ChallengePageProps) {
                   boxShadow: `0 8px 24px ${match.away.style.glow}`,
                 }}
               >
-                <div className="truncate w-full px-1" style={{ fontFamily: 'Inter', fontSize: 'clamp(8px, 2.2vw, 9px)', fontWeight: 600, color: 'rgba(255,255,255,0.85)', textTransform: 'uppercase' }}>
-                  支持 {match.away.shortCode}
-                </div>
-                <div style={{ fontFamily: 'Inter', fontSize: 'clamp(16px, 5vw, 20px)', fontWeight: 900, fontStyle: 'italic', color: '#fff', lineHeight: 1, marginTop: '2px' }}>
-                  {(100 / match.away.probability).toFixed(2)}x
-                </div>
-                <div style={{ fontFamily: 'Inter', fontSize: 'clamp(8px, 2.2vw, 9px)', fontWeight: 600, color: 'rgba(255,255,255,0.85)', textTransform: 'uppercase', marginTop: '2px' }}>
-                  胜率 {match.away.probability}%
+                <div className="truncate w-full px-1" style={{ fontFamily: 'Inter', fontSize: 'clamp(13px, 3.5vw, 16px)', fontWeight: 900, color: '#fff', letterSpacing: '0.03em' }}>
+                  买{match.away.shortCode} 胜
                 </div>
               </button>
 
