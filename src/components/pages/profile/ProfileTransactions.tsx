@@ -3,7 +3,7 @@ import { useProfileTransactions } from "./useProfileTransactions";
 import { GlassCard } from "./components/GlassCard";
 import { OutcomePill } from "./components/OutcomePill";
 import { ProfileEmptyState } from "./components/ProfileEmptyState";
-import { ProfileCardSkeleton } from "./ProfilePositions";
+import { ProfileTransactionSkeleton } from "./components/ProfileTransactionSkeleton";
 
 export interface ProfileTransactionsProps {
   portfolioLoading: boolean;
@@ -22,9 +22,11 @@ export function ProfileTransactions({ portfolioLoading, trades }: ProfileTransac
     >
       {portfolioLoading ? (
         <>
-          <ProfileCardSkeleton />
-          <ProfileCardSkeleton />
-          <ProfileCardSkeleton />
+          <ProfileTransactionSkeleton />
+          <ProfileTransactionSkeleton />
+          <ProfileTransactionSkeleton />
+          <ProfileTransactionSkeleton />
+          <ProfileTransactionSkeleton />
         </>
       ) : transactionData.length === 0 ? (
         <ProfileEmptyState loading={false} emptyText="暂无交易记录" />

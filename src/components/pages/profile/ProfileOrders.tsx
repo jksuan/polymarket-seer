@@ -2,7 +2,7 @@ import { motion } from "motion/react";
 import { GlassCard } from "./components/GlassCard";
 import { OutcomePill } from "./components/OutcomePill";
 import { ProfileEmptyState } from "./components/ProfileEmptyState";
-import { ProfileCardSkeleton } from "./ProfilePositions";
+import { ProfileCardSkeleton } from "./components/ProfileCardSkeleton";
 
 export interface ProfileOrdersProps {
   portfolioLoading: boolean;
