@@ -177,10 +177,12 @@ export function useTrading(
   }, []);
 
   // --- SWR 集成 ---
+  const swrKey = (authenticated && proxyAddress && walletAddress && hasCreds)
+    ? ["portfolio", proxyAddress, walletAddress]
+    : null;
+
   const { data, mutate, isLoading, isValidating } = useSWR(
-    (authenticated && proxyAddress && walletAddress && hasCreds)
-      ? ["portfolio", proxyAddress, walletAddress]
-      : null,
+    swrKey,
     fetcher,
     {
       refreshInterval: 15000,
@@ -192,7 +194,9 @@ export function useTrading(
   const positions = data?.positions || [];
   const openOrders = data?.openOrders || [];
   const trades = data?.trades || [];
-  const portfolioLoading = isLoading;
+  
+  const isAuthInitializing = authenticated && swrKey === null && !data;
+  const portfolioLoading = isLoading || isAuthInitializing;
 
   // Stablize fetchBalance reference to prevent infinite render loops in useEffect
   const fetchBalanceRef = useRef(fetchBalance);
