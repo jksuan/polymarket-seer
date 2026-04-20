@@ -15,7 +15,7 @@ export function DiscoverCardsContainer({ children }: { children: React.ReactNode
 }
 
 // 1. Trending Card - The 24H Volume Focus
-export function TrendingCard({ match }: { match?: ParsedMatch }) {
+export function TrendingCard({ match, onClick }: { match?: ParsedMatch; onClick?: () => void }) {
   if (!match) return null;
   // Use the team with the higher probability as the hero
   const isHomeFavored = match.home.probability >= match.away.probability;
@@ -29,6 +29,7 @@ export function TrendingCard({ match }: { match?: ParsedMatch }) {
   return (
     <motion.div 
       whileTap={{ scale: 0.98 }}
+      onClick={onClick}
       className="relative w-full h-[400px] rounded-[32px] overflow-hidden border border-white/10 group cursor-pointer shadow-xl"
     >
       <div className="absolute inset-0 bg-[#0D0518]" />
@@ -88,7 +89,7 @@ export function TrendingCard({ match }: { match?: ParsedMatch }) {
 }
 
 // 2. 50/50 Split Card - The High Tension Deathmatch
-export function SplitCard({ match }: { match?: ParsedMatch }) {
+export function SplitCard({ match, onClick }: { match?: ParsedMatch; onClick?: () => void }) {
   if (!match) return null;
   const homeColor = match.home.style.primary;
   const awayColor = match.away.style.primary;
@@ -101,6 +102,7 @@ export function SplitCard({ match }: { match?: ParsedMatch }) {
   return (
     <motion.div 
       whileTap={{ scale: 0.98 }}
+      onClick={onClick}
       className="relative w-full h-[320px] rounded-[32px] overflow-hidden border border-white/5 cursor-pointer bg-[#0D0518] shadow-xl"
     >
       {/* Diagonal Split Backgrounds using dynamic team colors */}
@@ -171,7 +173,7 @@ export function SplitCard({ match }: { match?: ParsedMatch }) {
 }
 
 // 3. Closing Soon / Next Match Card - FOMO Timer
-export function ClosingSoonCard({ match }: { match?: ParsedMatch }) {
+export function ClosingSoonCard({ match, onClick }: { match?: ParsedMatch; onClick?: () => void }) {
   const [timeLeft, setTimeLeft] = useState<string>('00:00:00');
   const [isUrgent, setIsUrgent] = useState<boolean>(true);
 
@@ -223,6 +225,7 @@ export function ClosingSoonCard({ match }: { match?: ParsedMatch }) {
   return (
     <motion.div 
       whileTap={{ scale: 0.98 }}
+      onClick={onClick}
       className={`relative w-full h-[240px] rounded-[32px] overflow-hidden border cursor-pointer shadow-xl ${isUrgent ? 'border-rose-500/20' : 'border-[#00F0FF]/20'} bg-[#0D0518]`}
     >
       <div className={`absolute inset-0 bg-[radial-gradient(circle_at_bottom_right,_var(--tw-gradient-stops))] ${glowTheme} via-[#0D0518]/50 to-[#0D0518] scale-125`} />

@@ -82,7 +82,7 @@ function AppRouterContent() {
              <HomePage onPlaceBet={handlePlaceBetWrap} positions={positions} />
           )}
           {activeTab === 'search' && <SearchPage onPlaceBet={handlePlaceBetWrap} positions={positions} />}
-          {activeTab === 'discover' && <DiscoverPage />}
+          {activeTab === 'discover' && <DiscoverPage onPlaceBet={handlePlaceBetWrap} positions={positions} />}
           {activeTab === 'profile' && (
             <ProfilePage 
               authenticated={authenticated}
