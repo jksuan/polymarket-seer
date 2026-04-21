@@ -324,6 +324,10 @@ export function UnderdogCard({ match, onClick }: { match?: ParsedMatch; onClick?
   // Clamp odds label length for layout stability
   const oddsDisplay = parseFloat(odds) >= 10 ? parseFloat(odds).toFixed(0) : odds;
 
+  // Team colors for flag glows
+  const homeColor = match.home.style.primary;
+  const awayColor = match.away.style.primary;
+
   // Dark gold color scheme
   const goldPrimary = '#F59E0B';
   const goldGlow = 'rgba(245, 158, 11, 0.25)';
@@ -332,56 +336,70 @@ export function UnderdogCard({ match, onClick }: { match?: ParsedMatch; onClick?
     <motion.div
       whileTap={{ scale: 0.98 }}
       onClick={onClick}
-      className="relative w-full h-[320px] rounded-[32px] overflow-hidden border border-amber-500/20 cursor-pointer shadow-xl bg-[#0D0518]"
+      className="relative group w-full h-[320px] rounded-[32px] overflow-hidden border border-amber-500/20 cursor-pointer shadow-xl bg-[#0D0518]"
     >
       {/* Background layers */}
       <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, #1a0a00 0%, #0D0518 60%)' }} />
       <div className="absolute inset-0 opacity-60" style={{ background: `radial-gradient(ellipse at top left, ${goldGlow}, transparent 65%)` }} />
 
-      {/* Top badge */}
-      <div className="absolute top-6 left-6 z-20 flex items-center gap-2 px-3 py-1.5 rounded-full backdrop-blur-md bg-amber-500/10 border border-amber-500/30">
-        <span className="text-amber-400 text-[14px]">⚡</span>
-        <span className="text-amber-400 text-[11px] font-bold tracking-[0.2em] uppercase">以小博大</span>
+      {/* Top left Title */}
+      <div className="absolute top-6 left-6 z-20 flex justify-between items-start pointer-events-none">
+         <div className="flex items-center gap-2 self-start">
+           <span className="text-amber-400 text-[14px]">⚡</span>
+           <span className="text-[13px] shadow-sm flex items-center gap-1 text-amber-400" style={{ fontFamily: 'Inter', fontWeight: 800, letterSpacing: '0.02em' }}>LONG SHOT</span>
+         </div>
       </div>
 
-      {/* Main content */}
-      <div className="absolute inset-0 p-6 flex flex-col justify-end z-20">
-        {/* Underdog name */}
-        <h3 className="text-white font-black italic uppercase text-4xl tracking-tighter leading-none mb-3">
+      {/* Main content - Centered */}
+      <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 p-6 z-20 pointer-events-none">
+        {/* Tagline */}
+        <span className="text-white/40 text-[11px] font-bold tracking-normal uppercase mb-1" style={{ fontFamily: 'Inter' }}>
+          Who dares bet on
+        </span>
+
+        {/* Underdog name — hero text */}
+        <h3 className="text-white font-black italic capitalize text-4xl tracking-tight leading-none pointer-events-auto">
           {underdog.name}
         </h3>
 
-        <div className="flex items-end justify-between">
-          <div className="flex flex-col gap-1">
-            <div className="text-amber-400/60 text-[10px] font-bold font-mono uppercase tracking-widest">冷门赔率</div>
-            {/* Giant odds multiplier */}
-            <div
-              className="font-black tracking-tighter leading-none"
-              style={{
-                fontSize: '72px',
-                color: goldPrimary,
-                filter: `drop-shadow(0 0 18px ${goldPrimary}80)`,
-                lineHeight: 1,
-              }}
-            >
-              {oddsDisplay}<span className="text-3xl align-baseline">x</span>
-            </div>
-            <div className="text-white/40 text-[11px] font-mono tracking-wide">
-              胜率仅 <span className="text-amber-400 font-bold">{underdog.probability}%</span>
-            </div>
-          </div>
-
-          {/* CTA button */}
-          <button
-            className="w-16 h-16 rounded-full flex items-center justify-center active:scale-95 transition-all duration-300 mb-2"
-            style={{
-              background: `linear-gradient(135deg, ${goldPrimary}, #D97706)`,
-              boxShadow: `0 0 24px ${goldPrimary}50`,
-            }}
-          >
-            <span className="text-[#0D0518] text-[22px] font-black">⚡</span>
-          </button>
+        {/* Giant odds multiplier */}
+        <div
+          className="font-black tracking-tighter leading-none pointer-events-auto mt-1"
+          style={{
+            fontSize: '72px',
+            color: goldPrimary,
+            filter: `drop-shadow(0 0 18px ${goldPrimary}80)`,
+            lineHeight: 1,
+          }}
+        >
+          {oddsDisplay}<span className="text-4xl align-baseline opacity-80 text-amber-500/80 ml-1">x</span>
         </div>
+
+        {/* Both teams row */}
+        <div className="flex items-center gap-6 mt-4 pointer-events-auto">
+          {/* Home team */}
+          <div className="flex flex-col items-center gap-1">
+            <div className="rounded-[6px] overflow-hidden" style={{ boxShadow: `0 0 8px ${homeColor}50` }}>
+              <img src={getCountryFlagUrl(match.home.name, 'svg')} alt={match.home.name} className="w-[30px] h-[21px] object-cover" />
+            </div>
+            <span className="text-white/50 text-[9px] font-bold capitalize tracking-wide">{match.home.name}</span>
+          </div>
+          <span className="text-white/20 text-[10px] font-black">VS</span>
+          {/* Away team */}
+          <div className="flex flex-col items-center gap-1">
+            <div className="rounded-[6px] overflow-hidden" style={{ boxShadow: `0 0 8px ${awayColor}50` }}>
+              <img src={getCountryFlagUrl(match.away.name, 'svg')} alt={match.away.name} className="w-[30px] h-[21px] object-cover" />
+            </div>
+            <span className="text-white/50 text-[9px] font-bold capitalize tracking-wide">{match.away.name}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Subtle Tap to Trade Hint */}
+      <div className="absolute bottom-4 left-0 w-full flex justify-center opacity-40 hover:opacity-100 transition-opacity z-50 pointer-events-none group-hover:opacity-100">
+        <span style={{ fontFamily: 'Inter', fontSize: '11px', color: 'rgba(255, 255, 255, 0.68)'}}>
+          点击卡片快速投注
+        </span>
       </div>
 
       {/* Watermark */}
