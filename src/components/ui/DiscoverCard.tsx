@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
-import { Flame, Swords, Timer, ArrowUpRight } from 'lucide-react';
+import { Flame, Swords, Timer, ArrowUpRight, ArrowLeftRight } from 'lucide-react';
 import { ParsedMatch } from '@/components/ui/MatchCard';
 import { formatVolume } from '@/lib/utils';
 import { getCountryFlagUrl } from '@/lib/countryFlags';
@@ -142,52 +142,78 @@ export function SplitCard({ match, onClick }: { match?: ParsedMatch; onClick?: (
          <div className="w-[150%] h-[1px] bg-gradient-to-r from-transparent via-white/50 to-transparent absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rotate-[35deg] drop-shadow-[0_0_5px_rgba(255,255,255,0.5)]" />
       </div>
 
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-30 flex flex-col items-center">
-        <div className="text-white/90 text-7xl font-black italic drop-shadow-[0_0_20px_rgba(255,255,255,0.2)] tracking-tighter">
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-30 flex flex-col items-center pointer-events-none">
+        <div className="text-white/80 text-[56px] font-black italic drop-shadow-[0_0_15px_rgba(255,255,255,0.1)] tracking-tighter mix-blend-overlay opacity-70">
           VS
         </div>
       </div>
 
       <div className="absolute inset-0 z-20 flex flex-col justify-between p-6">
-        <div className="flex justify-between items-start">
-           <div className="flex items-center gap-2 self-start bg-white/5 border border-white/10 backdrop-blur-xl px-3 py-1.5 rounded-full">
-             <Swords className="w-4 h-4 text-white" />
-             <span className="text-white text-[11px] font-bold tracking-[0.2em] uppercase">生死局</span>
+        {/* Top left Title */}
+        <div className="flex justify-between items-start pointer-events-none">
+           <div className="flex items-center gap-2 self-start">
+             <ArrowLeftRight className="w-4 h-4 text-white" />
+             <span className="text-[13px] shadow-sm flex items-center gap-1 text-white" style={{ fontFamily: 'Inter', fontWeight: 800, letterSpacing: '0.02em' }}>势均力敌</span>
            </div>
         </div>
 
-        <div className="flex w-full justify-between items-end mb-2 relative">
-          
-          {/* Middle Draw Element (Implicit spread info) */}
-          {drawProb > 0 && (
-             <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex flex-col items-center bg-[#0D0518]/60 border border-white/10 backdrop-blur-md px-4 py-2 rounded-xl scale-90 opacity-90 z-40">
-                <span className="text-[9px] text-white/50 font-bold tracking-[0.2em] uppercase">DRAW (平局)</span>
-                <div className="flex gap-2 items-baseline mt-0.5">
-                   <span className="text-white font-mono font-bold">{drawProb}%</span>
-                   <span className="text-[#6bff8f] text-[10px] font-bold tracking-wider">x{drawPayout}</span>
-                </div>
-             </div>
-          )}
-
+        {/* Center Teams - Absolute positioning for perfect vertical centering */}
+        <div className="absolute inset-0 flex items-center justify-between px-8 pointer-events-none">
           {/* Left Team */}
-          <div className="flex flex-col z-30 w-[85px]">
-            <span className="text-white/60 font-bold uppercase text-[10px] mb-2 tracking-[0.2em] break-words line-clamp-2 leading-tight min-h-[30px]">{match.home.name}</span>
-            <div className="border text-white font-black text-3xl w-20 py-3 rounded-xl flex justify-center backdrop-blur-md"
-                 style={{ backgroundColor: `${homeColor}30`, borderColor: `${homeColor}60`, boxShadow: `0 0 20px ${homeColor}40` }}>
-              {match.home.probability}%
+          <div className="flex flex-col items-center pointer-events-auto z-30 max-w-[100px]">
+            {/* Flag */}
+            <div className="mb-2 rounded-[10px] overflow-hidden shadow-lg ring-2 ring-black/30"
+                 style={{ boxShadow: `0 0 16px ${homeColor}40` }}>
+              <img
+                src={getCountryFlagUrl(match.home.name, 'svg')}
+                alt={match.home.name}
+                className="w-[52px] h-[36px] object-cover"
+              />
             </div>
-            <div className="mt-2 text-[10px] text-white/40 font-mono tracking-widest text-center uppercase">payout <span className="text-white/80 font-bold">{(100 / Math.max(match.home.probability, 1)).toFixed(1)}x</span></div>
+            {/* Name */}
+            <span className="text-white/70 font-bold uppercase text-[10px] mb-2.5 tracking-[0.15em] break-words line-clamp-2 leading-tight text-center">{match.home.name}</span>
+            {/* Probability Text */}
+            <div 
+              className="text-white font-black text-[42px] tracking-tighter leading-none"
+              style={{ filter: `drop-shadow(0 0 16px ${homeColor}60)` }}
+            >
+              {match.home.probability}<span className="text-2xl opacity-80">%</span>
+            </div>
           </div>
 
           {/* Right Team */}
-          <div className="flex flex-col items-end z-30 w-[85px]">
-             <span className="text-white/60 font-bold uppercase text-[10px] mb-2 tracking-[0.2em] text-right break-words line-clamp-2 leading-tight min-h-[30px]">{match.away.name}</span>
-             <div className="border text-white font-black text-3xl w-20 py-3 rounded-xl flex justify-center backdrop-blur-md"
-                  style={{ backgroundColor: `${awayColor}30`, borderColor: `${awayColor}60`, boxShadow: `0 0 20px ${awayColor}40` }}>
-              {match.away.probability}%
+          <div className="flex flex-col items-center pointer-events-auto z-30 max-w-[100px]">
+            {/* Flag */}
+            <div className="mb-2 rounded-[10px] overflow-hidden shadow-lg ring-2 ring-black/30"
+                 style={{ boxShadow: `0 0 16px ${awayColor}40` }}>
+              <img
+                src={getCountryFlagUrl(match.away.name, 'svg')}
+                alt={match.away.name}
+                className="w-[52px] h-[36px] object-cover"
+              />
             </div>
-            <div className="mt-2 text-[10px] text-white/40 font-mono tracking-widest text-center uppercase">payout <span className="text-white/80 font-bold">{(100 / Math.max(match.away.probability, 1)).toFixed(1)}x</span></div>
+            {/* Name */}
+            <span className="text-white/70 font-bold uppercase text-[10px] mb-2.5 tracking-[0.15em] break-words line-clamp-2 leading-tight text-center">{match.away.name}</span>
+            {/* Probability Text */}
+            <div 
+              className="text-white font-black text-[42px] tracking-tighter leading-none"
+              style={{ filter: `drop-shadow(0 0 16px ${awayColor}60)` }}
+            >
+              {match.away.probability}<span className="text-2xl opacity-80">%</span>
+            </div>
           </div>
+        </div>
+
+        {/* Bottom Center Draw Info */}
+        <div className="flex w-full justify-center items-end mt-auto pointer-events-none">
+          {drawProb > 0 && (
+             <div className="flex flex-col items-center gap-1 z-40 mb-4">
+               <span className="text-[9px] text-white/40 font-bold tracking-[0.25em] uppercase">DRAW</span>
+               <div className="text-white/80 font-black text-xl tracking-tighter mix-blend-screen drop-shadow-lg">
+                 {drawProb}<span className="text-[12px] opacity-70">%</span>
+               </div>
+             </div>
+          )}
         </div>
       </div>
     </motion.div>
