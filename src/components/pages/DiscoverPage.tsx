@@ -7,6 +7,7 @@ import {
   TrendingCard,
   SplitCard,
   ClosingSoonCard,
+  UnderdogCard,
   HorizontalMatchRow
 } from '@/components/ui/DiscoverCard';
 import { useMatchData } from '@/hooks/useMatchData';
@@ -32,7 +33,7 @@ export function DiscoverPage({ onPlaceBet, positions }: DiscoverPageProps) {
   const [confirmAction, setConfirmAction] = useState<{match: ParsedMatch, side: 'home'|'away'|'draw'} | null>(null);
 
   // Compute dynamic discovering matches
-  const { trendingMatch, splitMatch, closingSoonMatch, trendingRest, splitRest, closingRest } = useMemo(() => {
+  const { trendingMatch, splitMatch, closingSoonMatch, trendingRest, splitRest, closingRest, underdogMatch, underdogRest } = useMemo(() => {
     if (!allMatches || allMatches.length === 0) return {};
 
     // 1. Trending: simply highest volume
@@ -59,7 +60,22 @@ export function DiscoverPage({ onPlaceBet, positions }: DiscoverPageProps) {
     // closingRest: other upcoming matches near the same time window (next 2 within same day)
     const closingRest = upcoming.filter(m => m.id !== closing?.id && m.id !== trending?.id).slice(0, 6);
 
-    return { trendingMatch: trending, splitMatch: split, closingSoonMatch: closing, trendingRest, splitRest, closingRest };
+    // 4. Underdog: team with lowest probability in 5-20% range (best legitimate long shot)
+    //    Sort by ascending probability (lowest = most extreme underdog)
+    const underdogCandidates = allMatches
+      .filter(m => {
+        const minProb = Math.min(m.home.probability, m.away.probability);
+        return minProb >= 5 && minProb <= 20;
+      })
+      .sort((a, b) =>
+        Math.min(a.home.probability, a.away.probability) - Math.min(b.home.probability, b.away.probability)
+      );
+    const underdog = underdogCandidates.find(
+      m => m.id !== trending?.id && m.id !== split?.id && m.id !== closing?.id
+    ) || underdogCandidates[0];
+    const underdogRest = underdogCandidates.filter(m => m.id !== underdog?.id).slice(0, 6);
+
+    return { trendingMatch: trending, splitMatch: split, closingSoonMatch: closing, trendingRest, splitRest, closingRest, underdogMatch: underdog, underdogRest };
   }, [allMatches]);
 
   // Helper handling QuickPick interaction
@@ -99,6 +115,15 @@ export function DiscoverPage({ onPlaceBet, positions }: DiscoverPageProps) {
                 matches={closingRest ?? []}
                 onClick={handleCardClick}
                 accentColor="#00F0FF"
+              />
+            )}
+            {underdogMatch && <UnderdogCard match={underdogMatch} onClick={() => handleCardClick(underdogMatch)} />}
+            {(underdogRest ?? []).length >= 1 && (
+              <HorizontalMatchRow
+                label="冷门博彩"
+                matches={underdogRest ?? []}
+                onClick={handleCardClick}
+                accentColor="#F59E0B"
               />
             )}
           </DiscoverCardsContainer>

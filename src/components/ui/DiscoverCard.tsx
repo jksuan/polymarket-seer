@@ -44,39 +44,39 @@ export function TrendingCard({ match, onClick }: { match?: ParsedMatch; onClick?
         <div className="flex items-center gap-2 bg-white/5 border border-white/20 px-3 py-1.5 rounded-full backdrop-blur-md inline-flex self-start">
           <Flame className="w-4 h-4 animate-pulse" style={{ color: glowColor }} />
           <span className="text-[11px] font-bold tracking-[0.2em] uppercase shadow-sm flex items-center gap-1" style={{ color: glowColor }}>
-            Volume: {formatVolume(match.volume)}
-            <span className="text-white/60 ml-1 text-[9px]">+24%</span>
+            全网焦点
           </span>
         </div>
       </div>
 
-      <div className="absolute inset-0 p-6 flex flex-col justify-end z-20 bg-gradient-to-t from-[#0D0518] via-[#0D0518]/70 to-transparent">
-        <h3 className="text-white text-5xl font-black italic uppercase leading-[0.9] tracking-tighter mb-4 text-shadow-sm flex flex-col">
-          <span>{heroMatch.name}</span>
-          <span className="text-3xl text-white/60 drop-shadow-md">VS {underdog.name}</span>
+      <div className="absolute top-6 right-6 z-20 flex flex-col items-end">
+         <div className="text-white/40 text-[9px] font-bold tracking-[0.2em] uppercase">24H 交易量</div>
+         <div className="text-white/80 font-mono text-sm tracking-wider flex items-center gap-1">
+           {formatVolume(match.volume)}
+           <span className="text-[#6bff8f] text-[9px]">+24%</span>
+         </div>
+      </div>
+
+      <div className="absolute inset-0 p-6 flex flex-col z-20 bg-gradient-to-t from-[#0D0518] via-transparent to-transparent">
+        
+        {/* Top spacing to avoid overlapping with badges */}
+        <div className="h-20 shrink-0" />
+
+        {/* Team Names (Single line, uniform size, centered) */}
+        <h3 className="w-full text-white text-2xl md:text-[28px] font-black italic uppercase leading-[1.1] tracking-tighter text-shadow-sm flex items-center justify-center gap-2">
+          <span className="truncate">{heroMatch.name}</span>
+          <span className="text-lg text-white/50 lowercase flex-shrink-0">vs</span>
+          <span className="truncate">{underdog.name}</span>
         </h3>
         
-        <div className="flex items-end justify-between mt-2">
-          <div className="flex items-end gap-4">
-            <div>
-              <div className="text-white/40 text-[10px] font-bold font-mono uppercase tracking-widest mb-1">Market Probability</div>
-              <div className="text-[64px] leading-none font-black tracking-tighter drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]" style={{ color: glowColor }}>
-                {heroMatch.probability}<span className="text-3xl">%</span>
-              </div>
-            </div>
-            {/* ROI Payout Badge */}
-            <div className="mb-2 bg-[#0D0518]/50 border px-3 py-2 rounded-xl backdrop-blur-md flex flex-col items-center justify-center" style={{ borderColor: `${glowColor}40` }}>
-               <span className="text-[9px] text-white/50 uppercase font-bold tracking-[0.1em] mb-0.5">EST. PAYOUT</span>
-               <span className="text-base font-black tracking-tighter text-white drop-shadow-md">{payoutMultiplier}x</span>
-            </div>
+        {/* Centered Market Probability */}
+        <div className="flex-1 flex flex-col items-center justify-center -mt-8">
+          <div className="text-white/40 text-[11px] font-bold font-mono uppercase tracking-[0.2em] mb-2 flex items-center gap-2">
+            <span className="text-white">{heroMatch.name}</span> MARKET PROBABILITY
           </div>
-          
-          <button 
-            className="w-16 h-16 rounded-full text-[#0D0518] flex items-center justify-center group-hover:scale-105 active:scale-95 transition-all duration-300"
-            style={{ backgroundColor: glowColor, boxShadow: `0 0 20px ${glowColor}60` }}
-          >
-            <ArrowUpRight className="w-8 h-8" />
-          </button>
+          <div className="text-[96px] leading-none font-black tracking-tighter drop-shadow-[0_0_20px_rgba(255,255,255,0.2)]" style={{ color: glowColor }}>
+            {heroMatch.probability}<span className="text-5xl">%</span>
+          </div>
         </div>
       </div>
       
@@ -125,12 +125,7 @@ export function SplitCard({ match, onClick }: { match?: ParsedMatch; onClick?: (
         <div className="flex justify-between items-start">
            <div className="flex items-center gap-2 self-start bg-white/5 border border-white/10 backdrop-blur-xl px-3 py-1.5 rounded-full">
              <Swords className="w-4 h-4 text-white" />
-             <span className="text-white text-[11px] font-bold tracking-[0.2em] uppercase">Deathmatch</span>
-           </div>
-           
-           <div className="text-right">
-             <div className="text-white/40 text-[9px] font-bold tracking-[0.2em] uppercase">Total Pool</div>
-             <div className="text-white/80 font-mono text-sm tracking-wider">{formatVolume(match.volume)}</div>
+             <span className="text-white text-[11px] font-bold tracking-[0.2em] uppercase">生死局</span>
            </div>
         </div>
 
@@ -235,7 +230,7 @@ export function ClosingSoonCard({ match, onClick }: { match?: ParsedMatch; onCli
           <div className={`${borderBgColor} px-3 py-1.5 rounded-full flex items-center gap-2 backdrop-blur-md inline-flex`}>
              <Timer className={`w-4 h-4 ${labelColor} ${isUrgent ? 'animate-pulse' : ''}`} />
              <span className={`${labelColor} text-[11px] font-bold uppercase tracking-[0.2em]`}>
-               {timeLeft === 'LIVE' ? 'Match Started' : (isUrgent ? 'Closing Soon' : 'Next Match')}
+               {timeLeft === 'LIVE' ? '比赛中' : (isUrgent ? '即将封盘' : '下一场')}
              </span>
           </div>
           <img src={match.home.flagUrl} alt="" className="w-8 h-8 rounded-full border border-white/20 opacity-80" />
@@ -251,6 +246,88 @@ export function ClosingSoonCard({ match, onClick }: { match?: ParsedMatch; onCli
              {timeLeft}
            </div>
         </div>
+      </div>
+    </motion.div>
+  );
+}
+
+// 4. Underdog Card - 以小博大 / The Long Shot
+export function UnderdogCard({ match, onClick }: { match?: ParsedMatch; onClick?: () => void }) {
+  if (!match) return null;
+
+  // The underdog is always the team with the LOWER probability
+  const isHomeUnderdog = match.home.probability <= match.away.probability;
+  const underdog = isHomeUnderdog ? match.home : match.away;
+  const favorite = isHomeUnderdog ? match.away : match.home;
+
+  const odds = (100 / Math.max(underdog.probability, 1)).toFixed(1);
+  // Clamp odds label length for layout stability
+  const oddsDisplay = parseFloat(odds) >= 10 ? parseFloat(odds).toFixed(0) : odds;
+
+  // Dark gold color scheme
+  const goldPrimary = '#F59E0B';
+  const goldGlow = 'rgba(245, 158, 11, 0.25)';
+
+  return (
+    <motion.div
+      whileTap={{ scale: 0.98 }}
+      onClick={onClick}
+      className="relative w-full h-[320px] rounded-[32px] overflow-hidden border border-amber-500/20 cursor-pointer shadow-xl bg-[#0D0518]"
+    >
+      {/* Background layers */}
+      <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, #1a0a00 0%, #0D0518 60%)' }} />
+      <div className="absolute inset-0 opacity-60" style={{ background: `radial-gradient(ellipse at top left, ${goldGlow}, transparent 65%)` }} />
+
+      {/* Top badge */}
+      <div className="absolute top-6 left-6 z-20 flex items-center gap-2 px-3 py-1.5 rounded-full backdrop-blur-md bg-amber-500/10 border border-amber-500/30">
+        <span className="text-amber-400 text-[14px]">⚡</span>
+        <span className="text-amber-400 text-[11px] font-bold tracking-[0.2em] uppercase">以小博大</span>
+      </div>
+
+      {/* Main content */}
+      <div className="absolute inset-0 p-6 flex flex-col justify-end z-20">
+        {/* Underdog name */}
+        <h3 className="text-white font-black italic uppercase text-4xl tracking-tighter leading-none mb-3">
+          {underdog.name}
+        </h3>
+
+        <div className="flex items-end justify-between">
+          <div className="flex flex-col gap-1">
+            <div className="text-amber-400/60 text-[10px] font-bold font-mono uppercase tracking-widest">冷门赔率</div>
+            {/* Giant odds multiplier */}
+            <div
+              className="font-black tracking-tighter leading-none"
+              style={{
+                fontSize: '72px',
+                color: goldPrimary,
+                filter: `drop-shadow(0 0 18px ${goldPrimary}80)`,
+                lineHeight: 1,
+              }}
+            >
+              {oddsDisplay}<span className="text-3xl align-baseline">x</span>
+            </div>
+            <div className="text-white/40 text-[11px] font-mono tracking-wide">
+              胜率仅 <span className="text-amber-400 font-bold">{underdog.probability}%</span>
+            </div>
+          </div>
+
+          {/* CTA button */}
+          <button
+            className="w-16 h-16 rounded-full flex items-center justify-center active:scale-95 transition-all duration-300 mb-2"
+            style={{
+              background: `linear-gradient(135deg, ${goldPrimary}, #D97706)`,
+              boxShadow: `0 0 24px ${goldPrimary}50`,
+            }}
+          >
+            <span className="text-[#0D0518] text-[22px] font-black">⚡</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Watermark */}
+      <div className="absolute -right-8 top-8 text-[160px] leading-none font-black italic select-none pointer-events-none rotate-12"
+        style={{ color: `${goldPrimary}06` }}>
+        {underdog.shortCode}
       </div>
     </motion.div>
   );
