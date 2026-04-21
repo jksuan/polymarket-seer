@@ -6,7 +6,6 @@ import {
   DiscoverCardsContainer,
   TrendingCard,
   SplitCard,
-  ClosingSoonCard,
   UnderdogCard,
   HorizontalMatchRow
 } from '@/components/ui/DiscoverCard';
@@ -38,7 +37,7 @@ export function DiscoverPage({ onPlaceBet, positions }: DiscoverPageProps) {
   const [activeUnderdogMatchId, setActiveUnderdogMatchId] = useState<string | null>(null);
 
   // Compute dynamic discovering matches
-  const { trendingMatch, splitMatch, closingSoonMatch, trendingRest, splitRest, closingRest, underdogMatch, underdogRest } = useMemo(() => {
+  const { trendingMatch, splitMatch, trendingRest, splitRest, underdogMatch, underdogRest } = useMemo(() => {
     if (!allMatches || allMatches.length === 0) return {};
 
     // 1. Trending: simply highest volume
@@ -50,20 +49,12 @@ export function DiscoverPage({ onPlaceBet, positions }: DiscoverPageProps) {
     splitMatches.sort((a, b) => Math.abs(a.home.probability - a.away.probability) - Math.abs(b.home.probability - b.away.probability));
     const split = splitMatches.find(m => m.id !== trending?.id) || splitMatches[0] || sortedByVolume[1];
 
-    // 3. Closing soon: nearest upcoming time
-    const upcoming = allMatches.filter(m => m.status === 'upcoming');
-    upcoming.sort((a, b) => new Date(a.rawMarket.matchTimeISO).getTime() - new Date(b.rawMarket.matchTimeISO).getTime());
-    const closing = upcoming.find(m => m.id !== trending?.id && m.id !== split?.id) || upcoming[0] || sortedByVolume[2];
-
     // Secondary horizontal row lists (exclude the hero card itself)
     // trendingRest: Vol 2-6 by volume, skip the trending hero
     const trendingRest = sortedByVolume.filter(m => m.id !== trending?.id).slice(0, 6);
 
     // splitRest: other deathmatch candidates, skip hero; sorted by tightness
     const splitRest = splitMatches.filter(m => m.id !== split?.id && m.id !== trending?.id).slice(0, 6);
-
-    // closingRest: other upcoming matches near the same time window (next 2 within same day)
-    const closingRest = upcoming.filter(m => m.id !== closing?.id && m.id !== trending?.id).slice(0, 6);
 
     // 4. Underdog: team with lowest probability in 5-20% range (best legitimate long shot)
     //    Sort by ascending probability (lowest = most extreme underdog)
@@ -76,11 +67,11 @@ export function DiscoverPage({ onPlaceBet, positions }: DiscoverPageProps) {
         Math.min(a.home.probability, a.away.probability) - Math.min(b.home.probability, b.away.probability)
       );
     const underdog = underdogCandidates.find(
-      m => m.id !== trending?.id && m.id !== split?.id && m.id !== closing?.id
+      m => m.id !== trending?.id && m.id !== split?.id
     ) || underdogCandidates[0];
     const underdogRest = underdogCandidates.filter(m => m.id !== underdog?.id).slice(0, 6);
 
-    return { trendingMatch: trending, splitMatch: split, closingSoonMatch: closing, trendingRest, splitRest, closingRest, underdogMatch: underdog, underdogRest };
+    return { trendingMatch: trending, splitMatch: split, trendingRest, splitRest, underdogMatch: underdog, underdogRest };
   }, [allMatches]);
 
   // Helper handling QuickPick interaction
@@ -127,15 +118,6 @@ export function DiscoverPage({ onPlaceBet, positions }: DiscoverPageProps) {
               activeMatchId={displaySplitMatch?.id}
               accentColor="#a855f7"
             />
-            {closingSoonMatch && <ClosingSoonCard match={closingSoonMatch} onClick={() => handleCardClick(closingSoonMatch)} />}
-            {(closingRest ?? []).length >= 2 && (
-              <HorizontalMatchRow
-                label="即将开赛"
-                matches={closingRest ?? []}
-                onClick={handleCardClick}
-                accentColor="#00F0FF"
-              />
-            )}
             {displayUnderdogMatch && <UnderdogCard match={displayUnderdogMatch} onClick={() => handleCardClick(displayUnderdogMatch)} />}
             {underdogCarousel.length >= 2 && (
               <HorizontalMatchRow
