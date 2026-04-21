@@ -123,35 +123,7 @@ export function DiscoverPage({ onPlaceBet, positions }: DiscoverPageProps) {
           </div>
         ) : (
           <DiscoverCardsContainer>
-            {displayTrendingMatch && <TrendingCard match={displayTrendingMatch} onClick={() => handleCardClick(displayTrendingMatch)} />}
-            <HorizontalMatchRow
-              label="热门赛事"
-              matches={trendingCarousel}
-              onClick={(match) => setActiveTrendingMatchId(match.id)} // Cast to main stage instead of action drawer
-              activeMatchId={displayTrendingMatch?.id}
-              accentColor="#ff6b35"
-            />
-            {displaySplitMatch && <SplitCard match={displaySplitMatch} onClick={() => handleCardClick(displaySplitMatch)} />}
-            <HorizontalMatchRow
-              label="势均力敌"
-              matches={splitCarousel}
-              onClick={(match) => setActiveSplitMatchId(match.id)}
-              activeMatchId={displaySplitMatch?.id}
-              accentColor="#a855f7"
-            />
-            {displayUnderdogMatch && <UnderdogCard match={displayUnderdogMatch} onClick={() => handleCardClick(displayUnderdogMatch)} />}
-            {underdogCarousel.length >= 2 && (
-              <HorizontalMatchRow
-                label="LONG SHOT"
-                matches={underdogCarousel}
-                onClick={(match) => setActiveUnderdogMatchId(match.id)}
-                activeMatchId={displayUnderdogMatch?.id}
-                accentColor="#F59E0B"
-                underdogMode={true}
-              />
-            )}
-
-            {/* ── Champion: 夺冠热门 ── */}
+            {/* ── 1. Champion: 夺冠热门 ── */}
             {displayChampionTeam && (
               <ChampionCard
                 team={displayChampionTeam}
@@ -163,6 +135,39 @@ export function DiscoverPage({ onPlaceBet, positions }: DiscoverPageProps) {
                 teams={championTeams}
                 activeIndex={activeChampionIdx}
                 onSelect={(idx) => setActiveChampionIdx(idx)}
+              />
+            )}
+
+            {/* ── 2. Trending: 热门赛事 ── */}
+            {displayTrendingMatch && <TrendingCard match={displayTrendingMatch} onClick={() => handleCardClick(displayTrendingMatch)} />}
+            <HorizontalMatchRow
+              label="热门赛事"
+              matches={trendingCarousel}
+              onClick={(match) => setActiveTrendingMatchId(match.id)}
+              activeMatchId={displayTrendingMatch?.id}
+              accentColor="#ff6b35"
+            />
+
+            {/* ── 3. Split: 势均力敌 ── */}
+            {displaySplitMatch && <SplitCard match={displaySplitMatch} onClick={() => handleCardClick(displaySplitMatch)} />}
+            <HorizontalMatchRow
+              label="势均力敌"
+              matches={splitCarousel}
+              onClick={(match) => setActiveSplitMatchId(match.id)}
+              activeMatchId={displaySplitMatch?.id}
+              accentColor="#a855f7"
+            />
+
+            {/* ── 4. Underdog: 以小博大 ── */}
+            {displayUnderdogMatch && <UnderdogCard match={displayUnderdogMatch} onClick={() => handleCardClick(displayUnderdogMatch)} />}
+            {underdogCarousel.length >= 2 && (
+              <HorizontalMatchRow
+                label="LONG SHOT"
+                matches={underdogCarousel}
+                onClick={(match) => setActiveUnderdogMatchId(match.id)}
+                activeMatchId={displayUnderdogMatch?.id}
+                accentColor="#FF2A6D"
+                underdogMode={true}
               />
             )}
           </DiscoverCardsContainer>
