@@ -2,13 +2,19 @@
 
 import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
-import { Flame, Swords, Timer, ArrowUpRight, ArrowLeftRight, Trophy } from 'lucide-react';
+import { Flame, Swords, Timer, ArrowUpRight, ArrowLeftRight, Trophy, Zap } from 'lucide-react';
 import { ParsedMatch } from '@/components/ui/MatchCard';
 import { formatVolume } from '@/lib/utils';
 import { getCountryFlagUrl } from '@/lib/countryFlags';
 import { SportMarket } from '@/types/sports';
 
 export const DISCOVER_THEME = {
+  // Danger Magenta for Long Shot
+  dangerMagenta: '#FF2A6D',
+  dangerMagentaGlow: 'rgba(255, 42, 109, 0.25)',
+  dangerMagentaGlowStrong: 'rgba(255, 42, 109, 0.6)',
+  
+  // Gold for Champion
   accentGold: '#F59E0B',
   accentGoldGlow: 'rgba(245, 158, 11, 0.25)',
   accentGoldGlowStrong: 'rgba(245,158,11,0.6)',
@@ -253,25 +259,25 @@ export function UnderdogCard({ match, onClick }: { match?: ParsedMatch; onClick?
   const homeColor = match.home.style.primary;
   const awayColor = match.away.style.primary;
 
-  // Dark gold color scheme from theme
-  const goldPrimary = DISCOVER_THEME.accentGold;
-  const goldGlow = DISCOVER_THEME.accentGoldGlow;
+  // Danger Magenta color scheme from theme
+  const dangerPrimary = DISCOVER_THEME.dangerMagenta;
+  const dangerGlow = DISCOVER_THEME.dangerMagentaGlow;
 
   return (
     <motion.div
       whileTap={{ scale: 0.98 }}
       onClick={onClick}
-      className="relative group w-full h-[320px] rounded-[32px] overflow-hidden border border-amber-500/20 cursor-pointer shadow-xl bg-[#0D0518]"
+      className="relative group w-full h-[320px] rounded-[32px] overflow-hidden border border-[#FF2A6D]/20 cursor-pointer shadow-xl bg-[#0D0518]"
     >
       {/* Background layers */}
-      <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, #1a0a00 0%, #0D0518 60%)' }} />
-      <div className="absolute inset-0 opacity-60" style={{ background: `radial-gradient(ellipse at top left, ${goldGlow}, transparent 65%)` }} />
+      <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, #1a000b 0%, #0D0518 60%)' }} />
+      <div className="absolute inset-0 opacity-60" style={{ background: `radial-gradient(ellipse at top left, ${dangerGlow}, transparent 65%)` }} />
 
       {/* Top left Title */}
       <div className="absolute top-6 left-6 z-20 flex justify-between items-start pointer-events-none">
          <div className="flex items-center gap-2 self-start">
-           <span className="text-amber-400 text-[14px]">⚡</span>
-           <span className="text-[13px] shadow-sm flex items-center gap-1 text-amber-400" style={{ fontFamily: 'Inter', fontWeight: 800, letterSpacing: '0.02em' }}>LONG SHOT</span>
+           <Zap className="w-[14px] h-[14px]" style={{ color: dangerPrimary }} fill="currentColor" />
+           <span className="text-[13px] shadow-sm flex items-center gap-1" style={{ color: dangerPrimary, fontFamily: 'Inter', fontWeight: 800, letterSpacing: '0.02em' }}>LONG SHOT</span>
          </div>
       </div>
 
@@ -292,12 +298,12 @@ export function UnderdogCard({ match, onClick }: { match?: ParsedMatch; onClick?
           className="font-black tracking-tighter leading-none pointer-events-auto mt-1"
           style={{
             fontSize: '72px',
-            color: goldPrimary,
-            filter: `drop-shadow(0 0 18px ${goldPrimary}80)`,
+            color: dangerPrimary,
+            filter: `drop-shadow(0 0 18px ${dangerPrimary}80)`,
             lineHeight: 1,
           }}
         >
-          {oddsDisplay}<span className="text-4xl align-baseline opacity-80 text-amber-500/80 ml-1">x</span>
+          {oddsDisplay}<span className="text-4xl align-baseline opacity-80 ml-1" style={{ color: dangerPrimary }}>x</span>
         </div>
 
         {/* Both teams row */}
@@ -329,7 +335,7 @@ export function UnderdogCard({ match, onClick }: { match?: ParsedMatch; onClick?
 
       {/* Watermark */}
       <div className="absolute -right-8 top-8 text-[160px] leading-none font-black italic select-none pointer-events-none rotate-12"
-        style={{ color: `${goldPrimary}06` }}>
+        style={{ color: `${dangerPrimary}06` }}>
         {underdog.shortCode}
       </div>
     </motion.div>
@@ -404,10 +410,10 @@ export function HorizontalMatchRow({ label, matches, onClick, accentColor = '#6b
 
               {/* Value display */}
               {underdogMode ? (
-                // Show underdog's odds multiplier in gold
+                // Show underdog's odds multiplier in danger magenta
                 <div
                   className="text-lg font-black tracking-tighter leading-none flex items-baseline"
-                  style={{ color: isActive ? '#F59E0B' : '#A0A0A0' }}
+                  style={{ color: isActive ? DISCOVER_THEME.dangerMagenta : '#A0A0A0' }}
                 >
                   {underdogOddsDisplay}<span className="text-[9px] opacity-70">x</span>
                 </div>
@@ -472,8 +478,8 @@ export function ChampionCard({ team, onClick }: ChampionCardProps) {
 
       {/* Top left badge */}
       <div className="absolute top-6 left-6 z-20 flex items-center gap-2">
-        <Trophy className="w-4 h-4 text-amber-500" />
-        <span className="text-[13px] text-amber-400" style={{ fontFamily: 'Inter', fontWeight: 800, letterSpacing: '0.02em' }}>
+        <Trophy className="w-4 h-4" style={{ color: DISCOVER_THEME.accentGold }} />
+        <span className="text-[13px]" style={{ color: DISCOVER_THEME.accentGold, fontFamily: 'Inter', fontWeight: 800, letterSpacing: '0.02em' }}>
           TITLE RACE
         </span>
       </div>
@@ -482,7 +488,7 @@ export function ChampionCard({ team, onClick }: ChampionCardProps) {
       <div className="absolute inset-0 flex flex-col items-center justify-center z-20 pointer-events-none px-6">
         {/* Question tagline */}
         <span className="text-white/40 text-[12px] font-bold tracking-wider uppercase mb-5" style={{ fontFamily: 'Inter' }}>
-          WHO WILL LIFT THE TROPHY?
+          2026 WORLD CUP WINNER IS...
         </span>
 
         {/* Giant flag */}
@@ -551,7 +557,7 @@ interface ChampionPlaylistProps {
   accentColor?: string;
 }
 
-export function ChampionPlaylist({ teams, activeIndex = 0, onSelect, accentColor = '#FFD700' }: ChampionPlaylistProps) {
+export function ChampionPlaylist({ teams, activeIndex = 0, onSelect, accentColor = DISCOVER_THEME.accentGold }: ChampionPlaylistProps) {
   if (!teams || teams.length === 0) return null;
 
   return (
@@ -570,10 +576,10 @@ export function ChampionPlaylist({ teams, activeIndex = 0, onSelect, accentColor
               onClick={() => onSelect?.(i)}
               className={`flex-shrink-0 w-[72px] flex flex-col items-center gap-1.5 px-2 py-2.5 rounded-2xl relative cursor-pointer transition-all duration-300 ${
                 isActive
-                  ? 'bg-white/[0.08] border shadow-[0_0_20px_rgba(255,215,0,0.08)] opacity-100 scale-105'
+                  ? 'bg-white/[0.08] border opacity-100 scale-105'
                   : 'bg-[#0D0518]/50 border border-white/5 shadow-md opacity-40 hover:opacity-100 hover:bg-white/5'
               }`}
-              style={{ borderColor: isActive ? accentColor : 'transparent' }}
+              style={isActive ? { borderColor: accentColor, boxShadow: `0 0 20px ${DISCOVER_THEME.accentGoldGlow}` } : { borderColor: 'transparent' }}
             >
               {/* Flag */}
               <div
