@@ -8,6 +8,13 @@ import { formatVolume } from '@/lib/utils';
 import { getCountryFlagUrl } from '@/lib/countryFlags';
 import { SportMarket } from '@/types/sports';
 
+export const DISCOVER_THEME = {
+  accentGold: '#F59E0B',
+  accentGoldGlow: 'rgba(245, 158, 11, 0.25)',
+  accentGoldGlowStrong: 'rgba(245,158,11,0.6)',
+  crownGlow: 'rgba(255, 215, 0, 0.20)',
+};
+
 export function DiscoverCardsContainer({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-6 w-full pb-10">
@@ -246,9 +253,9 @@ export function UnderdogCard({ match, onClick }: { match?: ParsedMatch; onClick?
   const homeColor = match.home.style.primary;
   const awayColor = match.away.style.primary;
 
-  // Dark gold color scheme
-  const goldPrimary = '#F59E0B';
-  const goldGlow = 'rgba(245, 158, 11, 0.25)';
+  // Dark gold color scheme from theme
+  const goldPrimary = DISCOVER_THEME.accentGold;
+  const goldGlow = DISCOVER_THEME.accentGoldGlow;
 
   return (
     <motion.div
@@ -437,7 +444,7 @@ export function parseChampionTeams(market: SportMarket): ChampionTeam[] {
       const price = market.rawPrices?.[i] ?? 0.001;
       const prob = Number((price * 100).toFixed(1));
       const oddsVal = 1 / Math.max(price, 0.01);
-      const odds = oddsVal >= 10 ? oddsVal.toFixed(0) + 'x' : oddsVal.toFixed(1) + 'x';
+      const odds = oddsVal >= 10 ? oddsVal.toFixed(0) : oddsVal.toFixed(1);
       const flagUrl = market.rawIcons?.[i] || getCountryFlagUrl(name, 'svg');
       return { name, probability: prob, odds, flagUrl, originalIndex: i };
     })
@@ -451,7 +458,7 @@ interface ChampionCardProps {
 }
 
 export function ChampionCard({ team, onClick }: ChampionCardProps) {
-  const crownGlow = 'rgba(255, 215, 0, 0.20)';
+  const crownGlow = DISCOVER_THEME.crownGlow;
 
   return (
     <motion.div
@@ -505,15 +512,15 @@ export function ChampionCard({ team, onClick }: ChampionCardProps) {
         <div className="flex items-baseline gap-4 mt-3">
           <span
             className="text-[36px] font-black tracking-tighter leading-none"
-            style={{ fontFamily: 'Inter', color: '#FFD700', filter: 'drop-shadow(0 0 12px rgba(255,215,0,0.4))' }}
+            style={{ color: DISCOVER_THEME.accentGold, filter: `drop-shadow(0 0 12px ${DISCOVER_THEME.accentGoldGlowStrong})` }}
           >
             {team.probability}<span className="text-xl opacity-60">%</span>
           </span>
           <span
             className="text-[36px] font-black tracking-tighter leading-none"
-            style={{ fontFamily: 'Inter', color: '#FFD700', filter: 'drop-shadow(0 0 12px rgba(255,215,0,0.4))' }}
+            style={{ color: DISCOVER_THEME.accentGold, filter: `drop-shadow(0 0 12px ${DISCOVER_THEME.accentGoldGlowStrong})` }}
           >
-            {team.odds}
+            {team.odds}<span className="text-xl opacity-60 ml-0.5">x</span>
           </span>
         </div>
       </div>
