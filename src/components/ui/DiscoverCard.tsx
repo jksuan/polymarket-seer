@@ -373,11 +373,11 @@ export function HorizontalMatchRow({ label, matches, onClick, accentColor = '#6b
   if (!matches || matches.length === 0) return null;
 
   return (
-    <div className="w-full -mt-2">
+    <div className="w-full -mt-4">
 
 
       <div
-        className="flex gap-3 overflow-x-auto pb-2 px-1"
+        className="flex gap-3 overflow-x-auto py-3 px-2"
         style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}
       >
         {matches.map((match) => {
@@ -390,32 +390,37 @@ export function HorizontalMatchRow({ label, matches, onClick, accentColor = '#6b
               key={match.id}
               whileTap={{ scale: 0.95 }}
               onClick={() => onClick?.(match)}
-              className={`flex-shrink-0 w-[168px] rounded-2xl overflow-hidden bg-[#0D0518] relative cursor-pointer transition-all duration-300 ${
+              className={`flex-shrink-0 w-[100px] flex items-center justify-between px-3 py-2.5 rounded-2xl relative cursor-pointer transition-all duration-300 ${
                 isActive 
-                  ? 'border shadow-[0_0_20px_rgba(255,255,255,0.15)] opacity-100 scale-[1.02]' 
-                  : 'border border-white/[0.08] shadow-[0_4px_16px_rgba(0,0,0,0.4)] opacity-60 hover:opacity-100'
+                  ? 'bg-white/[0.08] border shadow-[0_0_20px_rgba(255,255,255,0.05)] opacity-100 scale-105' 
+                  : 'bg-[#0D0518]/50 border border-white/5 shadow-md opacity-40 hover:opacity-100 hover:bg-white/5'
               }`}
               style={{
-                borderColor: isActive ? accentColor : undefined
+                borderColor: isActive ? accentColor : 'transparent'
               }}
             >
-              {/* Color stripe at top */}
-              <div className="h-[3px] w-full" style={{ background: `linear-gradient(to right, ${homeColor}, ${awayColor})` }} />
-              <div className="p-3 flex flex-col gap-2">
-                <div className="flex flex-col gap-0.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-white text-[11px] font-bold truncate max-w-[80px]">{match.home.name}</span>
-                    <span className="text-[11px] font-black font-mono" style={{ color: homeColor }}>{match.home.probability}%</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-white/50 text-[11px] font-bold truncate max-w-[80px]">{match.away.name}</span>
-                    <span className="text-[11px] font-black font-mono" style={{ color: awayColor }}>{match.away.probability}%</span>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between border-t border-white/5 pt-2">
-                  <span className="text-white/30 text-[9px] font-mono uppercase tracking-widest">VOL</span>
-                  <span className="text-white/70 text-[10px] font-bold font-mono">{formatVolume(match.volume)}</span>
-                </div>
+              {/* Overlapping SVG Flags */}
+              <div className="relative w-[36px] h-[22px] shrink-0">
+                <img 
+                  src={getCountryFlagUrl(match.home.name, 'svg')} 
+                  alt="" 
+                  className="absolute left-0 top-0 z-10 w-[22px] h-[16px] rounded-[3px] object-cover shadow-md ring-1 ring-black/40" 
+                />
+                <img 
+                  src={getCountryFlagUrl(match.away.name, 'svg')} 
+                  alt="" 
+                  className="absolute right-0 bottom-0 z-0 w-[22px] h-[16px] rounded-[3px] object-cover shadow-sm opacity-80 brightness-75 ring-1 ring-black/40" 
+                />
+              </div>
+
+              {/* Favored Probability */}
+              <div 
+                className="text-lg font-black tracking-tighter leading-none flex items-baseline" 
+                style={{ 
+                  color: isActive ? (match.home.probability >= match.away.probability ? homeColor : awayColor) : '#A0A0A0' 
+                }}
+              >
+                {Math.max(match.home.probability, match.away.probability)}<span className="text-[9px] opacity-70">%</span>
               </div>
             </motion.button>
           );
