@@ -120,6 +120,7 @@ export function SplitCard({ match, onClick }: { match?: ParsedMatch; onClick?: (
   if (!match) return null;
   const homeColor = match.home.style.primary;
   const awayColor = match.away.style.primary;
+  const glowColor = match.home.probability >= match.away.probability ? homeColor : awayColor;
   
   // Use actual Draw probability from market data (supports >100% AMM sum)
   const drawProb = match.draw?.probability ?? 0;
@@ -151,8 +152,8 @@ export function SplitCard({ match, onClick }: { match?: ParsedMatch; onClick?: (
         {/* Top left Title */}
         <div className="flex justify-between items-start pointer-events-none">
            <div className="flex items-center gap-2 self-start">
-             <ArrowLeftRight className="w-4 h-4 text-white" />
-             <span className="text-[13px] shadow-sm flex items-center gap-1 text-white" style={{ fontFamily: 'Inter', fontWeight: 800, letterSpacing: '0.02em' }}>势均力敌</span>
+             <ArrowLeftRight className="w-4 h-4" style={{ color: glowColor }} />
+             <span className="text-[13px] shadow-sm flex items-center gap-1" style={{ color: glowColor, fontFamily: 'Inter', fontWeight: 800, letterSpacing: '0.02em' }}>势均力敌</span>
            </div>
         </div>
 
