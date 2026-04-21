@@ -2,10 +2,11 @@
 
 import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
-import { Flame, Swords, Timer, ArrowUpRight, ArrowLeftRight } from 'lucide-react';
+import { Flame, Swords, Timer, ArrowUpRight, ArrowLeftRight, Trophy } from 'lucide-react';
 import { ParsedMatch } from '@/components/ui/MatchCard';
 import { formatVolume } from '@/lib/utils';
 import { getCountryFlagUrl } from '@/lib/countryFlags';
+import { SportMarket } from '@/types/sports';
 
 export function DiscoverCardsContainer({ children }: { children: React.ReactNode }) {
   return (
@@ -412,6 +413,176 @@ export function HorizontalMatchRow({ label, matches, onClick, accentColor = '#6b
                   {Math.max(match.home.probability, match.away.probability)}<span className="text-[9px] opacity-70">%</span>
                 </div>
               )}
+            </motion.button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ── ChampionCard: 夺冠热门英雄卡 ──────────────────────────────
+
+export interface ChampionTeam {
+  name: string;
+  probability: number;
+  odds: string;
+  flagUrl: string;
+  originalIndex: number;
+}
+
+export function parseChampionTeams(market: SportMarket): ChampionTeam[] {
+  return (market.rawOutcomes || [])
+    .map((name, i) => {
+      const price = market.rawPrices?.[i] ?? 0.001;
+      const prob = Number((price * 100).toFixed(1));
+      const oddsVal = 1 / Math.max(price, 0.01);
+      const odds = oddsVal >= 10 ? oddsVal.toFixed(0) + 'x' : oddsVal.toFixed(1) + 'x';
+      const flagUrl = market.rawIcons?.[i] || getCountryFlagUrl(name, 'svg');
+      return { name, probability: prob, odds, flagUrl, originalIndex: i };
+    })
+    .filter(t => !/^Team\s+[A-Z]{1,3}$/i.test(t.name) && t.name !== 'Other')
+    .sort((a, b) => b.probability - a.probability);
+}
+
+interface ChampionCardProps {
+  team: ChampionTeam;
+  onClick?: () => void;
+}
+
+export function ChampionCard({ team, onClick }: ChampionCardProps) {
+  const crownGlow = 'rgba(255, 215, 0, 0.20)';
+
+  return (
+    <motion.div
+      whileTap={{ scale: 0.98 }}
+      onClick={onClick}
+      className="relative group w-full h-[380px] rounded-[32px] overflow-hidden border border-amber-500/15 cursor-pointer shadow-xl bg-[#0D0518]"
+    >
+      {/* Background layers */}
+      <div className="absolute inset-0" style={{ background: 'linear-gradient(160deg, #1a1000 0%, #0D0518 50%, #0a0020 100%)' }} />
+      <div className="absolute inset-0" style={{ background: `radial-gradient(ellipse at center, ${crownGlow}, transparent 70%)` }} />
+
+      {/* Top left badge */}
+      <div className="absolute top-6 left-6 z-20 flex items-center gap-2">
+        <Trophy className="w-4 h-4 text-amber-500" />
+        <span className="text-[13px] text-amber-400" style={{ fontFamily: 'Inter', fontWeight: 800, letterSpacing: '0.02em' }}>
+          TITLE RACE
+        </span>
+      </div>
+
+      {/* Main content — vertically centered */}
+      <div className="absolute inset-0 flex flex-col items-center justify-center z-20 pointer-events-none px-6">
+        {/* Question tagline */}
+        <span className="text-white/40 text-[12px] font-bold tracking-wider uppercase mb-5" style={{ fontFamily: 'Inter' }}>
+          WHO WILL LIFT THE TROPHY?
+        </span>
+
+        {/* Giant flag */}
+        <div
+          className="rounded-2xl overflow-hidden shadow-2xl group-hover:scale-[1.04] transition-transform duration-500"
+          style={{
+            boxShadow: `0 0 40px ${crownGlow}, 0 8px 32px rgba(0,0,0,0.6)`,
+            border: '2px solid rgba(255,215,0,0.15)',
+          }}
+        >
+          <img
+            src={getCountryFlagUrl(team.name, 'svg')}
+            alt={team.name}
+            className="w-[140px] h-[96px] object-cover"
+          />
+        </div>
+
+        {/* Country name */}
+        <h3
+          className="text-white font-black text-3xl tracking-tight capitalize mt-5 leading-none"
+          style={{ fontFamily: 'Inter', textShadow: '0 2px 20px rgba(0,0,0,0.5)' }}
+        >
+          {team.name}
+        </h3>
+
+        {/* Probability + Odds */}
+        <div className="flex items-baseline gap-4 mt-3">
+          <span
+            className="text-[36px] font-black tracking-tighter leading-none"
+            style={{ fontFamily: 'Inter', color: '#FFD700', filter: 'drop-shadow(0 0 12px rgba(255,215,0,0.4))' }}
+          >
+            {team.probability}<span className="text-xl opacity-60">%</span>
+          </span>
+          <span
+            className="text-[36px] font-black tracking-tighter leading-none"
+            style={{ fontFamily: 'Inter', color: '#FFD700', filter: 'drop-shadow(0 0 12px rgba(255,215,0,0.4))' }}
+          >
+            {team.odds}
+          </span>
+        </div>
+      </div>
+
+      {/* Subtle Tap to Trade Hint (Moved to Bottom) */}
+      <div className="absolute bottom-4 left-0 w-full flex justify-center opacity-40 hover:opacity-100 transition-opacity z-50 pointer-events-none group-hover:opacity-100">
+        <span style={{ fontFamily: 'Inter', fontSize: '11px', color: 'rgba(255, 255, 255, 0.68)'}}>
+          点击卡片快速投注
+        </span>
+      </div>
+
+      {/* Background watermark */}
+      <div
+        className="absolute -right-10 top-6 text-[200px] leading-none font-black italic select-none pointer-events-none rotate-12"
+        style={{ color: 'rgba(255,215,0,0.03)' }}
+      >
+        {team.name.slice(0, 3).toUpperCase()}
+      </div>
+    </motion.div>
+  );
+}
+
+// ── ChampionPlaylist: 横向 Top 10 国旗+概率 ──────────────────────
+interface ChampionPlaylistProps {
+  teams: ChampionTeam[];
+  activeIndex?: number;
+  onSelect?: (index: number) => void;
+  accentColor?: string;
+}
+
+export function ChampionPlaylist({ teams, activeIndex = 0, onSelect, accentColor = '#FFD700' }: ChampionPlaylistProps) {
+  if (!teams || teams.length === 0) return null;
+
+  return (
+    <div className="w-full -mt-4">
+      <div
+        className="flex gap-3 overflow-x-auto py-3 px-2"
+        style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}
+      >
+        {teams.slice(0, 10).map((team, i) => {
+          const isActive = activeIndex === i;
+
+          return (
+            <motion.button
+              key={team.name}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => onSelect?.(i)}
+              className={`flex-shrink-0 w-[72px] flex flex-col items-center gap-1.5 px-2 py-2.5 rounded-2xl relative cursor-pointer transition-all duration-300 ${
+                isActive
+                  ? 'bg-white/[0.08] border shadow-[0_0_20px_rgba(255,215,0,0.08)] opacity-100 scale-105'
+                  : 'bg-[#0D0518]/50 border border-white/5 shadow-md opacity-40 hover:opacity-100 hover:bg-white/5'
+              }`}
+              style={{ borderColor: isActive ? accentColor : 'transparent' }}
+            >
+              {/* Flag */}
+              <div
+                className="rounded-[5px] overflow-hidden"
+                style={isActive ? { boxShadow: `0 0 10px ${accentColor}50` } : {}}
+              >
+                <img src={getCountryFlagUrl(team.name, 'svg')} alt={team.name} className="w-[28px] h-[20px] object-cover" />
+              </div>
+
+              {/* Probability */}
+              <div
+                className="text-[13px] font-black tracking-tight leading-none flex items-baseline"
+                style={{ fontFamily: 'Inter', color: isActive ? accentColor : '#A0A0A0' }}
+              >
+                {team.probability}<span className="text-[9px] opacity-70">%</span>
+              </div>
             </motion.button>
           );
         })}

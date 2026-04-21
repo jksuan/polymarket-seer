@@ -7,9 +7,14 @@ import {
   TrendingCard,
   SplitCard,
   UnderdogCard,
-  HorizontalMatchRow
+  HorizontalMatchRow,
+  ChampionCard,
+  ChampionPlaylist,
+  parseChampionTeams,
+  ChampionTeam
 } from '@/components/ui/DiscoverCard';
 import { useMatchData } from '@/hooks/useMatchData';
+import { useOutrightData } from '@/hooks/useOutrightData';
 import { useState, useMemo, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'motion/react';
@@ -23,6 +28,7 @@ interface DiscoverPageProps {
 
 export function DiscoverPage({ onPlaceBet, positions }: DiscoverPageProps) {
   const { allMatches, isLoading } = useMatchData(true);
+  const { markets: outrightMarkets } = useOutrightData(true, 'World Cup Winner');
   const [mounted, setMounted] = useState(false);
   
   useEffect(() => setMounted(true), []);
@@ -35,6 +41,21 @@ export function DiscoverPage({ onPlaceBet, positions }: DiscoverPageProps) {
   const [activeTrendingMatchId, setActiveTrendingMatchId] = useState<string | null>(null);
   const [activeSplitMatchId, setActiveSplitMatchId] = useState<string | null>(null);
   const [activeUnderdogMatchId, setActiveUnderdogMatchId] = useState<string | null>(null);
+  const [activeChampionIdx, setActiveChampionIdx] = useState(0);
+
+  // Champion: find the World Cup Winner market and parse teams
+  const championMarket = useMemo(() => {
+    const candidates = outrightMarkets
+      .filter(m => (m.rawOutcomes?.length || 0) > 10)
+      .sort((a, b) => (b.rawOutcomes?.length || 0) - (a.rawOutcomes?.length || 0));
+    return candidates[0] || null;
+  }, [outrightMarkets]);
+
+  const championTeams = useMemo(() => championMarket ? parseChampionTeams(championMarket) : [], [championMarket]);
+  const displayChampionTeam = championTeams[activeChampionIdx] || championTeams[0];
+
+  // Champion confirm state
+  const [championConfirm, setChampionConfirm] = useState<ChampionTeam | null>(null);
 
   // Compute dynamic discovering matches
   const { trendingMatch, splitMatch, trendingRest, splitRest, underdogMatch, underdogRest } = useMemo(() => {
@@ -127,6 +148,21 @@ export function DiscoverPage({ onPlaceBet, positions }: DiscoverPageProps) {
                 activeMatchId={displayUnderdogMatch?.id}
                 accentColor="#F59E0B"
                 underdogMode={true}
+              />
+            )}
+
+            {/* ── Champion: 夺冠热门 ── */}
+            {displayChampionTeam && (
+              <ChampionCard
+                team={displayChampionTeam}
+                onClick={() => setChampionConfirm(displayChampionTeam)}
+              />
+            )}
+            {championTeams.length > 0 && (
+              <ChampionPlaylist
+                teams={championTeams}
+                activeIndex={activeChampionIdx}
+                onSelect={(idx) => setActiveChampionIdx(idx)}
               />
             )}
           </DiscoverCardsContainer>
@@ -285,6 +321,40 @@ export function DiscoverPage({ onPlaceBet, positions }: DiscoverPageProps) {
           onCancel={() => setConfirmAction(null)}
         />
       )}
+
+      {/* 4. Champion Outright ConfirmModal */}
+      {championConfirm && championMarket && (() => {
+        const idx = championConfirm.originalIndex;
+        const price = championMarket.rawPrices?.[idx] ?? 0.05;
+        const prob = Number((price * 100).toFixed(1));
+        const odds = 1 / Math.max(price, 0.01);
+        const tokenId = championMarket.rawTokenIds?.[idx]?.[0] || '';
+        return (
+          <ConfirmModal
+            isOpen={true}
+            market={championMarket}
+            side="home"
+            tokenId={tokenId}
+            outrightInfo={{
+              title: `${championMarket.question} - ${championConfirm.name}`,
+              directionLabel: '买入是',
+              probability: prob,
+              odds,
+              primaryColor: '#00C85A',
+              accentColor: '#00A040',
+              glowColor: 'rgba(0,200,90,0.4)',
+              badgeText: '是',
+            }}
+            onConfirm={async (amount, executionPrice) => {
+              setChampionConfirm(null);
+              if (onPlaceBet) {
+                await onPlaceBet(amount.toString(), tokenId, executionPrice);
+              }
+            }}
+            onCancel={() => setChampionConfirm(null)}
+          />
+        );
+      })()}
     </div>
   );
 }
