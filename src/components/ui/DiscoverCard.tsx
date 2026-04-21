@@ -121,16 +121,15 @@ export function SplitCard({ match, onClick }: { match?: ParsedMatch; onClick?: (
   const homeColor = match.home.style.primary;
   const awayColor = match.away.style.primary;
   
-  // Calculate remaining probability for Draw
-  const combinedProb = match.home.probability + match.away.probability;
-  const drawProb = Math.max(0, 100 - combinedProb);
+  // Use actual Draw probability from market data (supports >100% AMM sum)
+  const drawProb = match.draw?.probability ?? 0;
   const drawPayout = drawProb > 0 ? (100 / drawProb).toFixed(1) : null;
 
   return (
     <motion.div 
       whileTap={{ scale: 0.98 }}
       onClick={onClick}
-      className="relative w-full h-[320px] rounded-[32px] overflow-hidden border border-white/5 cursor-pointer bg-[#0D0518] shadow-xl"
+      className="relative group w-full h-[320px] rounded-[32px] overflow-hidden border border-white/5 cursor-pointer bg-[#0D0518] shadow-xl"
     >
       {/* Diagonal Split Backgrounds using dynamic team colors */}
       <div className="absolute inset-0 z-0 opacity-60 mix-blend-screen">
@@ -171,13 +170,13 @@ export function SplitCard({ match, onClick }: { match?: ParsedMatch; onClick?: (
               />
             </div>
             {/* Name */}
-            <span className="text-white/70 font-bold uppercase text-[10px] mb-2.5 tracking-[0.15em] break-words line-clamp-2 leading-tight text-center">{match.home.name}</span>
+            <span className="text-white/70 font-bold capitalize text-[10px] mb-2.5 tracking-[0.15em] break-words line-clamp-2 leading-tight text-center">{match.home.name}</span>
             {/* Probability Text */}
             <div 
               className="text-white font-black text-[42px] tracking-tighter leading-none"
               style={{ filter: `drop-shadow(0 0 16px ${homeColor}60)` }}
             >
-              {match.home.probability}<span className="text-2xl opacity-80">%</span>
+              {match.home.probability}<span className="text-2xl opacity-80 ml-1">%</span>
             </div>
           </div>
 
@@ -193,13 +192,13 @@ export function SplitCard({ match, onClick }: { match?: ParsedMatch; onClick?: (
               />
             </div>
             {/* Name */}
-            <span className="text-white/70 font-bold uppercase text-[10px] mb-2.5 tracking-[0.15em] break-words line-clamp-2 leading-tight text-center">{match.away.name}</span>
+            <span className="text-white/70 font-bold capitalize text-[10px] mb-2.5 tracking-[0.15em] break-words line-clamp-2 leading-tight text-center">{match.away.name}</span>
             {/* Probability Text */}
             <div 
               className="text-white font-black text-[42px] tracking-tighter leading-none"
               style={{ filter: `drop-shadow(0 0 16px ${awayColor}60)` }}
             >
-              {match.away.probability}<span className="text-2xl opacity-80">%</span>
+              {match.away.probability}<span className="text-2xl opacity-80 ml-1">%</span>
             </div>
           </div>
         </div>
@@ -210,10 +209,17 @@ export function SplitCard({ match, onClick }: { match?: ParsedMatch; onClick?: (
              <div className="flex flex-col items-center gap-1 z-40 mb-4">
                <span className="text-[9px] text-white/40 font-bold tracking-[0.25em] uppercase">DRAW</span>
                <div className="text-white/80 font-black text-xl tracking-tighter mix-blend-screen drop-shadow-lg">
-                 {drawProb}<span className="text-[12px] opacity-70">%</span>
+                 {drawProb}<span className="text-[12px] opacity-70 ml-0.5">%</span>
                </div>
              </div>
           )}
+        </div>
+
+        {/* Subtle Tap to Trade Hint */}
+        <div className="absolute bottom-4 left-0 w-full flex justify-center opacity-40 hover:opacity-100 transition-opacity z-50 pointer-events-none group-hover:opacity-100">
+          <span style={{ fontFamily: 'Inter', fontSize: '11px', color: 'rgba(255, 255, 255, 0.68)'}}>
+            点击卡片快速投注
+          </span>
         </div>
       </div>
     </motion.div>

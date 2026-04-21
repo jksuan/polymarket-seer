@@ -34,6 +34,7 @@ export function DiscoverPage({ onPlaceBet, positions }: DiscoverPageProps) {
 
   // States for Stage/Playlist Master-Detail Cast
   const [activeTrendingMatchId, setActiveTrendingMatchId] = useState<string | null>(null);
+  const [activeSplitMatchId, setActiveSplitMatchId] = useState<string | null>(null);
 
   // Compute dynamic discovering matches
   const { trendingMatch, splitMatch, closingSoonMatch, trendingRest, splitRest, closingRest, underdogMatch, underdogRest } = useMemo(() => {
@@ -90,6 +91,10 @@ export function DiscoverPage({ onPlaceBet, positions }: DiscoverPageProps) {
   const trendingCarousel = useMemo(() => [trendingMatch, ...(trendingRest || [])].filter(Boolean) as ParsedMatch[], [trendingMatch, trendingRest]);
   const displayTrendingMatch = useMemo(() => trendingCarousel.find(m => m.id === activeTrendingMatchId) || trendingCarousel[0], [trendingCarousel, activeTrendingMatchId]);
 
+  // Derive the active master match for Split
+  const splitCarousel = useMemo(() => [splitMatch, ...(splitRest || [])].filter(Boolean) as ParsedMatch[], [splitMatch, splitRest]);
+  const displaySplitMatch = useMemo(() => splitCarousel.find(m => m.id === activeSplitMatchId) || splitCarousel[0], [splitCarousel, activeSplitMatchId]);
+
   return (
     <div className="pb-32 min-h-[100dvh]">
       <TopHeader isSticky={true} />
@@ -109,11 +114,12 @@ export function DiscoverPage({ onPlaceBet, positions }: DiscoverPageProps) {
               activeMatchId={displayTrendingMatch?.id}
               accentColor="#ff6b35"
             />
-            {splitMatch && <SplitCard match={splitMatch} onClick={() => handleCardClick(splitMatch)} />}
+            {displaySplitMatch && <SplitCard match={displaySplitMatch} onClick={() => handleCardClick(displaySplitMatch)} />}
             <HorizontalMatchRow
-              label="剃刀边缘"
-              matches={splitRest ?? []}
-              onClick={handleCardClick}
+              label="势均力敌"
+              matches={splitCarousel}
+              onClick={(match) => setActiveSplitMatchId(match.id)}
+              activeMatchId={displaySplitMatch?.id}
               accentColor="#a855f7"
             />
             {closingSoonMatch && <ClosingSoonCard match={closingSoonMatch} onClick={() => handleCardClick(closingSoonMatch)} />}
