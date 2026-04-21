@@ -32,6 +32,9 @@ export function DiscoverPage({ onPlaceBet, positions }: DiscoverPageProps) {
   const [quickPickMatch, setQuickPickMatch] = useState<ParsedMatch | null>(null);
   const [confirmAction, setConfirmAction] = useState<{match: ParsedMatch, side: 'home'|'away'|'draw'} | null>(null);
 
+  // States for Stage/Playlist Master-Detail Cast
+  const [activeTrendingMatchId, setActiveTrendingMatchId] = useState<string | null>(null);
+
   // Compute dynamic discovering matches
   const { trendingMatch, splitMatch, closingSoonMatch, trendingRest, splitRest, closingRest, underdogMatch, underdogRest } = useMemo(() => {
     if (!allMatches || allMatches.length === 0) return {};
@@ -83,6 +86,10 @@ export function DiscoverPage({ onPlaceBet, positions }: DiscoverPageProps) {
     if (match) setQuickPickMatch(match);
   };
 
+  // Derive the active master match for Trending
+  const trendingCarousel = useMemo(() => [trendingMatch, ...(trendingRest || [])].filter(Boolean) as ParsedMatch[], [trendingMatch, trendingRest]);
+  const displayTrendingMatch = useMemo(() => trendingCarousel.find(m => m.id === activeTrendingMatchId) || trendingCarousel[0], [trendingCarousel, activeTrendingMatchId]);
+
   return (
     <div className="pb-32 min-h-[100dvh]">
       <TopHeader isSticky={true} />
@@ -94,11 +101,12 @@ export function DiscoverPage({ onPlaceBet, positions }: DiscoverPageProps) {
           </div>
         ) : (
           <DiscoverCardsContainer>
-            {trendingMatch && <TrendingCard match={trendingMatch} onClick={() => handleCardClick(trendingMatch)} />}
+            {displayTrendingMatch && <TrendingCard match={displayTrendingMatch} onClick={() => handleCardClick(displayTrendingMatch)} />}
             <HorizontalMatchRow
               label="热门赛事"
-              matches={trendingRest ?? []}
-              onClick={handleCardClick}
+              matches={trendingCarousel}
+              onClick={(match) => setActiveTrendingMatchId(match.id)} // Cast to main stage instead of action drawer
+              activeMatchId={displayTrendingMatch?.id}
               accentColor="#ff6b35"
             />
             {splitMatch && <SplitCard match={splitMatch} onClick={() => handleCardClick(splitMatch)} />}

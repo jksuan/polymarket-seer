@@ -366,9 +366,10 @@ interface HorizontalMatchRowProps {
   matches: ParsedMatch[];
   onClick?: (match: ParsedMatch) => void;
   accentColor?: string;
+  activeMatchId?: string;
 }
 
-export function HorizontalMatchRow({ label, matches, onClick, accentColor = '#6bff8f' }: HorizontalMatchRowProps) {
+export function HorizontalMatchRow({ label, matches, onClick, accentColor = '#6bff8f', activeMatchId }: HorizontalMatchRowProps) {
   if (!matches || matches.length === 0) return null;
 
   return (
@@ -376,20 +377,27 @@ export function HorizontalMatchRow({ label, matches, onClick, accentColor = '#6b
 
 
       <div
-        className="flex gap-3 overflow-x-auto pb-2"
+        className="flex gap-3 overflow-x-auto pb-2 px-1"
         style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}
       >
         {matches.map((match) => {
           const homeColor = match.home.style.primary || '#6bff8f';
           const awayColor = match.away.style.primary || '#00F0FF';
+          const isActive = activeMatchId === match.id;
 
           return (
             <motion.button
               key={match.id}
               whileTap={{ scale: 0.95 }}
               onClick={() => onClick?.(match)}
-              className="flex-shrink-0 w-[168px] rounded-2xl overflow-hidden border border-white/[0.08] bg-[#0D0518] relative cursor-pointer"
-              style={{ boxShadow: '0 4px 16px rgba(0,0,0,0.4)' }}
+              className={`flex-shrink-0 w-[168px] rounded-2xl overflow-hidden bg-[#0D0518] relative cursor-pointer transition-all duration-300 ${
+                isActive 
+                  ? 'border shadow-[0_0_20px_rgba(255,255,255,0.15)] opacity-100 scale-[1.02]' 
+                  : 'border border-white/[0.08] shadow-[0_4px_16px_rgba(0,0,0,0.4)] opacity-60 hover:opacity-100'
+              }`}
+              style={{
+                borderColor: isActive ? accentColor : undefined
+              }}
             >
               {/* Color stripe at top */}
               <div className="h-[3px] w-full" style={{ background: `linear-gradient(to right, ${homeColor}, ${awayColor})` }} />
