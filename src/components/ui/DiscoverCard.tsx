@@ -5,6 +5,7 @@ import { motion } from 'motion/react';
 import { Flame, Swords, Timer, ArrowUpRight } from 'lucide-react';
 import { ParsedMatch } from '@/components/ui/MatchCard';
 import { formatVolume } from '@/lib/utils';
+import { getCountryFlagUrl } from '@/lib/countryFlags';
 
 export function DiscoverCardsContainer({ children }: { children: React.ReactNode }) {
   return (
@@ -41,42 +42,68 @@ export function TrendingCard({ match, onClick }: { match?: ParsedMatch; onClick?
       
       {/* Glowing Tag & Meta */}
       <div className="absolute top-6 left-6 z-20 flex flex-col gap-2">
-        <div className="flex items-center gap-2 bg-white/5 border border-white/20 px-3 py-1.5 rounded-full backdrop-blur-md inline-flex self-start">
+        <div className="flex items-center gap-2 inline-flex self-start">
           <Flame className="w-4 h-4 animate-pulse" style={{ color: glowColor }} />
-          <span className="text-[11px] font-bold tracking-[0.2em] uppercase shadow-sm flex items-center gap-1" style={{ color: glowColor }}>
+          <span className="text-[13px] shadow-sm flex items-center gap-1" style={{ color: glowColor, fontFamily: 'Inter', fontWeight: 800, letterSpacing: '0.02em' }}>
             全网焦点
           </span>
         </div>
       </div>
 
       <div className="absolute top-6 right-6 z-20 flex flex-col items-end">
-         <div className="text-white/40 text-[9px] font-bold tracking-[0.2em] uppercase">24H 交易量</div>
-         <div className="text-white/80 font-mono text-sm tracking-wider flex items-center gap-1">
+         <div className="text-white/80 font-mono text-sm tracking-wider flex justify-center items-center gap-1.5">
+           <span className="text-white/50 text-xs" style={{ fontFamily: 'Inter', letterSpacing: '0.02em' }}>交易量</span>
            {formatVolume(match.volume)}
-           <span className="text-[#6bff8f] text-[9px]">+24%</span>
          </div>
       </div>
 
       <div className="absolute inset-0 p-6 flex flex-col z-20 bg-gradient-to-t from-[#0D0518] via-transparent to-transparent">
         
         {/* Top spacing to avoid overlapping with badges */}
-        <div className="h-20 shrink-0" />
+        <div className="h-10 shrink-0" />
 
-        {/* Team Names (Single line, uniform size, centered) */}
-        <h3 className="w-full text-white text-2xl md:text-[28px] font-black italic uppercase leading-[1.1] tracking-tighter text-shadow-sm flex items-center justify-center gap-2">
-          <span className="truncate">{heroMatch.name}</span>
-          <span className="text-lg text-white/50 lowercase flex-shrink-0">vs</span>
-          <span className="truncate">{underdog.name}</span>
-        </h3>
+        {/* Teams with SVG Flags (Broadcast Style) */}
+        <div className="w-full flex items-center justify-center gap-6 mt-4">
+          {/* Hero Team */}
+          <div className="flex flex-col items-center gap-2">
+            <div className="w-[64px] h-[48px] rounded-xl overflow-hidden shadow-[0_4px_24px_rgba(0,0,0,0.5)] border border-white/20 relative group-hover:scale-[1.03] transition-transform duration-300 bg-[#0D0518]">
+              <img src={getCountryFlagUrl(heroMatch.name, 'svg')} alt={heroMatch.name} className="w-full h-full object-cover" />
+              <div className="absolute inset-0 ring-1 ring-inset ring-white/10 rounded-xl pointer-events-none" />
+            </div>
+            <span className="text-white text-xs font-bold capitalize tracking-wide truncate max-w-[90px] text-center mt-1">
+              {heroMatch.name.toLowerCase()}
+            </span>
+          </div>
+
+          <div className="text-white/30 text-lg font-black italic self-start mt-4 px-2">vs</div>
+
+          {/* Underdog Team */}
+          <div className="flex flex-col items-center gap-2">
+            <div className="w-[64px] h-[48px] rounded-xl overflow-hidden shadow-[0_4px_24px_rgba(0,0,0,0.5)] border border-white/10 relative opacity-85 group-hover:opacity-100 group-hover:scale-[1.03] transition-all duration-300 bg-[#0D0518]">
+              <img src={getCountryFlagUrl(underdog.name, 'svg')} alt={underdog.name} className="w-full h-full object-cover grayscale-[20%] group-hover:grayscale-0 transition-all duration-300" />
+              <div className="absolute inset-0 ring-1 ring-inset ring-white/10 rounded-xl pointer-events-none" />
+            </div>
+            <span className="text-white text-xs font-bold capitalize tracking-wide truncate max-w-[90px] text-center mt-1">
+              {underdog.name.toLowerCase()}
+            </span>
+          </div>
+        </div>
         
-        {/* Centered Market Probability */}
+        {/* Centered Market Probability (Number highlighted, Label below) */}
         <div className="flex-1 flex flex-col items-center justify-center -mt-8">
-          <div className="text-white/40 text-[11px] font-bold font-mono uppercase tracking-[0.2em] mb-2 flex items-center gap-2">
-            <span className="text-white">{heroMatch.name}</span> MARKET PROBABILITY
+          <div className="text-[112px] leading-[0.8] font-black tracking-tighter drop-shadow-[0_0_30px_rgba(255,255,255,0.25)]" style={{ color: glowColor }}>
+            {heroMatch.probability}<span className="text-6xl">%</span>
           </div>
-          <div className="text-[96px] leading-none font-black tracking-tighter drop-shadow-[0_0_20px_rgba(255,255,255,0.2)]" style={{ color: glowColor }}>
-            {heroMatch.probability}<span className="text-5xl">%</span>
+          <div className="text-white/50 text-[10px] font-bold uppercase tracking-[0.2em] mt-3 text-center">
+            {heroMatch.name} MARKET PROBABILITY
           </div>
+        </div>
+
+        {/* Subtle Tap to Trade Hint */}
+        <div className="absolute bottom-4 left-0 w-full flex justify-center mt-auto opacity-40 hover:opacity-100 transition-opacity">
+          <span style={{ fontFamily: 'Inter', fontSize: '11px', color: 'rgba(255, 255, 255, 0.68)'}}>
+            点击卡片快速投注
+          </span>
         </div>
       </div>
       
@@ -233,7 +260,7 @@ export function ClosingSoonCard({ match, onClick }: { match?: ParsedMatch; onCli
                {timeLeft === 'LIVE' ? '比赛中' : (isUrgent ? '即将封盘' : '下一场')}
              </span>
           </div>
-          <img src={match.home.flagUrl} alt="" className="w-8 h-8 rounded-full border border-white/20 opacity-80" />
+          <img src={getCountryFlagUrl(match.home.name, 'svg')} alt="" className="w-8 h-8 rounded-full border border-white/20 opacity-80 object-cover" />
         </div>
 
         <div className="flex flex-col">
