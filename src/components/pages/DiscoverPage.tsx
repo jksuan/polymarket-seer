@@ -35,6 +35,7 @@ export function DiscoverPage({ onPlaceBet, positions }: DiscoverPageProps) {
   // States for Stage/Playlist Master-Detail Cast
   const [activeTrendingMatchId, setActiveTrendingMatchId] = useState<string | null>(null);
   const [activeSplitMatchId, setActiveSplitMatchId] = useState<string | null>(null);
+  const [activeUnderdogMatchId, setActiveUnderdogMatchId] = useState<string | null>(null);
 
   // Compute dynamic discovering matches
   const { trendingMatch, splitMatch, closingSoonMatch, trendingRest, splitRest, closingRest, underdogMatch, underdogRest } = useMemo(() => {
@@ -95,6 +96,10 @@ export function DiscoverPage({ onPlaceBet, positions }: DiscoverPageProps) {
   const splitCarousel = useMemo(() => [splitMatch, ...(splitRest || [])].filter(Boolean) as ParsedMatch[], [splitMatch, splitRest]);
   const displaySplitMatch = useMemo(() => splitCarousel.find(m => m.id === activeSplitMatchId) || splitCarousel[0], [splitCarousel, activeSplitMatchId]);
 
+  // Derive the active master match for Underdog
+  const underdogCarousel = useMemo(() => [underdogMatch, ...(underdogRest || [])].filter(Boolean) as ParsedMatch[], [underdogMatch, underdogRest]);
+  const displayUnderdogMatch = useMemo(() => underdogCarousel.find(m => m.id === activeUnderdogMatchId) || underdogCarousel[0], [underdogCarousel, activeUnderdogMatchId]);
+
   return (
     <div className="pb-32 min-h-[100dvh]">
       <TopHeader isSticky={true} />
@@ -131,13 +136,15 @@ export function DiscoverPage({ onPlaceBet, positions }: DiscoverPageProps) {
                 accentColor="#00F0FF"
               />
             )}
-            {underdogMatch && <UnderdogCard match={underdogMatch} onClick={() => handleCardClick(underdogMatch)} />}
-            {(underdogRest ?? []).length >= 1 && (
+            {displayUnderdogMatch && <UnderdogCard match={displayUnderdogMatch} onClick={() => handleCardClick(displayUnderdogMatch)} />}
+            {underdogCarousel.length >= 2 && (
               <HorizontalMatchRow
-                label="冷门博彩"
-                matches={underdogRest ?? []}
-                onClick={handleCardClick}
+                label="LONG SHOT"
+                matches={underdogCarousel}
+                onClick={(match) => setActiveUnderdogMatchId(match.id)}
+                activeMatchId={displayUnderdogMatch?.id}
                 accentColor="#F59E0B"
+                underdogMode={true}
               />
             )}
           </DiscoverCardsContainer>

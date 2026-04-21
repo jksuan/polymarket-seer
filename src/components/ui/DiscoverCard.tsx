@@ -418,9 +418,11 @@ interface HorizontalMatchRowProps {
   onClick?: (match: ParsedMatch) => void;
   accentColor?: string;
   activeMatchId?: string;
+  /** When true, shows the underdog flag first + odds multiplier instead of probability */
+  underdogMode?: boolean;
 }
 
-export function HorizontalMatchRow({ label, matches, onClick, accentColor = '#6bff8f', activeMatchId }: HorizontalMatchRowProps) {
+export function HorizontalMatchRow({ label, matches, onClick, accentColor = '#6bff8f', activeMatchId, underdogMode = false }: HorizontalMatchRowProps) {
   if (!matches || matches.length === 0) return null;
 
   return (
@@ -436,6 +438,18 @@ export function HorizontalMatchRow({ label, matches, onClick, accentColor = '#6b
           const awayColor = match.away.style.primary || '#00F0FF';
           const isActive = activeMatchId === match.id;
 
+          // Underdog mode: identify the longshot team
+          const isHomeUnderdog = match.home.probability <= match.away.probability;
+          const undergogTeam = isHomeUnderdog ? match.home : match.away;
+          const favoriteTeam = isHomeUnderdog ? match.away : match.home;
+          const underdogOdds = (100 / Math.max(undergogTeam.probability, 1));
+          const underdogOddsDisplay = underdogOdds >= 10 ? underdogOdds.toFixed(0) : underdogOdds.toFixed(1);
+          const underdogColor = isHomeUnderdog ? homeColor : awayColor;
+
+          // Flag order: in underdogMode, underdog flag is in front/glowing
+          const frontFlag = underdogMode ? getCountryFlagUrl(undergogTeam.name, 'svg') : getCountryFlagUrl(match.home.name, 'svg');
+          const backFlag  = underdogMode ? getCountryFlagUrl(favoriteTeam.name, 'svg') : getCountryFlagUrl(match.away.name, 'svg');
+
           return (
             <motion.button
               key={match.id}
@@ -446,33 +460,41 @@ export function HorizontalMatchRow({ label, matches, onClick, accentColor = '#6b
                   ? 'bg-white/[0.08] border shadow-[0_0_20px_rgba(255,255,255,0.05)] opacity-100 scale-105' 
                   : 'bg-[#0D0518]/50 border border-white/5 shadow-md opacity-40 hover:opacity-100 hover:bg-white/5'
               }`}
-              style={{
-                borderColor: isActive ? accentColor : 'transparent'
-              }}
+              style={{ borderColor: isActive ? accentColor : 'transparent' }}
             >
-              {/* Overlapping SVG Flags */}
+              {/* Overlapping SVG Flags — underdog in front when underdogMode */}
               <div className="relative w-[36px] h-[22px] shrink-0">
                 <img 
-                  src={getCountryFlagUrl(match.home.name, 'svg')} 
-                  alt="" 
-                  className="absolute left-0 top-0 z-10 w-[22px] h-[16px] rounded-[3px] object-cover shadow-md ring-1 ring-black/40" 
+                  src={frontFlag}
+                  alt=""
+                  className="absolute left-0 top-0 z-10 w-[22px] h-[16px] rounded-[3px] object-cover shadow-md ring-1 ring-black/40"
+                  style={underdogMode && isActive ? { boxShadow: `0 0 8px ${underdogColor}80` } : {}}
                 />
                 <img 
-                  src={getCountryFlagUrl(match.away.name, 'svg')} 
-                  alt="" 
-                  className="absolute right-0 bottom-0 z-0 w-[22px] h-[16px] rounded-[3px] object-cover shadow-sm opacity-80 brightness-75 ring-1 ring-black/40" 
+                  src={backFlag}
+                  alt=""
+                  className="absolute right-0 bottom-0 z-0 w-[22px] h-[16px] rounded-[3px] object-cover shadow-sm opacity-80 brightness-75 ring-1 ring-black/40"
                 />
               </div>
 
-              {/* Favored Probability */}
-              <div 
-                className="text-lg font-black tracking-tighter leading-none flex items-baseline" 
-                style={{ 
-                  color: isActive ? (match.home.probability >= match.away.probability ? homeColor : awayColor) : '#A0A0A0' 
-                }}
-              >
-                {Math.max(match.home.probability, match.away.probability)}<span className="text-[9px] opacity-70">%</span>
-              </div>
+              {/* Value display */}
+              {underdogMode ? (
+                // Show underdog's odds multiplier in gold
+                <div
+                  className="text-lg font-black tracking-tighter leading-none flex items-baseline"
+                  style={{ color: isActive ? '#F59E0B' : '#A0A0A0' }}
+                >
+                  {underdogOddsDisplay}<span className="text-[9px] opacity-70">x</span>
+                </div>
+              ) : (
+                // Normal mode: show favourite's probability
+                <div
+                  className="text-lg font-black tracking-tighter leading-none flex items-baseline"
+                  style={{ color: isActive ? (match.home.probability >= match.away.probability ? homeColor : awayColor) : '#A0A0A0' }}
+                >
+                  {Math.max(match.home.probability, match.away.probability)}<span className="text-[9px] opacity-70">%</span>
+                </div>
+              )}
             </motion.button>
           );
         })}
