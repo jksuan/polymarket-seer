@@ -11,10 +11,13 @@ const countryNameZh: Record<string, string> = {
   'South Korea': '韩国',
   'Czechia': '捷克',
   'Czech Republic': '捷克',
+  'CZE/DEN/MKD/IRL': '捷克',
 
   // ─── Group B ───
   'Canada': '加拿大',
   'Bosnia and Herzegovina': '波黑',
+  'Bosnia-Herzegovina': '波黑',
+  'BIH/ITA/NIR/WAL': '波黑',
   'Qatar': '卡塔尔',
   'Switzerland': '瑞士',
 
@@ -31,6 +34,8 @@ const countryNameZh: Record<string, string> = {
   'Australia': '澳大利亚',
   'Türkiye': '土耳其',
   'Turkey': '土耳其',
+  'Turkiye': '土耳其',
+  'KOS/ROU/SVK/TUR': '土耳其',
 
   // ─── Group E ───
   'Germany': '德国',
@@ -65,6 +70,7 @@ const countryNameZh: Record<string, string> = {
   'France': '法国',
   'Senegal': '塞内加尔',
   'Iraq': '伊拉克',
+  'BOL/IRQ/SUR': '伊拉克',
   'Norway': '挪威',
 
   // ─── Group J ───
@@ -76,6 +82,8 @@ const countryNameZh: Record<string, string> = {
   // ─── Group K ───
   'Portugal': '葡萄牙',
   'DR Congo': '刚果（金）',
+  'Congo DR': '刚果（金）',
+  'DRC/JAM/NCL': '刚果（金）',
   'Uzbekistan': '乌兹别克斯坦',
   'Colombia': '哥伦比亚',
 
@@ -86,13 +94,31 @@ const countryNameZh: Record<string, string> = {
   'Panama': '巴拿马',
 };
 
+const normalizationEn: Record<string, string> = {
+  'CZE/DEN/MKD/IRL': 'Czechia',
+  'BIH/ITA/NIR/WAL': 'Bosnia and Herzegovina',
+  'KOS/ROU/SVK/TUR': 'Türkiye',
+  'Turkiye': 'Türkiye',
+  'Turkey': 'Türkiye',
+  'BOL/IRQ/SUR': 'Iraq',
+  'DRC/JAM/NCL': 'DR Congo',
+  'Congo DR': 'DR Congo',
+  'South Korea': 'Korea Republic',
+  'USA': 'United States',
+  'Curacao': 'Curaçao',
+  'Cote d\'Ivoire': 'Côte d\'Ivoire',
+  'Ivory Coast': 'Côte d\'Ivoire',
+  'Iran': 'IR Iran',
+  'Cape Verde': 'Cabo Verde',
+};
+
 /**
  * Translate a country name based on locale.
  * Falls back to the original (English) name if no mapping is found.
  */
 export function translateCountryName(name: string, locale: string): string {
-  if (locale === 'zh') {
+  if (locale.startsWith('zh')) {
     return countryNameZh[name] || name;
   }
-  return name;
+  return normalizationEn[name] || name;
 }
