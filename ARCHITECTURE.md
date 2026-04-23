@@ -1,6 +1,6 @@
 # Polymarket Seer — 工程架构文档 (ARCHITECTURE)
 
-> **版本**：v1.0 · 最后更新：2026-04-20
+> **版本**：v1.1 · 最后更新：2026-04-22
 > **技术栈**：Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS v4 · SWR · ethers.js · Privy
 
 ---
@@ -35,7 +35,8 @@ polymarket-seer/
 │   │   ├── TxOverlay.tsx           # 交易状态全屏遮罩
 │   │   │
 │   │   ├── pages/                  # ★ 页面级组件
-│   │   │   ├── HomePage.tsx        # 首页（赛程/积分榜/射手榜/淘汰赛/趣味投注）
+│   │   │   ├── DiscoverPage.tsx    # 全新聚合发现页（替换原首页首屏，展现 4 大主题卡片）
+│   │   │   ├── HomePage.tsx        # 赛事大厅（赛程/积分榜/射手榜/淘汰赛）
 │   │   │   ├── ChallengePage.tsx   # 挑战页（世界杯专属赛事预测）
 │   │   │   ├── SearchPage.tsx      # 搜索页（全局搜索入口）
 │   │   │   ├── LeaderboardPage.tsx # 排行页（待重构）
@@ -59,9 +60,10 @@ polymarket-seer/
 │   │   │           └── ProfileTransactionSkeleton.tsx # ★ 明细专用骨架屏
 │   │   │
 │   │   └── ui/                     # ★ 通用 UI 组件库
-│   │       ├── Skeleton.tsx        # 原子骨架屏基础组件
+│   │       ├── Skeleton.tsx        # 原子骨架屏基础组件（标准化无布局偏移加载）
 │   │       ├── TopHeader.tsx       # 吸顶头部栏
 │   │       ├── BottomNav.tsx       # 底部导航栏
+│   │       ├── DiscoverCard.tsx    # ★ 聚合发现流组件集合包 (包含 Champion/Trending/Split/Underdog)
 │   │       ├── CategoryTabs.tsx    # 分类导航标签
 │   │       ├── SubTabs.tsx         # 子标签栏（首页二级导航）
 │   │       ├── BannerCarousel.tsx  # 轮播图（首页横幅）
@@ -266,23 +268,20 @@ polymarket-seer/
 5. **余额查询**：实时获取 USDC 余额
 6. **登出清理**：`handleLogout()` 清除所有 localStorage 状态
 
-### 3.3 骨架屏体系
+### 3.3 UI 与动画体系设计
 
-```
-Skeleton.tsx (原子基础)
-    │
-    ├── MatchCardSkeleton      (MatchCard.tsx 内)
-    ├── OutrightCardSkeleton   (OutrightCard.tsx 内)
-    ├── ProfileCardSkeleton    (独立文件: components/ProfileCardSkeleton.tsx)
-    ├── ProfileTransactionSkeleton (独立文件: components/ProfileTransactionSkeleton.tsx)
-    ├── ProfileOverviewSkeleton (ProfileOverview.tsx 内)
-    └── ChallengePage 内联骨架   (ChallengePage.tsx 内)
-```
+1. **统一骨架屏 (Skeleton Architecture)**
+   - 痛点：使用传统 Spinner 在数据加载时导致巨大的 Layout Shifts（组件跳动/突变），导致体验廉价。
+   - 解决方案：引入原子的 `<Skeleton>` 组件。为每个包含网络 IO 的视图构建 1:1 像素级模拟的占位视图 (`ProfileTransactionSkeleton`, `MatchCardSkeleton` 等)。
+   - 实现：统一使用 `animate-pulse` 及 `bg-white/5` 透明度映射进行暗黑主题适配。
 
-**设计原则**：
-- 每个骨架严格 1:1 模拟真实 UI 的布局和尺寸
-- 使用 `animate-pulse` 呼吸动效
-- 颜色与应用暗色主题一致 (`#1a1025 → #2a1f3a` 渐变)
+2. **全局组件交互 (Master-Detail Portals)**
+   - 痛点：在长列表中弹出确认交易单时，常遇到 CSS z-index 和父节点 overflow 截断问题。
+   - 解决方案：`DiscoverPage` 广泛使用 `createPortal` 以及 Framer Motion 的 `AnimatePresence` 处理抽屉或全屏 Overlay 弹起逻辑。弹窗直接附着于 `document.body`，剥离了内部上下文的视觉耦合。
+
+3. **色彩令牌工厂 (Color Tokens Abstraction)**
+   - 我们抛弃了随地写死的 Tailwind hex 色值，统一提取主题配置引擎，如 `DISCOVER_THEME`。
+   - 通过 JS 常量管理 `accentGold` (TITLE RACE金)、`dangerMagenta` (LONG SHOT危险紫红) 及其自带的高斯模糊光晕变量 `dangerMagentaGlow`，使得后续可无痛拓展皮肤和调整色阶。
 
 ---
 
