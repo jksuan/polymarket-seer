@@ -42,6 +42,12 @@ const zh = {
     whodaresbet: 'Who dares bet on',
     worldCupWinner: '2026 WORLD CUP WINNER IS...',
     marketProbability: 'MARKET PROBABILITY',
+    chooseSide: '选择阵营',
+    win: '胜',
+    drawLabel: '平局 DRAW',
+    buyYes: '买入是',
+    loadingMarket: 'Loading Market Data...',
+    hotMatches: '热门赛事',
   },
 
   // ─── 首页 ───

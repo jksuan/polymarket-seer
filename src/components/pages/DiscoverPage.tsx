@@ -1,7 +1,8 @@
-'use client';
+﻿'use client';
 
 import { TopHeader } from '@/components/ui/TopHeader';
 import { Compass, X } from 'lucide-react';
+import { useTranslation } from '@/i18n';
 import {
   DiscoverCardsContainer,
   TrendingCard,
@@ -29,6 +30,7 @@ interface DiscoverPageProps {
 export function DiscoverPage({ onPlaceBet, positions }: DiscoverPageProps) {
   const { allMatches, isLoading } = useMatchData(true);
   const { markets: outrightMarkets } = useOutrightData(true, 'World Cup Winner');
+  const { t } = useTranslation();
   const [mounted, setMounted] = useState(false);
   
   useEffect(() => setMounted(true), []);
@@ -119,7 +121,7 @@ export function DiscoverPage({ onPlaceBet, positions }: DiscoverPageProps) {
       <div className="px-5 mt-6">
         {isLoading && !allMatches?.length ? (
           <div className="flex justify-center items-center h-48">
-            <span className="text-[#6bff8f] animate-pulse font-mono tracking-widest text-xs uppercase">Loading Market Data...</span>
+            <span className="text-[#6bff8f] animate-pulse font-mono tracking-widest text-xs uppercase">{t.discover.loadingMarket}</span>
           </div>
         ) : (
           <DiscoverCardsContainer>
@@ -141,7 +143,7 @@ export function DiscoverPage({ onPlaceBet, positions }: DiscoverPageProps) {
             {/* ── 2. Trending: 热门赛事 ── */}
             {displayTrendingMatch && <TrendingCard match={displayTrendingMatch} onClick={() => handleCardClick(displayTrendingMatch)} />}
             <HorizontalMatchRow
-              label="热门赛事"
+              label={t.discover.hotMatches}
               matches={trendingCarousel}
               onClick={(match) => setActiveTrendingMatchId(match.id)}
               activeMatchId={displayTrendingMatch?.id}
@@ -151,7 +153,7 @@ export function DiscoverPage({ onPlaceBet, positions }: DiscoverPageProps) {
             {/* ── 3. Split: 势均力敌 ── */}
             {displaySplitMatch && <SplitCard match={displaySplitMatch} onClick={() => handleCardClick(displaySplitMatch)} />}
             <HorizontalMatchRow
-              label="势均力敌"
+              label={t.discover.split}
               matches={splitCarousel}
               onClick={(match) => setActiveSplitMatchId(match.id)}
               activeMatchId={displaySplitMatch?.id}
@@ -200,7 +202,7 @@ export function DiscoverPage({ onPlaceBet, positions }: DiscoverPageProps) {
               >
                 <div className="flex justify-between items-center mb-6">
                    <div>
-                     <h2 className="text-white font-black italic text-4xl tracking-tighter uppercase whitespace-nowrap overflow-hidden text-ellipsis max-w-[280px]">Choose Side</h2>
+                     <h2 className="text-white font-black italic text-4xl tracking-tighter uppercase whitespace-nowrap overflow-hidden text-ellipsis max-w-[280px]">{t.discover.chooseSide}</h2>
                      <p className="text-[#6bff8f] text-[10px] uppercase font-bold tracking-widest mt-1">{quickPickMatch.title}</p>
                    </div>
                    <button onClick={() => setQuickPickMatch(null)} className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/50 active:scale-90 transition-transform">
@@ -220,7 +222,7 @@ export function DiscoverPage({ onPlaceBet, positions }: DiscoverPageProps) {
                      <div className="flex items-center gap-4">
                        <img src={quickPickMatch.home.flagUrl} alt="" className="w-8 h-8 rounded-full border border-white/20 object-cover" />
                        <div className="flex flex-col items-start gap-0.5">
-                         <span className="text-white font-bold text-lg leading-none">{quickPickMatch.home.name} 胜</span>
+                         <span className="text-white font-bold text-lg leading-none">{quickPickMatch.home.name} {t.discover.win}</span>
                        </div>
                      </div>
                      <div className="text-right">
@@ -237,7 +239,7 @@ export function DiscoverPage({ onPlaceBet, positions }: DiscoverPageProps) {
                      >
                        <div className="flex items-center gap-4">
                          <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white/60 text-xs font-black">VS</div>
-                         <span className="text-white/80 font-bold text-lg leading-none">平局 DRAW</span>
+                         <span className="text-white/80 font-bold text-lg leading-none">{t.discover.drawLabel}</span>
                        </div>
                        <div className="text-right">
                           <div className="text-white font-black text-2xl tracking-tighter">{quickPickMatch.draw.probability}%</div>
@@ -257,7 +259,7 @@ export function DiscoverPage({ onPlaceBet, positions }: DiscoverPageProps) {
                      <div className="flex items-center gap-4">
                        <img src={quickPickMatch.away.flagUrl} alt="" className="w-8 h-8 rounded-full border border-white/20 object-cover" />
                        <div className="flex flex-col items-start gap-0.5">
-                         <span className="text-white font-bold text-lg leading-none">{quickPickMatch.away.name} 胜</span>
+                         <span className="text-white font-bold text-lg leading-none">{quickPickMatch.away.name} {t.discover.win}</span>
                        </div>
                      </div>
                      <div className="text-right">
@@ -288,11 +290,11 @@ export function DiscoverPage({ onPlaceBet, positions }: DiscoverPageProps) {
           }
           outrightInfo={{
             title: confirmAction.side === 'draw'
-              ? `${confirmAction.match.home.name} vs ${confirmAction.match.away.name} — 平局`
+              ? `${confirmAction.match.home.name} vs ${confirmAction.match.away.name} — ${t.trade.draw}`
               : confirmAction.side === 'home'
-                ? `${confirmAction.match.home.name} 胜`
-                : `${confirmAction.match.away.name} 胜`,
-            directionLabel: confirmAction.side === 'draw' ? '买入平局' : confirmAction.side === 'home' ? `买入 ${confirmAction.match.home.name} 胜` : `买入 ${confirmAction.match.away.name} 胜`,
+                ? `${confirmAction.match.home.name} ${t.discover.win}`
+                : `${confirmAction.match.away.name} ${t.discover.win}`,
+            directionLabel: confirmAction.side === 'draw' ? `${t.trade.buy} ${t.trade.draw}` : confirmAction.side === 'home' ? `${t.trade.buy} ${confirmAction.match.home.name} ${t.discover.win}` : `${t.trade.buy} ${confirmAction.match.away.name} ${t.discover.win}`,
             probability: confirmAction.side === 'draw'
               ? confirmAction.match.draw.probability
               : confirmAction.side === 'home'
@@ -342,13 +344,13 @@ export function DiscoverPage({ onPlaceBet, positions }: DiscoverPageProps) {
             tokenId={tokenId}
             outrightInfo={{
               title: `${championMarket.question} - ${championConfirm.name}`,
-              directionLabel: '买入是',
+              directionLabel: t.discover.buyYes,
               probability: prob,
               odds,
               primaryColor: '#00C85A',
               accentColor: '#00A040',
               glowColor: 'rgba(0,200,90,0.4)',
-              badgeText: '是',
+              badgeText: t.trade.buy,
             }}
             onConfirm={async (amount, executionPrice) => {
               setChampionConfirm(null);

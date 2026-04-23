@@ -7,6 +7,7 @@ import { ParsedMatch } from '@/components/ui/MatchCard';
 import { formatVolume } from '@/lib/utils';
 import { getCountryFlagUrl } from '@/lib/countryFlags';
 import { SportMarket } from '@/types/sports';
+import { useTranslation } from '@/i18n';
 
 export const DISCOVER_THEME = {
   // Danger Magenta for Long Shot
@@ -22,12 +23,14 @@ export const DISCOVER_THEME = {
 };
 
 function MatchTimeCapsule({ match }: { match: ParsedMatch }) {
+  const { t, locale } = useTranslation();
   const isLive = match.status === 'live';
   
   const displayTime = () => {
     const date = new Date(match.rawMarket?.matchTimeISO || match.dateISO || new Date().toISOString());
     if (isNaN(date.getTime())) return match.timeLabel || '';
-    return `${date.getMonth() + 1}月${date.getDate()}日 ${date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false })}`;
+    const timeStr = date.toLocaleTimeString(locale === 'zh' ? 'zh-CN' : 'en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+    return `${t.date.monthDay(date.getMonth() + 1, date.getDate())} ${timeStr}`;
   };
 
   return (
@@ -38,7 +41,7 @@ function MatchTimeCapsule({ match }: { match: ParsedMatch }) {
         textShadow: isLive ? '0 0 8px rgba(255,42,85,0.6)' : 'none'
       }}
     >
-      {isLive ? '● 比赛进行中' : displayTime()}
+      {isLive ? `● ${t.discover.matchLive}` : displayTime()}
     </div>
   );
 }
@@ -53,6 +56,7 @@ export function DiscoverCardsContainer({ children }: { children: React.ReactNode
 
 // 1. Trending Card - The 24H Volume Focus
 export function TrendingCard({ match, onClick }: { match?: ParsedMatch; onClick?: () => void }) {
+  const { t } = useTranslation();
   if (!match) return null;
   // Use the team with the higher probability as the hero
   const isHomeFavored = match.home.probability >= match.away.probability;
@@ -81,7 +85,7 @@ export function TrendingCard({ match, onClick }: { match?: ParsedMatch; onClick?
         <div className="flex items-center gap-2 inline-flex self-start">
           <Flame className="w-4 h-4 animate-pulse" style={{ color: glowColor }} />
           <span className="text-[13px] shadow-sm flex items-center gap-1" style={{ color: glowColor, fontFamily: 'Inter', fontWeight: 800, letterSpacing: '0.02em' }}>
-            全网焦点
+            {t.discover.trending}
           </span>
         </div>
       </div>
@@ -130,14 +134,14 @@ export function TrendingCard({ match, onClick }: { match?: ParsedMatch; onClick?
             {heroMatch.probability}<span className="text-6xl">%</span>
           </div>
           <div className="text-white/50 text-[10px] font-bold uppercase tracking-[0.2em] mt-3 text-center">
-            {heroMatch.name} MARKET PROBABILITY
+            {heroMatch.name} {t.discover.marketProbability}
           </div>
         </div>
 
         {/* Subtle Tap to Trade Hint */}
         <div className="absolute bottom-4 left-0 w-full flex justify-center mt-auto opacity-40 hover:opacity-100 transition-opacity">
           <span style={{ fontFamily: 'Inter', fontSize: '11px', color: 'rgba(255, 255, 255, 0.68)'}}>
-            点击卡片快速投注
+            {t.discover.tapToTrade}
           </span>
         </div>
       </div>
@@ -152,6 +156,7 @@ export function TrendingCard({ match, onClick }: { match?: ParsedMatch; onClick?
 
 // 2. 50/50 Split Card - The High Tension Deathmatch
 export function SplitCard({ match, onClick }: { match?: ParsedMatch; onClick?: () => void }) {
+  const { t } = useTranslation();
   if (!match) return null;
   const homeColor = match.home.style.primary;
   const awayColor = match.away.style.primary;
@@ -188,7 +193,7 @@ export function SplitCard({ match, onClick }: { match?: ParsedMatch; onClick?: (
         <div className="flex justify-between items-start pointer-events-none">
            <div className="flex items-center gap-2 self-start">
              <ArrowLeftRight className="w-4 h-4" style={{ color: glowColor }} />
-             <span className="text-[13px] shadow-sm flex items-center gap-1" style={{ color: glowColor, fontFamily: 'Inter', fontWeight: 800, letterSpacing: '0.02em' }}>势均力敌</span>
+             <span className="text-[13px] shadow-sm flex items-center gap-1" style={{ color: glowColor, fontFamily: 'Inter', fontWeight: 800, letterSpacing: '0.02em' }}>{t.discover.split}</span>
            </div>
            
            <MatchTimeCapsule match={match} />
@@ -256,7 +261,7 @@ export function SplitCard({ match, onClick }: { match?: ParsedMatch; onClick?: (
         {/* Subtle Tap to Trade Hint */}
         <div className="absolute bottom-4 left-0 w-full flex justify-center opacity-40 hover:opacity-100 transition-opacity z-50 pointer-events-none group-hover:opacity-100">
           <span style={{ fontFamily: 'Inter', fontSize: '11px', color: 'rgba(255, 255, 255, 0.68)'}}>
-            点击卡片快速投注
+            {t.discover.tapToTrade}
           </span>
         </div>
       </div>
@@ -267,6 +272,7 @@ export function SplitCard({ match, onClick }: { match?: ParsedMatch; onClick?: (
 
 // 4. Underdog Card - 以小博大 / The Long Shot
 export function UnderdogCard({ match, onClick }: { match?: ParsedMatch; onClick?: () => void }) {
+  const { t } = useTranslation();
   if (!match) return null;
 
   // The underdog is always the team with the LOWER probability
@@ -300,7 +306,7 @@ export function UnderdogCard({ match, onClick }: { match?: ParsedMatch; onClick?
       <div className="absolute top-6 left-6 right-6 z-20 flex justify-between items-start pointer-events-none">
          <div className="flex items-center gap-2 self-start">
            <Zap className="w-[14px] h-[14px]" style={{ color: dangerPrimary }} fill="currentColor" />
-           <span className="text-[13px] shadow-sm flex items-center gap-1" style={{ color: dangerPrimary, fontFamily: 'Inter', fontWeight: 800, letterSpacing: '0.02em' }}>LONG SHOT</span>
+           <span className="text-[13px] shadow-sm flex items-center gap-1" style={{ color: dangerPrimary, fontFamily: 'Inter', fontWeight: 800, letterSpacing: '0.02em' }}>{t.discover.longShot}</span>
          </div>
 
          <MatchTimeCapsule match={match} />
@@ -310,7 +316,7 @@ export function UnderdogCard({ match, onClick }: { match?: ParsedMatch; onClick?
       <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 p-6 z-20 pointer-events-none">
         {/* Tagline */}
         <span className="text-white/40 text-[11px] font-bold tracking-normal uppercase mb-1" style={{ fontFamily: 'Inter' }}>
-          Who dares bet on
+          {t.discover.whodaresbet}
         </span>
 
         {/* Underdog name — hero text */}
@@ -354,7 +360,7 @@ export function UnderdogCard({ match, onClick }: { match?: ParsedMatch; onClick?
       {/* Subtle Tap to Trade Hint */}
       <div className="absolute bottom-4 left-0 w-full flex justify-center opacity-40 hover:opacity-100 transition-opacity z-50 pointer-events-none group-hover:opacity-100">
         <span style={{ fontFamily: 'Inter', fontSize: '11px', color: 'rgba(255, 255, 255, 0.68)'}}>
-          点击卡片快速投注
+          {t.discover.tapToTrade}
         </span>
       </div>
 
@@ -489,6 +495,7 @@ interface ChampionCardProps {
 }
 
 export function ChampionCard({ team, onClick }: ChampionCardProps) {
+  const { t } = useTranslation();
   const crownGlow = DISCOVER_THEME.crownGlow;
 
   return (
@@ -506,12 +513,12 @@ export function ChampionCard({ team, onClick }: ChampionCardProps) {
         <div className="flex items-center gap-2">
           <Trophy className="w-4 h-4" style={{ color: DISCOVER_THEME.accentGold }} />
           <span className="text-[13px]" style={{ color: DISCOVER_THEME.accentGold, fontFamily: 'Inter', fontWeight: 800, letterSpacing: '0.02em' }}>
-            TITLE RACE
+            {t.discover.titleRace}
           </span>
         </div>
         
         <div className="text-[12px] font-bold text-white/50" style={{ fontFamily: 'Inter' }}>
-          7月19日 决赛
+          {t.discover.finals}
         </div>
       </div>
 
@@ -519,7 +526,7 @@ export function ChampionCard({ team, onClick }: ChampionCardProps) {
       <div className="absolute inset-0 flex flex-col items-center justify-center z-20 pointer-events-none px-6">
         {/* Question tagline */}
         <span className="text-white/40 text-[12px] font-bold tracking-wider uppercase mb-5" style={{ fontFamily: 'Inter' }}>
-          2026 WORLD CUP WINNER IS...
+          {t.discover.worldCupWinner}
         </span>
 
         {/* Giant flag */}
@@ -565,7 +572,7 @@ export function ChampionCard({ team, onClick }: ChampionCardProps) {
       {/* Subtle Tap to Trade Hint (Moved to Bottom) */}
       <div className="absolute bottom-4 left-0 w-full flex justify-center opacity-40 hover:opacity-100 transition-opacity z-50 pointer-events-none group-hover:opacity-100">
         <span style={{ fontFamily: 'Inter', fontSize: '11px', color: 'rgba(255, 255, 255, 0.68)'}}>
-          点击卡片快速投注
+          {t.discover.tapToTrade}
         </span>
       </div>
 

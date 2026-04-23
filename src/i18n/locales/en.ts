@@ -44,6 +44,12 @@ const en: TranslationKeys = {
     whodaresbet: 'Who dares bet on',
     worldCupWinner: '2026 WORLD CUP WINNER IS...',
     marketProbability: 'MARKET PROBABILITY',
+    chooseSide: 'Choose Side',
+    win: 'Win',
+    drawLabel: 'Draw',
+    buyYes: 'Buy Yes',
+    loadingMarket: 'Loading Market Data...',
+    hotMatches: 'Trending Matches',
   },
 
   // ─── Home Page ───
