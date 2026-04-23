@@ -62,13 +62,13 @@ const en: TranslationKeys = {
     funBets: 'Fun Bets',
     matchStart: 'Kickoff',
     volume: 'Volume',
-    group: 'Group',
+    group: ' Group',
     knockoutStage: 'Knockout',
     live: 'Live',
     ended: 'Ended',
     upcoming: 'Upcoming',
     all: 'All',
-    teamFilter: 'TEAMS',
+    teamFilter: 'Teams',
     lockedTitle: 'Tournament Data Locked',
     lockedDesc: '2026 World Cup knockout stage data engine is pending. It will be injected in real-time after the group stage concludes.',
     noGroupMatches: 'No matches available for Group',
@@ -213,7 +213,7 @@ const en: TranslationKeys = {
 
   // ─── Date Formatting ───
   date: {
-    monthDay: (month: number, day: number) => `${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][month - 1]} ${day}`,
+    monthDay: (month: number, day: number) => `${['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][month - 1]} ${day}`,
     finals: 'Jul 19 Finals',
   },
 } as const;
