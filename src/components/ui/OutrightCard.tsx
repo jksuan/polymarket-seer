@@ -6,6 +6,7 @@ import { SportMarket } from '@/types/sports';
 import { formatVolume } from '@/lib/utils';
 import { ConfirmModal } from './ConfirmModal';
 import { Skeleton } from './Skeleton';
+import { useTranslation, translateCountryName } from '@/i18n';
 
 interface OutrightCardProps {
   market: SportMarket;
@@ -22,6 +23,7 @@ function OutcomeRow({ opt, i, onBet, positions, tokenIds }: {
   positions?: any[];
   tokenIds?: string[];
 }) {
+  const { t, locale } = useTranslation();
   const yesCents = Number((opt.price * 100).toFixed(1));
   const noCents  = Number(((1 - opt.price) * 100).toFixed(1));
 
@@ -43,11 +45,11 @@ function OutcomeRow({ opt, i, onBet, positions, tokenIds }: {
             className="truncate"
             style={{ fontFamily: 'Inter', fontSize: '13px', fontWeight: 600, color: 'rgba(255,255,255,0.85)' }}
           >
-            {opt.name}
+            {translateCountryName(opt.name, locale)}
           </span>
           {opt.volume > 0 && (
             <span style={{ fontFamily: 'Inter', fontSize: '10px', fontWeight: 500, color: 'rgba(255,255,255,0.35)', marginTop: '1px' }}>
-              {formatVolume(opt.volume)} 交易量
+              {formatVolume(opt.volume)} {t.home.volume}
             </span>
           )}
         </div>
@@ -64,7 +66,7 @@ function OutcomeRow({ opt, i, onBet, positions, tokenIds }: {
           className="flex flex-col items-center justify-center rounded-lg active:scale-95 transition-transform"
           style={{ minWidth: '68px', height: '36px', background: 'rgba(0,180,80,0.18)', border: '1px solid rgba(0,200,90,0.35)' }}
         >
-          <span style={{ fontFamily: 'Inter', fontSize: '10px', fontWeight: 700, color: '#00C85A' }}>是</span>
+          <span style={{ fontFamily: 'Inter', fontSize: '10px', fontWeight: 700, color: '#00C85A' }}>{t.trade.yes}</span>
           <span style={{ fontFamily: 'Inter', fontSize: '10px', fontWeight: 600, color: 'rgba(0,200,90,0.8)' }}>{yesCents}%</span>
         </button>
         {yesPos && (
@@ -81,7 +83,7 @@ function OutcomeRow({ opt, i, onBet, positions, tokenIds }: {
           className="flex flex-col items-center justify-center rounded-lg active:scale-95 transition-transform"
           style={{ minWidth: '68px', height: '36px', background: 'rgba(220,40,40,0.18)', border: '1px solid rgba(220,60,60,0.35)' }}
         >
-          <span style={{ fontFamily: 'Inter', fontSize: '10px', fontWeight: 700, color: '#E05050' }}>否</span>
+          <span style={{ fontFamily: 'Inter', fontSize: '10px', fontWeight: 700, color: '#E05050' }}>{t.trade.no}</span>
           <span style={{ fontFamily: 'Inter', fontSize: '10px', fontWeight: 600, color: 'rgba(220,60,60,0.8)' }}>{noCents}%</span>
         </button>
         {noPos && (
@@ -105,6 +107,7 @@ export function OutrightCard({ market, index = 0, onPlaceBet, positions }: Outri
   } | null>(null);
   const [visibleCount, setVisibleCount] = useState(2);
   const cardRef = useRef<HTMLDivElement>(null);
+  const { t, locale } = useTranslation();
 
   // Build sorted option list from rawOutcomes / rawPrices
   const options = (market.rawOutcomes || [])
@@ -210,8 +213,8 @@ export function OutrightCard({ market, index = 0, onPlaceBet, positions }: Outri
             <span style={{ fontSize: '11px', fontFamily: 'Inter', fontWeight: 700, color: '#00C85A' }}>
               {formatVolume(market.volume)}
             </span>
-            <span style={{ fontSize: '11px', fontFamily: 'Inter', color: 'rgba(255,255,255,0.35)' }}>
-              交易量
+            <span style={{ fontSize: '11px', fontFamily: 'Inter', color: 'rgba(255,255,255,0.35)', marginLeft: '4px' }}>
+              {t.home.volume}
             </span>
           </div>
 
@@ -223,7 +226,7 @@ export function OutrightCard({ market, index = 0, onPlaceBet, positions }: Outri
                 className="flex items-center gap-1.5 active:scale-[0.98] transition-transform"
               >
                 <span style={{ fontFamily: 'Inter', fontSize: '12px', fontWeight: 700, color: 'rgba(255,215,0,0.85)' }}>
-                  展开更多 ({remaining})
+                  {t.trade.showMore} ({remaining})
                 </span>
                 <span style={{ fontSize: '10px', color: 'rgba(255,215,0,0.85)' }}>▼</span>
               </button>
@@ -234,7 +237,7 @@ export function OutrightCard({ market, index = 0, onPlaceBet, positions }: Outri
                 className="flex items-center gap-1.5 active:scale-[0.98] transition-transform"
               >
                 <span style={{ fontFamily: 'Inter', fontSize: '12px', fontWeight: 700, color: 'rgba(255,255,255,0.5)' }}>
-                  收起
+                  {t.trade.collapse}
                 </span>
                 <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.5)' }}>▲</span>
               </button>
@@ -264,14 +267,14 @@ export function OutrightCard({ market, index = 0, onPlaceBet, positions }: Outri
             side="home"
             tokenId={isYes ? (market.rawTokenIds?.[confirmState.optionIndex]?.[0] || '') : (market.rawTokenIds?.[confirmState.optionIndex]?.[1] || '')}
             outrightInfo={{
-              title: `${market.question} - ${confirmState.optionName}`,
-              directionLabel: isYes ? '买入是' : '买入否',
+              title: `${market.question} - ${opt ? translateCountryName(opt.name, locale) : confirmState.optionName}`,
+              directionLabel: isYes ? t.trade.buyYes : t.trade.buyNo,
               probability: optProb,
               odds: optOdds,
               primaryColor: isYes ? '#00C85A' : '#E05050',
               accentColor:  isYes ? '#00A040' : '#C03030',
               glowColor:    isYes ? 'rgba(0,200,90,0.4)' : 'rgba(220,40,40,0.4)',
-              badgeText:    isYes ? '是' : '否',
+              badgeText:    isYes ? t.trade.yes : t.trade.no,
             }}
             onConfirm={async (amount, executionPrice) => {
               setConfirmState(null);

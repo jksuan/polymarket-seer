@@ -5,6 +5,7 @@ import { motion } from 'motion/react';
 import { SportMarket } from '@/types/sports';
 import { formatVolume } from '@/lib/utils';
 import { ConfirmModal } from './ConfirmModal';
+import { useTranslation } from '@/i18n';
 
 interface BinaryOutrightCardProps {
   market: SportMarket;
@@ -14,6 +15,7 @@ interface BinaryOutrightCardProps {
 }
 
 export function BinaryOutrightCard({ market, index = 0, onPlaceBet, positions }: BinaryOutrightCardProps) {
+  const { t } = useTranslation();
   const [confirmState, setConfirmState] = useState<{
     optionName: string;
     side: 'home' | 'away';
@@ -121,7 +123,7 @@ export function BinaryOutrightCard({ market, index = 0, onPlaceBet, positions }:
                   <span style={{ fontFamily: 'Inter', fontWeight: 800, fontSize: '13px', color: '#fff' }}>
                     {yesProb}%
                   </span>
-                  <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.6)', marginTop: '-2px' }}>是</span>
+                  <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.6)', marginTop: '-2px' }}>{t.trade.yes}</span>
                 </div>
               </div>
             );
@@ -180,7 +182,7 @@ export function BinaryOutrightCard({ market, index = 0, onPlaceBet, positions }:
             {formatVolume(market.volume)}
           </span>
           <span style={{ fontSize: '12px', fontFamily: 'Inter', color: 'rgba(255,255,255,0.4)', marginLeft: '4px' }}>
-            交易量
+            {t.home.volume}
           </span>
         </div>
       </motion.div>
@@ -202,13 +204,13 @@ export function BinaryOutrightCard({ market, index = 0, onPlaceBet, positions }:
             tokenId={isYes ? (market.rawTokenIds?.[0]?.[0] || '') : (market.rawTokenIds?.[0]?.[1] || '')}
             outrightInfo={{
               title: market.question,
-              directionLabel: isYes ? '买入是' : '买入否',
+              directionLabel: isYes ? t.trade.buyYes : t.trade.buyNo,
               probability: isYes ? yesProbPct : noProbPct,
               odds:        isYes ? yesOdds    : noOdds,
               primaryColor: isYes ? '#00C85A' : '#E05050',
               accentColor:  isYes ? '#00A040' : '#C03030',
               glowColor:    isYes ? 'rgba(0,200,90,0.4)' : 'rgba(220,40,40,0.4)',
-              badgeText:    isYes ? '是' : '否',
+              badgeText:    isYes ? t.trade.yes : t.trade.no,
             }}
             onConfirm={async (amount, executionPrice) => {
               setConfirmState(null);
