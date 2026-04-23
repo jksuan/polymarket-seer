@@ -21,7 +21,7 @@ import { ScorersView } from '@/components/ui/ScorersView';
 import { ScorersNav } from '@/components/ui/ScorersNav';
 import { HistoricYear as ScorersYear } from '@/lib/mockScorers';
 import { getCountryFlagUrl } from '@/lib/countryFlags';
-import { useTranslation } from '@/i18n';
+import { useTranslation, translateCountryName } from '@/i18n';
 
 export function HomePage({ onPlaceBet, positions }: { onPlaceBet?: (amount: string, tokenId: string, executionPrice?: number) => Promise<void>; positions?: any[] }) {
   const [primaryTab, setPrimaryTab] = useState<PrimaryTab>('matches');
@@ -43,7 +43,7 @@ export function HomePage({ onPlaceBet, positions }: { onPlaceBet?: (amount: stri
   const [skipAnimation, setSkipAnimation] = useState(false);
   const [prevKeyword, setPrevKeyword] = useState<string>('');
 
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
 
   // ── Computed keyword (for outrights only now) ──
   const keyword = (() => {
@@ -228,12 +228,12 @@ export function HomePage({ onPlaceBet, positions }: { onPlaceBet?: (amount: stri
           >
             <img
               src={getCountryFlagUrl(selectedTeam, 40)}
-              alt={selectedTeam}
+              alt={translateCountryName(selectedTeam, locale)}
               width={18}
               height={13}
               style={{ width: '18px', height: '13px', objectFit: 'cover', borderRadius: '2px', border: '1px solid rgba(255,255,255,0.15)' }}
             />
-            <span className="text-[12px] font-bold text-[#FFD700]">{selectedTeam}</span>
+            <span className="text-[12px] font-bold text-[#FFD700]">{translateCountryName(selectedTeam, locale)}</span>
             <X size={12} className="text-[#FFD700]/60" />
           </div>
         </div>
