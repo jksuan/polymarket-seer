@@ -5,101 +5,85 @@
 
 const countryNameZh: Record<string, string> = {
   // ─── Group A ───
-  'Morocco': '摩洛哥',
-  'USA': '美国',
-  'United States': '美国',
-  'Panama': '巴拿马',
-  'Cabo Verde': '佛得角',
-  'Cape Verde': '佛得角',
+  'Mexico': '墨西哥',
+  'South Africa': '南非',
+  'Korea Republic': '韩国',
+  'South Korea': '韩国',
+  'Czechia': '捷克',
+  'Czech Republic': '捷克',
 
   // ─── Group B ───
-  'Portugal': '葡萄牙',
-  'Colombia': '哥伦比亚',
-  'Bolivia': '玻利维亚',
-  'Cote d\'Ivoire': '科特迪瓦',
-  'Ivory Coast': '科特迪瓦',
+  'Canada': '加拿大',
+  'Bosnia and Herzegovina': '波黑',
+  'Qatar': '卡塔尔',
+  'Switzerland': '瑞士',
 
   // ─── Group C ───
-  'Belgium': '比利时',
-  'Mexico': '墨西哥',
-  'Ecuador': '厄瓜多尔',
+  'Brazil': '巴西',
+  'Morocco': '摩洛哥',
   'Haiti': '海地',
+  'Scotland': '苏格兰',
 
   // ─── Group D ───
-  'Argentina': '阿根廷',
-  'Uzbekistan': '乌兹别克斯坦',
-  'Peru': '秘鲁',
-  'Bahrain': '巴林',
+  'United States': '美国',
+  'USA': '美国',
+  'Paraguay': '巴拉圭',
+  'Australia': '澳大利亚',
+  'Türkiye': '土耳其',
+  'Turkey': '土耳其',
 
   // ─── Group E ───
-  'Denmark': '丹麦',
-  'Australia': '澳大利亚',
-  'Indonesia': '印度尼西亚',
-  'Paraguay': '巴拉圭',
+  'Germany': '德国',
+  'Curaçao': '库拉索',
+  'Curacao': '库拉索',
+  'Côte d\'Ivoire': '科特迪瓦',
+  'Cote d\'Ivoire': '科特迪瓦',
+  'Ivory Coast': '科特迪瓦',
+  'Ecuador': '厄瓜多尔',
 
   // ─── Group F ───
-  'Brazil': '巴西',
-  'Italy': '意大利',
-  'Honduras': '洪都拉斯',
-  'Slovenia': '斯洛文尼亚',
+  'Netherlands': '荷兰',
+  'Japan': '日本',
+  'Sweden': '瑞典',
+  'Tunisia': '突尼斯',
 
   // ─── Group G ───
-  'France': '法国',
+  'Belgium': '比利时',
+  'Egypt': '埃及',
+  'IR Iran': '伊朗',
   'Iran': '伊朗',
-  'Kenya': '肯尼亚',
-  'Uganda': '乌干达',
+  'New Zealand': '新西兰',
 
   // ─── Group H ───
   'Spain': '西班牙',
-  'Japan': '日本',
-  'Serbia': '塞尔维亚',
-  'New Zealand': '新西兰',
+  'Cabo Verde': '佛得角',
+  'Cape Verde': '佛得角',
+  'Saudi Arabia': '沙特阿拉伯',
+  'Uruguay': '乌拉圭',
 
   // ─── Group I ───
-  'England': '英格兰',
+  'France': '法国',
   'Senegal': '塞内加尔',
-  'Uruguay': '乌拉圭',
-  'Poland': '波兰',
+  'Iraq': '伊拉克',
+  'Norway': '挪威',
 
   // ─── Group J ───
-  'Germany': '德国',
-  'Chile': '智利',
-  'South Korea': '韩国',
-  'Korea Republic': '韩国',
-  'Trinidad and Tobago': '特立尼达和多巴哥',
-  'Trinidad & Tobago': '特立尼达和多巴哥',
+  'Argentina': '阿根廷',
+  'Algeria': '阿尔及利亚',
+  'Austria': '奥地利',
+  'Jordan': '约旦',
 
   // ─── Group K ───
-  'Netherlands': '荷兰',
-  'Canada': '加拿大',
-  'Cameroon': '喀麦隆',
-  'Jamaica': '牙买加',
+  'Portugal': '葡萄牙',
+  'DR Congo': '刚果（金）',
+  'Uzbekistan': '乌兹别克斯坦',
+  'Colombia': '哥伦比亚',
 
   // ─── Group L ───
+  'England': '英格兰',
   'Croatia': '克罗地亚',
-  'Egypt': '埃及',
-  'Costa Rica': '哥斯达黎加',
-  'Albania': '阿尔巴尼亚',
-
-  // ─── Other common names ───
-  'Switzerland': '瑞士',
-  'Wales': '威尔士',
-  'Scotland': '苏格兰',
-  'Nigeria': '尼日利亚',
   'Ghana': '加纳',
-  'Tunisia': '突尼斯',
-  'Saudi Arabia': '沙特阿拉伯',
-  'Qatar': '卡塔尔',
-  'Sweden': '瑞典',
-  'Norway': '挪威',
-  'Ukraine': '乌克兰',
-  'Turkey': '土耳其',
-  'Austria': '奥地利',
-  'Czech Republic': '捷克',
-  'Czechia': '捷克',
-  'Russia': '俄罗斯',
-  'China': '中国',
-  'India': '印度',
+  'Panama': '巴拿马',
 };
 
 /**
