@@ -32,10 +32,10 @@ const zh = {
 
   // ─── 发现页卡片 ───
   discover: {
-    titleRace: 'TITLE RACE',
+    titleRace: '夺冠热门',
     trending: '全网焦点',
     split: '势均力敌',
-    longShot: 'LONG SHOT',
+    longShot: '以小博大',
     tapToTrade: '点击卡片快速投注',
     matchLive: '比赛进行中',
     finals: '7月19日 决赛',
@@ -193,8 +193,8 @@ export default zh;
 // Widen to string so en.ts can use different string values
 type DeepStringify<T> = {
   [K in keyof T]: T[K] extends (...args: infer A) => infer R ? (...args: A) => R
-    : T[K] extends object ? DeepStringify<T[K]>
-    : string;
+  : T[K] extends object ? DeepStringify<T[K]>
+  : string;
 };
 
 export type TranslationKeys = DeepStringify<typeof zh>;
