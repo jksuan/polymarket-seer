@@ -41,7 +41,7 @@ const zh = {
     finals: '7月19日 决赛',
     whodaresbet: '谁敢押注',
     worldCupWinner: '2026 世界杯冠军是...',
-    marketProbability: '市场概率',
+    marketProbability: '获胜概率',
     chooseSide: '选择阵营',
     win: '胜',
     drawLabel: '平局 DRAW',

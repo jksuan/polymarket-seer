@@ -252,7 +252,7 @@ export function SplitCard({ match, onClick }: { match?: ParsedMatch; onClick?: (
         <div className="flex w-full justify-center items-end mt-auto pointer-events-none">
           {drawProb > 0 && (
              <div className="flex flex-col items-center gap-1 z-40 mb-4">
-               <span className="text-[9px] text-white/40 font-bold tracking-[0.25em] uppercase">DRAW</span>
+               <span className="text-[9px] text-white/40 font-bold tracking-[0.25em] uppercase">{t.trade.draw}</span>
                <div className="text-white/80 font-black text-xl tracking-tighter mix-blend-screen drop-shadow-lg">
                  {drawProb}<span className="text-[12px] opacity-70 ml-0.5">%</span>
                </div>
