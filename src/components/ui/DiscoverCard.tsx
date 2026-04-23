@@ -7,7 +7,7 @@ import { ParsedMatch } from '@/components/ui/MatchCard';
 import { formatVolume } from '@/lib/utils';
 import { getCountryFlagUrl } from '@/lib/countryFlags';
 import { SportMarket } from '@/types/sports';
-import { useTranslation } from '@/i18n';
+import { useTranslation, translateCountryName } from '@/i18n';
 
 export const DISCOVER_THEME = {
   // Danger Magenta for Long Shot
@@ -56,7 +56,8 @@ export function DiscoverCardsContainer({ children }: { children: React.ReactNode
 
 // 1. Trending Card - The 24H Volume Focus
 export function TrendingCard({ match, onClick }: { match?: ParsedMatch; onClick?: () => void }) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
+  const cn = (name: string) => translateCountryName(name, locale);
   if (!match) return null;
   // Use the team with the higher probability as the hero
   const isHomeFavored = match.home.probability >= match.away.probability;
@@ -110,7 +111,7 @@ export function TrendingCard({ match, onClick }: { match?: ParsedMatch; onClick?
               <div className="absolute inset-0 ring-1 ring-inset ring-white/10 rounded-xl pointer-events-none" />
             </div>
             <span className="text-white text-xs font-bold capitalize tracking-wide truncate max-w-[90px] text-center mt-1">
-              {heroMatch.name.toLowerCase()}
+              {cn(heroMatch.name)}
             </span>
           </div>
 
@@ -123,7 +124,7 @@ export function TrendingCard({ match, onClick }: { match?: ParsedMatch; onClick?
               <div className="absolute inset-0 ring-1 ring-inset ring-white/10 rounded-xl pointer-events-none" />
             </div>
             <span className="text-white text-xs font-bold capitalize tracking-wide truncate max-w-[90px] text-center mt-1">
-              {underdog.name.toLowerCase()}
+              {cn(underdog.name)}
             </span>
           </div>
         </div>
@@ -134,7 +135,7 @@ export function TrendingCard({ match, onClick }: { match?: ParsedMatch; onClick?
             {heroMatch.probability}<span className="text-6xl">%</span>
           </div>
           <div className="text-white/50 text-[10px] font-bold uppercase tracking-[0.2em] mt-3 text-center">
-            {heroMatch.name} {t.discover.marketProbability}
+            {cn(heroMatch.name)} {t.discover.marketProbability}
           </div>
         </div>
 
@@ -156,7 +157,8 @@ export function TrendingCard({ match, onClick }: { match?: ParsedMatch; onClick?
 
 // 2. 50/50 Split Card - The High Tension Deathmatch
 export function SplitCard({ match, onClick }: { match?: ParsedMatch; onClick?: () => void }) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
+  const cn = (name: string) => translateCountryName(name, locale);
   if (!match) return null;
   const homeColor = match.home.style.primary;
   const awayColor = match.away.style.primary;
@@ -213,7 +215,7 @@ export function SplitCard({ match, onClick }: { match?: ParsedMatch; onClick?: (
               />
             </div>
             {/* Name */}
-            <span className="text-white/70 font-bold capitalize text-[10px] mb-2.5 tracking-[0.15em] break-words line-clamp-2 leading-tight text-center">{match.home.name}</span>
+            <span className="text-white/70 font-bold capitalize text-[10px] mb-2.5 tracking-[0.15em] break-words line-clamp-2 leading-tight text-center">{cn(match.home.name)}</span>
             {/* Probability Text */}
             <div 
               className="text-white font-black text-[42px] tracking-tighter leading-none"
@@ -235,7 +237,7 @@ export function SplitCard({ match, onClick }: { match?: ParsedMatch; onClick?: (
               />
             </div>
             {/* Name */}
-            <span className="text-white/70 font-bold capitalize text-[10px] mb-2.5 tracking-[0.15em] break-words line-clamp-2 leading-tight text-center">{match.away.name}</span>
+            <span className="text-white/70 font-bold capitalize text-[10px] mb-2.5 tracking-[0.15em] break-words line-clamp-2 leading-tight text-center">{cn(match.away.name)}</span>
             {/* Probability Text */}
             <div 
               className="text-white font-black text-[42px] tracking-tighter leading-none"
@@ -272,7 +274,8 @@ export function SplitCard({ match, onClick }: { match?: ParsedMatch; onClick?: (
 
 // 4. Underdog Card - 以小博大 / The Long Shot
 export function UnderdogCard({ match, onClick }: { match?: ParsedMatch; onClick?: () => void }) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
+  const cn = (name: string) => translateCountryName(name, locale);
   if (!match) return null;
 
   // The underdog is always the team with the LOWER probability
@@ -321,7 +324,7 @@ export function UnderdogCard({ match, onClick }: { match?: ParsedMatch; onClick?
 
         {/* Underdog name — hero text */}
         <h3 className="text-white font-black italic capitalize text-4xl tracking-tight leading-none pointer-events-auto">
-          {underdog.name}
+          {cn(underdog.name)}
         </h3>
 
         {/* Giant odds multiplier */}
@@ -344,7 +347,7 @@ export function UnderdogCard({ match, onClick }: { match?: ParsedMatch; onClick?
             <div className="rounded-[6px] overflow-hidden" style={{ boxShadow: `0 0 8px ${homeColor}50` }}>
               <img src={getCountryFlagUrl(match.home.name, 'svg')} alt={match.home.name} className="w-[30px] h-[21px] object-cover" />
             </div>
-            <span className="text-white/50 text-[9px] font-bold capitalize tracking-wide">{match.home.name}</span>
+            <span className="text-white/50 text-[9px] font-bold capitalize tracking-wide">{cn(match.home.name)}</span>
           </div>
           <span className="text-white/20 text-[10px] font-black">VS</span>
           {/* Away team */}
@@ -352,7 +355,7 @@ export function UnderdogCard({ match, onClick }: { match?: ParsedMatch; onClick?
             <div className="rounded-[6px] overflow-hidden" style={{ boxShadow: `0 0 8px ${awayColor}50` }}>
               <img src={getCountryFlagUrl(match.away.name, 'svg')} alt={match.away.name} className="w-[30px] h-[21px] object-cover" />
             </div>
-            <span className="text-white/50 text-[9px] font-bold capitalize tracking-wide">{match.away.name}</span>
+            <span className="text-white/50 text-[9px] font-bold capitalize tracking-wide">{cn(match.away.name)}</span>
           </div>
         </div>
       </div>
@@ -495,7 +498,8 @@ interface ChampionCardProps {
 }
 
 export function ChampionCard({ team, onClick }: ChampionCardProps) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
+  const cn = (name: string) => translateCountryName(name, locale);
   const crownGlow = DISCOVER_THEME.crownGlow;
 
   return (
@@ -549,7 +553,7 @@ export function ChampionCard({ team, onClick }: ChampionCardProps) {
           className="text-white font-black text-3xl tracking-tight capitalize mt-5 leading-none"
           style={{ fontFamily: 'Inter', textShadow: '0 2px 20px rgba(0,0,0,0.5)' }}
         >
-          {team.name}
+          {cn(team.name)}
         </h3>
 
         {/* Probability + Odds */}
