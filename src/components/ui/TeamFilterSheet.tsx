@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import { X, Search } from 'lucide-react';
 import { getCountryFlagUrl } from '@/lib/countryFlags';
+import { useTranslation, translateCountryName } from '@/i18n';
 
 // 48 teams grouped by World Cup 2026 groups
 const TEAMS_BY_GROUP: Record<string, string[]> = {
@@ -22,58 +23,6 @@ const TEAMS_BY_GROUP: Record<string, string[]> = {
   L: ['England', 'Croatia', 'Ghana', 'Panama'],
 };
 
-// Display name overrides for cleaner UI
-const DISPLAY_NAMES: Record<string, string> = {
-  'Korea Republic': '韩国',
-  'United States': '美国',
-  'Türkiye': '土耳其',
-  'Bosnia and Herzegovina': '波黑',
-  'Czechia': '捷克',
-  "Côte d'Ivoire": '科特迪瓦',
-  'Curaçao': '库拉索',
-  'IR Iran': '伊朗',
-  'New Zealand': '新西兰',
-  'Cabo Verde': '佛得角',
-  'Saudi Arabia': '沙特',
-  'DR Congo': '刚果(金)',
-  'South Africa': '南非',
-  'Mexico': '墨西哥',
-  'Australia': '澳大利亚',
-  'Paraguay': '巴拉圭',
-  'Switzerland': '瑞士',
-  'Qatar': '卡塔尔',
-  'Canada': '加拿大',
-  'Brazil': '巴西',
-  'Morocco': '摩洛哥',
-  'Scotland': '苏格兰',
-  'Haiti': '海地',
-  'Germany': '德国',
-  'Ecuador': '厄瓜多尔',
-  'Japan': '日本',
-  'Netherlands': '荷兰',
-  'Sweden': '瑞典',
-  'Tunisia': '突尼斯',
-  'Belgium': '比利时',
-  'Egypt': '埃及',
-  'Spain': '西班牙',
-  'Uruguay': '乌拉圭',
-  'France': '法国',
-  'Senegal': '塞内加尔',
-  'Iraq': '伊拉克',
-  'Norway': '挪威',
-  'Argentina': '阿根廷',
-  'Algeria': '阿尔及利亚',
-  'Austria': '奥地利',
-  'Jordan': '约旦',
-  'Portugal': '葡萄牙',
-  'Croatia': '克罗地亚',
-  'England': '英格兰',
-  'Colombia': '哥伦比亚',
-  'Uzbekistan': '乌兹别克',
-  'Ghana': '加纳',
-  'Panama': '巴拿马',
-};
-
 interface TeamFilterSheetProps {
   isOpen: boolean;
   onClose: () => void;
@@ -83,6 +32,7 @@ interface TeamFilterSheetProps {
 
 function TeamFilterSheetContent({ isOpen, onClose, onSelect, selectedTeam }: TeamFilterSheetProps) {
   const [searchQuery, setSearchQuery] = useState('');
+  const { t, locale } = useTranslation();
 
   // Filter groups/teams based on search query
   const filteredGroups = useMemo(() => {
@@ -92,13 +42,13 @@ function TeamFilterSheetContent({ isOpen, onClose, onSelect, selectedTeam }: Tea
     const result: Record<string, string[]> = {};
     for (const [group, teams] of Object.entries(TEAMS_BY_GROUP)) {
       const filtered = teams.filter(t => {
-        const displayName = DISPLAY_NAMES[t] || t;
-        return t.toLowerCase().includes(q) || displayName.includes(q);
+        const displayName = translateCountryName(t, locale);
+        return t.toLowerCase().includes(q) || displayName.toLowerCase().includes(q);
       });
       if (filtered.length > 0) result[group] = filtered;
     }
     return result;
-  }, [searchQuery]);
+  }, [searchQuery, locale]);
 
   const handleSelect = (team: string) => {
     onSelect(team === selectedTeam ? null : team);
@@ -150,7 +100,7 @@ function TeamFilterSheetContent({ isOpen, onClose, onSelect, selectedTeam }: Tea
 
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-3 shrink-0">
-              <div className="text-[16px] font-black text-white tracking-wider">选择球队</div>
+              <div className="text-[16px] font-black text-white tracking-wider">{t.home.teamFilterTitle}</div>
               <div className="flex items-center gap-3">
                 {selectedTeam && (
                   <button
@@ -158,7 +108,7 @@ function TeamFilterSheetContent({ isOpen, onClose, onSelect, selectedTeam }: Tea
                     className="text-[12px] font-bold text-[#FFD700] px-2 py-0.5 rounded-md active:scale-95"
                     style={{ background: 'rgba(255,215,0,0.1)', border: '1px solid rgba(255,215,0,0.25)' }}
                   >
-                    清除筛选
+                    {t.home.clearFilter}
                   </button>
                 )}
                 <button
@@ -183,7 +133,7 @@ function TeamFilterSheetContent({ isOpen, onClose, onSelect, selectedTeam }: Tea
                 <Search size={16} className="text-white/30 shrink-0" />
                 <input
                   type="text"
-                  placeholder="搜索球队..."
+                  placeholder={t.home.searchTeam}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="bg-transparent outline-none text-[16px] font-bold text-white placeholder:text-white/25 w-full"
@@ -197,12 +147,12 @@ function TeamFilterSheetContent({ isOpen, onClose, onSelect, selectedTeam }: Tea
               {Object.entries(filteredGroups).map(([group, teams]) => (
                 <div key={group} className="mb-4">
                   <div className="text-[10px] font-black text-white/30 tracking-widest uppercase mb-2">
-                    {group}组
+                    {group}{t.home.groupSuffix}
                   </div>
                   <div className="grid grid-cols-4 gap-2">
                     {teams.map((team) => {
                       const isSelected = selectedTeam === team;
-                      const displayName = DISPLAY_NAMES[team] || team;
+                      const displayName = translateCountryName(team, locale);
                       return (
                         <button
                           key={team}
@@ -251,7 +201,7 @@ function TeamFilterSheetContent({ isOpen, onClose, onSelect, selectedTeam }: Tea
 
               {Object.keys(filteredGroups).length === 0 && (
                 <div className="flex flex-col items-center justify-center py-16 opacity-40">
-                  <div className="text-[12px] font-bold text-white/50 tracking-widest">未找到匹配的球队</div>
+                  <div className="text-[12px] font-bold text-white/50 tracking-widest">{t.home.noTeamsFound}</div>
                 </div>
               )}
             </div>

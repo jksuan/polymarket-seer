@@ -83,6 +83,10 @@ const en: TranslationKeys = {
     knockoutPicker: 'Knockouts ▾',
     selectGroupTitle: 'Select Group',
     selectKnockoutTitle: 'Select Knockout Stage',
+    teamFilterTitle: 'Select Team',
+    searchTeam: 'Search team...',
+    clearFilter: 'Clear filter',
+    noTeamsFound: 'No teams found',
     groupSuffix: ' Group',
     knockoutsTrans: {
       '32强': 'R32',

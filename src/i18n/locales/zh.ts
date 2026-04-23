@@ -81,6 +81,10 @@ const zh = {
     knockoutPicker: '淘汰赛 ▾',
     selectGroupTitle: '选择小组',
     selectKnockoutTitle: '选择淘汰赛阶段',
+    teamFilterTitle: '选择球队',
+    searchTeam: '搜索球队...',
+    clearFilter: '清除筛选',
+    noTeamsFound: '未找到匹配的球队',
     groupSuffix: '组',
     knockoutsTrans: {
       '32强': '32强',
