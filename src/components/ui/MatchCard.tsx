@@ -398,7 +398,7 @@ export function MatchCard({ match, index = 0, onPlaceBet, positions }: MatchCard
 
 // ─── Helper: Parse raw API events into ParsedMatch objects ───
 
-export function parseMatchEvents(events: any[]): ParsedMatch[] {
+export function parseMatchEvents(events: any[], locale: string = 'en'): ParsedMatch[] {
   const matches: ParsedMatch[] = [];
 
   for (const evt of events) {
@@ -465,12 +465,15 @@ export function parseMatchEvents(events: any[]): ParsedMatch[] {
     const startTime = evt.startTime || homeMarket.gameStartTime || evt.eventDate;
     const matchDate = new Date(startTime);
     
-    // Format date label: "Thu, June 11"
-    const dateLabel = matchDate.toLocaleDateString('en-US', {
-      weekday: 'short',
-      month: 'long',
-      day: 'numeric',
-    });
+    // Format date label: "Thu, June 11" OR "6月12日 星期五"
+    const isZh = locale.startsWith('zh');
+    const dateLabel = isZh
+      ? `${matchDate.getMonth() + 1}月${matchDate.getDate()}日 ${matchDate.toLocaleDateString('zh-CN', { weekday: 'long' })}`
+      : matchDate.toLocaleDateString('en-US', {
+          weekday: 'short',
+          month: 'long',
+          day: 'numeric',
+        });
 
     // Format time label in local timezone: "13:00", "9:00"
     const timeLabel = matchDate.toLocaleTimeString('zh-CN', {

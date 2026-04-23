@@ -3,6 +3,7 @@
 import { useMemo } from 'react';
 import useSWR from 'swr';
 import { parseMatchEvents, groupMatchesByDate, ParsedMatch, MatchGroup } from '@/components/ui/MatchCard';
+import { useTranslation } from '@/i18n';
 
 // ── Raw events fetcher ──
 const rawEventsFetcher = async ([url, keyword]: [string, string]) => {
@@ -21,6 +22,7 @@ const rawEventsFetcher = async ([url, keyword]: [string, string]) => {
  *  - matchGroups: date-grouped list (for the default "today hot" view)
  */
 export function useMatchData(enabled: boolean) {
+  const { locale } = useTranslation();
   const { data: rawMatchEvents, isLoading } = useSWR(
     enabled ? ['/api/search', 'FIFA World Cup'] : null,
     rawEventsFetcher,
@@ -33,8 +35,8 @@ export function useMatchData(enabled: boolean) {
 
   const allMatches: ParsedMatch[] = useMemo(() => {
     if (!rawMatchEvents) return [];
-    return parseMatchEvents(rawMatchEvents);
-  }, [rawMatchEvents]);
+    return parseMatchEvents(rawMatchEvents, locale);
+  }, [rawMatchEvents, locale]);
 
   const matchGroups: MatchGroup[] = useMemo(() => {
     return groupMatchesByDate(allMatches);
