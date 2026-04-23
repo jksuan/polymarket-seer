@@ -6,6 +6,7 @@ import { usePrivy } from '@privy-io/react-auth';
 import { usePolymarketAuth } from '@/contexts/PolymarketAuthContext';
 import { SettingsDrawer } from '@/components/ui/SettingsDrawer';
 import { DepositDrawer } from '@/components/ui/DepositDrawer';
+import { useTranslation } from '@/i18n';
 
 interface TopHeaderProps {
   isSticky?: boolean;
@@ -14,6 +15,7 @@ interface TopHeaderProps {
 export function TopHeader({ isSticky = false }: TopHeaderProps = {}) {
   const { login, authenticated, logout } = usePrivy();
   const { proxyAddress, displayIdentifier, usdcBalance } = usePolymarketAuth();
+  const { t } = useTranslation();
 
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [depositOpen, setDepositOpen] = useState(false);
@@ -47,14 +49,14 @@ export function TopHeader({ isSticky = false }: TopHeaderProps = {}) {
             className="flex items-center gap-2 px-4 py-2 rounded-full active:scale-95 transition-all shadow-[0_0_12px_rgba(173,255,47,0.15)] bg-[#ADFF2F]/10 border border-[#ADFF2F]/50 text-[#ADFF2F] font-bold text-[12px]"
           >
             <Wallet size={14} />
-            登录
+            {t.common.login}
           </button>
         ) : (
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-3 mr-1">
               <div className="flex flex-col items-end justify-center">
                 <span className="text-[9px] font-bold text-white/40 uppercase tracking-widest mb-0.5">
-                  可用余额
+                  {t.header.balance}
                 </span>
                 <span className="text-[15px] font-black text-[#ADFF2F] leading-none" style={{ textShadow: "0 0 10px rgba(173,255,47,0.4)" }}>
                   ${Number(usdcBalance || 0).toFixed(2)}
@@ -65,7 +67,7 @@ export function TopHeader({ isSticky = false }: TopHeaderProps = {}) {
                 className="flex items-center gap-1 bg-[#ADFF2F] hover:bg-[#8CEE1C] text-[#0D0518] px-3 py-1.5 rounded-lg text-[12px] font-bold tracking-wider transition-all shadow-[0_0_12px_rgba(173,255,47,0.3)] active:scale-95"
               >
                 <ArrowDownToLine size={12} strokeWidth={2.5} />
-                充值
+                {t.header.deposit}
               </button>
             </div>
 

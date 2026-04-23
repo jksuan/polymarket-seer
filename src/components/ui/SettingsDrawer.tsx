@@ -21,6 +21,8 @@ import {
 } from "lucide-react";
 import { usePolymarketAuth } from "@/contexts/PolymarketAuthContext";
 import { shortenAddress } from "@/lib/utils";
+import { useTranslation } from "@/i18n";
+import type { Locale } from "@/i18n";
 
 interface SettingsDrawerProps {
   isOpen: boolean;
@@ -29,35 +31,38 @@ interface SettingsDrawerProps {
   onLogout?: () => void;
 }
 
-const SETTINGS_GROUPS = [
-  {
-    title: "偏好设置",
-    items: [
-      { icon: Globe, label: "语言", value: "中文", color: "#00F0FF" },
-      { icon: Bell, label: "通知设置", value: "已开启", color: "#ADFF2F" },
-      { icon: Moon, label: "外观", value: "暗黑模式", color: "#A78BFA" },
-    ],
-  },
-  {
-    title: "帮助与支持",
-    items: [
-      { icon: HelpCircle, label: "帮助中心", value: "", color: "#60A5FA" },
-      { icon: Info, label: "关于 SEER.SPORTS", value: "v1.0.0", color: "#F59E0B" },
-    ],
-  },
-  {
-    title: "法律与隐私",
-    items: [
-      { icon: Shield, label: "隐私政策", value: "", color: "#34D399" },
-      { icon: FileText, label: "用户协议", value: "", color: "#34D399" },
-    ],
-  },
-];
+
 
 function DrawerContent({ isOpen, onClose, authenticated = false, onLogout }: SettingsDrawerProps) {
   const { displayIdentifier, proxyAddress, walletAddress } = usePolymarketAuth();
+  const { t, locale, setLocale } = useTranslation();
   const [copiedProxy, setCopiedProxy] = useState(false);
   const [copiedEoa, setCopiedEoa] = useState(false);
+
+  const SETTINGS_GROUPS = [
+    {
+      title: t.settings.preferences,
+      items: [
+        { id: 'language', icon: Globe, label: t.settings.language, value: locale === 'zh' ? t.settings.languageZh : t.settings.languageEn, color: "#00F0FF" },
+        { id: 'notifications', icon: Bell, label: t.settings.notifications, value: t.settings.notificationsOn, color: "#ADFF2F" },
+        { id: 'appearance', icon: Moon, label: t.settings.appearance, value: t.settings.darkMode, color: "#A78BFA" },
+      ],
+    },
+    {
+      title: t.settings.helpSupport,
+      items: [
+        { id: 'help', icon: HelpCircle, label: t.settings.helpCenter, value: "", color: "#60A5FA" },
+        { id: 'about', icon: Info, label: t.settings.about, value: "v1.0.0", color: "#F59E0B" },
+      ],
+    },
+    {
+      title: t.settings.legal,
+      items: [
+        { id: 'privacy', icon: Shield, label: t.settings.privacy, value: "", color: "#34D399" },
+        { id: 'terms', icon: FileText, label: t.settings.terms, value: "", color: "#34D399" },
+      ],
+    },
+  ];
 
   const handleCopy = async (text: string, setCopied: (v: boolean) => void) => {
     if (!text) return;
@@ -139,7 +144,7 @@ function DrawerContent({ isOpen, onClose, authenticated = false, onLogout }: Set
                   letterSpacing: "-0.5px",
                 }}
               >
-                设置
+                {t.settings.title}
               </h2>
               <button
                 onClick={onClose}
@@ -176,7 +181,7 @@ function DrawerContent({ isOpen, onClose, authenticated = false, onLogout }: Set
                         {displayIdentifier}
                       </span>
                       <span className="text-[#00F0FF] text-[11px] font-bold uppercase tracking-widest mt-0.5">
-                        SEER SPORTS 登录账户
+                        {t.settings.loggedInAccount}
                       </span>
                     </div>
                   </div>
@@ -195,8 +200,8 @@ function DrawerContent({ isOpen, onClose, authenticated = false, onLogout }: Set
                           <Building2 size={13} className="text-[#ADFF2F]" />
                         </div>
                         <div className="flex flex-col">
-                          <span className="text-[10px] text-white/50 font-bold tracking-wider mb-0.5 uppercase">智能金库 (Polymarket Proxy)</span>
-                          <span className="text-[12px] text-white font-mono">{proxyAddress ? shortenAddress(proxyAddress, 6, 6) : "未分配"}</span>
+                          <span className="text-[10px] text-white/50 font-bold tracking-wider mb-0.5 uppercase">{t.settings.proxyWallet}</span>
+                          <span className="text-[12px] text-white font-mono">{proxyAddress ? shortenAddress(proxyAddress, 6, 6) : t.settings.notAssigned}</span>
                         </div>
                       </div>
                       <div className={`w-6 h-6 flex items-center justify-center rounded-md ${copiedProxy ? 'text-[#ADFF2F]' : 'text-white/30 group-hover:text-white/60 transition-colors'}`}>
@@ -214,8 +219,8 @@ function DrawerContent({ isOpen, onClose, authenticated = false, onLogout }: Set
                           <Wallet size={13} className="text-blue-400" />
                         </div>
                         <div className="flex flex-col">
-                          <span className="text-[10px] text-white/50 font-bold tracking-wider mb-0.5 uppercase">底层钱包 (Signer EOA)</span>
-                          <span className="text-[12px] text-white font-mono">{walletAddress ? shortenAddress(walletAddress, 6, 6) : "未连接"}</span>
+                          <span className="text-[10px] text-white/50 font-bold tracking-wider mb-0.5 uppercase">{t.settings.signerWallet}</span>
+                          <span className="text-[12px] text-white font-mono">{walletAddress ? shortenAddress(walletAddress, 6, 6) : t.settings.notConnected}</span>
                         </div>
                       </div>
                       <div className={`w-6 h-6 flex items-center justify-center rounded-md ${copiedEoa ? 'text-blue-400' : 'text-white/30 group-hover:text-white/60 transition-colors'}`}>
@@ -249,6 +254,11 @@ function DrawerContent({ isOpen, onClose, authenticated = false, onLogout }: Set
                       return (
                         <button
                           key={item.label}
+                          onClick={() => {
+                            if (item.id === 'language') {
+                              setLocale(locale === 'zh' ? 'en' : 'zh' as Locale);
+                            }
+                          }}
                           className="w-full flex items-center gap-3 px-4 py-3.5 active:bg-white/5 transition-colors"
                           style={{
                             borderBottom:
@@ -310,7 +320,7 @@ function DrawerContent({ isOpen, onClose, authenticated = false, onLogout }: Set
                   }}
                 >
                   <LogOut size={16} />
-                  退出登录
+                  {t.common.logout}
                 </button>
               )}
             </div>

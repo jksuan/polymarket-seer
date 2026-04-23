@@ -1,6 +1,7 @@
 'use client';
 
 import { Home, Search, Compass, User } from 'lucide-react';
+import { useTranslation } from '@/i18n';
 
 interface BottomNavProps {
   activeTab: string;
@@ -8,15 +9,16 @@ interface BottomNavProps {
 }
 
 export function BottomNav({ activeTab, onChange }: BottomNavProps) {
+  const { t } = useTranslation();
   const isActive = (p: string) => activeTab === p;
 
   const navItems = [
-    { path: 'home', icon: Home, label: '首页' },
-    { path: 'search', icon: Search, label: '搜索' },
+    { path: 'home', icon: Home, label: t.nav.home },
+    { path: 'search', icon: Search, label: t.nav.search },
   ];
   const rightItems = [
-    { path: 'discover', icon: Compass, label: '发现' },
-    { path: 'profile', icon: User, label: '我的' },
+    { path: 'discover', icon: Compass, label: t.nav.discover },
+    { path: 'profile', icon: User, label: t.nav.profile },
   ];
 
   return (
@@ -96,7 +98,7 @@ export function BottomNav({ activeTab, onChange }: BottomNavProps) {
               textShadow: '0 0 6px rgba(173,255,47,0.7)',
             }}
           >
-            挑战
+            {t.nav.challenge}
           </span>
         </div>
 
