@@ -86,13 +86,6 @@ export function TrendingCard({ match, onClick }: { match?: ParsedMatch; onClick?
         </div>
       </div>
 
-      {/* Top Center Volume */}
-      <div className="absolute top-6 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center">
-         <div className="text-white/80 font-mono text-[13px] tracking-wider flex justify-center items-center gap-1.5 bg-white/5 px-3 py-1 rounded-full border border-white/5 backdrop-blur-sm shadow-xl">
-           <span className="text-white/50 text-xs" style={{ fontFamily: 'Inter', letterSpacing: '0.02em' }}>交易量</span>
-           {formatVolume(match.volume)}
-         </div>
-      </div>
 
       {/* Top Right Date/Time */}
       <div className="absolute top-6 right-6 z-20 flex flex-col items-end">
