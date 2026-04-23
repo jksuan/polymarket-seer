@@ -92,6 +92,14 @@ const countryNameZh: Record<string, string> = {
   'Croatia': '克罗地亚',
   'Ghana': '加纳',
   'Panama': '巴拿马',
+
+  // ─── Continents (for Fun Bets) ───
+  'Europe': '欧洲',
+  'South America': '南美洲',
+  'Africa': '非洲',
+  'Asia': '亚洲',
+  'North America': '北美洲',
+  'Oceania': '大洋洲',
 };
 
 const normalizationEn: Record<string, string> = {
