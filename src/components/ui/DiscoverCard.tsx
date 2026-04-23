@@ -21,6 +21,28 @@ export const DISCOVER_THEME = {
   crownGlow: 'rgba(255, 215, 0, 0.20)',
 };
 
+function MatchTimeCapsule({ match }: { match: ParsedMatch }) {
+  const isLive = match.status === 'live';
+  
+  const displayTime = () => {
+    const date = new Date(match.rawMarket?.matchTimeISO || match.dateISO || new Date().toISOString());
+    if (isNaN(date.getTime())) return match.timeLabel || '';
+    return `${date.getMonth() + 1}月${date.getDate()}日 ${date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false })}`;
+  };
+
+  return (
+    <div 
+      className={`text-[12px] font-bold ${isLive ? 'text-[#FF2A55] animate-pulse' : 'text-white/50'}`}
+      style={{ 
+        fontFamily: 'Inter',
+        textShadow: isLive ? '0 0 8px rgba(255,42,85,0.6)' : 'none'
+      }}
+    >
+      {isLive ? '● 比赛进行中' : displayTime()}
+    </div>
+  );
+}
+
 export function DiscoverCardsContainer({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-6 w-full pb-10">
@@ -64,11 +86,17 @@ export function TrendingCard({ match, onClick }: { match?: ParsedMatch; onClick?
         </div>
       </div>
 
-      <div className="absolute top-6 right-6 z-20 flex flex-col items-end">
-         <div className="text-white/80 font-mono text-sm tracking-wider flex justify-center items-center gap-1.5">
+      {/* Top Center Volume */}
+      <div className="absolute top-6 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center">
+         <div className="text-white/80 font-mono text-[13px] tracking-wider flex justify-center items-center gap-1.5 bg-white/5 px-3 py-1 rounded-full border border-white/5 backdrop-blur-sm shadow-xl">
            <span className="text-white/50 text-xs" style={{ fontFamily: 'Inter', letterSpacing: '0.02em' }}>交易量</span>
            {formatVolume(match.volume)}
          </div>
+      </div>
+
+      {/* Top Right Date/Time */}
+      <div className="absolute top-6 right-6 z-20 flex flex-col items-end">
+        <MatchTimeCapsule match={match} />
       </div>
 
       <div className="absolute inset-0 p-6 flex flex-col z-20 bg-gradient-to-t from-[#0D0518] via-transparent to-transparent">
@@ -163,12 +191,14 @@ export function SplitCard({ match, onClick }: { match?: ParsedMatch; onClick?: (
       </div>
 
       <div className="absolute inset-0 z-20 flex flex-col justify-between p-6">
-        {/* Top left Title */}
+        {/* Top Header */}
         <div className="flex justify-between items-start pointer-events-none">
            <div className="flex items-center gap-2 self-start">
              <ArrowLeftRight className="w-4 h-4" style={{ color: glowColor }} />
              <span className="text-[13px] shadow-sm flex items-center gap-1" style={{ color: glowColor, fontFamily: 'Inter', fontWeight: 800, letterSpacing: '0.02em' }}>势均力敌</span>
            </div>
+           
+           <MatchTimeCapsule match={match} />
         </div>
 
         {/* Center Teams - Absolute positioning for perfect vertical centering */}
@@ -273,12 +303,14 @@ export function UnderdogCard({ match, onClick }: { match?: ParsedMatch; onClick?
       <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, #1a000b 0%, #0D0518 60%)' }} />
       <div className="absolute inset-0 opacity-60" style={{ background: `radial-gradient(ellipse at top left, ${dangerGlow}, transparent 65%)` }} />
 
-      {/* Top left Title */}
-      <div className="absolute top-6 left-6 z-20 flex justify-between items-start pointer-events-none">
+      {/* Top Header (Title + Time) */}
+      <div className="absolute top-6 left-6 right-6 z-20 flex justify-between items-start pointer-events-none">
          <div className="flex items-center gap-2 self-start">
            <Zap className="w-[14px] h-[14px]" style={{ color: dangerPrimary }} fill="currentColor" />
            <span className="text-[13px] shadow-sm flex items-center gap-1" style={{ color: dangerPrimary, fontFamily: 'Inter', fontWeight: 800, letterSpacing: '0.02em' }}>LONG SHOT</span>
          </div>
+
+         <MatchTimeCapsule match={match} />
       </div>
 
       {/* Main content - Centered */}
@@ -476,12 +508,18 @@ export function ChampionCard({ team, onClick }: ChampionCardProps) {
       <div className="absolute inset-0" style={{ background: 'linear-gradient(160deg, #1a1000 0%, #0D0518 50%, #0a0020 100%)' }} />
       <div className="absolute inset-0" style={{ background: `radial-gradient(ellipse at center, ${crownGlow}, transparent 70%)` }} />
 
-      {/* Top left badge */}
-      <div className="absolute top-6 left-6 z-20 flex items-center gap-2">
-        <Trophy className="w-4 h-4" style={{ color: DISCOVER_THEME.accentGold }} />
-        <span className="text-[13px]" style={{ color: DISCOVER_THEME.accentGold, fontFamily: 'Inter', fontWeight: 800, letterSpacing: '0.02em' }}>
-          TITLE RACE
-        </span>
+      {/* Top Header (Badge + Date) */}
+      <div className="absolute top-6 left-6 right-6 z-20 flex justify-between items-start pointer-events-none">
+        <div className="flex items-center gap-2">
+          <Trophy className="w-4 h-4" style={{ color: DISCOVER_THEME.accentGold }} />
+          <span className="text-[13px]" style={{ color: DISCOVER_THEME.accentGold, fontFamily: 'Inter', fontWeight: 800, letterSpacing: '0.02em' }}>
+            TITLE RACE
+          </span>
+        </div>
+        
+        <div className="text-[12px] font-bold text-white/50" style={{ fontFamily: 'Inter' }}>
+          7月19日 决赛
+        </div>
       </div>
 
       {/* Main content — vertically centered */}
