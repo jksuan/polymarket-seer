@@ -21,6 +21,7 @@ import { ScorersView } from '@/components/ui/ScorersView';
 import { ScorersNav } from '@/components/ui/ScorersNav';
 import { HistoricYear as ScorersYear } from '@/lib/mockScorers';
 import { getCountryFlagUrl } from '@/lib/countryFlags';
+import { useTranslation } from '@/i18n';
 
 export function HomePage({ onPlaceBet, positions }: { onPlaceBet?: (amount: string, tokenId: string, executionPrice?: number) => Promise<void>; positions?: any[] }) {
   const [primaryTab, setPrimaryTab] = useState<PrimaryTab>('matches');
@@ -41,6 +42,8 @@ export function HomePage({ onPlaceBet, positions }: { onPlaceBet?: (amount: stri
 
   const [skipAnimation, setSkipAnimation] = useState(false);
   const [prevKeyword, setPrevKeyword] = useState<string>('');
+
+  const { t } = useTranslation();
 
   // ── Computed keyword (for outrights only now) ──
   const keyword = (() => {
@@ -144,7 +147,7 @@ export function HomePage({ onPlaceBet, positions }: { onPlaceBet?: (amount: stri
                 border: selectedDate === 'ALL' ? '1px solid rgba(255,215,0,0.3)' : '1px solid rgba(255,255,255,0.08)'
               }}
             >
-              全部
+              {t.home.all}
             </button>
 
             {/* Search Team Button */}
@@ -158,7 +161,7 @@ export function HomePage({ onPlaceBet, positions }: { onPlaceBet?: (amount: stri
             >
               <Search size={13} className={selectedTeam ? 'text-[#FFD700]' : 'text-white/40'} />
               <span className={`text-[11px] font-bold ${selectedTeam ? 'text-[#FFD700]' : 'text-white/60'}`}>
-                球队
+                {t.home.teamFilter}
               </span>
             </button>
 
@@ -308,10 +311,10 @@ export function HomePage({ onPlaceBet, positions }: { onPlaceBet?: (amount: stri
               </div>
 
               <h3 style={{ fontFamily: 'Inter', fontSize: '18px', fontWeight: 900, color: '#fff', letterSpacing: '0.02em', marginBottom: '8px' }}>
-                赛事数据尚未解锁
+                {t.home.lockedTitle}
               </h3>
               <p style={{ fontFamily: 'Inter', fontSize: '12px', color: 'rgba(255,255,255,0.4)', textAlign: 'center', maxWidth: '280px', marginBottom: '32px' }}>
-                2026 美加墨世界杯淘汰赛数据引擎挂起中，待小组赛结束后将实时同步注入系统。
+                {t.home.lockedDesc}
               </p>
 
               {/* Placeholder Skeleton Rows */}
@@ -341,7 +344,7 @@ export function HomePage({ onPlaceBet, positions }: { onPlaceBet?: (amount: stri
           ) : (
             <div className="flex flex-col items-center justify-center h-48 opacity-40">
               <div className="text-[12px] font-bold text-white/50 tracking-widest uppercase">
-                {matchSub === 'group' ? `${selectedGroup}组暂无赛事公开` : '暂无比赛数据'}
+                {matchSub === 'group' ? `${selectedGroup}${t.home.noGroupMatches}` : t.home.noMatches}
               </div>
             </div>
           )
@@ -357,12 +360,12 @@ export function HomePage({ onPlaceBet, positions }: { onPlaceBet?: (amount: stri
             )
           ) : (
             <div className="flex flex-col items-center justify-center h-48 opacity-50">
-              <div className="text-[12px] font-bold text-white/50 tracking-widest uppercase">暂无相关市场数据</div>
+              <div className="text-[12px] font-bold text-white/50 tracking-widest uppercase">{t.home.noMarkets}</div>
             </div>
           )
         ) : (
           <div className="flex flex-col items-center justify-center h-48 opacity-50">
-            <div className="text-[12px] font-bold text-white/50 tracking-widest uppercase">暂无相关市场数据</div>
+            <div className="text-[12px] font-bold text-white/50 tracking-widest uppercase">{t.home.noMarkets}</div>
           </div>
         )}
       </div>

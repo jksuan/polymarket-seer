@@ -3,6 +3,7 @@
 import { useRef } from 'react';
 import { PRIMARY_TABS } from '@/lib/mockMarkets';
 import { PrimaryTab } from '@/types/sports';
+import { useTranslation } from '@/i18n';
 
 interface CategoryTabsProps {
   active: PrimaryTab;
@@ -11,6 +12,7 @@ interface CategoryTabsProps {
 
 export function CategoryTabs({ active, onChange }: CategoryTabsProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const { t } = useTranslation();
 
   return (
     <div
@@ -41,7 +43,12 @@ export function CategoryTabs({ active, onChange }: CategoryTabsProps) {
                 strokeWidth: isActive ? 2.5 : 2
               }} 
             />
-            {tab.label}
+            {{
+              matches: t.home.matchesTab,
+              outrights: t.home.outrightsTab,
+              standings: t.home.standingsTab,
+              scorers: t.home.scorersTab,
+            }[tab.id] || tab.label}
             
             {/* Strict content-width underline */}
             {isActive && (

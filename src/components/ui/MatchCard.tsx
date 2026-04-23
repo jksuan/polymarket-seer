@@ -8,6 +8,8 @@ import { ConfirmModal } from './ConfirmModal';
 import { getCountryFlagUrl, getCountryShortCode, getCountryColor, getCountryGroup, isGroupStageMatch, TeamColors } from '@/lib/countryFlags';
 import { formatVolume } from '@/lib/utils';
 import { Skeleton } from './Skeleton';
+import { useTranslation } from '@/i18n';
+import { translateCountryName } from '@/i18n';
 
 /**
  * Parsed match data — derived from the raw SportMarket structure
@@ -72,6 +74,8 @@ interface MatchCardProps {
 }
 
 export function MatchCard({ match, index = 0, onPlaceBet, positions }: MatchCardProps) {
+  const { t, locale } = useTranslation();
+  const cn = (name: string) => translateCountryName(name, locale);
   const [confirmSide, setConfirmSide] = useState<'home' | 'away' | 'draw' | null>(null);
 
   // Determine which token ID is selected
@@ -113,7 +117,7 @@ export function MatchCard({ match, index = 0, onPlaceBet, positions }: MatchCard
                   letterSpacing: '0.01em',
                 }}
               >
-                <Clock size={12} /> 开赛 {match.timeLabel}
+                <Clock size={12} /> {t.home.matchStart} {match.timeLabel}
               </div>
               <div
                 className="px-1.5 py-[1px] rounded-[4px] text-[10px] font-black"
@@ -123,7 +127,7 @@ export function MatchCard({ match, index = 0, onPlaceBet, positions }: MatchCard
                   border: match.isGroupStage ? '1px solid rgba(255,215,0,0.3)' : '1px solid rgba(173,255,47,0.3)'
                 }}
               >
-                {match.isGroupStage ? `${match.group}组` : '淘汰赛'}
+                {match.isGroupStage ? `${match.group}${t.home.group}` : t.home.knockoutStage}
               </div>
               <span
                 style={{
@@ -133,7 +137,7 @@ export function MatchCard({ match, index = 0, onPlaceBet, positions }: MatchCard
                   color: 'rgba(255,255,255,0.35)',
                 }}
               >
-                {formatVolume(match.volume)} 交易量
+                {formatVolume(match.volume)} {t.home.volume}
               </span>
             </div>
 
@@ -151,7 +155,7 @@ export function MatchCard({ match, index = 0, onPlaceBet, positions }: MatchCard
                   }}
                 >
                   <span className="text-[12px] animate-pulse">◉</span>
-                  <span>实时</span>
+                  <span>{t.home.live}</span>
                 </div>
               ) : match.status === 'ended' ? (
                 <div 
@@ -163,7 +167,7 @@ export function MatchCard({ match, index = 0, onPlaceBet, positions }: MatchCard
                     border: '1px solid rgba(255, 255, 255, 0.1)',
                   }}
                 >
-                  已结束
+                  {t.home.ended}
                 </div>
               ) : (
                 <div 
@@ -176,7 +180,7 @@ export function MatchCard({ match, index = 0, onPlaceBet, positions }: MatchCard
                     boxShadow: '0 0 8px rgba(0, 240, 255, 0.15)'
                   }}
                 >
-                  未开赛
+                  {t.home.upcoming}
                 </div>
               )}
             </div>
@@ -210,7 +214,7 @@ export function MatchCard({ match, index = 0, onPlaceBet, positions }: MatchCard
                   flex: 1,
                 }}
               >
-                {match.home.name}
+                {cn(match.home.name)}
               </span>
               <span
                 style={{
@@ -250,7 +254,7 @@ export function MatchCard({ match, index = 0, onPlaceBet, positions }: MatchCard
                   flex: 1,
                 }}
               >
-                {match.away.name}
+                {cn(match.away.name)}
               </span>
               <span
                 style={{
@@ -307,7 +311,7 @@ export function MatchCard({ match, index = 0, onPlaceBet, positions }: MatchCard
             >
               <div className="flex items-baseline justify-center gap-1">
                 <span style={{ fontFamily: 'Inter', fontSize: '11px', fontWeight: 800, color: 'rgba(255,255,255,0.85)', letterSpacing: '0.02em' }}>
-                  DRAW
+                  {t.trade.draw}
                 </span>
                 <span style={{ fontFamily: 'Inter', fontSize: '13px', fontWeight: 900, color: '#fff' }}>
                   {match.draw.probability}%
@@ -355,11 +359,11 @@ export function MatchCard({ match, index = 0, onPlaceBet, positions }: MatchCard
         tokenId={getSelectedTokenId()}
         outrightInfo={{
           title: confirmSide === 'draw'
-            ? `${match.home.name} vs ${match.away.name} — 平局`
+            ? `${cn(match.home.name)} vs ${cn(match.away.name)} ${t.discover.drawLabel.includes('DRAW') ? '— DRAW' : '— 平局'}`
             : confirmSide === 'home'
-              ? `${match.home.name} 胜`
-              : `${match.away.name} 胜`,
-          directionLabel: confirmSide === 'draw' ? '买入平局' : confirmSide === 'home' ? `买入 ${match.home.name} 胜` : `买入 ${match.away.name} 胜`,
+              ? `${cn(match.home.name)} ${t.discover.win}`
+              : `${cn(match.away.name)} ${t.discover.win}`,
+          directionLabel: confirmSide === 'draw' ? t.discover.drawLabel : confirmSide === 'home' ? `${t.trade.buy} ${cn(match.home.name)} ${t.discover.win}` : `${t.trade.buy} ${cn(match.away.name)} ${t.discover.win}`,
           probability: confirmSide === 'draw'
             ? match.draw.probability
             : confirmSide === 'home'

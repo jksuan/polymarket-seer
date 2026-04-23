@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { MATCH_SUB_TABS, WORLD_CUP_GROUPS, WORLD_CUP_KNOCKOUTS } from '@/lib/mockMarkets';
 import { MatchSubTab, PrimaryTab } from '@/types/sports';
 import { AnimatePresence, motion } from 'motion/react';
+import { useTranslation } from '@/i18n';
 
 export interface SubTabsProps {
   primaryTab: PrimaryTab;
@@ -25,6 +26,7 @@ export function SubTabs({
   onGroupChange,
   onKnockoutChange,
 }: SubTabsProps) {
+  const { t } = useTranslation();
   const [showGroupPicker, setShowGroupPicker] = useState(false);
   const [showKnockoutPicker, setShowKnockoutPicker] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -78,12 +80,16 @@ export function SubTabs({
                 boxShadow: isActive ? '0 0 10px rgba(255,215,0,0.15)' : 'none',
               }}
             >
-              {tab.label}
+              {{
+                hot: t.home.hotOverview,
+                group: t.home.groupPicker,
+                knockout: t.home.knockoutPicker,
+              }[tab.id] || tab.label}
               {isGroupActive && selectedGroup && (
-                <span style={{ color: '#FFD700', fontWeight: 900, marginLeft: '2px' }}>{selectedGroup}组</span>
+                <span style={{ color: '#FFD700', fontWeight: 900, marginLeft: '2px' }}>{selectedGroup}{t.home.groupSuffix}</span>
               )}
               {isKnockoutActive && selectedKnockout && (
-                <span style={{ color: '#FFD700', fontWeight: 900, marginLeft: '2px' }}>{selectedKnockout}</span>
+                <span style={{ color: '#FFD700', fontWeight: 900, marginLeft: '2px' }}>{t.home.knockoutsTrans[selectedKnockout as keyof typeof t.home.knockoutsTrans]}</span>
               )}
             </button>
           );
@@ -111,6 +117,7 @@ export function SubTabs({
 
 // ── Group Filter Bottom Sheet ──
 function GroupFilterSheetContent({ isOpen, onClose, selectedGroup, onSelect }: any) {
+  const { t } = useTranslation();
   return (
     <AnimatePresence>
       {isOpen && (
@@ -144,7 +151,7 @@ function GroupFilterSheetContent({ isOpen, onClose, selectedGroup, onSelect }: a
               <div className="w-10 h-1 rounded-full bg-white/20"></div>
             </div>
             <div className="px-5 py-3 shrink-0">
-              <div className="text-[16px] font-black text-white tracking-wider">选择小组</div>
+              <div className="text-[16px] font-black text-white tracking-wider">{t.home.selectGroupTitle}</div>
             </div>
             <div className="overflow-y-auto px-5 pb-8 flex-1" style={{ scrollbarWidth: 'none' }}>
               <div className="grid grid-cols-4 gap-3">
@@ -193,6 +200,7 @@ function GroupFilterSheet(props: any) {
 
 // ── Knockout Filter Bottom Sheet ──
 function KnockoutFilterSheetContent({ isOpen, onClose, selectedKnockout, onSelect }: any) {
+  const { t } = useTranslation();
   return (
     <AnimatePresence>
       {isOpen && (
@@ -226,7 +234,7 @@ function KnockoutFilterSheetContent({ isOpen, onClose, selectedKnockout, onSelec
               <div className="w-10 h-1 rounded-full bg-white/20"></div>
             </div>
             <div className="px-5 py-3 shrink-0">
-              <div className="text-[16px] font-black text-white tracking-wider">选择淘汰赛阶段</div>
+              <div className="text-[16px] font-black text-white tracking-wider">{t.home.selectKnockoutTitle}</div>
             </div>
             <div className="overflow-y-auto px-5 pb-8 flex-1" style={{ scrollbarWidth: 'none' }}>
               <div className="grid grid-cols-2 gap-3">
@@ -252,7 +260,7 @@ function KnockoutFilterSheetContent({ isOpen, onClose, selectedKnockout, onSelec
                       }}
                     >
                       <span className="text-[14px] font-bold" style={{ color: isSelected ? '#FFD700' : 'rgba(255,255,255,0.7)' }}>
-                        {k}
+                        {t.home.knockoutsTrans[k as keyof typeof t.home.knockoutsTrans]}
                       </span>
                     </button>
                   );
