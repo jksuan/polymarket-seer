@@ -127,7 +127,7 @@ export function MatchCard({ match, index = 0, onPlaceBet, positions }: MatchCard
                   border: match.isGroupStage ? '1px solid rgba(255,215,0,0.3)' : '1px solid rgba(173,255,47,0.3)'
                 }}
               >
-                {match.isGroupStage ? `${match.group}${t.home.group}` : t.home.knockoutStage}
+                {match.isGroupStage ? `${t.standings.groupPrefix}${match.group}${t.standings.groupSuffix}` : t.home.knockoutStage}
               </div>
               <span
                 style={{

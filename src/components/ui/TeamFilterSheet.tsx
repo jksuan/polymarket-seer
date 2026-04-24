@@ -147,7 +147,7 @@ function TeamFilterSheetContent({ isOpen, onClose, onSelect, selectedTeam }: Tea
               {Object.entries(filteredGroups).map(([group, teams]) => (
                 <div key={group} className="mb-4">
                   <div className="text-[10px] font-black text-white/30 tracking-widest uppercase mb-2">
-                    {group}{t.home.groupSuffix}
+                    {t.standings.groupPrefix}{group}{t.standings.groupSuffix}
                   </div>
                   <div className="grid grid-cols-4 gap-2">
                     {teams.map((team) => {
