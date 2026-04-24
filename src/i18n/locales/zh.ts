@@ -248,7 +248,7 @@ const zh = {
     ended: '已结束',
     winRate: '胜率',
     drawLabel: '平局',
-    marketPool: '市场交易池',
+    marketPool: '交易量',
     holding: '已持仓',
     shares: '股',
     noMatches: '暂无可用赛事，请稍后再来',

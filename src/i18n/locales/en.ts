@@ -250,7 +250,7 @@ const en: TranslationKeys = {
     ended: 'ENDED',
     winRate: 'Win Rate',
     drawLabel: 'Draw',
-    marketPool: 'Market Pool',
+    marketPool: 'VOLUME',
     holding: 'Holding',
     shares: 'Shares',
     noMatches: 'No matches available, check back later',
