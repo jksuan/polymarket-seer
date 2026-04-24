@@ -105,7 +105,7 @@ export function ProfilePage({
           >
           <button
             onClick={() => handleTabChange("stats")}
-            className="relative pb-2 font-bold text-[15px] transition-colors shrink-0"
+            className="relative pb-2 font-bold text-[13px] transition-colors shrink-0"
             style={{ color: activeTab === "stats" ? "#dee5ff" : "#a3aac4" }}
           >
             {t.profile.overview}
@@ -119,10 +119,10 @@ export function ProfilePage({
           </button>
           <button
             onClick={() => handleTabChange("active")}
-            className="relative pb-2 font-bold text-[15px] transition-colors shrink-0"
+            className="relative pb-2 font-bold text-[13px] transition-colors shrink-0"
             style={{ color: activeTab === "active" ? "#dee5ff" : "#a3aac4" }}
           >
-            {t.profile.positions}<span className="text-[12px] opacity-60 font-medium">({positions?.length || 0})</span>
+            {t.profile.positions}<span className="text-[11px] opacity-60 font-medium">({positions?.length || 0})</span>
             {activeTab === "active" && (
               <motion.div
                 layoutId="activeTabIndicator"
@@ -133,10 +133,10 @@ export function ProfilePage({
           </button>
           <button
             onClick={() => handleTabChange("orders")}
-            className="relative pb-2 font-bold text-[15px] transition-colors shrink-0"
+            className="relative pb-2 font-bold text-[13px] transition-colors shrink-0"
             style={{ color: activeTab === "orders" ? "#dee5ff" : "#a3aac4" }}
           >
-            {t.profile.orders}<span className="text-[12px] opacity-60 font-medium">({openOrders?.length || 0})</span>
+            {t.profile.orders}<span className="text-[11px] opacity-60 font-medium">({openOrders?.length || 0})</span>
             {activeTab === "orders" && (
               <motion.div
                 layoutId="activeTabIndicator"
@@ -147,10 +147,10 @@ export function ProfilePage({
           </button>
           <button
             onClick={() => handleTabChange("history")}
-            className="relative pb-2 font-bold text-[15px] transition-colors shrink-0"
+            className="relative pb-2 font-bold text-[13px] transition-colors shrink-0"
             style={{ color: activeTab === "history" ? "#dee5ff" : "#a3aac4" }}
           >
-            {t.profile.history}<span className="text-[12px] opacity-60 font-medium">({historyCount})</span>
+            {t.profile.history}<span className="text-[11px] opacity-60 font-medium">({historyCount})</span>
             {activeTab === "history" && (
               <motion.div
                 layoutId="activeTabIndicator"
@@ -161,10 +161,10 @@ export function ProfilePage({
           </button>
           <button
             onClick={() => handleTabChange("transactions")}
-            className="relative pb-2 font-bold text-[15px] transition-colors shrink-0"
+            className="relative pb-2 font-bold text-[13px] transition-colors shrink-0"
             style={{ color: activeTab === "transactions" ? "#dee5ff" : "#a3aac4" }}
           >
-            {t.profile.transactions}<span className="text-[12px] opacity-60 font-medium">({transactionsCount})</span>
+            {t.profile.transactions}<span className="text-[11px] opacity-60 font-medium">({transactionsCount})</span>
             {activeTab === "transactions" && (
               <motion.div
                 layoutId="activeTabIndicator"
