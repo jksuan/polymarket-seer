@@ -122,6 +122,36 @@ const en: TranslationKeys = {
     tbd: 'TBD',
   },
 
+  scorers: {
+    lockedTitle: 'Golden Boot Bracket Locked',
+    lockedDesc: 'The 2026 World Cup has not kicked off yet. The scorers leaderboard will unlock with the first goal.',
+    awaitingKickoff: 'AWAITING KICKOFF',
+    goals: 'GOALS',
+  },
+
+  players: {
+    'Kylian Mbappé': 'Kylian Mbappé',
+    'Lionel Messi': 'Lionel Messi',
+    'Julián Álvarez': 'Julián Álvarez',
+    'Olivier Giroud': 'Olivier Giroud',
+    'Álvaro Morata': 'Álvaro Morata',
+    'Bukayo Saka': 'Bukayo Saka',
+    'Cody Gakpo': 'Cody Gakpo',
+    'Enner Valencia': 'Enner Valencia',
+    'Gonçalo Ramos': 'Gonçalo Ramos',
+    'Marcus Rashford': 'Marcus Rashford',
+    'Richarlison': 'Richarlison',
+    'Harry Kane': 'Harry Kane',
+    'Antoine Griezmann': 'Antoine Griezmann',
+    'Cristiano Ronaldo': 'Cristiano Ronaldo',
+    'Denis Cheryshev': 'Denis Cheryshev',
+    'Romelu Lukaku': 'Romelu Lukaku',
+    'James Rodríguez': 'James Rodríguez',
+    'Thomas Müller': 'Thomas Müller',
+    'Neymar Jr': 'Neymar Jr',
+    'Robin van Persie': 'Robin van Persie',
+  },
+
   // ─── Trade Terminal ───
   trade: {
     terminal: 'Trade Terminal',

@@ -5,6 +5,7 @@ import { Lock, User } from 'lucide-react';
 import { HistoricYear, MOCK_SCORERS_DATA } from '@/lib/mockScorers';
 import { getCountryFlagUrl } from '@/lib/countryFlags';
 import { useState } from 'react';
+import { useTranslation, translateCountryName } from '@/i18n';
 
 export interface ScorersViewProps {
   selectedYear: HistoricYear;
@@ -35,8 +36,9 @@ export function ScorersView({ selectedYear }: ScorersViewProps) {
   );
 }
 
-// ── Locked State for 2026 ──
 function Locked2026Scorers() {
+  const { t } = useTranslation();
+
   return (
     <div className="flex flex-col items-center justify-center pt-8 pb-12">
       <div className="relative mb-8">
@@ -58,16 +60,16 @@ function Locked2026Scorers() {
           fontFamily: 'Inter',
         }}
       >
-        金靴悬念 未解之谜
+        {t.scorers.lockedTitle}
       </div>
       
       <div className="text-white/40 text-[14px] font-medium max-w-[280px] text-center leading-relaxed font-sans mb-8">
-        2026 美加墨世界杯正赛尚未开启，实时射手榜将在第一粒进球诞生时全面解锁。
+        {t.scorers.lockedDesc}
       </div>
 
       <div className="flex items-center gap-1.5 px-4 py-2 bg-[#00F0FF]/10 rounded-full border border-[#00F0FF]/20 shadow-[0_0_15px_rgba(0,240,255,0.05)]">
         <div className="w-2 h-2 rounded-full bg-[#00F0FF] animate-pulse" />
-        <span className="text-[#00F0FF] text-[12px] font-bold tracking-widest px-1">AWAITING KICKOFF</span>
+        <span className="text-[#00F0FF] text-[12px] font-bold tracking-widest px-1">{t.scorers.awaitingKickoff}</span>
       </div>
     </div>
   );
@@ -75,6 +77,7 @@ function Locked2026Scorers() {
 
 // ── Render Historics ──
 function HistoricScorersView({ year }: { year: Exclude<HistoricYear, '2026'> }) {
+  const { t, locale } = useTranslation();
   const scorers = MOCK_SCORERS_DATA[year];
   const maxGoals = Math.max(...scorers.map(s => s.goals), 1); // Avoid division by zero
 
@@ -119,7 +122,7 @@ function HistoricScorersView({ year }: { year: Exclude<HistoricYear, '2026'> }) 
                 <div className="flex items-center justify-between">
                   {/* Name */}
                   <span className={`font-bold tracking-tight ${isTop ? 'text-white' : 'text-white/90'}`} style={{ fontSize: '15px' }}>
-                    {scorer.name}
+                    {t.players[scorer.name as keyof typeof t.players] || scorer.name}
                   </span>
                   {/* Goals */}
                   <span 
@@ -139,12 +142,12 @@ function HistoricScorersView({ year }: { year: Exclude<HistoricYear, '2026'> }) 
                       className="w-[20px] h-[14px] shadow-sm rounded-[2px] object-cover"
                     />
                     <span className="text-white/50 text-[12px] font-medium tracking-wide">
-                      {scorer.countryCode}
+                      {translateCountryName(scorer.countryCode, locale)}
                     </span>
                   </div>
                   {/* Label */}
                   <span className={`text-[10px] font-bold tracking-widest uppercase ${isTop ? 'text-[#FFD700]/60' : 'text-white/30'}`}>
-                    GOALS
+                    {t.scorers.goals}
                   </span>
                 </div>
               </div>

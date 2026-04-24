@@ -120,6 +120,36 @@ const zh = {
     tbd: '待定',
   },
 
+  scorers: {
+    lockedTitle: '金靴悬念 未解之谜',
+    lockedDesc: '2026 美加墨世界杯正赛尚未开启，实时射手榜将在第一粒进球诞生时全面解锁。',
+    awaitingKickoff: '赛事筹备中',
+    goals: '进球',
+  },
+
+  players: {
+    'Kylian Mbappé': '基利安·姆巴佩',
+    'Lionel Messi': '里奥·梅西',
+    'Julián Álvarez': '朱利安·阿尔瓦雷斯',
+    'Olivier Giroud': '奥利维尔·吉鲁',
+    'Álvaro Morata': '阿尔瓦罗·莫拉塔',
+    'Bukayo Saka': '布卡约·萨卡',
+    'Cody Gakpo': '科迪·加克波',
+    'Enner Valencia': '恩纳·瓦伦西亚',
+    'Gonçalo Ramos': '贡萨洛·拉莫斯',
+    'Marcus Rashford': '马库斯·拉什福德',
+    'Richarlison': '理查利森',
+    'Harry Kane': '哈里·凯恩',
+    'Antoine Griezmann': '安托万·格列兹曼',
+    'Cristiano Ronaldo': '克里斯蒂亚诺·罗纳尔多',
+    'Denis Cheryshev': '丹尼斯·切里舍夫',
+    'Romelu Lukaku': '罗梅卢·卢卡库',
+    'James Rodríguez': '哈梅斯·罗德里格斯',
+    'Thomas Müller': '托马斯·穆勒',
+    'Neymar Jr': '内马尔',
+    'Robin van Persie': '罗宾·范佩西',
+  },
+
   // ─── 交易终端 ───
   trade: {
     terminal: '交易终端',

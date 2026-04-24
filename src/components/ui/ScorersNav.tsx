@@ -3,12 +3,7 @@
 import { Lock } from 'lucide-react';
 import { HistoricYear } from '@/lib/mockScorers';
 
-const YEARS: Array<{ id: HistoricYear; label: string; locked?: boolean }> = [
-  { id: '2026', label: '2026 🏆', locked: true },
-  { id: '2022', label: '2022 卡塔尔' },
-  { id: '2018', label: '2018 俄罗斯' },
-  { id: '2014', label: '2014 巴西' },
-];
+import { useTranslation } from '@/i18n';
 
 export interface ScorersNavProps {
   selectedYear: HistoricYear;
@@ -16,6 +11,15 @@ export interface ScorersNavProps {
 }
 
 export function ScorersNav({ selectedYear, onYearChange }: ScorersNavProps) {
+  const { t } = useTranslation();
+
+  const YEARS: Array<{ id: HistoricYear; label: string; locked?: boolean }> = [
+    { id: '2026', label: '2026 🏆', locked: true },
+    { id: '2022', label: `2022 ${t.standings.hostQatar}` },
+    { id: '2018', label: `2018 ${t.standings.hostRussia}` },
+    { id: '2014', label: `2014 ${t.standings.hostBrazil}` },
+  ];
+
   return (
     <div className="flex flex-col pt-2.5 pb-2">
       {/* SubTabs for Years */}
