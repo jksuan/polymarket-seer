@@ -242,7 +242,6 @@ const CarouselCard = memo(function CarouselCard({ match, positions, onShare }: C
                 <div style={{
                   fontFamily: 'Inter',
                   fontWeight: 900,
-                  fontStyle: 'italic',
                   fontSize: '26px',
                   color: match.home.style.accent,
                   textShadow: `0 0 16px ${match.home.style.glow}`,
@@ -268,7 +267,7 @@ const CarouselCard = memo(function CarouselCard({ match, positions, onShare }: C
                 }}
               >
                 <div style={{ fontFamily: 'Inter', fontSize: '10px', fontWeight: 700, color: 'rgba(255,255,255,0.35)', textAlign: 'center' }}>{t.challenge.drawLabel}</div>
-                <div style={{ fontFamily: 'Inter', fontSize: '14px', fontWeight: 900, fontStyle: 'italic', color: 'rgba(255,255,255,0.7)', textAlign: 'center', lineHeight: 1, marginTop: '1px' }}>
+                <div style={{ fontFamily: 'Inter', fontSize: '14px', fontWeight: 900, color: 'rgba(255,255,255,0.7)', textAlign: 'center', lineHeight: 1, marginTop: '1px' }}>
                   {(100 / match.draw.probability).toFixed(2)}x
                 </div>
                 <div style={{ fontFamily: 'Inter', fontSize: '9px', color: 'rgba(255,255,255,0.3)', textAlign: 'center', marginTop: '1px' }}>
@@ -294,7 +293,6 @@ const CarouselCard = memo(function CarouselCard({ match, positions, onShare }: C
                 <div style={{
                   fontFamily: 'Inter',
                   fontWeight: 900,
-                  fontStyle: 'italic',
                   fontSize: '26px',
                   color: match.away.style.accent,
                   textShadow: `0 0 16px ${match.away.style.glow}`,
