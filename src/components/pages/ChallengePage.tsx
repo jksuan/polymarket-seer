@@ -153,7 +153,7 @@ const CarouselCard = memo(function CarouselCard({ match, positions, onShare }: C
           {/* 1. 赛事名称 + 分组 */}
           <div className="flex items-center gap-2 mt-1">
             <span style={{ fontFamily: 'Inter', fontWeight: 700, fontSize: '12px', color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-              FIFA World Cup 2026
+              {t.challenge.title}
             </span>
             <div
               className="px-1.5 py-[1px] rounded-[4px] text-[10px] font-black"

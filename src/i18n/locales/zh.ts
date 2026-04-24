@@ -242,7 +242,7 @@ const zh = {
 
   // ─── 挑战页 ───
   challenge: {
-    title: '2026 FIFA World Cup',
+    title: '2026 世界杯',
     liveNow: '🔴 LIVE NOW',
     kickoff: '开赛',
     ended: '已结束',
