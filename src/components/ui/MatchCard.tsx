@@ -310,7 +310,7 @@ export function MatchCard({ match, index = 0, onPlaceBet, positions }: MatchCard
               }}
             >
               <div className="flex items-baseline justify-center gap-1">
-                <span style={{ fontFamily: 'Inter', fontSize: locale === 'zh' ? '13px' : '11px', fontWeight: locale === 'zh' ? 900 : 800, color: 'rgba(255,255,255,0.85)', letterSpacing: '0.02em' }}>
+                <span style={{ fontFamily: 'Inter', fontSize: locale === 'zh' ? '12px' : '11px', fontWeight: 800, color: 'rgba(255,255,255,0.85)', letterSpacing: '0.02em' }}>
                   {locale === 'en' ? t.trade.draw.toUpperCase() : t.trade.draw}
                 </span>
                 <span style={{ fontFamily: 'Inter', fontSize: '13px', fontWeight: 900, color: '#fff' }}>
