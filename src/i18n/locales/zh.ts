@@ -285,6 +285,11 @@ const zh = {
     // Transactions
     txEmpty: '暂无交易记录',
     txUnknown: '未知市场',
+    txBuy: '买入',
+    txSell: '卖出',
+    txRedeem: '兑换',
+    txArchive: '归档',
+    txOther: '其他',
   },
 
   // ─── 挑战页 ───

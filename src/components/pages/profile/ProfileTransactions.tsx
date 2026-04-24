@@ -13,7 +13,7 @@ export interface ProfileTransactionsProps {
 
 export function ProfileTransactions({ portfolioLoading, trades }: ProfileTransactionsProps) {
   const { t } = useTranslation();
-  const transactionData = useProfileTransactions(trades);
+  const transactionData = useProfileTransactions(trades, t);
 
   return (
     <motion.div

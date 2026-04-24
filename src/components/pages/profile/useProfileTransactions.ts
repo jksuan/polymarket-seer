@@ -14,7 +14,7 @@ export interface TransactionRowData {
   outcome: string;
 }
 
-export function useProfileTransactions(trades: any[]): TransactionRowData[] {
+export function useProfileTransactions(trades: any[], t: any): TransactionRowData[] {
   return useMemo(() => {
     if (!trades || trades.length === 0) return [];
 
@@ -28,13 +28,13 @@ export function useProfileTransactions(trades: any[]): TransactionRowData[] {
       const isBuy = item.side === "BUY";
       const isWonRedeem = isRedeem && usdcAmt > 0.01;
 
-      let txLabel = "其他";
+      let txLabel = t.profile.txOther;
       let txColor = "#a3aac4";
       let txBg = "rgba(255,255,255,0.07)";
-      if (isBuy) { txLabel = "买入"; txColor = "#60a5fa"; txBg = "rgba(96,165,250,0.12)"; }
-      else if (item.side === "SELL") { txLabel = "卖出"; txColor = "#fb923c"; txBg = "rgba(251,146,60,0.12)"; }
-      else if (isWonRedeem) { txLabel = "兑换"; txColor = "#6bff8f"; txBg = "rgba(107,255,143,0.12)"; }
-      else if (isRedeem) { txLabel = "归档"; txColor = "#a3aac4"; txBg = "rgba(255,255,255,0.07)"; }
+      if (isBuy) { txLabel = t.profile.txBuy; txColor = "#60a5fa"; txBg = "rgba(96,165,250,0.12)"; }
+      else if (item.side === "SELL") { txLabel = t.profile.txSell; txColor = "#fb923c"; txBg = "rgba(251,146,60,0.12)"; }
+      else if (isWonRedeem) { txLabel = t.profile.txRedeem; txColor = "#6bff8f"; txBg = "rgba(107,255,143,0.12)"; }
+      else if (isRedeem) { txLabel = t.profile.txArchive; txColor = "#a3aac4"; txBg = "rgba(255,255,255,0.07)"; }
 
       const amtDisplay = isBuy ? `-$${usdcAmt.toFixed(2)}` : `+$${usdcAmt.toFixed(2)}`;
       const amtColor = isBuy ? "#ff6b6b" : usdcAmt > 0.01 ? "#6bff8f" : "#a3aac4";
@@ -46,5 +46,5 @@ export function useProfileTransactions(trades: any[]): TransactionRowData[] {
         item, idx, usdcAmt, txLabel, txColor, txBg, amtDisplay, amtColor, timeStr, outcome
       };
     });
-  }, [trades]);
+  }, [trades, t]);
 }

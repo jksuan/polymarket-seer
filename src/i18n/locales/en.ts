@@ -287,6 +287,11 @@ const en: TranslationKeys = {
     // Transactions labels
     txEmpty: 'No transaction history',
     txUnknown: 'Unknown Market',
+    txBuy: 'Buy',
+    txSell: 'Sell',
+    txRedeem: 'Redeem',
+    txArchive: 'Archive',
+    txOther: 'Other',
   },
 
   // ─── Challenge Page ───
