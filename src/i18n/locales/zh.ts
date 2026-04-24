@@ -96,6 +96,25 @@ const zh = {
     },
   },
 
+  // ─── 积分榜 Standings ───
+  standings: {
+    lockedTitle: '赛事数据尚未解锁',
+    lockedDesc: '2026 美加墨世界杯积分榜数据引擎挂起中，待小组赛开打后将实时同步注入系统。',
+    hostQatar: '卡塔尔',
+    hostRussia: '俄罗斯',
+    hostBrazil: '巴西',
+    groupsTitle: '小组赛排位',
+    knockoutTitle: '淘汰赛晋级树',
+    team: '球队',
+    won: '胜',
+    drawn: '平',
+    lost: '负',
+    goals: '进/失',
+    points: '积分',
+    groupPrefix: '',
+    groupSuffix: '组',
+  },
+
   // ─── 交易终端 ───
   trade: {
     terminal: '交易终端',

@@ -98,6 +98,25 @@ const en: TranslationKeys = {
     },
   },
 
+  // ─── Standings ───
+  standings: {
+    lockedTitle: 'Tournament Data Suspended',
+    lockedDesc: 'The 2026 World Cup standings engine is suspended. Data will be injected in real-time once the group stage begins.',
+    hostQatar: 'Qatar',
+    hostRussia: 'Russia',
+    hostBrazil: 'Brazil',
+    groupsTitle: 'Group Standings',
+    knockoutTitle: 'Knockout Bracket',
+    team: 'Team',
+    won: 'W',
+    drawn: 'D',
+    lost: 'L',
+    goals: 'GF/GA',
+    points: 'Pts',
+    groupPrefix: 'Group ',
+    groupSuffix: '',
+  },
+
   // ─── Trade Terminal ───
   trade: {
     terminal: 'Trade Terminal',

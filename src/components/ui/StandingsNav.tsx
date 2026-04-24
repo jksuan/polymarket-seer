@@ -2,13 +2,7 @@
 
 import { Lock, Trophy, BarChart3 } from 'lucide-react';
 import { HistoricYear } from '@/lib/mockStandings';
-
-const YEARS: Array<{ id: HistoricYear; label: string; locked?: boolean }> = [
-  { id: '2026', label: '2026 🏆', locked: true },
-  { id: '2022', label: '2022 卡塔尔' },
-  { id: '2018', label: '2018 俄罗斯' },
-  { id: '2014', label: '2014 巴西' },
-];
+import { useTranslation } from '@/i18n';
 
 export interface StandingsNavProps {
   selectedYear: HistoricYear;
@@ -23,6 +17,14 @@ export function StandingsNav({
   viewMode,
   onViewModeChange,
 }: StandingsNavProps) {
+  const { t } = useTranslation();
+
+  const YEARS: Array<{ id: HistoricYear; label: string; locked?: boolean }> = [
+    { id: '2026', label: '2026 🏆', locked: true },
+    { id: '2022', label: `2022 ${t.standings.hostQatar}` },
+    { id: '2018', label: `2018 ${t.standings.hostRussia}` },
+    { id: '2014', label: `2014 ${t.standings.hostBrazil}` },
+  ];
   return (
     <div className="flex flex-col pt-2.5 pb-2">
       {/* SubTabs for Years */}
@@ -73,13 +75,13 @@ export function StandingsNav({
             onClick={() => onViewModeChange('groups')} 
             className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-[13px] rounded-[6px] transition-all duration-300 ${viewMode === 'groups' ? 'bg-white/10 text-white shadow-[0_2px_8px_rgba(0,0,0,0.5)] font-bold' : 'text-white/40 font-medium hover:text-white/70'}`}
           >
-            <BarChart3 size={14} /> 小组赛排位
+            <BarChart3 size={14} /> {t.standings.groupsTitle}
           </button>
           <button 
             onClick={() => onViewModeChange('knockout')} 
             className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-[13px] rounded-[6px] transition-all duration-300 ${viewMode === 'knockout' ? 'bg-gradient-to-br from-[#00F0FF]/20 to-[#00F0FF]/5 text-[#00F0FF] shadow-[0_0_12px_rgba(0,240,255,0.1)] font-bold border border-[#00F0FF]/20' : 'text-white/40 font-medium hover:text-white/70'}`}
           >
-            <Trophy size={14} /> 淘汰赛晋级树
+            <Trophy size={14} /> {t.standings.knockoutTitle}
           </button>
         </div>
       </div>

@@ -6,13 +6,7 @@ import { Lock, Trophy, BarChart3, Clock, AlertTriangle } from 'lucide-react';
 import { HistoricYear, HISTORIC_STANDINGS } from '@/lib/mockStandings';
 import { getCountryFlagUrl } from '@/lib/countryFlags';
 import { KnockoutBracketView } from '@/components/ui/KnockoutBracketView';
-
-const YEARS: Array<{ id: HistoricYear; label: string; locked?: boolean }> = [
-  { id: '2026', label: '2026 🏆', locked: true },
-  { id: '2022', label: '2022 卡塔尔' },
-  { id: '2018', label: '2018 俄罗斯' },
-  { id: '2014', label: '2014 巴西' },
-];
+import { useTranslation, translateCountryName } from '@/i18n';
 
 export interface StandingsViewProps {
   selectedYear: HistoricYear;
@@ -48,6 +42,7 @@ export function StandingsView({ selectedYear, viewMode }: StandingsViewProps) {
 
 // ── Locked State for 2026 ──
 function Locked2026State() {
+  const { t } = useTranslation();
   return (
     <div className="flex flex-col items-center justify-center pt-8 pb-12">
       {/* Locked Header */}
@@ -62,10 +57,10 @@ function Locked2026State() {
       </div>
 
       <h3 style={{ fontFamily: 'Inter', fontSize: '18px', fontWeight: 900, color: '#fff', letterSpacing: '0.02em', marginBottom: '8px' }}>
-        赛事数据尚未解锁
+        {t.standings.lockedTitle}
       </h3>
       <p style={{ fontFamily: 'Inter', fontSize: '12px', color: 'rgba(255,255,255,0.4)', textAlign: 'center', maxWidth: '280px', marginBottom: '32px' }}>
-        2026 美加墨世界杯积分榜数据引擎挂起中，待小组赛开打后将实时同步注入系统。
+        {t.standings.lockedDesc}
       </p>
 
       {/* Placeholder Skeleton Rows */}
@@ -97,38 +92,44 @@ function Locked2026State() {
 
 // ── Render historic data ──
 function HistoricStandingsView({ year }: { year: Exclude<HistoricYear, '2026'> }) {
+  const { t, locale } = useTranslation();
   const groups = HISTORIC_STANDINGS[year];
   
   if (!groups || groups.length === 0) return null;
 
   return (
     <div className="flex flex-col gap-6">
-      {groups.map((group, gIdx) => (
-        <div 
-          key={group.groupName}
-          className="rounded-[20px] overflow-hidden"
-          style={{
-            background: 'rgba(255,255,255,0.02)',
-            border: '1px solid rgba(255,255,255,0.06)',
-            boxShadow: '0 4px 20px rgba(0,0,0,0.2)'
-          }}
-        >
-          {/* Group Header */}
-          <div className="px-4 py-3 flex items-center border-b border-white/5" style={{ background: 'rgba(255,255,255,0.01)' }}>
-            <span style={{ fontFamily: 'Inter', fontSize: '14px', fontWeight: 800, color: '#fff' }}>
-              {group.groupName.split(' ')[0]}
-            </span>
-          </div>
+      {groups.map((group, gIdx) => {
+        const match = group.groupName.match(/^([A-Z])/);
+        const letter = match ? match[1] : group.groupName.charAt(0);
+        const groupDisplay = `${t.standings.groupPrefix}${letter}${t.standings.groupSuffix}`;
 
-          {/* Table Header */}
-          <div className="grid grid-cols-12 px-4 py-2 border-b border-white/5" style={{ background: 'rgba(0,0,0,0.2)' }}>
-            <div className="col-span-5 flex items-center text-[10px] font-semibold text-white/40 uppercase tracking-wider">球队</div>
-            <div className="col-span-1 flex items-center justify-center text-[10px] font-semibold text-white/40">胜</div>
-            <div className="col-span-1 flex items-center justify-center text-[10px] font-semibold text-white/40">平</div>
-            <div className="col-span-1 flex items-center justify-center text-[10px] font-semibold text-white/40">负</div>
-            <div className="col-span-2 flex items-center justify-center text-[10px] font-semibold text-white/40">进/失</div>
-            <div className="col-span-2 flex items-center justify-end text-[10px] font-semibold text-[#FFD700]/70 uppercase tracking-wider">积分</div>
-          </div>
+        return (
+          <div 
+            key={group.groupName}
+            className="rounded-[20px] overflow-hidden"
+            style={{
+              background: 'rgba(255,255,255,0.02)',
+              border: '1px solid rgba(255,255,255,0.06)',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.2)'
+            }}
+          >
+            {/* Group Header */}
+            <div className="px-4 py-3 flex items-center border-b border-white/5" style={{ background: 'rgba(255,255,255,0.01)' }}>
+              <span style={{ fontFamily: 'Inter', fontSize: '14px', fontWeight: 800, color: '#fff' }}>
+                {groupDisplay}
+              </span>
+            </div>
+
+            {/* Table Header */}
+            <div className="grid grid-cols-12 px-4 py-2 border-b border-white/5" style={{ background: 'rgba(0,0,0,0.2)' }}>
+              <div className="col-span-4 flex items-center text-[10px] font-semibold text-white/40 uppercase tracking-wider">{t.standings.team}</div>
+              <div className="col-span-1 flex items-center justify-center text-[10px] font-semibold text-white/40">{t.standings.won}</div>
+              <div className="col-span-1 flex items-center justify-center text-[10px] font-semibold text-white/40">{t.standings.drawn}</div>
+              <div className="col-span-1 flex items-center justify-center text-[10px] font-semibold text-white/40">{t.standings.lost}</div>
+              <div className="col-span-3 flex items-center justify-center text-[10px] font-semibold text-white/40">{t.standings.goals}</div>
+              <div className="col-span-2 flex items-center justify-end text-[10px] font-semibold text-[#FFD700]/70 uppercase tracking-wider">{t.standings.points}</div>
+            </div>
 
           {/* Teams */}
           <div className="flex flex-col">
@@ -148,8 +149,8 @@ function HistoricStandingsView({ year }: { year: Exclude<HistoricYear, '2026'> }
                   <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-[#ADFF2F] shadow-[0_0_8px_rgba(173,255,47,0.5)]" />
                 )}
 
-                <div className="col-span-5 flex items-center gap-2.5 relative z-10">
-                  <div className="w-4 flex items-center justify-center">
+                <div className="col-span-4 flex items-center gap-2.5 relative z-10">
+                  <div className="w-4 flex items-center justify-center shrink-0">
                     <span style={{ fontSize: '11px', fontFamily: 'Inter', fontWeight: 800, color: team.qualified ? '#fff' : 'rgba(255,255,255,0.3)' }}>
                       {idx + 1}
                     </span>
@@ -166,7 +167,7 @@ function HistoricStandingsView({ year }: { year: Exclude<HistoricYear, '2026'> }
                     />
                   </div>
                   <span style={{ fontSize: '13px', fontFamily: 'Inter', fontWeight: 700, color: team.qualified ? '#fff' : 'rgba(255,255,255,0.6)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {team.name}
+                    {translateCountryName(team.name, locale)}
                   </span>
                 </div>
 
@@ -179,7 +180,7 @@ function HistoricStandingsView({ year }: { year: Exclude<HistoricYear, '2026'> }
                 <div className="col-span-1 flex items-center justify-center relative z-10">
                   <span style={{ fontSize: '12px', fontFamily: 'Inter', fontWeight: 600, color: 'rgba(255,255,255,0.6)' }}>{team.lost}</span>
                 </div>
-                <div className="col-span-2 flex items-center justify-center relative z-10">
+                <div className="col-span-3 flex items-center justify-center relative z-10">
                   <span style={{ fontSize: '11px', fontFamily: 'Inter', fontWeight: 500, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.02em' }}>
                     {team.goalsFor}/{team.goalsAgainst}
                   </span>
@@ -193,7 +194,8 @@ function HistoricStandingsView({ year }: { year: Exclude<HistoricYear, '2026'> }
             ))}
           </div>
         </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
