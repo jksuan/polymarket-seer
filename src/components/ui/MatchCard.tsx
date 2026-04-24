@@ -281,8 +281,8 @@ export function MatchCard({ match, index = 0, onPlaceBet, positions }: MatchCard
               }}
             >
               <div className="flex items-baseline justify-center gap-1">
-                <span style={{ fontFamily: 'Inter', fontSize: '11px', fontWeight: 800, color: '#fff', letterSpacing: '0.02em' }}>
-                  {match.home.shortCode}
+                <span style={{ fontFamily: 'Inter', fontSize: locale === 'zh' ? '12px' : '11px', fontWeight: 800, color: '#fff', letterSpacing: '0.02em' }}>
+                  {locale === 'zh' ? cn(match.home.name) : match.home.shortCode}
                 </span>
                 <span style={{ fontFamily: 'Inter', fontSize: '13px', fontWeight: 900, color: '#fff' }}>
                   {match.home.probability}%
@@ -329,8 +329,8 @@ export function MatchCard({ match, index = 0, onPlaceBet, positions }: MatchCard
               }}
             >
               <div className="flex items-baseline justify-center gap-1">
-                <span style={{ fontFamily: 'Inter', fontSize: '11px', fontWeight: 800, color: '#fff', letterSpacing: '0.02em' }}>
-                  {match.away.shortCode}
+                <span style={{ fontFamily: 'Inter', fontSize: locale === 'zh' ? '12px' : '11px', fontWeight: 800, color: '#fff', letterSpacing: '0.02em' }}>
+                  {locale === 'zh' ? cn(match.away.name) : match.away.shortCode}
                 </span>
                 <span style={{ fontFamily: 'Inter', fontSize: '13px', fontWeight: 900, color: '#fff' }}>
                   {match.away.probability}%
