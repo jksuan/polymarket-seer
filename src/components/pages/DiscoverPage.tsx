@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { TopHeader } from '@/components/ui/TopHeader';
 import { Compass, X } from 'lucide-react';
@@ -28,8 +28,8 @@ interface DiscoverPageProps {
 }
 
 export function DiscoverPage({ onPlaceBet, positions }: DiscoverPageProps) {
-  const { allMatches, isLoading } = useMatchData(true);
-  const { markets: outrightMarkets } = useOutrightData(true, 'World Cup Winner');
+  const { allMatches, isLoading: isMatchLoading } = useMatchData(true);
+  const { markets: outrightMarkets, isLoading: isOutrightLoading } = useOutrightData(true, 'World Cup Winner');
   const { t } = useTranslation();
   const [mounted, setMounted] = useState(false);
   
@@ -119,7 +119,7 @@ export function DiscoverPage({ onPlaceBet, positions }: DiscoverPageProps) {
       <TopHeader isSticky={true} />
       
       <div className="px-5 mt-6">
-        {isLoading && !allMatches?.length ? (
+        {(isMatchLoading && !allMatches?.length) || (isOutrightLoading && !outrightMarkets?.length) ? (
           <div className="flex justify-center items-center h-48">
             <span className="text-[#6bff8f] animate-pulse font-mono tracking-widest text-xs uppercase">{t.discover.loadingMarket}</span>
           </div>
