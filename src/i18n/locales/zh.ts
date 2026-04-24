@@ -113,6 +113,11 @@ const zh = {
     points: '积分',
     groupPrefix: '',
     groupSuffix: '组',
+    final: '世界杯决赛',
+    champion: '最终冠军',
+    extraTime: '加时',
+    penalties: '点球大战',
+    tbd: '待定',
   },
 
   // ─── 交易终端 ───

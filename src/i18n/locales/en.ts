@@ -115,6 +115,11 @@ const en: TranslationKeys = {
     points: 'Pts',
     groupPrefix: 'Group ',
     groupSuffix: '',
+    final: 'World Cup Final',
+    champion: 'CHAMPION',
+    extraTime: 'AET',
+    penalties: 'FT (P)',
+    tbd: 'TBD',
   },
 
   // ─── Trade Terminal ───

@@ -3,6 +3,7 @@
 import { getCountryFlagUrl } from '@/lib/countryFlags';
 import { KnockoutMatch, BRACKET_2022, BRACKET_2018, BRACKET_2014, BRACKET_2026_TBD, KnockoutNode } from '@/lib/mockKnockout';
 import { HistoricYear } from '@/lib/mockStandings';
+import { useTranslation, translateCountryName } from '@/i18n';
 
 function flattenMatches(node: KnockoutNode, stage: string): KnockoutNode[] {
   let matches: KnockoutNode[] = [];
@@ -48,15 +49,30 @@ function BezierConnector({ start, end, isHighlight }: { start: [number, number];
 }
 
 function MatchCard({ node }: { node: KnockoutNode }) {
+  const { t, locale } = useTranslation();
+
   if (!node.match) {
     return (
       <div className="w-full h-[68px] rounded-lg border border-white/5 bg-white/5 flex flex-col justify-center items-center opacity-50 relative shrink-0">
-        <span style={{ fontFamily: 'Inter', fontSize: '11px', fontWeight: 800, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.05em' }}>TBD</span>
+        <span style={{ fontFamily: 'Inter', fontSize: '11px', fontWeight: 800, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.05em' }}>{t.standings.tbd}</span>
       </div>
     );
   }
 
   const m = node.match;
+
+  // Simple date format adapter
+  const formatBracketDate = (d: string) => {
+    if (locale === 'en') return d;
+    // Dec 18, 22 -> 12月18日
+    const match = d.match(/([a-zA-Z]+) (\d+)/);
+    if (!match) return d;
+    const months: Record<string, string> = { 
+      Jan: '1月', Feb: '2月', Mar: '3月', Apr: '4月', May: '5月', Jun: '6月', 
+      Jul: '7月', Aug: '8月', Sep: '9月', Oct: '10月', Nov: '11月', Dec: '12月' 
+    };
+    return `${months[match[1]] || match[1]}${match[2]}日`;
+  };
   
   return (
     <div 
@@ -68,9 +84,9 @@ function MatchCard({ node }: { node: KnockoutNode }) {
       }}
     >
       <div className="flex justify-between items-center px-2 py-1 border-b border-white/5" style={{ background: 'rgba(0,0,0,0.4)' }}>
-        <span style={{ fontSize: '9px', fontWeight: 500, color: 'rgba(255,255,255,0.4)' }}>{m.dateStr}</span>
-        {m.isPenalties && <span style={{ fontSize: '9px', fontWeight: 800, color: '#FFD700' }}>FT (P)</span>}
-        {m.isAfterExtraTime && <span style={{ fontSize: '9px', fontWeight: 800, color: '#ADFF2F' }}>AET</span>}
+        <span style={{ fontSize: '9px', fontWeight: 500, color: 'rgba(255,255,255,0.4)' }}>{formatBracketDate(m.dateStr)}</span>
+        {m.isPenalties && <span style={{ fontSize: '9px', fontWeight: 800, color: '#FFD700' }}>{t.standings.penalties}</span>}
+        {m.isAfterExtraTime && <span style={{ fontSize: '9px', fontWeight: 800, color: '#ADFF2F' }}>{t.standings.extraTime}</span>}
       </div>
 
       <div className="flex flex-col p-2 gap-1.5">
@@ -92,7 +108,7 @@ function MatchCard({ node }: { node: KnockoutNode }) {
                   textOverflow: 'ellipsis'
                 }}
               >
-                {team.name}
+                {translateCountryName(team.name, locale)}
               </span>
             </div>
             
@@ -116,6 +132,7 @@ function MatchCard({ node }: { node: KnockoutNode }) {
 
 
 export function KnockoutBracketView({ year }: { year: HistoricYear }) {
+  const { t } = useTranslation();
   let root = BRACKET_2022;
   if (year === '2026') root = BRACKET_2026_TBD;
   else if (year === '2018') root = BRACKET_2018;
@@ -254,7 +271,7 @@ export function KnockoutBracketView({ year }: { year: HistoricYear }) {
           <div className="flex flex-col justify-around shrink-0 relative z-10" style={{ width: `${COL_WIDTH}px`, height: '100%', scrollSnapAlign: 'center' }}>
             <div className="flex flex-col justify-center" style={{ height: `${H_FINAL}px` }}>
               <div className="text-center mb-3">
-                 <span className="text-sm font-black tracking-[0.2em] text-[#FFD700] uppercase drop-shadow-[0_0_10px_rgba(255,215,0,0.5)]">World Cup Final</span>
+                 <span className="text-sm font-black tracking-[0.2em] text-[#FFD700] uppercase drop-shadow-[0_0_10px_rgba(255,215,0,0.5)]">{t.standings.final}</span>
               </div>
               <MatchCard node={finalNode[0]} />
               
@@ -263,7 +280,7 @@ export function KnockoutBracketView({ year }: { year: HistoricYear }) {
                  <div className="flex justify-center mt-3 animate-bounce">
                    <div className="px-3 py-1 bg-[#FFD700]/20 border border-[#FFD700]/40 rounded-full flex items-center gap-2">
                      <span style={{ fontSize: '12px' }}>👑</span>
-                     <span className="text-[#FFD700] text-xs font-bold tracking-widest">CHAMPION</span>
+                     <span className="text-[#FFD700] text-xs font-bold tracking-widest">{t.standings.champion}</span>
                    </div>
                  </div>
               )}
