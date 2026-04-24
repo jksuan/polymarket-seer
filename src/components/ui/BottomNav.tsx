@@ -39,7 +39,7 @@ export function BottomNav({ activeTab, onChange }: BottomNavProps) {
             onClick={() => onChange(p)}
             className="flex flex-col items-center flex-1 py-2 transition-all active:scale-95"
             style={{
-              color: isActive(p) ? '#00F0FF' : '#555',
+              color: isActive(p) ? '#00F0FF' : '#888',
               textShadow: isActive(p) ? '0 0 8px #00F0FF' : 'none',
             }}
           >
@@ -109,7 +109,7 @@ export function BottomNav({ activeTab, onChange }: BottomNavProps) {
             onClick={() => onChange(p)}
             className="flex flex-col items-center flex-1 py-2 transition-all active:scale-95"
             style={{
-              color: isActive(p) ? '#00F0FF' : '#555',
+              color: isActive(p) ? '#00F0FF' : '#888',
               textShadow: isActive(p) ? '0 0 8px #00F0FF' : 'none',
             }}
           >
