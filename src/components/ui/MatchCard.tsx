@@ -359,11 +359,11 @@ export function MatchCard({ match, index = 0, onPlaceBet, positions }: MatchCard
         tokenId={getSelectedTokenId()}
         outrightInfo={{
           title: confirmSide === 'draw'
-            ? `${cn(match.home.name)} vs ${cn(match.away.name)} ${t.discover.drawLabel.includes('DRAW') ? '— DRAW' : '— 平局'}`
+            ? `${cn(match.home.name)} vs ${cn(match.away.name)} — ${t.trade.draw}`
             : confirmSide === 'home'
               ? `${cn(match.home.name)} ${t.discover.win}`
               : `${cn(match.away.name)} ${t.discover.win}`,
-          directionLabel: confirmSide === 'draw' ? t.discover.drawLabel : confirmSide === 'home' ? `${t.trade.buy} ${cn(match.home.name)} ${t.discover.win}` : `${t.trade.buy} ${cn(match.away.name)} ${t.discover.win}`,
+          directionLabel: confirmSide === 'draw' ? `${t.trade.buy} ${t.trade.draw}` : confirmSide === 'home' ? `${t.trade.buy} ${cn(match.home.name)} ${t.discover.win}` : `${t.trade.buy} ${cn(match.away.name)} ${t.discover.win}`,
           probability: confirmSide === 'draw'
             ? match.draw.probability
             : confirmSide === 'home'

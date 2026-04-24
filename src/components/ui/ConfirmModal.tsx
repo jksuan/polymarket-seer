@@ -100,7 +100,7 @@ export function ConfirmModal({
   const isOutright = !!outrightInfo;
 
   const displayTitle      = isOutright ? outrightInfo!.title       : `${(side === 'home' ? market.homeTeam : side === 'draw' && market.drawTeam ? market.drawTeam : market.awayTeam).displayName}`;
-  const displaySubLabel   = isOutright ? outrightInfo!.directionLabel : (side === 'home' ? '主队' : side === 'draw' ? '平局' : '客队');
+  const displaySubLabel   = isOutright ? outrightInfo!.directionLabel : (side === 'home' ? t.trade.homeTeam : side === 'draw' ? t.trade.draw : t.trade.awayTeam);
   const baseOdds          = isOutright ? outrightInfo!.odds        : (side === 'home' ? market.homeOdds : side === 'draw' && market.drawOdds !== undefined ? market.drawOdds : market.awayOdds);
   const displayProbability = isOutright ? outrightInfo!.probability : (side === 'home' ? market.homeProbability : market.awayProbability);
   const primaryColor      = isOutright ? outrightInfo!.primaryColor : (side === 'home' ? market.homeTeam.primaryColor : market.awayTeam.primaryColor);
