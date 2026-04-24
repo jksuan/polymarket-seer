@@ -289,8 +289,8 @@ const en: TranslationKeys = {
     txUnknown: 'Unknown Market',
     txBuy: 'Buy',
     txSell: 'Sell',
-    txRedeem: 'Redeem',
-    txArchive: 'Archive',
+    txRedeem: 'Rdm',
+    txArchive: 'Arch',
     txOther: 'Other',
   },
 
