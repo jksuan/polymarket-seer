@@ -344,6 +344,14 @@ const en: TranslationKeys = {
     monthDay: (month: number, day: number) => `${['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][month - 1]} ${day}`,
     finals: 'Jul 19 Finals',
   },
+  // ─── Time Formatting ───
+  time: {
+    daysAndHours: (d: number, h: number) => `${d}d ${h}h`,
+    days: (d: number) => `${d}d`,
+    hours: (h: number) => `${h}h`,
+    minutes: (m: number) => `${m}m`,
+    lessThanMin: 'Less than 1m',
+  },
 } as const;
 
 export default en;

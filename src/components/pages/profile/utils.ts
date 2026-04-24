@@ -17,15 +17,15 @@ export function formatTimestamp(timestamp: number | null | undefined): string {
 }
 
 // Calculate holding duration based on buy/redeem timestamps
-export function formatHoldingTime(redeemTs: number, buyTs: number): string {
+export function formatHoldingTime(redeemTs: number, buyTs: number, timeTranslations: any): string {
   if (redeemTs > 0 && buyTs > 0 && redeemTs > buyTs) {
     const diffSec = redeemTs - buyTs;
     const days = Math.floor(diffSec / 86400);
     const hours = Math.floor((diffSec % 86400) / 3600);
-    if (days > 0) return `${days}天${hours > 0 ? hours + "小时" : ""}`;
-    if (hours > 0) return `${hours}小时`;
+    if (days > 0) return hours > 0 ? timeTranslations.daysAndHours(days, hours) : timeTranslations.days(days);
+    if (hours > 0) return timeTranslations.hours(hours);
     const mins = Math.floor(diffSec / 60);
-    return mins > 0 ? `${mins}分钟` : "不足1分钟";
+    return mins > 0 ? timeTranslations.minutes(mins) : timeTranslations.lessThanMin;
   }
   return "";
 }

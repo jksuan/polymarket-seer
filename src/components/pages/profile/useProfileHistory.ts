@@ -14,7 +14,7 @@ export interface HistoryRowData {
   outcome: string;
 }
 
-export function useProfileHistory(trades: any[]): HistoryRowData[] {
+export function useProfileHistory(trades: any[], t: any): HistoryRowData[] {
   return useMemo(() => {
     if (!trades || trades.length === 0) return [];
     
@@ -58,7 +58,7 @@ export function useProfileHistory(trades: any[]): HistoryRowData[] {
 
       const redeemTs = Number(item.timestamp || 0);
       const buyTs = buyFirstTsByCondId[item.conditionId] || 0;
-      const holdingStr = formatHoldingTime(redeemTs, buyTs);
+      const holdingStr = formatHoldingTime(redeemTs, buyTs, t.time);
       const timeStr = formatTimestamp(item.timestamp);
       const outcome = item.outcome || "";
       
@@ -77,5 +77,5 @@ export function useProfileHistory(trades: any[]): HistoryRowData[] {
         outcome
       };
     });
-  }, [trades]);
+  }, [trades, t]);
 }

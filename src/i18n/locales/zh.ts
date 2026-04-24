@@ -342,6 +342,15 @@ const zh = {
     monthDay: (month: number, day: number) => `${month}月${day}日`,
     finals: '7月19日 决赛',
   },
+
+  // ─── 时间显示 ───
+  time: {
+    daysAndHours: (d: number, h: number) => `${d}天${h}小时`,
+    days: (d: number) => `${d}天`,
+    hours: (h: number) => `${h}小时`,
+    minutes: (m: number) => `${m}分钟`,
+    lessThanMin: '不足1分钟',
+  },
 };
 
 export default zh;

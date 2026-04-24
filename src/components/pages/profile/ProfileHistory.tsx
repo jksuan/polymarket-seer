@@ -15,7 +15,7 @@ export interface ProfileHistoryProps {
 
 export function ProfileHistory({ portfolioLoading, trades }: ProfileHistoryProps) {
   const { t } = useTranslation();
-  const historyData = useProfileHistory(trades);
+  const historyData = useProfileHistory(trades, t);
 
   const {
     isGenerating, showModal, cardImageUrl, cardData,
