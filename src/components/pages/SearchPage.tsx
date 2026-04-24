@@ -9,31 +9,25 @@ import { OutrightCard } from '@/components/ui/OutrightCard';
 import { BinaryOutrightCard } from '@/components/ui/BinaryOutrightCard';
 import { SportMarket } from '@/types/sports';
 import { getCountryFlagUrl } from '@/lib/countryFlags';
+import { useTranslation } from '@/i18n';
+import { translateCountryName } from '@/i18n/countryNames';
 
 // ═══════════════════════════════════════════════════
 // Quick Filter — 空窗期引导数据
 // ═══════════════════════════════════════════════════
 
 const HOT_COUNTRIES = [
-  { name: 'Brazil', label: '巴西' },
-  { name: 'Argentina', label: '阿根廷' },
-  { name: 'France', label: '法国' },
-  { name: 'Germany', label: '德国' },
-  { name: 'Spain', label: '西班牙' },
-  { name: 'England', label: '英格兰' },
-  { name: 'Portugal', label: '葡萄牙' },
-  { name: 'Japan', label: '日本' },
-  { name: 'United States', label: '美国' },
-  { name: 'Mexico', label: '墨西哥' },
+  'Brazil', 'Argentina', 'France', 'Germany', 'Spain',
+  'England', 'Portugal', 'Japan', 'United States', 'Mexico',
 ];
 
-const HOT_TOPICS: Array<{ keyword: string; label: string; icon: any }> = [
-  { keyword: 'Messi', label: '梅西', icon: User },
-  { keyword: 'Neymar', label: '内马尔', icon: User },
-  { keyword: 'Mbappe', label: '姆巴佩', icon: User },
-  { keyword: 'Ronaldo', label: 'C罗', icon: User },
-  { keyword: 'World Cup Winner', label: '冠军预测', icon: Trophy },
-  { keyword: 'Golden Boot', label: '金靴奖', icon: TrendingUp },
+const HOT_TOPIC_KEYS = [
+  { keyword: 'Messi', labelKey: 'topicMessi' as const, icon: User },
+  { keyword: 'Neymar', labelKey: 'topicNeymar' as const, icon: User },
+  { keyword: 'Mbappe', labelKey: 'topicMbappe' as const, icon: User },
+  { keyword: 'Ronaldo', labelKey: 'topicRonaldo' as const, icon: User },
+  { keyword: 'World Cup Winner', labelKey: 'topicChampion' as const, icon: Trophy },
+  { keyword: 'Golden Boot', labelKey: 'topicGoldenBoot' as const, icon: TrendingUp },
 ];
 
 // ═══════════════════════════════════════════════════
@@ -268,6 +262,8 @@ interface SearchPageProps {
 }
 
 export function SearchPage({ onPlaceBet, positions }: SearchPageProps) {
+  const { t, locale } = useTranslation();
+  const cnName = (name: string) => translateCountryName(name, locale);
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<ClassifiedResults | null>(null);
@@ -357,7 +353,7 @@ export function SearchPage({ onPlaceBet, positions }: SearchPageProps) {
                 executeSearch(query);
               }
             }}
-            placeholder="搜寻队、赛事或话题..."
+            placeholder={t.search.placeholder}
             className="flex-1 bg-transparent py-2.5 min-w-0 focus:outline-none"
             style={{
               fontFamily: 'Inter',
@@ -393,7 +389,7 @@ export function SearchPage({ onPlaceBet, positions }: SearchPageProps) {
                 boxShadow: '0 2px 10px rgba(0, 240, 255, 0.1)',
               }}
             >
-              搜索
+              {t.search.searchBtn}
             </button>
           </div>
         </div>
@@ -414,14 +410,14 @@ export function SearchPage({ onPlaceBet, positions }: SearchPageProps) {
             <div className="flex items-center gap-2 mb-3">
               <Flame size={16} color="#FF3B30" />
               <span style={{ fontFamily: 'Inter', fontSize: '13px', fontWeight: 800, color: '#FFF', letterSpacing: '0.02em' }}>
-                世界杯 · 热门球队
+                {t.search.hotTeams}
               </span>
             </div>
             <div className="flex flex-wrap gap-2">
-              {HOT_COUNTRIES.map(country => (
+              {HOT_COUNTRIES.map(countryName => (
                 <button
-                  key={country.name}
-                  onClick={() => handleQuickFilter(country.name)}
+                  key={countryName}
+                  onClick={() => handleQuickFilter(countryName)}
                   className="flex items-center gap-2 px-3 py-2 rounded-xl active:scale-95 transition-all"
                   style={{
                     background: 'rgba(255,255,255,0.04)',
@@ -430,8 +426,8 @@ export function SearchPage({ onPlaceBet, positions }: SearchPageProps) {
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={getCountryFlagUrl(country.name, 40)}
-                    alt={country.name}
+                    src={getCountryFlagUrl(countryName, 40)}
+                    alt={countryName}
                     width={20}
                     height={15}
                     style={{
@@ -443,7 +439,7 @@ export function SearchPage({ onPlaceBet, positions }: SearchPageProps) {
                     }}
                   />
                   <span style={{ fontFamily: 'Inter', fontSize: '12px', fontWeight: 600, color: 'rgba(255,255,255,0.7)' }}>
-                    {country.label}
+                    {cnName(countryName)}
                   </span>
                 </button>
               ))}
@@ -455,11 +451,11 @@ export function SearchPage({ onPlaceBet, positions }: SearchPageProps) {
             <div className="flex items-center gap-2 mb-3">
               <Zap size={16} color="#FF9500" />
               <span style={{ fontFamily: 'Inter', fontSize: '13px', fontWeight: 800, color: '#FFF', letterSpacing: '0.02em' }}>
-                世界杯 · 热门话题
+                {t.search.hotTopics}
               </span>
             </div>
             <div className="flex flex-wrap gap-2">
-              {HOT_TOPICS.map(topic => {
+              {HOT_TOPIC_KEYS.map(topic => {
                 const Icon = topic.icon;
                 return (
                   <button
@@ -473,7 +469,7 @@ export function SearchPage({ onPlaceBet, positions }: SearchPageProps) {
                   >
                     <Icon size={14} color="rgba(255,255,255,0.7)" />
                     <span style={{ fontFamily: 'Inter', fontSize: '12px', fontWeight: 600, color: 'rgba(255,255,255,0.7)' }}>
-                      {topic.label}
+                      {t.search[topic.labelKey]}
                     </span>
                   </button>
                 );
@@ -488,7 +484,7 @@ export function SearchPage({ onPlaceBet, positions }: SearchPageProps) {
           >
             <Search size={13} className="text-white/20 flex-shrink-0" />
             <span style={{ fontFamily: 'Inter', fontSize: '11px', color: 'rgba(255,255,255,0.3)' }}>
-              输入英文关键词搜索 Polymarket 上的实时市场，如 &quot;Messi&quot;, &quot;Champions League&quot;
+              {t.search.searchHint}
             </span>
           </div>
         </motion.div>
@@ -521,10 +517,10 @@ export function SearchPage({ onPlaceBet, positions }: SearchPageProps) {
             </div>
           </div>
           <h3 style={{ fontFamily: 'Inter', fontSize: '16px', fontWeight: 800, color: '#fff', marginBottom: '6px' }}>
-            未找到相关市场
+            {t.search.noResults}
           </h3>
           <p style={{ fontFamily: 'Inter', fontSize: '12px', color: 'rgba(255,255,255,0.4)', textAlign: 'center', maxWidth: '260px' }}>
-            尝试用英文搜索球队名称或赛事关键词，如 &quot;Brazil&quot;, &quot;World Cup Winner&quot;
+            {t.search.noResultsHint}
           </p>
         </div>
       )}
@@ -537,7 +533,7 @@ export function SearchPage({ onPlaceBet, positions }: SearchPageProps) {
           {/* 结果计数 */}
           <div className="px-5 pb-2 flex items-center gap-2">
             <span style={{ fontFamily: 'Inter', fontSize: '12px', fontWeight: 600, color: 'rgba(255,255,255,0.3)' }}>
-              找到 {totalResults} 个市场
+              {t.search.foundMarkets(totalResults)}
             </span>
           </div>
 
@@ -548,7 +544,7 @@ export function SearchPage({ onPlaceBet, positions }: SearchPageProps) {
                 <div className="flex items-center gap-1.5">
                   <div className="w-1.5 h-1.5 rounded-full bg-[#FF2A55]" />
                   <span style={{ fontFamily: 'Inter', fontSize: '13px', fontWeight: 800, color: '#fff', letterSpacing: '-0.01em' }}>
-                    赛程
+                    {t.search.matchesSection}
                   </span>
                   <span style={{ fontFamily: 'Inter', fontSize: '11px', fontWeight: 600, color: 'rgba(255,255,255,0.3)', marginLeft: '4px' }}>
                     {results.matches.length}
@@ -574,7 +570,7 @@ export function SearchPage({ onPlaceBet, positions }: SearchPageProps) {
                 <div className="flex items-center gap-1.5">
                   <div className="w-1.5 h-1.5 rounded-full bg-[#FFD700]" />
                   <span style={{ fontFamily: 'Inter', fontSize: '13px', fontWeight: 800, color: '#fff', letterSpacing: '-0.01em' }}>
-                    趣味投注
+                    {t.search.funBetsSection}
                   </span>
                   <span style={{ fontFamily: 'Inter', fontSize: '11px', fontWeight: 600, color: 'rgba(255,255,255,0.3)', marginLeft: '4px' }}>
                     {results.outrights.length + results.binaries.length}

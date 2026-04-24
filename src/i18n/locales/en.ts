@@ -219,6 +219,7 @@ const en: TranslationKeys = {
   // ─── Profile ───
   profile: {
     loginPrompt: 'Connect to start predicting',
+    loginDesc: 'Log in to view your cross-chain wallet balance, past records, and current positions.',
     overview: 'Overview',
     positions: 'Positions',
     orders: 'Orders',
@@ -244,19 +245,39 @@ const en: TranslationKeys = {
   // ─── Challenge Page ───
   challenge: {
     title: '2026 FIFA World Cup',
-    today: 'Today',
-    tomorrow: 'Tomorrow',
-    dayAfter: 'Day After',
-    filterByTeam: 'Filter by Team',
-    share: 'Share',
-    participants: 'Participants',
+    liveNow: '🔴 LIVE NOW',
+    kickoff: 'Kickoff',
+    ended: 'ENDED',
+    winRate: 'Win Rate',
+    drawLabel: 'Draw',
+    marketPool: 'Market Pool',
+    holding: 'Holding',
+    shares: 'Shares',
+    noMatches: 'No matches available, check back later',
+    swipeLeft: 'Swipe',
+    swipeRight: 'Swipe',
+    buyWin: 'BUY {code} WIN',
+    buyDraw: 'BUY DRAW',
   },
 
   // ─── Search Page ───
   search: {
-    placeholder: 'Search teams or events...',
-    hotRecommend: 'Trending',
-    noResults: 'No results found',
+    placeholder: 'Search teams, matches or topics...',
+    searchBtn: 'Search',
+    hotTeams: 'World Cup · Hot Teams',
+    hotTopics: 'World Cup · Hot Topics',
+    searchHint: 'Enter keywords to search live markets on Polymarket, e.g. "Messi", "Champions League"',
+    noResults: 'No markets found',
+    noResultsHint: 'Try searching by team name or event keyword, e.g. "Brazil", "World Cup Winner"',
+    foundMarkets: (n: number) => `Found ${n} markets`,
+    matchesSection: 'Matches',
+    funBetsSection: 'Fun Bets',
+    topicChampion: 'Champion',
+    topicGoldenBoot: 'Golden Boot',
+    topicMessi: 'Messi',
+    topicNeymar: 'Neymar',
+    topicMbappe: 'Mbappé',
+    topicRonaldo: 'Ronaldo',
   },
 
   // ─── Deposit Drawer ───

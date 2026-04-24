@@ -217,6 +217,7 @@ const zh = {
   // ─── 个人中心 ───
   profile: {
     loginPrompt: '连接进入预测场',
+    loginDesc: '登陆以查看您的跨链钱包余额、过往战绩和当前仓位。',
     overview: '总览',
     positions: '持仓',
     orders: '挂单',
@@ -242,19 +243,39 @@ const zh = {
   // ─── 挑战页 ───
   challenge: {
     title: '2026 FIFA World Cup',
-    today: '今天',
-    tomorrow: '明天',
-    dayAfter: '后天',
-    filterByTeam: '按球队筛选',
-    share: '分享',
-    participants: '参与人数',
+    liveNow: '🔴 LIVE NOW',
+    kickoff: '开赛',
+    ended: '已结束',
+    winRate: '胜率',
+    drawLabel: '平局',
+    marketPool: '市场交易池',
+    holding: '已持仓',
+    shares: '股',
+    noMatches: '暂无可用赛事，请稍后再来',
+    swipeLeft: '左拉',
+    swipeRight: '右拉',
+    buyWin: '买{code}胜',
+    buyDraw: '买平局',
   },
 
   // ─── 搜索页 ───
   search: {
-    placeholder: '搜索球队或赛事...',
-    hotRecommend: '热门推荐',
-    noResults: '未找到相关结果',
+    placeholder: '搜寻队、赛事或话题...',
+    searchBtn: '搜索',
+    hotTeams: '世界杯 · 热门球队',
+    hotTopics: '世界杯 · 热门话题',
+    searchHint: '输入英文关键词搜索 Polymarket 上的实时市场，如 "Messi", "Champions League"',
+    noResults: '未找到相关市场',
+    noResultsHint: '尝试用英文搜索球队名称或赛事关键词，如 "Brazil", "World Cup Winner"',
+    foundMarkets: (n: number) => `找到 ${n} 个市场`,
+    matchesSection: '赛程',
+    funBetsSection: '趣味投注',
+    topicChampion: '冠军预测',
+    topicGoldenBoot: '金靴奖',
+    topicMessi: '梅西',
+    topicNeymar: '内马尔',
+    topicMbappe: '姆巴佩',
+    topicRonaldo: 'C罗',
   },
 
   // ─── 充值抽屉 ───

@@ -10,6 +10,8 @@ import { ShareModal } from '@/components/ui/ShareModal';
 import { TopHeader } from '@/components/ui/TopHeader';
 import { formatVolume } from '@/lib/utils';
 import { getCountryFlagUrl } from '@/lib/countryFlags';
+import { useTranslation } from '@/i18n';
+import { translateCountryName } from '@/i18n/countryNames';
 
 // ═══════════════════════════════════════════════════
 // 类型 & 常量
@@ -117,6 +119,8 @@ interface CarouselCardProps {
 
 const CarouselCard = memo(function CarouselCard({ match, positions, onShare }: CarouselCardProps) {
   const isLive = match.status === 'live';
+  const { t, locale } = useTranslation();
+  const cn = (name: string) => translateCountryName(name, locale);
 
   // ── 计算该场比赛的用户持仓 ──
   const homePos = positions?.find(p => p.asset === match.home.tokenId && parseFloat(p.size) > 0);
@@ -165,7 +169,7 @@ const CarouselCard = memo(function CarouselCard({ match, positions, onShare }: C
                   boxShadow: '0 0 12px rgba(255,80,0,0.5)',
                 }}
               >
-                🔴 LIVE NOW
+                {t.challenge.liveNow}
               </motion.div>
             )}
             {match.status === 'upcoming' && (
@@ -181,7 +185,7 @@ const CarouselCard = memo(function CarouselCard({ match, positions, onShare }: C
                 textTransform: 'uppercase',
                 letterSpacing: '0.08em',
               }}>
-                开赛 {match.timeLabel} · {match.dateLabel}
+                {t.challenge.kickoff} {match.timeLabel} · {match.dateLabel}
               </div>
             )}
             {match.status === 'ended' && (
@@ -197,7 +201,7 @@ const CarouselCard = memo(function CarouselCard({ match, positions, onShare }: C
                 textTransform: 'uppercase',
                 letterSpacing: '0.08em',
               }}>
-                已结束 · ENDED
+                {t.challenge.ended}
               </div>
             )}
           </div>
@@ -215,7 +219,7 @@ const CarouselCard = memo(function CarouselCard({ match, positions, onShare }: C
                 border: match.isGroupStage ? '1px solid rgba(255,215,0,0.3)' : '1px solid rgba(173,255,47,0.3)',
               }}
             >
-              {match.isGroupStage ? `${match.group}组` : '淘汰赛'}
+              {match.isGroupStage ? `${locale === 'zh' ? '' : 'Group '}${match.group}${locale === 'zh' ? t.home.groupSuffix : ''}` : t.home.knockoutStage}
             </div>
           </div>
 
@@ -233,7 +237,7 @@ const CarouselCard = memo(function CarouselCard({ match, positions, onShare }: C
               />
               <div className="text-center">
                 <div style={{ fontFamily: 'Inter', fontWeight: 700, fontSize: '13px', color: 'rgba(255,255,255,0.9)', marginBottom: '4px' }}>
-                  {match.home.name}
+                  {cn(match.home.name)}
                 </div>
                 <div style={{
                   fontFamily: 'Inter',
@@ -247,7 +251,7 @@ const CarouselCard = memo(function CarouselCard({ match, positions, onShare }: C
                   {(100 / match.home.probability).toFixed(2)}x
                 </div>
                 <div style={{ fontFamily: 'Inter', fontSize: '11px', color: 'rgba(255,255,255,0.4)', marginTop: '2px' }}>
-                  {match.home.probability}% 胜率
+                  {match.home.probability}% {t.challenge.winRate}
                 </div>
               </div>
             </div>
@@ -263,7 +267,7 @@ const CarouselCard = memo(function CarouselCard({ match, positions, onShare }: C
                   border: '1px solid rgba(255,255,255,0.08)',
                 }}
               >
-                <div style={{ fontFamily: 'Inter', fontSize: '10px', fontWeight: 700, color: 'rgba(255,255,255,0.35)', textAlign: 'center' }}>平局</div>
+                <div style={{ fontFamily: 'Inter', fontSize: '10px', fontWeight: 700, color: 'rgba(255,255,255,0.35)', textAlign: 'center' }}>{t.challenge.drawLabel}</div>
                 <div style={{ fontFamily: 'Inter', fontSize: '14px', fontWeight: 900, fontStyle: 'italic', color: 'rgba(255,255,255,0.7)', textAlign: 'center', lineHeight: 1, marginTop: '1px' }}>
                   {(100 / match.draw.probability).toFixed(2)}x
                 </div>
@@ -285,7 +289,7 @@ const CarouselCard = memo(function CarouselCard({ match, positions, onShare }: C
               />
               <div className="text-center">
                 <div style={{ fontFamily: 'Inter', fontWeight: 700, fontSize: '13px', color: 'rgba(255,255,255,0.9)', marginBottom: '4px' }}>
-                  {match.away.name}
+                  {cn(match.away.name)}
                 </div>
                 <div style={{
                   fontFamily: 'Inter',
@@ -299,7 +303,7 @@ const CarouselCard = memo(function CarouselCard({ match, positions, onShare }: C
                   {(100 / match.away.probability).toFixed(2)}x
                 </div>
                 <div style={{ fontFamily: 'Inter', fontSize: '11px', color: 'rgba(255,255,255,0.4)', marginTop: '2px' }}>
-                  {match.away.probability}% 胜率
+                  {match.away.probability}% {t.challenge.winRate}
                 </div>
               </div>
             </div>
@@ -323,7 +327,7 @@ const CarouselCard = memo(function CarouselCard({ match, positions, onShare }: C
               </div>
               <div>
                 <div style={{ fontSize: '10px', fontFamily: 'Inter', fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  市场交易池
+                  {t.challenge.marketPool}
                 </div>
                 <div style={{ fontFamily: 'Inter', fontWeight: 900, fontSize: '16px', color: '#fff', marginTop: '1px' }}>
                   {formatVolume(match.volume)}
@@ -340,12 +344,12 @@ const CarouselCard = memo(function CarouselCard({ match, positions, onShare }: C
                 >
                   <div className="w-1.5 h-1.5 rounded-full bg-[#00F0FF] animate-pulse" />
                   <span style={{ fontFamily: 'Inter', fontSize: '11px', fontWeight: 600, color: '#00F0FF' }}>
-                    已持仓
+                    {t.challenge.holding}
                   </span>
                   <span style={{ fontFamily: 'Inter', fontSize: '12px', fontWeight: 800, color: '#fff', marginLeft: '2px' }}>
-                    {homePos ? `${match.home.name} ${parseFloat(homePos.size).toFixed(1)} 股` : 
-                     awayPos ? `${match.away.name} ${parseFloat(awayPos.size).toFixed(1)} 股` : 
-                     `平局 ${parseFloat(drawPos!.size).toFixed(1)} 股`}
+                    {homePos ? `${cn(match.home.name)} ${parseFloat(homePos.size).toFixed(1)} ${t.challenge.shares}` : 
+                     awayPos ? `${cn(match.away.name)} ${parseFloat(awayPos.size).toFixed(1)} ${t.challenge.shares}` : 
+                     `${t.challenge.drawLabel} ${parseFloat(drawPos!.size).toFixed(1)} ${t.challenge.shares}`}
                   </span>
                 </div>
               )}
@@ -375,6 +379,8 @@ const CarouselCard = memo(function CarouselCard({ match, positions, onShare }: C
 // ═══════════════════════════════════════════════════
 
 export function ChallengePage({ onPlaceBet, positions }: ChallengePageProps) {
+  const { t, locale } = useTranslation();
+  const cn = (name: string) => translateCountryName(name, locale);
   const scrollRef = useRef<HTMLDivElement>(null);
   const hasRestoredScroll = useRef(false);
 
@@ -533,7 +539,7 @@ export function ChallengePage({ onPlaceBet, positions }: ChallengePageProps) {
         <div className="flex-1 flex flex-col items-center justify-center gap-4 px-8">
           <Zap size={40} color="#00F0FF" style={{ opacity: 0.3 }} />
           <span style={{ fontFamily: 'Inter', fontSize: '14px', fontWeight: 700, color: 'rgba(255,255,255,0.4)', textAlign: 'center' }}>
-            暂无可用赛事，请稍后再来
+            {t.challenge.noMatches}
           </span>
         </div>
       )}
@@ -560,13 +566,13 @@ export function ChallengePage({ onPlaceBet, positions }: ChallengePageProps) {
             <div className="flex items-center justify-center gap-4 py-2 z-20">
               <div className="flex items-center gap-1.5 opacity-60">
                 <div style={{ width: '24px', height: '2px', background: 'linear-gradient(to left, #fff, transparent)', borderRadius: '1px' }} />
-                <span style={{ fontSize: '10px', fontFamily: 'Inter', fontWeight: 600, color: 'rgba(255,255,255,0.6)' }}>左拉</span>
+                <span style={{ fontSize: '10px', fontFamily: 'Inter', fontWeight: 600, color: 'rgba(255,255,255,0.6)' }}>{t.challenge.swipeLeft}</span>
               </div>
               <span style={{ fontFamily: 'Inter', fontWeight: 900, color: '#00F0FF', textShadow: '0 0 8px #00F0FF', fontSize: '14px' }}>
                 {currentIndex + 1} / {swipeMatches.length}
               </span>
               <div className="flex items-center gap-1.5 opacity-60">
-                <span style={{ fontSize: '10px', fontFamily: 'Inter', fontWeight: 600, color: 'rgba(255,255,255,0.6)' }}>右拉</span>
+                <span style={{ fontSize: '10px', fontFamily: 'Inter', fontWeight: 600, color: 'rgba(255,255,255,0.6)' }}>{t.challenge.swipeRight}</span>
                 <div style={{ width: '24px', height: '2px', background: 'linear-gradient(to right, #fff, transparent)', borderRadius: '1px' }} />
               </div>
             </div>
@@ -595,7 +601,7 @@ export function ChallengePage({ onPlaceBet, positions }: ChallengePageProps) {
                 }}
               >
                 <div className="truncate w-full px-1" style={{ fontFamily: 'Inter', fontSize: 'clamp(13px, 3.5vw, 16px)', fontWeight: 900, color: '#fff', letterSpacing: '0.03em' }}>
-                  买{match.home.shortCode}胜
+                  {t.challenge.buyWin.replace('{code}', locale === 'zh' ? cn(match.home.name) : match.home.shortCode)}
                 </div>
               </button>
 
@@ -610,7 +616,7 @@ export function ChallengePage({ onPlaceBet, positions }: ChallengePageProps) {
                   boxShadow: '0 8px 24px rgba(51,65,85,0.4)',
                 }}
               >
-                <div className="truncate w-full px-1" style={{ fontFamily: 'Inter', fontSize: 'clamp(13px, 3.5vw, 16px)', fontWeight: 900, color: 'rgba(255,255,255,0.95)', letterSpacing: '0.03em' }}>买平局</div>
+                <div className="truncate w-full px-1" style={{ fontFamily: 'Inter', fontSize: 'clamp(13px, 3.5vw, 16px)', fontWeight: 900, color: 'rgba(255,255,255,0.95)', letterSpacing: '0.03em' }}>{t.challenge.buyDraw}</div>
               </button>
 
               {/* 客队胜 */}
@@ -625,7 +631,7 @@ export function ChallengePage({ onPlaceBet, positions }: ChallengePageProps) {
                 }}
               >
                 <div className="truncate w-full px-1" style={{ fontFamily: 'Inter', fontSize: 'clamp(13px, 3.5vw, 16px)', fontWeight: 900, color: '#fff', letterSpacing: '0.03em' }}>
-                  买{match.away.shortCode}胜
+                  {t.challenge.buyWin.replace('{code}', locale === 'zh' ? cn(match.away.name) : match.away.shortCode)}
                 </div>
               </button>
 
@@ -650,15 +656,15 @@ export function ChallengePage({ onPlaceBet, positions }: ChallengePageProps) {
               tokenId={getSelectedTokenId()}
               outrightInfo={{
                 title: confirmSide === 'draw'
-                  ? `${match.home.name} vs ${match.away.name} — 平局`
+                  ? `${cn(match.home.name)} vs ${cn(match.away.name)} — ${t.trade.draw}`
                   : confirmSide === 'home'
-                    ? `${match.home.name} 胜`
-                    : `${match.away.name} 胜`,
+                    ? `${cn(match.home.name)} ${t.discover.win}`
+                    : `${cn(match.away.name)} ${t.discover.win}`,
                 directionLabel: confirmSide === 'draw'
-                  ? '买入平局'
+                  ? `${t.trade.buy} ${t.trade.draw}`
                   : confirmSide === 'home'
-                    ? `买入 ${match.home.name} 胜`
-                    : `买入 ${match.away.name} 胜`,
+                    ? `${t.trade.buy} ${cn(match.home.name)} ${t.discover.win}`
+                    : `${t.trade.buy} ${cn(match.away.name)} ${t.discover.win}`,
                 probability: confirmSide === 'draw'
                   ? match.draw.probability
                   : confirmSide === 'home'

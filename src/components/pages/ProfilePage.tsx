@@ -5,6 +5,7 @@ import { motion } from "motion/react";
 import { Wallet } from "lucide-react";
 import { TopHeader } from "@/components/ui/TopHeader";
 import { usePolymarketAuth } from "@/contexts/PolymarketAuthContext";
+import { useTranslation } from '@/i18n';
 
 import { ProfileOverview } from "./profile/ProfileOverview";
 import { ProfilePositions } from "./profile/ProfilePositions";
@@ -39,6 +40,7 @@ export function ProfilePage({
   onSell, onLimitSell, onCancelOrder, onRedeem
 }: ProfilePageProps) {
   const { displayIdentifier } = usePolymarketAuth();
+  const { t } = useTranslation();
   const [activeTab, setActiveTabRaw] = useState<"stats" | "active" | "orders" | "history" | "transactions">("stats");
 
   useEffect(() => {
@@ -76,12 +78,12 @@ export function ProfilePage({
            <div className="w-20 h-20 bg-blue-600/20 rounded-full flex items-center justify-center mb-6">
               <Wallet size={36} className="text-blue-500" />
            </div>
-           <h1 className="text-2xl font-black italic text-white mb-2">连接进入预测场</h1>
+           <h1 className="text-2xl font-black italic text-white mb-2">{t.profile.loginPrompt}</h1>
            <p className="text-white/50 text-sm text-center mb-8 max-w-[240px]">
-             登陆以查看您的跨链钱包余额、过往战绩和当前仓位。
+             {t.profile.loginDesc}
            </p>
            <button onClick={login} className="bg-blue-600 hover:bg-blue-500 text-white font-bold w-full max-w-[280px] py-4 rounded-2xl shadow-[0_0_20px_rgba(37,99,235,0.4)] active:scale-95 transition-all">
-              登录
+              {t.common.login}
            </button>
         </div>
       </div>
@@ -106,7 +108,7 @@ export function ProfilePage({
             className="relative pb-2 font-bold text-[15px] transition-colors shrink-0"
             style={{ color: activeTab === "stats" ? "#dee5ff" : "#a3aac4" }}
           >
-            总览
+            {t.profile.overview}
             {activeTab === "stats" && (
               <motion.div
                 layoutId="activeTabIndicator"
@@ -120,7 +122,7 @@ export function ProfilePage({
             className="relative pb-2 font-bold text-[15px] transition-colors shrink-0"
             style={{ color: activeTab === "active" ? "#dee5ff" : "#a3aac4" }}
           >
-            持仓<span className="text-[12px] opacity-60 font-medium">({positions?.length || 0})</span>
+            {t.profile.positions}<span className="text-[12px] opacity-60 font-medium">({positions?.length || 0})</span>
             {activeTab === "active" && (
               <motion.div
                 layoutId="activeTabIndicator"
@@ -134,7 +136,7 @@ export function ProfilePage({
             className="relative pb-2 font-bold text-[15px] transition-colors shrink-0"
             style={{ color: activeTab === "orders" ? "#dee5ff" : "#a3aac4" }}
           >
-            挂单<span className="text-[12px] opacity-60 font-medium">({openOrders?.length || 0})</span>
+            {t.profile.orders}<span className="text-[12px] opacity-60 font-medium">({openOrders?.length || 0})</span>
             {activeTab === "orders" && (
               <motion.div
                 layoutId="activeTabIndicator"
@@ -148,7 +150,7 @@ export function ProfilePage({
             className="relative pb-2 font-bold text-[15px] transition-colors shrink-0"
             style={{ color: activeTab === "history" ? "#dee5ff" : "#a3aac4" }}
           >
-            战绩<span className="text-[12px] opacity-60 font-medium">({historyCount})</span>
+            {t.profile.history}<span className="text-[12px] opacity-60 font-medium">({historyCount})</span>
             {activeTab === "history" && (
               <motion.div
                 layoutId="activeTabIndicator"
@@ -162,7 +164,7 @@ export function ProfilePage({
             className="relative pb-2 font-bold text-[15px] transition-colors shrink-0"
             style={{ color: activeTab === "transactions" ? "#dee5ff" : "#a3aac4" }}
           >
-            明细<span className="text-[12px] opacity-60 font-medium">({transactionsCount})</span>
+            {t.profile.transactions}<span className="text-[12px] opacity-60 font-medium">({transactionsCount})</span>
             {activeTab === "transactions" && (
               <motion.div
                 layoutId="activeTabIndicator"
