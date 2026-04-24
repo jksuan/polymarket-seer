@@ -86,7 +86,7 @@ export function SubTabs({
                 knockout: t.home.knockoutPicker,
               }[tab.id] || tab.label}
               {isGroupActive && selectedGroup && (
-                <span style={{ color: '#FFD700', fontWeight: 900, marginLeft: '2px' }}>{selectedGroup}{t.home.groupSuffix}</span>
+                <span style={{ color: '#FFD700', fontWeight: 900, marginLeft: '2px' }}>{t.standings.groupPrefix}{selectedGroup}{t.standings.groupSuffix}</span>
               )}
               {isKnockoutActive && selectedKnockout && (
                 <span style={{ color: '#FFD700', fontWeight: 900, marginLeft: '2px' }}>{t.home.knockoutsTrans[selectedKnockout as keyof typeof t.home.knockoutsTrans]}</span>
@@ -177,7 +177,7 @@ function GroupFilterSheetContent({ isOpen, onClose, selectedGroup, onSelect }: a
                       }}
                     >
                       <span className="text-[16px] font-black" style={{ color: isSelected ? '#FFD700' : 'rgba(255,255,255,0.7)' }}>
-                        {g}
+                        {t.standings.groupPrefix}{g}{t.standings.groupSuffix}
                       </span>
                     </button>
                   );
