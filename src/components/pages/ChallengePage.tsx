@@ -600,7 +600,7 @@ export function ChallengePage({ onPlaceBet, positions }: ChallengePageProps) {
                   boxShadow: `0 8px 24px ${match.home.style.glow}`,
                 }}
               >
-                <div className="truncate w-full px-1" style={{ fontFamily: 'Inter', fontSize: 'clamp(11px, 3vw, 13px)', fontWeight: 900, color: '#fff', letterSpacing: '0.03em' }}>
+                <div className="truncate w-full px-0.5 sm:px-1" style={{ fontFamily: 'Inter', fontSize: locale === 'zh' ? 'clamp(11px, 3vw, 13px)' : 'clamp(10px, 2.8vw, 13px)', fontWeight: 900, color: '#fff', letterSpacing: locale === 'zh' ? '0.03em' : '-0.01em' }}>
                   {t.challenge.buyWin.replace('{code}', locale === 'zh' ? cn(match.home.name, true) : match.home.shortCode)}
                 </div>
               </button>
@@ -616,7 +616,7 @@ export function ChallengePage({ onPlaceBet, positions }: ChallengePageProps) {
                   boxShadow: '0 8px 24px rgba(51,65,85,0.4)',
                 }}
               >
-                <div className="truncate w-full px-1" style={{ fontFamily: 'Inter', fontSize: 'clamp(11px, 3vw, 13px)', fontWeight: 900, color: 'rgba(255,255,255,0.95)', letterSpacing: '0.03em' }}>{t.challenge.buyDraw}</div>
+                <div className="truncate w-full px-0.5 sm:px-1" style={{ fontFamily: 'Inter', fontSize: locale === 'zh' ? 'clamp(11px, 3vw, 13px)' : 'clamp(10px, 2.8vw, 13px)', fontWeight: 900, color: 'rgba(255,255,255,0.95)', letterSpacing: locale === 'zh' ? '0.03em' : '-0.01em' }}>{t.challenge.buyDraw}</div>
               </button>
 
               {/* 客队胜 */}
@@ -630,7 +630,7 @@ export function ChallengePage({ onPlaceBet, positions }: ChallengePageProps) {
                   boxShadow: `0 8px 24px ${match.away.style.glow}`,
                 }}
               >
-                <div className="truncate w-full px-1" style={{ fontFamily: 'Inter', fontSize: 'clamp(11px, 3vw, 13px)', fontWeight: 900, color: '#fff', letterSpacing: '0.03em' }}>
+                <div className="truncate w-full px-0.5 sm:px-1" style={{ fontFamily: 'Inter', fontSize: locale === 'zh' ? 'clamp(11px, 3vw, 13px)' : 'clamp(10px, 2.8vw, 13px)', fontWeight: 900, color: '#fff', letterSpacing: locale === 'zh' ? '0.03em' : '-0.01em' }}>
                   {t.challenge.buyWin.replace('{code}', locale === 'zh' ? cn(match.away.name, true) : match.away.shortCode)}
                 </div>
               </button>
