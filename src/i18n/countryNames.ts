@@ -81,9 +81,9 @@ const countryNameZh: Record<string, string> = {
 
   // ─── Group K ───
   'Portugal': '葡萄牙',
-  'DR Congo': '刚果（金）',
-  'Congo DR': '刚果（金）',
-  'DRC/JAM/NCL': '刚果（金）',
+  'DR Congo': '刚果(金)',
+  'Congo DR': '刚果(金)',
+  'DRC/JAM/NCL': '刚果(金)',
   'Uzbekistan': '乌兹别克斯坦',
   'Colombia': '哥伦比亚',
 
@@ -93,6 +93,21 @@ const countryNameZh: Record<string, string> = {
   'Ghana': '加纳',
   'Panama': '巴拿马',
 
+  // ─── Historic (2022, 2018, 2014) ───
+  'Wales': '威尔士',
+  'Poland': '波兰',
+  'Denmark': '丹麦',
+  'Costa Rica': '哥斯达黎加',
+  'Cameroon': '喀麦隆',
+  'Serbia': '塞尔维亚',
+  'Russia': '俄罗斯',
+  'Nigeria': '尼日利亚',
+  'Iceland': '冰岛',
+  'Chile': '智利',
+  'Greece': '希腊',
+  'Italy': '意大利',
+  'Honduras': '洪都拉斯',
+
   // ─── Continents (for Fun Bets) ───
   'Europe': '欧洲',
   'South America': '南美洲',
@@ -100,6 +115,14 @@ const countryNameZh: Record<string, string> = {
   'Asia': '亚洲',
   'North America': '北美洲',
   'Oceania': '大洋洲',
+};
+
+const shortCountryNameZh: Record<string, string> = {
+  'Uzbekistan': '乌兹别克',
+  'Saudi Arabia': '沙特',
+  'Bosnia and Herzegovina': '波黑',
+  'Bosnia-Herzegovina': '波黑',
+  'BIH/ITA/NIR/WAL': '波黑',
 };
 
 const normalizationEn: Record<string, string> = {
@@ -124,8 +147,11 @@ const normalizationEn: Record<string, string> = {
  * Translate a country name based on locale.
  * Falls back to the original (English) name if no mapping is found.
  */
-export function translateCountryName(name: string, locale: string): string {
+export function translateCountryName(name: string, locale: string, short: boolean = false): string {
   if (locale.startsWith('zh')) {
+    if (short && shortCountryNameZh[name]) {
+      return shortCountryNameZh[name];
+    }
     return countryNameZh[name] || name;
   }
   return normalizationEn[name] || name;

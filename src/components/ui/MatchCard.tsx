@@ -75,7 +75,7 @@ interface MatchCardProps {
 
 export function MatchCard({ match, index = 0, onPlaceBet, positions }: MatchCardProps) {
   const { t, locale } = useTranslation();
-  const cn = (name: string) => translateCountryName(name, locale);
+  const cn = (name: string, short: boolean = false) => translateCountryName(name, locale, short);
   const [confirmSide, setConfirmSide] = useState<'home' | 'away' | 'draw' | null>(null);
 
   // Determine which token ID is selected
@@ -280,9 +280,9 @@ export function MatchCard({ match, index = 0, onPlaceBet, positions }: MatchCard
                 boxShadow: `0 2px 8px ${match.home.style.primary}40`,
               }}
             >
-              <div className="flex items-baseline justify-center gap-1">
-                <span style={{ fontFamily: 'Inter', fontSize: locale === 'zh' ? '12px' : '11px', fontWeight: 800, color: '#fff', letterSpacing: '0.02em' }}>
-                  {locale === 'zh' ? cn(match.home.name) : match.home.shortCode}
+              <div className="flex items-baseline justify-center gap-1 overflow-hidden px-1">
+                <span className="truncate whitespace-nowrap" style={{ fontFamily: 'Inter', fontSize: locale === 'zh' ? '12px' : '11px', fontWeight: 800, color: '#fff', letterSpacing: '0.02em' }}>
+                  {locale === 'zh' ? cn(match.home.name, true) : match.home.shortCode}
                 </span>
                 <span style={{ fontFamily: 'Inter', fontSize: '13px', fontWeight: 900, color: '#fff' }}>
                   {match.home.probability}%
@@ -313,7 +313,7 @@ export function MatchCard({ match, index = 0, onPlaceBet, positions }: MatchCard
                 <span style={{ fontFamily: 'Inter', fontSize: locale === 'zh' ? '12px' : '11px', fontWeight: 800, color: 'rgba(255,255,255,0.85)', letterSpacing: '0.02em' }}>
                   {locale === 'en' ? t.trade.draw.toUpperCase() : t.trade.draw}
                 </span>
-                <span style={{ fontFamily: 'Inter', fontSize: '13px', fontWeight: 900, color: '#fff' }}>
+                <span style={{ fontFamily: 'Inter', fontSize: '12px', fontWeight: 800, color: '#fff' }}>
                   {match.draw.probability}%
                 </span>
               </div>
@@ -328,9 +328,9 @@ export function MatchCard({ match, index = 0, onPlaceBet, positions }: MatchCard
                 boxShadow: `0 2px 8px ${match.away.style.primary}40`,
               }}
             >
-              <div className="flex items-baseline justify-center gap-1">
-                <span style={{ fontFamily: 'Inter', fontSize: locale === 'zh' ? '12px' : '11px', fontWeight: 800, color: '#fff', letterSpacing: '0.02em' }}>
-                  {locale === 'zh' ? cn(match.away.name) : match.away.shortCode}
+              <div className="flex items-baseline justify-center gap-1 overflow-hidden px-1">
+                <span className="truncate whitespace-nowrap" style={{ fontFamily: 'Inter', fontSize: locale === 'zh' ? '12px' : '11px', fontWeight: 800, color: '#fff', letterSpacing: '0.02em' }}>
+                  {locale === 'zh' ? cn(match.away.name, true) : match.away.shortCode}
                 </span>
                 <span style={{ fontFamily: 'Inter', fontSize: '13px', fontWeight: 900, color: '#fff' }}>
                   {match.away.probability}%
