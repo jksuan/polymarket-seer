@@ -45,7 +45,7 @@ export function BottomNav({ activeTab, onChange }: BottomNavProps) {
           >
             <Icon size={22} strokeWidth={isActive(p) ? 2.5 : 2} />
             <span
-              className="mt-1 uppercase tracking-wide"
+              className="mt-1 tracking-wide"
               style={{ fontSize: '10px', fontFamily: 'Inter', fontWeight: 700 }}
             >
               {label}
@@ -89,7 +89,7 @@ export function BottomNav({ activeTab, onChange }: BottomNavProps) {
             </svg>
           </button>
           <span
-            className="absolute -bottom-5 uppercase"
+            className="absolute -bottom-5"
             style={{
               fontSize: '10px',
               fontFamily: 'Inter',
@@ -115,7 +115,7 @@ export function BottomNav({ activeTab, onChange }: BottomNavProps) {
           >
             <Icon size={22} strokeWidth={isActive(p) ? 2.5 : 2} />
             <span
-              className="mt-1 uppercase tracking-wide"
+              className="mt-1 tracking-wide"
               style={{ fontSize: '10px', fontFamily: 'Inter', fontWeight: 700 }}
             >
               {label}
