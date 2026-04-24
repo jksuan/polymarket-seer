@@ -150,8 +150,25 @@ const CarouselCard = memo(function CarouselCard({ match, positions, onShare }: C
         {/* ── 卡片正文 ── */}
         <div className="relative z-10 flex flex-col items-center h-full p-5 pb-4" style={{ gap: '10px' }}>
 
-          {/* 1. 顶部状态 */}
-          <div className="flex flex-col items-center gap-2 mt-1">
+          {/* 1. 赛事名称 + 分组 */}
+          <div className="flex items-center gap-2 mt-1">
+            <span style={{ fontFamily: 'Inter', fontWeight: 700, fontSize: '12px', color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              FIFA World Cup 2026
+            </span>
+            <div
+              className="px-1.5 py-[1px] rounded-[4px] text-[10px] font-black"
+              style={{
+                background: match.isGroupStage ? 'rgba(255,215,0,0.15)' : 'rgba(173,255,47,0.15)',
+                color: match.isGroupStage ? '#FFD700' : '#ADFF2F',
+                border: match.isGroupStage ? '1px solid rgba(255,215,0,0.3)' : '1px solid rgba(173,255,47,0.3)',
+              }}
+            >
+              {match.isGroupStage ? `${locale === 'zh' ? '' : 'Group '}${match.group}${locale === 'zh' ? t.home.groupSuffix : ''}` : t.home.knockoutStage}
+            </div>
+          </div>
+
+          {/* 2. 顶部状态 */}
+          <div className="flex flex-col items-center gap-2 mt-2">
             {isLive && (
               <motion.div
                 animate={{ opacity: [1, 0.5, 1] }}
@@ -204,23 +221,6 @@ const CarouselCard = memo(function CarouselCard({ match, positions, onShare }: C
                 {t.challenge.ended}
               </div>
             )}
-          </div>
-
-          {/* 2. 赛事名称 + 分组 */}
-          <div className="flex items-center gap-2">
-            <span style={{ fontFamily: 'Inter', fontWeight: 700, fontSize: '12px', color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-              FIFA World Cup 2026
-            </span>
-            <div
-              className="px-1.5 py-[1px] rounded-[4px] text-[10px] font-black"
-              style={{
-                background: match.isGroupStage ? 'rgba(255,215,0,0.15)' : 'rgba(173,255,47,0.15)',
-                color: match.isGroupStage ? '#FFD700' : '#ADFF2F',
-                border: match.isGroupStage ? '1px solid rgba(255,215,0,0.3)' : '1px solid rgba(173,255,47,0.3)',
-              }}
-            >
-              {match.isGroupStage ? `${locale === 'zh' ? '' : 'Group '}${match.group}${locale === 'zh' ? t.home.groupSuffix : ''}` : t.home.knockoutStage}
-            </div>
           </div>
 
           {/* 3. 大圆圈对阵区 */}
@@ -600,7 +600,7 @@ export function ChallengePage({ onPlaceBet, positions }: ChallengePageProps) {
                   boxShadow: `0 8px 24px ${match.home.style.glow}`,
                 }}
               >
-                <div className="truncate w-full px-1" style={{ fontFamily: 'Inter', fontSize: 'clamp(13px, 3.5vw, 16px)', fontWeight: 900, color: '#fff', letterSpacing: '0.03em' }}>
+                <div className="truncate w-full px-1" style={{ fontFamily: 'Inter', fontSize: 'clamp(11px, 3vw, 13px)', fontWeight: 900, color: '#fff', letterSpacing: '0.03em' }}>
                   {t.challenge.buyWin.replace('{code}', locale === 'zh' ? cn(match.home.name) : match.home.shortCode)}
                 </div>
               </button>
@@ -616,7 +616,7 @@ export function ChallengePage({ onPlaceBet, positions }: ChallengePageProps) {
                   boxShadow: '0 8px 24px rgba(51,65,85,0.4)',
                 }}
               >
-                <div className="truncate w-full px-1" style={{ fontFamily: 'Inter', fontSize: 'clamp(13px, 3.5vw, 16px)', fontWeight: 900, color: 'rgba(255,255,255,0.95)', letterSpacing: '0.03em' }}>{t.challenge.buyDraw}</div>
+                <div className="truncate w-full px-1" style={{ fontFamily: 'Inter', fontSize: 'clamp(11px, 3vw, 13px)', fontWeight: 900, color: 'rgba(255,255,255,0.95)', letterSpacing: '0.03em' }}>{t.challenge.buyDraw}</div>
               </button>
 
               {/* 客队胜 */}
@@ -630,7 +630,7 @@ export function ChallengePage({ onPlaceBet, positions }: ChallengePageProps) {
                   boxShadow: `0 8px 24px ${match.away.style.glow}`,
                 }}
               >
-                <div className="truncate w-full px-1" style={{ fontFamily: 'Inter', fontSize: 'clamp(13px, 3.5vw, 16px)', fontWeight: 900, color: '#fff', letterSpacing: '0.03em' }}>
+                <div className="truncate w-full px-1" style={{ fontFamily: 'Inter', fontSize: 'clamp(11px, 3vw, 13px)', fontWeight: 900, color: '#fff', letterSpacing: '0.03em' }}>
                   {t.challenge.buyWin.replace('{code}', locale === 'zh' ? cn(match.away.name) : match.away.shortCode)}
                 </div>
               </button>
