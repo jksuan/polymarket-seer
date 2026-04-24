@@ -2,7 +2,7 @@ import { motion } from "motion/react";
 import { useProfileStats } from "./useProfileStats";
 import { CategoryPnlChart } from "./CategoryPnlChart";
 import { useSportCategories } from "@/hooks/useSportCategories";
-
+import { useTranslation } from "@/i18n";
 import { Skeleton } from "@/components/ui/Skeleton";
 
 export interface ProfileOverviewProps {
@@ -12,6 +12,7 @@ export interface ProfileOverviewProps {
 }
 
 export function ProfileOverview({ portfolioLoading, trades, positions }: ProfileOverviewProps) {
+  const { t } = useTranslation();
   const { leagueToSport, keywords, iconToCategory } = useSportCategories();
 
   const {
@@ -65,7 +66,7 @@ export function ProfileOverview({ portfolioLoading, trades, positions }: Profile
                 color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: "0.05em",
               }}
             >
-              总净盈亏 · 全周期
+              {t.profile.overviewTotalPnl}
             </div>
             <div className="flex items-baseline gap-2 mt-1 flex-1">
               <span
@@ -82,11 +83,11 @@ export function ProfileOverview({ portfolioLoading, trades, positions }: Profile
             {/* Supporting Breakdown */}
             <div className="flex justify-between items-end border-t border-white/10 pt-2 mt-auto">
               <div>
-                <span className="text-[10px] text-white/30 uppercase tracking-widest font-bold">总投入(买入)</span>
+                <span className="text-[10px] text-white/30 uppercase tracking-widest font-bold">{t.profile.overviewTotalInvested}</span>
                 <div className="text-[13px] font-black text-white/80">${historyInvested.toFixed(2)}</div>
               </div>
               <div className="text-right">
-                <span className="text-[10px] text-white/30 uppercase tracking-widest font-bold">总收入(卖出+兑换)</span>
+                <span className="text-[10px] text-white/30 uppercase tracking-widest font-bold">{t.profile.overviewTotalReturned}</span>
                 <div className="text-[13px] font-black text-white/80">${historyRevenue.toFixed(2)}</div>
               </div>
             </div>
@@ -113,22 +114,22 @@ export function ProfileOverview({ portfolioLoading, trades, positions }: Profile
               color: "rgba(255,255,255,0.4)", letterSpacing: "0.05em",
             }}
           >
-            当前持仓
+            {t.profile.overviewCurrentPositions}
           </div>
 
           <div className="flex w-full">
             <div className="flex-1 flex flex-col items-center relative z-10 border-r border-white/10">
-              <div className="text-[10px] text-white/40 uppercase tracking-widest font-bold mb-1">总本金</div>
+              <div className="text-[10px] text-white/40 uppercase tracking-widest font-bold mb-1">{t.profile.overviewTotalCost}</div>
               <div className="text-[16px] font-black text-white">${currentInvested.toFixed(2)}</div>
             </div>
             
             <div className="flex-1 flex flex-col items-center relative z-10 border-r border-white/10">
-              <div className="text-[10px] text-white/40 uppercase tracking-widest font-bold mb-1">总价值</div>
+              <div className="text-[10px] text-white/40 uppercase tracking-widest font-bold mb-1">{t.profile.overviewCurrentValue}</div>
               <div className="text-[16px] font-black text-[#00F0FF]">${currentValue.toFixed(2)}</div>
             </div>
             
             <div className="flex-1 flex flex-col items-center justify-center relative z-10">
-              <div className="text-[10px] uppercase tracking-widest font-bold mb-1" style={{ color: currentUnrealizedPnl >= 0 ? "rgba(173,255,47,0.7)" : "rgba(255,107,107,0.7)" }}>浮动盈亏</div>
+              <div className="text-[10px] uppercase tracking-widest font-bold mb-1" style={{ color: currentUnrealizedPnl >= 0 ? "rgba(173,255,47,0.7)" : "rgba(255,107,107,0.7)" }}>{t.profile.overviewUnrealizedPnl}</div>
               <div className="flex flex-col items-center">
                  <div className={`text-[15px] font-black leading-none ${currentUnrealizedPnl >= 0 ? 'text-[#ADFF2F]' : 'text-[#ff6b6b]'}`}>
                    {currentUnrealizedPnl >= 0 ? '+' : '-'}${Math.abs(currentUnrealizedPnl).toFixed(2)}
@@ -156,11 +157,11 @@ export function ProfileOverview({ portfolioLoading, trades, positions }: Profile
         >
           <div className="flex items-center justify-between mb-3">
             <div className="text-[11px] font-bold text-white/50 uppercase tracking-wider">
-              分类盈亏 · 全周期
+              {t.profile.overviewCategoryPnl}
             </div>
             {hasCategoryData && (
               <div className="text-[10px] text-white/25 font-medium">
-                自动分类 · {categoryPnlData.length} 类
+                {t.profile.overviewAutoCategory(categoryPnlData.length)}
               </div>
             )}
           </div>
@@ -169,7 +170,7 @@ export function ProfileOverview({ portfolioLoading, trades, positions }: Profile
               <CategoryPnlChart data={categoryPnlData} width={320} />
             ) : (
               <div className="flex items-center justify-center flex-col gap-1.5" style={{ height: 80 }}>
-                <span className="text-[12px] font-medium text-white/40 tracking-wide">暂无交易数据</span>
+                <span className="text-[12px] font-medium text-white/40 tracking-wide">{t.profile.overviewNoData}</span>
               </div>
             )}
           </div>

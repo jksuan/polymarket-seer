@@ -4,6 +4,7 @@ import { GlassCard } from "./components/GlassCard";
 import { OutcomePill } from "./components/OutcomePill";
 import { ProfileEmptyState } from "./components/ProfileEmptyState";
 import { ProfileTransactionSkeleton } from "./components/ProfileTransactionSkeleton";
+import { useTranslation } from "@/i18n";
 
 export interface ProfileTransactionsProps {
   portfolioLoading: boolean;
@@ -11,6 +12,7 @@ export interface ProfileTransactionsProps {
 }
 
 export function ProfileTransactions({ portfolioLoading, trades }: ProfileTransactionsProps) {
+  const { t } = useTranslation();
   const transactionData = useProfileTransactions(trades);
 
   return (
@@ -29,7 +31,7 @@ export function ProfileTransactions({ portfolioLoading, trades }: ProfileTransac
           <ProfileTransactionSkeleton />
         </>
       ) : transactionData.length === 0 ? (
-        <ProfileEmptyState loading={false} emptyText="暂无交易记录" />
+        <ProfileEmptyState loading={false} emptyText={t.profile.txEmpty} />
       ) : (
         transactionData.map(({
           item, idx, txLabel, txColor, txBg, amtDisplay, amtColor, timeStr, outcome
@@ -58,7 +60,7 @@ export function ProfileTransactions({ portfolioLoading, trades }: ProfileTransac
                   className="text-[12px] font-semibold text-[#dee5ff] truncate notranslate"
                   translate="no"
                 >
-                  {item.title || "未知市场"}
+                  {item.title || t.profile.txUnknown}
                 </div>
                 <OutcomePill outcome={outcome} className="mt-0.5" />
               </div>

@@ -9,6 +9,7 @@ import { GlassCard } from "./components/GlassCard";
 import { OutcomePill } from "./components/OutcomePill";
 import { ProfileEmptyState } from "./components/ProfileEmptyState";
 import { ProfileCardSkeleton } from "./components/ProfileCardSkeleton";
+import { useTranslation } from "@/i18n";
 
 function getMarketStatus(pos: any): "active" | "won" | "lost" | "resolving" {
   let cp = -1;
@@ -34,6 +35,7 @@ export interface ProfilePositionsProps {
 }
 
 export function ProfilePositions({ portfolioLoading, positions, onSell, onLimitSell, onRedeem }: ProfilePositionsProps) {
+  const { t } = useTranslation();
   const [sellDrawerOpen, setSellDrawerOpen] = useState(false);
   const [activeSellPos, setActiveSellPos] = useState<any>(null);
   const [redeemDrawerOpen, setRedeemDrawerOpen] = useState(false);
@@ -110,7 +112,7 @@ export function ProfilePositions({ portfolioLoading, positions, onSell, onLimitS
             <ProfileCardSkeleton />
           </>
         ) : (!positions || positions.length === 0) ? (
-          <ProfileEmptyState loading={false} emptyText="空空如也，快去预测盈亏吧！" />
+          <ProfileEmptyState loading={false} emptyText={t.profile.positionEmpty} />
         ) : (
           positions.map((pos: any, idx: number) => {
             const avgPct = ((pos.avgPrice || 0) * 100).toFixed(1);
@@ -150,11 +152,11 @@ export function ProfilePositions({ portfolioLoading, positions, onSell, onLimitS
                 <div className="mt-4 px-0.5 flex flex-col gap-3">
                   <div className="grid grid-cols-3 gap-2">
                     <div className="flex flex-col gap-1">
-                      <span className="text-[11px] sm:text-[12px] font-medium text-[#a3aac4] whitespace-nowrap">投入本金</span>
+                      <span className="text-[11px] sm:text-[12px] font-medium text-[#a3aac4] whitespace-nowrap">{t.profile.positionCost}</span>
                       <span className="text-[15px] font-bold text-[#a3aac4] tracking-tight">${Number(initialVal).toFixed(2)}</span>
                     </div>
                     <div className="flex flex-col gap-1">
-                      <span className="text-[11px] sm:text-[12px] font-medium text-[#a3aac4] whitespace-nowrap">当前价值</span>
+                      <span className="text-[11px] sm:text-[12px] font-medium text-[#a3aac4] whitespace-nowrap">{t.profile.positionCurrentValue}</span>
                       <div className="flex flex-col leading-none">
                         <span className="text-[16px] font-bold text-[#dee5ff]">${Number(currentVal).toFixed(2)}</span>
                         <span className={`text-[11px] font-bold mt-1.5 ${isProfitable ? 'text-[#6bff8f]' : 'text-[#ff6b6b]'}`}>
@@ -163,14 +165,14 @@ export function ProfilePositions({ portfolioLoading, positions, onSell, onLimitS
                       </div>
                     </div>
                     <div className="flex flex-col gap-1 items-end text-right">
-                      <span className="text-[11px] sm:text-[12px] font-medium text-[#a3aac4] whitespace-nowrap">预期回报</span>
+                      <span className="text-[11px] sm:text-[12px] font-medium text-[#a3aac4] whitespace-nowrap">{t.profile.positionExpectedReturn}</span>
                       <span className="text-[15px] font-bold text-[#a3aac4] tracking-tight">${Number(expectedReturn).toFixed(2)}</span>
                     </div>
                   </div>
 
                   <div className="flex items-end justify-between mt-2 pt-3 border-t border-white/5">
                     <div className="flex flex-col gap-1">
-                      <span className="text-[11px] sm:text-[12px] font-medium text-[#a3aac4]">胜率变化</span>
+                      <span className="text-[11px] sm:text-[12px] font-medium text-[#a3aac4]">{t.profile.positionProbChange}</span>
                       <div className="flex items-center gap-1.5 text-[15px] font-bold tracking-tight">
                         <span className="text-[#a3aac4]">{avgPct}%</span>
                         <span className="text-[#60a5fa]">→</span>
@@ -190,7 +192,7 @@ export function ProfilePositions({ portfolioLoading, positions, onSell, onLimitS
                               }}
                               className="bg-transparent border border-[#0099FF]/50 text-[#0099FF] text-[13px] font-bold px-5 py-1.5 rounded-[6px] hover:bg-[#0099FF]/10 active:scale-95 transition-all leading-none h-[28px] shadow-[0_0_12px_rgba(0,153,255,0.15)] tracking-wide"
                             >
-                              卖出
+                              {t.profile.sell}
                             </button>
                           )}
 
@@ -207,7 +209,7 @@ export function ProfilePositions({ portfolioLoading, positions, onSell, onLimitS
                                 boxShadow: "0 0 14px rgba(173,255,47,0.3)",
                               }}
                             >
-                              🏆 兑换
+                              {t.profile.statusRedeem}
                             </button>
                           )}
 
@@ -219,7 +221,7 @@ export function ProfilePositions({ portfolioLoading, positions, onSell, onLimitS
                               }}
                               className="bg-transparent border border-white/20 text-white/40 text-[13px] font-bold px-4 py-1.5 rounded-[6px] hover:bg-white/5 active:scale-95 transition-all leading-none h-[28px] tracking-wide"
                             >
-                              📦 归档
+                              {t.profile.statusArchive}
                             </button>
                           )}
 
@@ -228,7 +230,7 @@ export function ProfilePositions({ portfolioLoading, positions, onSell, onLimitS
                               disabled
                               className="bg-[#192540] border border-white/10 text-[#a3aac4]/60 text-[13px] font-bold px-4 py-1.5 rounded-[6px] cursor-not-allowed leading-none h-[28px] tracking-wide flex items-center gap-1.5"
                             >
-                              ⏳ 判定中
+                              {t.profile.statusResolving}
                             </button>
                           )}
 
