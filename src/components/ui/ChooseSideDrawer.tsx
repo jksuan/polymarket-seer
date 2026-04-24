@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { X } from 'lucide-react';
 import { ParsedMatch } from '@/components/ui/MatchCard';
 import { useTranslation, translateCountryName } from '@/i18n';
+import { getCountryFlagUrl } from '@/lib/countryFlags';
 
 interface ChooseSideDrawerProps {
   isOpen: boolean;
@@ -45,7 +46,10 @@ function DrawerContent({ isOpen, onClose, match, onSelectSide }: ChooseSideDrawe
           >
             <div className="flex justify-between items-center mb-6">
               <div>
-                <h2 className="text-white font-black italic text-4xl tracking-tighter uppercase whitespace-nowrap overflow-hidden text-ellipsis max-w-[280px]">
+                <h2 
+                  className="uppercase whitespace-nowrap overflow-hidden text-ellipsis max-w-[280px]"
+                  style={{ fontFamily: 'Outfit, Inter', fontWeight: 900, fontSize: '17px', color: '#fff', letterSpacing: '0.02em' }}
+                >
                   {t.trade.chooseSide}
                 </h2>
                 <p className="text-[#6bff8f] text-[10px] uppercase font-bold tracking-widest mt-1">
@@ -72,9 +76,9 @@ function DrawerContent({ isOpen, onClose, match, onSelectSide }: ChooseSideDrawe
               >
                 <div className="flex items-center gap-4">
                   <img
-                    src={match.home.flagUrl}
+                    src={getCountryFlagUrl(match.home.name, 'svg')}
                     alt=""
-                    className="w-8 h-8 rounded-full border border-white/20 object-cover"
+                    className="w-[42px] h-[32px] rounded-[6px] border border-white/20 object-cover"
                   />
                   <div className="flex flex-col items-start gap-0.5">
                     <span className="text-white font-bold text-lg leading-none">
@@ -106,7 +110,7 @@ function DrawerContent({ isOpen, onClose, match, onSelectSide }: ChooseSideDrawe
                   }}
                 >
                   <div className="flex items-center gap-4">
-                    <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white/60 text-xs font-black">
+                    <div className="w-[42px] h-[32px] rounded-[6px] bg-white/10 flex items-center justify-center text-white/60 text-xs font-black">
                       VS
                     </div>
                     <span className="text-white/80 font-bold text-lg leading-none">
@@ -135,9 +139,9 @@ function DrawerContent({ isOpen, onClose, match, onSelectSide }: ChooseSideDrawe
               >
                 <div className="flex items-center gap-4">
                   <img
-                    src={match.away.flagUrl}
+                    src={getCountryFlagUrl(match.away.name, 'svg')}
                     alt=""
-                    className="w-8 h-8 rounded-full border border-white/20 object-cover"
+                    className="w-[42px] h-[32px] rounded-[6px] border border-white/20 object-cover"
                   />
                   <div className="flex flex-col items-start gap-0.5">
                     <span className="text-white font-bold text-lg leading-none">
