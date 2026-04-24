@@ -120,7 +120,7 @@ interface CarouselCardProps {
 const CarouselCard = memo(function CarouselCard({ match, positions, onShare }: CarouselCardProps) {
   const isLive = match.status === 'live';
   const { t, locale } = useTranslation();
-  const cn = (name: string) => translateCountryName(name, locale);
+  const cn = (name: string, short?: boolean) => translateCountryName(name, locale, short);
 
   // ── 计算该场比赛的用户持仓 ──
   const homePos = positions?.find(p => p.asset === match.home.tokenId && parseFloat(p.size) > 0);
@@ -380,7 +380,7 @@ const CarouselCard = memo(function CarouselCard({ match, positions, onShare }: C
 
 export function ChallengePage({ onPlaceBet, positions }: ChallengePageProps) {
   const { t, locale } = useTranslation();
-  const cn = (name: string) => translateCountryName(name, locale);
+  const cn = (name: string, short?: boolean) => translateCountryName(name, locale, short);
   const scrollRef = useRef<HTMLDivElement>(null);
   const hasRestoredScroll = useRef(false);
 
@@ -601,7 +601,7 @@ export function ChallengePage({ onPlaceBet, positions }: ChallengePageProps) {
                 }}
               >
                 <div className="truncate w-full px-1" style={{ fontFamily: 'Inter', fontSize: 'clamp(11px, 3vw, 13px)', fontWeight: 900, color: '#fff', letterSpacing: '0.03em' }}>
-                  {t.challenge.buyWin.replace('{code}', locale === 'zh' ? cn(match.home.name) : match.home.shortCode)}
+                  {t.challenge.buyWin.replace('{code}', locale === 'zh' ? cn(match.home.name, true) : match.home.shortCode)}
                 </div>
               </button>
 
@@ -631,7 +631,7 @@ export function ChallengePage({ onPlaceBet, positions }: ChallengePageProps) {
                 }}
               >
                 <div className="truncate w-full px-1" style={{ fontFamily: 'Inter', fontSize: 'clamp(11px, 3vw, 13px)', fontWeight: 900, color: '#fff', letterSpacing: '0.03em' }}>
-                  {t.challenge.buyWin.replace('{code}', locale === 'zh' ? cn(match.away.name) : match.away.shortCode)}
+                  {t.challenge.buyWin.replace('{code}', locale === 'zh' ? cn(match.away.name, true) : match.away.shortCode)}
                 </div>
               </button>
 
