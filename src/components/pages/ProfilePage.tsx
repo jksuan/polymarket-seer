@@ -100,8 +100,8 @@ export function ProfilePage({
           <TopHeader />
 
           <div
-            className="px-4 flex items-center gap-6 pb-2 overflow-x-auto whitespace-nowrap [&::-webkit-scrollbar]:hidden"
-            style={{ msOverflowStyle: "none", scrollbarWidth: "none" }}
+            className="px-4 flex items-center gap-6 pb-2 overflow-x-auto overflow-y-hidden touch-pan-x whitespace-nowrap [&::-webkit-scrollbar]:hidden"
+            style={{ msOverflowStyle: "none", scrollbarWidth: "none", WebkitOverflowScrolling: "touch" }}
           >
           <button
             onClick={() => handleTabChange("stats")}
