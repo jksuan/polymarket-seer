@@ -414,14 +414,16 @@ export function SearchPage({ onPlaceBet, positions }: SearchPageProps) {
               </span>
             </div>
             <div className="flex flex-wrap gap-2">
-              {HOT_COUNTRIES.map(countryName => (
+              {HOT_COUNTRIES.map(countryName => {
+                const isActive = query.toLowerCase() === countryName.toLowerCase();
+                return (
                 <button
                   key={countryName}
                   onClick={() => handleQuickFilter(countryName)}
                   className="flex items-center gap-2 px-3 py-2 rounded-xl active:scale-95 transition-all"
                   style={{
-                    background: 'rgba(255,255,255,0.04)',
-                    border: '1px solid rgba(255,255,255,0.08)',
+                    background: isActive ? 'rgba(0, 240, 255, 0.15)' : 'rgba(255,255,255,0.04)',
+                    border: isActive ? '1px solid rgba(0, 240, 255, 0.5)' : '1px solid rgba(255,255,255,0.08)',
                   }}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -438,11 +440,12 @@ export function SearchPage({ onPlaceBet, positions }: SearchPageProps) {
                       border: '1px solid rgba(255,255,255,0.12)',
                     }}
                   />
-                  <span style={{ fontFamily: 'Inter', fontSize: '12px', fontWeight: 600, color: 'rgba(255,255,255,0.7)' }}>
+                  <span style={{ fontFamily: 'Inter', fontSize: '12px', fontWeight: 600, color: isActive ? '#00F0FF' : 'rgba(255,255,255,0.7)' }}>
                     {cnName(countryName)}
                   </span>
                 </button>
-              ))}
+                );
+              })}
             </div>
           </div>
 
@@ -456,6 +459,7 @@ export function SearchPage({ onPlaceBet, positions }: SearchPageProps) {
             </div>
             <div className="flex flex-wrap gap-2">
               {HOT_TOPIC_KEYS.map(topic => {
+                const isActive = query.toLowerCase() === topic.keyword.toLowerCase();
                 const Icon = topic.icon;
                 return (
                   <button
@@ -463,12 +467,12 @@ export function SearchPage({ onPlaceBet, positions }: SearchPageProps) {
                     onClick={() => handleQuickFilter(topic.keyword)}
                     className="flex items-center gap-2 px-3 py-2 rounded-xl active:scale-95 transition-all"
                     style={{
-                      background: 'rgba(255,255,255,0.04)',
-                      border: '1px solid rgba(255,255,255,0.08)',
+                      background: isActive ? 'rgba(0, 240, 255, 0.15)' : 'rgba(255,255,255,0.04)',
+                      border: isActive ? '1px solid rgba(0, 240, 255, 0.5)' : '1px solid rgba(255,255,255,0.08)',
                     }}
                   >
-                    <Icon size={14} color="rgba(255,255,255,0.7)" />
-                    <span style={{ fontFamily: 'Inter', fontSize: '12px', fontWeight: 600, color: 'rgba(255,255,255,0.7)' }}>
+                    <Icon size={14} color={isActive ? "#00F0FF" : "rgba(255,255,255,0.7)"} />
+                    <span style={{ fontFamily: 'Inter', fontSize: '12px', fontWeight: 600, color: isActive ? '#00F0FF' : 'rgba(255,255,255,0.7)' }}>
                       {t.search[topic.labelKey]}
                     </span>
                   </button>
