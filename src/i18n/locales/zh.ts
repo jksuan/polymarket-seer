@@ -243,14 +243,14 @@ const zh = {
   // ─── 挑战页 ───
   challenge: {
     title: '2026 世界杯',
-    liveNow: '🔴 LIVE NOW',
+    liveNow: '🔴 进行中',
     kickoff: '开赛',
     ended: '已结束',
     winRate: '胜率',
     drawLabel: '平局',
     marketPool: '交易量',
     holding: '已持仓',
-    shares: '股',
+    shares: '份额',
     noMatches: '暂无可用赛事，请稍后再来',
     swipeLeft: '左拉',
     swipeRight: '右拉',
