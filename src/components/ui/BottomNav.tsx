@@ -46,7 +46,7 @@ export function BottomNav({ activeTab, onChange }: BottomNavProps) {
             <Icon size={22} strokeWidth={isActive(p) ? 2.5 : 2} />
             <span
               className="mt-1 tracking-wide"
-              style={{ fontSize: '12px', fontFamily: 'Inter', fontWeight: 700 }}
+              style={{ fontSize: '13px', fontFamily: 'Inter', fontWeight: 700 }}
             >
               {label}
             </span>
@@ -91,7 +91,7 @@ export function BottomNav({ activeTab, onChange }: BottomNavProps) {
           <span
             className="absolute -bottom-5"
             style={{
-              fontSize: '12px',
+              fontSize: '13px',
               fontFamily: 'Inter',
               fontWeight: 900,
               color: '#ADFF2F',
@@ -116,7 +116,7 @@ export function BottomNav({ activeTab, onChange }: BottomNavProps) {
             <Icon size={22} strokeWidth={isActive(p) ? 2.5 : 2} />
             <span
               className="mt-1 tracking-wide"
-              style={{ fontSize: '12px', fontFamily: 'Inter', fontWeight: 700 }}
+              style={{ fontSize: '13px', fontFamily: 'Inter', fontWeight: 700 }}
             >
               {label}
             </span>
