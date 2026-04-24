@@ -174,6 +174,26 @@ const en: TranslationKeys = {
     securedBy: 'Secured by Polymarket Protocol',
     insufficientBalance: 'Insufficient balance, max available',
     minBetError: 'Minimum bet amount is $1',
+    // Sell Drawer
+    sellPosition: 'Sell Position',
+    quickSell: 'Market',
+    limitSell: 'Limit',
+    principalInvested: 'Amount',
+    buyProbability: 'Entry Avg',
+    bestSellProbability: 'Best Ask',
+    expectedSellProbability: 'Limit Price',
+    estimatedIncome: 'Estimated Return',
+    sellNow: 'Sell Shares',
+    submitLimitSell: 'Sell Shares',
+    gasFreeHint: 'This transaction is executed gas-free on Polygon by your smart wallet.',
+    insufficientShares: 'Insufficient shares (min 5)',
+    // Generic
+    done: 'Done',
+    close: 'Close',
+    retry: 'Retry',
+    later: 'Later',
+    // Choose Side
+    chooseSide: 'CHOOSE SIDE',
   },
 
   // ─── Transaction Overlay ───

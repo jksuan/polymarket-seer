@@ -8,6 +8,7 @@ import { SportMarket } from '@/types/sports';
 import { usePrivy } from '@privy-io/react-auth';
 import { usePolymarketAuth } from '@/contexts/PolymarketAuthContext';
 import useSWR from 'swr';
+import { useTranslation, translateCountryName } from '@/i18n';
 
 // ──────────────────────────────────────────────
 // OutrightInfo: data block for the "outright" / Yes-No panel
@@ -67,6 +68,7 @@ export function ConfirmModal({
   const [showError, setShowError] = useState(false);
   const [mounted, setMounted] = useState(false);
 
+  const { t, locale } = useTranslation();
   const { authenticated, login } = usePrivy();
   const { usdcBalance, isRefreshingBalance } = usePolymarketAuth();
 
@@ -181,7 +183,7 @@ export function ConfirmModal({
                       <Zap size={14} color="#ADFF2F" fill="#ADFF2F" />
                     </div>
                     <span style={{ fontFamily: 'Outfit, Inter', fontWeight: 900, fontSize: '17px', color: '#fff', letterSpacing: '0.02em' }}>
-                      交易终端
+                      {t.trade.terminal}
                     </span>
                   </div>
                   <button
@@ -260,7 +262,7 @@ export function ConfirmModal({
                   {/* Unified Stats Row */}
                   <div className="flex items-center justify-between p-1">
                     <div className="flex flex-col items-center min-w-[60px]">
-                      <div style={{ fontFamily: 'Inter', fontSize: '10px', fontWeight: 600, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', marginBottom: '4px' }}>最优买入概率</div>
+                      <div style={{ fontFamily: 'Inter', fontSize: '10px', fontWeight: 600, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', marginBottom: '4px' }}>{t.trade.bestBuyProb}</div>
                       <div className={`transition-opacity duration-300 ${isFetchingBook ? 'animate-pulse opacity-70' : 'opacity-100'}`} style={{ fontFamily: 'Inter', fontWeight: 700, fontSize: '15px', color: '#fff' }}>
                         {(activePrice * 100).toFixed(1)}<span className="text-[11px] text-white/70 ml-[1px]">%</span>
                       </div>
@@ -269,7 +271,7 @@ export function ConfirmModal({
                     <div className="w-[1px] h-6 bg-white/10" />
 
                     <div className="flex flex-col items-center min-w-[60px]">
-                      <div style={{ fontFamily: 'Inter', fontSize: '10px', fontWeight: 600, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', marginBottom: '4px' }}>赔率</div>
+                      <div style={{ fontFamily: 'Inter', fontSize: '10px', fontWeight: 600, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', marginBottom: '4px' }}>{t.trade.odds}</div>
                       <div className={`transition-opacity duration-300 ${isFetchingBook ? 'animate-pulse opacity-70' : 'opacity-100'}`} style={{ fontFamily: 'Inter', fontWeight: 700, fontSize: '15px', color: '#fff' }}>
                         {displayOdds.toFixed(2)}x
                       </div>
@@ -278,7 +280,7 @@ export function ConfirmModal({
                     <div className="w-[1px] h-6 bg-white/10" />
 
                     <div className="flex flex-col items-end min-w-[70px]">
-                      <div style={{ fontFamily: 'Inter', fontSize: '10px', fontWeight: 700, color: 'rgba(173,255,47,0.8)', textTransform: 'uppercase', marginBottom: '4px' }}>预期回报</div>
+                      <div style={{ fontFamily: 'Inter', fontSize: '10px', fontWeight: 700, color: 'rgba(173,255,47,0.8)', textTransform: 'uppercase', marginBottom: '4px' }}>{t.trade.expectedReturn}</div>
                       <div className={`flex items-baseline gap-[1px] transition-opacity duration-300 ${isFetchingBook ? 'animate-pulse opacity-70' : 'opacity-100'}`} style={{ fontFamily: 'Inter', fontWeight: 900, fontSize: '19px', color: '#ADFF2F', textShadow: '0 0 12px rgba(173,255,47,0.3)', letterSpacing: '-0.02em' }}>
                         <span>${formatWithCommas(expectedReturn)}</span>
                       </div>
@@ -291,11 +293,11 @@ export function ConfirmModal({
                   <div className="flex items-center justify-between mb-4 border-b border-white/5 pb-4 px-5">
                     <div className="flex flex-col gap-1.5">
                       <span style={{ fontSize: '13px', fontFamily: 'Inter', fontWeight: 700, color: '#fff', textTransform: 'uppercase', letterSpacing: '0.02em' }}>
-                        投注金额
+                        {t.trade.betAmount}
                       </span>
                       {authenticated && (
                         <span style={{ fontSize: '11px', fontFamily: 'Inter', fontWeight: 500, color: 'rgba(255,255,255,0.4)' }}>
-                          {isRefreshingBalance ? '钱包余额...' : `可用余额: $${usdcBalance}`}
+                          {isRefreshingBalance ? t.trade.walletBalance : `${t.trade.availableBalance}: $${usdcBalance}`}
                         </span>
                       )}
                     </div>
@@ -341,9 +343,9 @@ export function ConfirmModal({
 
                         let errorMessage = '';
                         if (authenticated && (maxAllowed < 1 || isExceedingBalance)) {
-                          errorMessage = `可用余额不足，当前最大可用 $${usdcBalance || '0'}`;
+                          errorMessage = `${t.trade.insufficientBalance} $${usdcBalance || '0'}`;
                         } else if (isBelowMin) {
-                          errorMessage = '投注金额必须大于等于$1';
+                          errorMessage = t.trade.minBetError;
                         }
                         
                         return (
@@ -386,7 +388,7 @@ export function ConfirmModal({
                             boxShadow: isActive ? `0 0 16px ${glowColor}, inset 0 0 8px ${glowColor}` : 'none',
                           }}
                         >
-                          {isMax ? '最大' : `$${item}`}
+                          {isMax ? 'MAX' : `$${item}`}
                           {isActive && (
                             <div className="absolute inset-0 bg-gradient-to-t from-white/10 to-transparent pointer-events-none" />
                           )}
@@ -436,7 +438,7 @@ export function ConfirmModal({
                         textTransform: authenticated ? 'uppercase' : 'none'
                       }}
                     >
-                      {authenticated ? `买入 ${badgeText} $${formatWithCommas(amount)}` : '登录'}
+                      {authenticated ? `${t.trade.buy} ${badgeText} $${formatWithCommas(amount)}` : 'Login'}
                     </span>
                   </div>
                 </button>
@@ -444,7 +446,7 @@ export function ConfirmModal({
                 <div className="flex items-center justify-center gap-1.5 mt-4 opacity-50">
                   <ShieldCheck size={12} fill="currentColor" color="#0D0518" className="text-white/80" />
                   <p style={{ fontSize: '10px', fontFamily: 'Inter', fontWeight: 500, color: '#ffffff', letterSpacing: '0.02em' }}>
-                    Secured by Polymarket Protocol
+                    {t.trade.securedBy}
                   </p>
                 </div>
               </div>

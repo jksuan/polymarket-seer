@@ -44,7 +44,7 @@ const zh = {
     marketProbability: '获胜概率',
     chooseSide: '选择阵营',
     win: '胜',
-    drawLabel: '平局 DRAW',
+    drawLabel: '平局',
     buyYes: '买入是',
     loadingMarket: 'Loading Market Data...',
     hotMatches: '热门赛事',
@@ -172,6 +172,26 @@ const zh = {
     securedBy: 'Secured by Polymarket Protocol',
     insufficientBalance: '可用余额不足，当前最大可用',
     minBetError: '投注金额必须大于等于$1',
+    // Sell Drawer
+    sellPosition: '卖出平仓',
+    quickSell: '快速卖出',
+    limitSell: '限价挂单',
+    principalInvested: '投入本金',
+    buyProbability: '买入概率',
+    bestSellProbability: '最优卖出概率',
+    expectedSellProbability: '期望卖出概率',
+    estimatedIncome: '预估卖出收入',
+    sellNow: '立即卖出',
+    submitLimitSell: '提交限价卖单',
+    gasFreeHint: '本交易由您的智能合约钱包在 Polygon 链上免 Gas 费执行。',
+    insufficientShares: '份额不足 (至少需 5 份)',
+    // Generic
+    done: '完成',
+    close: '关闭',
+    retry: '重试',
+    later: '稍后',
+    // Choose Side
+    chooseSide: '选择阵营',
   },
 
   // ─── 交易状态遮罩 ───

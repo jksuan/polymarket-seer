@@ -2,7 +2,7 @@
 
 import { TopHeader } from '@/components/ui/TopHeader';
 import { Compass, X } from 'lucide-react';
-import { useTranslation } from '@/i18n';
+import { useTranslation, translateCountryName } from '@/i18n';
 import {
   DiscoverCardsContainer,
   TrendingCard,
@@ -20,6 +20,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
+import { ChooseSideDrawer } from '@/components/ui/ChooseSideDrawer';
 import { ParsedMatch } from '@/components/ui/MatchCard';
 
 interface DiscoverPageProps {
@@ -30,7 +31,8 @@ interface DiscoverPageProps {
 export function DiscoverPage({ onPlaceBet, positions }: DiscoverPageProps) {
   const { allMatches, isLoading: isMatchLoading } = useMatchData(true);
   const { markets: outrightMarkets, isLoading: isOutrightLoading } = useOutrightData(true, 'World Cup Winner');
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
+  const cn = (name: string) => translateCountryName(name, locale);
   const [mounted, setMounted] = useState(false);
   
   useEffect(() => setMounted(true), []);
@@ -178,100 +180,15 @@ export function DiscoverPage({ onPlaceBet, positions }: DiscoverPageProps) {
 
       {/* 1. Quick-Pick Action Sheet Overlay (Portaled) */}
       {mounted && typeof document !== 'undefined' && createPortal(
-        <AnimatePresence>
-          {quickPickMatch && (
-            <div className="fixed inset-0 z-[100] flex items-end justify-center pointer-events-none">
-              {/* Backdrop */}
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                onClick={() => setQuickPickMatch(null)}
-                className="absolute inset-0 bg-[#000000] backdrop-blur-md pointer-events-auto"
-                style={{ opacity: 0.85 }}
-              />
-
-              {/* Sheet */}
-              <motion.div
-                initial={{ y: '100%' }}
-                animate={{ y: 0 }}
-                exit={{ y: '100%' }}
-                transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                className="relative w-full max-w-[448px] mx-auto bg-[#0D0518] rounded-t-[32px] p-6 border-t border-white/10 shadow-[0_-20px_50px_rgba(0,0,0,0.8)] pb-safe pointer-events-auto"
-                style={{ maxHeight: '85vh', overflowY: 'auto' }}
-              >
-                <div className="flex justify-between items-center mb-6">
-                   <div>
-                     <h2 className="text-white font-black italic text-4xl tracking-tighter uppercase whitespace-nowrap overflow-hidden text-ellipsis max-w-[280px]">{t.discover.chooseSide}</h2>
-                     <p className="text-[#6bff8f] text-[10px] uppercase font-bold tracking-widest mt-1">{quickPickMatch.title}</p>
-                   </div>
-                   <button onClick={() => setQuickPickMatch(null)} className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/50 active:scale-90 transition-transform">
-                     <X size={20} />
-                   </button>
-                </div>
-
-                <div className="flex flex-col gap-3 mb-4">
-                   <button 
-                     onClick={() => { setConfirmAction({ match: quickPickMatch, side: 'home' }); setQuickPickMatch(null); }}
-                     className="flex items-center justify-between p-4 rounded-2xl active:scale-[0.98] transition-all bg-gradient-to-r"
-                     style={{ 
-                       backgroundImage: `linear-gradient(to right, ${quickPickMatch.home.style.primary}15, transparent)`, 
-                       border: `1px solid ${quickPickMatch.home.style.primary}40` 
-                     }}
-                   >
-                     <div className="flex items-center gap-4">
-                       <img src={quickPickMatch.home.flagUrl} alt="" className="w-8 h-8 rounded-full border border-white/20 object-cover" />
-                       <div className="flex flex-col items-start gap-0.5">
-                         <span className="text-white font-bold text-lg leading-none">{quickPickMatch.home.name} {t.discover.win}</span>
-                       </div>
-                     </div>
-                     <div className="text-right">
-                        <div className="text-white font-black text-2xl tracking-tighter">{quickPickMatch.home.probability}%</div>
-                        <div className="text-[12px] font-mono tracking-wider" style={{ color: quickPickMatch.home.style.primary }}>{(100/Math.max(quickPickMatch.home.probability, 1)).toFixed(2)}x</div>
-                     </div>
-                   </button>
-
-                   {quickPickMatch.draw.probability > 0 && (
-                     <button 
-                       onClick={() => { setConfirmAction({ match: quickPickMatch, side: 'draw' }); setQuickPickMatch(null); }}
-                       className="flex items-center justify-between p-4 rounded-2xl active:scale-[0.98] transition-all"
-                       style={{ backgroundColor: `rgba(255,255,255,0.03)`, border: `1px solid rgba(255,255,255,0.1)` }}
-                     >
-                       <div className="flex items-center gap-4">
-                         <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white/60 text-xs font-black">VS</div>
-                         <span className="text-white/80 font-bold text-lg leading-none">{t.discover.drawLabel}</span>
-                       </div>
-                       <div className="text-right">
-                          <div className="text-white font-black text-2xl tracking-tighter">{quickPickMatch.draw.probability}%</div>
-                          <div className="text-[12px] font-mono tracking-wider text-white/50">{(100/Math.max(quickPickMatch.draw.probability, 1)).toFixed(2)}x</div>
-                       </div>
-                     </button>
-                   )}
-
-                   <button 
-                     onClick={() => { setConfirmAction({ match: quickPickMatch, side: 'away' }); setQuickPickMatch(null); }}
-                     className="flex items-center justify-between p-4 rounded-2xl active:scale-[0.98] transition-all bg-gradient-to-l"
-                     style={{ 
-                       backgroundImage: `linear-gradient(to left, ${quickPickMatch.away.style.primary}15, transparent)`, 
-                       border: `1px solid ${quickPickMatch.away.style.primary}40` 
-                     }}
-                   >
-                     <div className="flex items-center gap-4">
-                       <img src={quickPickMatch.away.flagUrl} alt="" className="w-8 h-8 rounded-full border border-white/20 object-cover" />
-                       <div className="flex flex-col items-start gap-0.5">
-                         <span className="text-white font-bold text-lg leading-none">{quickPickMatch.away.name} {t.discover.win}</span>
-                       </div>
-                     </div>
-                     <div className="text-right">
-                        <div className="text-white font-black text-2xl tracking-tighter">{quickPickMatch.away.probability}%</div>
-                        <div className="text-[12px] font-mono tracking-wider" style={{ color: quickPickMatch.away.style.primary }}>{(100/Math.max(quickPickMatch.away.probability, 1)).toFixed(2)}x</div>
-                     </div>
-                   </button>
-                </div>
-              </motion.div>
-            </div>
-          )}
-        </AnimatePresence>,
+        <ChooseSideDrawer
+          isOpen={!!quickPickMatch}
+          onClose={() => setQuickPickMatch(null)}
+          match={quickPickMatch}
+          onSelectSide={(side) => {
+             setConfirmAction({ match: quickPickMatch!, side });
+             setQuickPickMatch(null);
+          }}
+        />,
         document.body
       )}
 
@@ -290,11 +207,11 @@ export function DiscoverPage({ onPlaceBet, positions }: DiscoverPageProps) {
           }
           outrightInfo={{
             title: confirmAction.side === 'draw'
-              ? `${confirmAction.match.home.name} vs ${confirmAction.match.away.name} — ${t.trade.draw}`
+              ? `${cn(confirmAction.match.home.name)} vs ${cn(confirmAction.match.away.name)} — ${t.trade.draw}`
               : confirmAction.side === 'home'
-                ? `${confirmAction.match.home.name} ${t.discover.win}`
-                : `${confirmAction.match.away.name} ${t.discover.win}`,
-            directionLabel: confirmAction.side === 'draw' ? `${t.trade.buy} ${t.trade.draw}` : confirmAction.side === 'home' ? `${t.trade.buy} ${confirmAction.match.home.name} ${t.discover.win}` : `${t.trade.buy} ${confirmAction.match.away.name} ${t.discover.win}`,
+                ? `${cn(confirmAction.match.home.name)} ${t.discover.win}`
+                : `${cn(confirmAction.match.away.name)} ${t.discover.win}`,
+            directionLabel: confirmAction.side === 'draw' ? `${t.trade.buy} ${t.trade.draw}` : confirmAction.side === 'home' ? `${t.trade.buy} ${cn(confirmAction.match.home.name)} ${t.discover.win}` : `${t.trade.buy} ${cn(confirmAction.match.away.name)} ${t.discover.win}`,
             probability: confirmAction.side === 'draw'
               ? confirmAction.match.draw.probability
               : confirmAction.side === 'home'

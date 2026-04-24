@@ -5,6 +5,7 @@ import { QRCodeSVG } from "qrcode.react";
 import { useState } from "react";
 import { copyToClipboard } from "@/lib/utils";
 import type { TxStep } from "@/hooks/useTrading";
+import { useTranslation } from "@/i18n";
 
 interface TxOverlayProps {
   txStep: TxStep;
@@ -18,6 +19,7 @@ interface TxOverlayProps {
 }
 
 export default function TxOverlay({ txStep, txMessage, txOrderId, txError, proxyAddress, amount, onClose, onRetry }: TxOverlayProps) {
+  const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
 
   const handleCopy = (text: string) => {
@@ -77,12 +79,12 @@ export default function TxOverlay({ txStep, txMessage, txOrderId, txError, proxy
 
         {/* Step Label */}
         <div>
-          {txStep === "preparing" && <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest">准备中</p>}
-          {txStep === "deploying" && <p className="text-blue-400 text-xs font-bold uppercase tracking-widest">部署金库</p>}
-          {txStep === "approving" && <p className="text-purple-400 text-xs font-bold uppercase tracking-widest">代币授权</p>}
-          {txStep === "placing" && <p className="text-green-400 text-xs font-bold uppercase tracking-widest">提交订单</p>}
-          {txStep === "success" && <p className="text-green-400 text-sm font-black uppercase tracking-widest">交易成功</p>}
-          {txStep === "error" && <p className="text-red-400 text-sm font-black uppercase tracking-widest">交易失败</p>}
+          {txStep === "preparing" && <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest">{t.tx.preparing}</p>}
+          {txStep === "deploying" && <p className="text-blue-400 text-xs font-bold uppercase tracking-widest">{t.tx.deploying}</p>}
+          {txStep === "approving" && <p className="text-purple-400 text-xs font-bold uppercase tracking-widest">{t.tx.approving}</p>}
+          {txStep === "placing" && <p className="text-green-400 text-xs font-bold uppercase tracking-widest">{t.tx.placing}</p>}
+          {txStep === "success" && <p className="text-green-400 text-sm font-black uppercase tracking-widest">{t.tx.success}</p>}
+          {txStep === "error" && <p className="text-red-400 text-sm font-black uppercase tracking-widest">{t.tx.error}</p>}
         </div>
 
         {/* Dynamic Message */}
@@ -95,7 +97,7 @@ export default function TxOverlay({ txStep, txMessage, txOrderId, txError, proxy
               <QRCodeSVG value={proxyAddress!} size={120} />
             </div>
             <div className="bg-zinc-950/80 border border-zinc-800 rounded-xl p-3 w-full space-y-2">
-               <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest text-left">您的专属金库地址 (Polygon)</p>
+               <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest text-left">{t.tx.depositAddress}</p>
                <div className="flex items-center justify-between gap-2">
                   <span className="text-xs font-mono text-zinc-300 truncate w-full">{proxyAddress}</span>
                   <button onClick={() => handleCopy(proxyAddress!)} className="text-blue-400 hover:text-blue-300 p-1 flex-shrink-0">
@@ -104,7 +106,7 @@ export default function TxOverlay({ txStep, txMessage, txOrderId, txError, proxy
                </div>
             </div>
             <p className="text-xs text-orange-400 font-bold bg-orange-400/10 border border-orange-400/20 px-3 py-2 rounded-lg text-left w-full">
-              ⚠️ 提示：请通过 Polygon 网络向此地址转入至少 <b>${amount} USDC.e</b>。到账后点击下方重试。
+              ⚠️ {t.tx.depositHint} <b>${amount} USDC.e</b> {t.tx.depositHintSuffix}
             </p>
           </div>
         )}
@@ -112,7 +114,7 @@ export default function TxOverlay({ txStep, txMessage, txOrderId, txError, proxy
         {/* Order ID on success */}
         {txStep === "success" && txOrderId && (
           <div className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-3">
-            <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-1">订单 ID</p>
+            <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-1">{t.tx.orderId}</p>
             <p className="text-xs font-mono text-zinc-300 break-all">{txOrderId}</p>
           </div>
         )}
@@ -136,7 +138,7 @@ export default function TxOverlay({ txStep, txMessage, txOrderId, txError, proxy
                     : "bg-zinc-800 hover:bg-zinc-700 text-white"
                 }`}
               >
-                {txStep === "success" ? "完成" : "关闭"}
+                {txStep === "success" ? t.trade.done : t.trade.close}
               </button>
             )}
             
@@ -145,14 +147,14 @@ export default function TxOverlay({ txStep, txMessage, txOrderId, txError, proxy
                 onClick={onRetry}
                 className="flex-1 py-3 rounded-xl font-bold text-sm bg-blue-600 hover:bg-blue-500 text-white transition-all active:scale-95"
               >
-                 {isInsufficient ? "已充值，继续下注" : "重试"}
+                 {isInsufficient ? t.tx.retryAfterDeposit : t.trade.retry}
               </button>
             )}
             
             {/* 如果是余额不足，额外给一个取消按钮 */}
             {txStep === "error" && isInsufficient && (
                <button onClick={onClose} className="py-3 px-4 rounded-xl font-bold text-sm bg-zinc-800 hover:bg-zinc-700 text-white transition-all active:scale-95 text-xs">
-                 稍后
+                 {t.trade.later}
                </button>
             )}
           </div>
@@ -161,7 +163,7 @@ export default function TxOverlay({ txStep, txMessage, txOrderId, txError, proxy
         {/* Subtle hint during processing */}
         {txStep !== "success" && txStep !== "error" && (
           <p className="text-amber-400/90 text-[10px] mt-2 font-medium animate-pulse px-4 py-1.5 bg-amber-400/5 rounded-full border border-amber-400/10">
-            ⚠️ 请勿关闭页面，交易正在链上处理中...
+            ⚠️ {t.tx.doNotClose}
           </p>
         )}
       </div>

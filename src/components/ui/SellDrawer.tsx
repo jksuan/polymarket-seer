@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "motion/react";
 import { X, Zap, Target, Minus, Plus } from "lucide-react";
 import useSWR from "swr";
+import { useTranslation, translateCountryName } from "@/i18n";
 
 interface SellDrawerProps {
   isOpen: boolean;
@@ -190,6 +191,7 @@ function WinRateStepper({
 
 // ── Main Drawer Content ─────────────────────────────────────
 function DrawerContent({ isOpen, onClose, position, onMarketSell, onLimitSell }: SellDrawerProps) {
+  const { t, locale } = useTranslation();
   const [tab, setTab] = useState<"market" | "limit">("market");
   const [limitWinRate, setLimitWinRate] = useState<number | null>(50);
   const [hasSetDefaultLimit, setHasSetDefaultLimit] = useState(false);
@@ -254,7 +256,7 @@ function DrawerContent({ isOpen, onClose, position, onMarketSell, onLimitSell }:
   const displayDecimals = Math.max(1, decimals);
 
   const isYes = String(position.outcome).toLowerCase() === 'yes';
-  const displayTitle = (position.title || "未知市场").replace(/\.+$/, '');
+  const displayTitle = (translateCountryName(position.title || "Unknown Market", locale)).replace(/\.+$/, '');
   const isLimitDisabled = shares < 5;
 
   // Estimated income
@@ -311,7 +313,7 @@ function DrawerContent({ isOpen, onClose, position, onMarketSell, onLimitSell }:
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-3 border-b border-white/5">
               <h2 style={{ fontFamily: "Inter", fontWeight: 900, fontSize: 18, color: "#dee5ff", letterSpacing: "-0.5px" }}>
-                卖出平仓
+                {t.trade.sellPosition}
               </h2>
               <button
                 onClick={onClose}
@@ -336,7 +338,7 @@ function DrawerContent({ isOpen, onClose, position, onMarketSell, onLimitSell }:
                     <span
                       className={`text-[10px] px-1.5 py-0.5 rounded font-bold uppercase ${isYes ? "bg-[#6bff8f]/10 text-[#6bff8f]" : "bg-[#ff6b6b]/10 text-[#ff6b6b]"}`}
                     >
-                      {position.outcome || "Unknown"}
+                      {isYes ? t.trade.yes : t.trade.no}
                     </span>
                   </div>
                 </div>
@@ -349,16 +351,15 @@ function DrawerContent({ isOpen, onClose, position, onMarketSell, onLimitSell }:
                   className={`flex-1 py-2 text-sm font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5
                     ${tab === "market" ? "bg-white/10 text-white shadow-sm" : "text-[#a3aac4] hover:text-white"}`}
                 >
-                  <Zap size={14} /> 快速卖出
+                  <Zap size={14} /> {t.trade.quickSell}
                 </button>
                 <button
                   onClick={() => !isLimitDisabled && setTab("limit")}
                   className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-1.5
                     ${tab === "limit" ? "bg-white/10 text-white shadow-sm" : "text-[#a3aac4] hover:text-white"}
                     ${isLimitDisabled ? "opacity-30 cursor-not-allowed filter grayscale" : ""}`}
-                  title={isLimitDisabled ? "持仓份额不足 5 份，无法发起限价单" : ""}
                 >
-                  <Target size={14} /> 限价挂单
+                  <Target size={14} /> {t.trade.limitSell}
                 </button>
               </div>
 
@@ -366,9 +367,9 @@ function DrawerContent({ isOpen, onClose, position, onMarketSell, onLimitSell }:
               <div className="bg-white/5 rounded-2xl p-4 border border-white/5 flex flex-col gap-3.5">
 
                 {/* Common rows — no divider yet */}
-                <InfoRow label="投入本金" value={`$${principal}`} />
+                <InfoRow label={t.trade.principalInvested} value={`$${principal}`} />
                 <InfoRow
-                  label="买入概率"
+                  label={t.trade.buyProbability}
                   value={`${entryWinRate.toFixed(displayDecimals)}%`}
                 />
 
@@ -376,14 +377,14 @@ function DrawerContent({ isOpen, onClose, position, onMarketSell, onLimitSell }:
                 {tab === "market" && (
                   <>
                     <InfoRow
-                      label="最优卖出概率"
+                      label={t.trade.bestSellProbability}
                       value={`${curWinRate.toFixed(displayDecimals)}%`}
                       highlight
                     />
                     {/* divider above 预估卖出收入 */}
                     <div className="h-[1px] bg-white/5 w-full" />
                     <div className="flex justify-between items-baseline">
-                      <span className="text-[#a3aac4] text-sm font-medium">预估卖出收入</span>
+                      <span className="text-[#a3aac4] text-sm font-medium">{t.trade.estimatedIncome}</span>
                       <span
                         className="text-2xl font-black tracking-tight"
                         style={{ color: "#6bff8f" }}
@@ -398,12 +399,12 @@ function DrawerContent({ isOpen, onClose, position, onMarketSell, onLimitSell }:
                 {tab === "limit" && (
                   <>
                     <InfoRow
-                      label="最优卖出概率"
+                      label={t.trade.bestSellProbability}
                       value={`${curWinRate.toFixed(displayDecimals)}%`}
                       highlight
                     />
                     <div className="flex justify-between items-center mt-1">
-                      <span className="text-[#a3aac4] text-sm font-medium">期望卖出概率</span>
+                      <span className="text-[#a3aac4] text-sm font-medium">{t.trade.expectedSellProbability}</span>
                       <WinRateStepper
                         value={limitWinRate}
                         onChange={setLimitWinRate}
@@ -415,7 +416,7 @@ function DrawerContent({ isOpen, onClose, position, onMarketSell, onLimitSell }:
                     {/* divider above 预估卖出收入 */}
                     <div className="h-[1px] bg-white/5 w-full" />
                     <div className="flex justify-between items-baseline">
-                      <span className="text-[#a3aac4] text-sm font-medium">预估卖出收入</span>
+                      <span className="text-[#a3aac4] text-sm font-medium">{t.trade.estimatedIncome}</span>
                       <span
                         className="text-2xl font-black tracking-tight"
                         style={{ color: "#00F0FF" }}
@@ -435,7 +436,7 @@ function DrawerContent({ isOpen, onClose, position, onMarketSell, onLimitSell }:
                     className="w-full text-white font-bold py-3.5 rounded-2xl active:scale-95 transition-all text-base shadow-[0_0_20px_rgba(0,153,255,0.35)]"
                     style={{ background: "linear-gradient(90deg, #0099FF, #0060CC)" }}
                   >
-                    立即卖出
+                    {t.trade.sellNow}
                   </button>
                 ) : (
                   <button
@@ -448,11 +449,11 @@ function DrawerContent({ isOpen, onClose, position, onMarketSell, onLimitSell }:
                       color: isLimitDisabled ? "#ff6b6b" : "#00F0FF",
                     }}
                   >
-                    {isLimitDisabled ? "份额不足 (至少需 5 份)" : "提交限价卖单"}
+                    {isLimitDisabled ? t.trade.insufficientShares : t.trade.submitLimitSell}
                   </button>
                 )}
                 <p className="text-center text-[11px] text-[#a3aac4]/60 mt-3 tracking-wide">
-                  本交易由您的智能合约钱包在 Polygon 链上免 Gas 费执行。
+                  {t.trade.gasFreeHint}
                 </p>
               </div>
 
