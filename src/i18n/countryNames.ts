@@ -107,6 +107,7 @@ const countryNameZh: Record<string, string> = {
   'Greece': '希腊',
   'Italy': '意大利',
   'Honduras': '洪都拉斯',
+  'Peru': '秘鲁',
 
   // ─── Continents (for Fun Bets) ───
   'Europe': '欧洲',
