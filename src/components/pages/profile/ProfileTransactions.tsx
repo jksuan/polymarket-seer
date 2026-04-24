@@ -37,9 +37,9 @@ export function ProfileTransactions({ portfolioLoading, trades }: ProfileTransac
           item, idx, txLabel, txColor, txBg, amtDisplay, amtColor, timeStr, outcome
         }) => (
           <GlassCard key={item.transactionHash || idx} className="p-3 flex items-center gap-3">
-            <div className="w-[42px] shrink-0">
+            <div className="w-[64px] shrink-0 flex items-center justify-start">
               <div
-                className="text-[11px] font-bold py-1.5 rounded-md text-center w-full leading-none"
+                className="text-[11px] font-bold py-1.5 px-1.5 min-w-[42px] rounded-md text-center leading-none whitespace-nowrap"
                 style={{ color: txColor, background: txBg }}
               >
                 {txLabel}
