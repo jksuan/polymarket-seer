@@ -63,7 +63,7 @@ export function ProfileOverview({ portfolioLoading, trades, positions }: Profile
             <div
               style={{
                 fontSize: "11px", fontFamily: "Inter", fontWeight: 600,
-                color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: "0.05em",
+                color: "rgba(255,255,255,0.4)", letterSpacing: "0.04em",
               }}
             >
               {t.profile.overviewTotalPnl}
@@ -83,11 +83,11 @@ export function ProfileOverview({ portfolioLoading, trades, positions }: Profile
             {/* Supporting Breakdown */}
             <div className="flex justify-between items-end border-t border-white/10 pt-2 mt-auto">
               <div>
-                <span className="text-[10px] text-white/30 uppercase tracking-widest font-bold">{t.profile.overviewTotalInvested}</span>
+                <span className="text-[10px] text-white/30 tracking-wide font-bold">{t.profile.overviewTotalInvested}</span>
                 <div className="text-[13px] font-black text-white/80">${historyInvested.toFixed(2)}</div>
               </div>
               <div className="text-right">
-                <span className="text-[10px] text-white/30 uppercase tracking-widest font-bold">{t.profile.overviewTotalReturned}</span>
+                <span className="text-[10px] text-white/30 tracking-wide font-bold">{t.profile.overviewTotalReturned}</span>
                 <div className="text-[13px] font-black text-white/80">${historyRevenue.toFixed(2)}</div>
               </div>
             </div>
@@ -119,17 +119,17 @@ export function ProfileOverview({ portfolioLoading, trades, positions }: Profile
 
           <div className="flex w-full">
             <div className="flex-1 flex flex-col items-center relative z-10 border-r border-white/10">
-              <div className="text-[10px] text-white/40 uppercase tracking-widest font-bold mb-1">{t.profile.overviewTotalCost}</div>
+              <div className="text-[10px] text-white/40 tracking-wide font-bold mb-1">{t.profile.overviewTotalCost}</div>
               <div className="text-[16px] font-black text-white">${currentInvested.toFixed(2)}</div>
             </div>
             
             <div className="flex-1 flex flex-col items-center relative z-10 border-r border-white/10">
-              <div className="text-[10px] text-white/40 uppercase tracking-widest font-bold mb-1">{t.profile.overviewCurrentValue}</div>
+              <div className="text-[10px] text-white/40 tracking-wide font-bold mb-1">{t.profile.overviewCurrentValue}</div>
               <div className="text-[16px] font-black text-[#00F0FF]">${currentValue.toFixed(2)}</div>
             </div>
             
             <div className="flex-1 flex flex-col items-center justify-center relative z-10">
-              <div className="text-[10px] uppercase tracking-widest font-bold mb-1" style={{ color: currentUnrealizedPnl >= 0 ? "rgba(173,255,47,0.7)" : "rgba(255,107,107,0.7)" }}>{t.profile.overviewUnrealizedPnl}</div>
+              <div className="text-[10px] tracking-wide font-bold mb-1" style={{ color: currentUnrealizedPnl >= 0 ? "rgba(173,255,47,0.7)" : "rgba(255,107,107,0.7)" }}>{t.profile.overviewUnrealizedPnl}</div>
               <div className="flex flex-col items-center">
                  <div className={`text-[15px] font-black leading-none ${currentUnrealizedPnl >= 0 ? 'text-[#ADFF2F]' : 'text-[#ff6b6b]'}`}>
                    {currentUnrealizedPnl >= 0 ? '+' : '-'}${Math.abs(currentUnrealizedPnl).toFixed(2)}

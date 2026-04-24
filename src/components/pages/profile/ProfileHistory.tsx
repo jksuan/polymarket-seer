@@ -102,7 +102,7 @@ export function ProfileHistory({ portfolioLoading, trades }: ProfileHistoryProps
 
               <div className="flex items-center justify-between mt-3.5 pt-3 border-t border-white/5 relative z-10 gap-2">
                 <div className="flex flex-col shrink-0">
-                  <span className="text-[9px] font-bold text-[#a3aac4]/50 uppercase tracking-[0.8px] mb-0.5">
+                  <span className="text-[9px] font-bold text-[#a3aac4]/50 tracking-wide mb-0.5">
                     {isWon ? t.profile.historyNetProfit : t.profile.historyNetLoss}
                   </span>
                   <span className="text-[18px] font-bold tracking-tight leading-none" style={{ color: isWon ? "#6bff8f" : "#ff6b6b" }}>
@@ -112,14 +112,14 @@ export function ProfileHistory({ portfolioLoading, trades }: ProfileHistoryProps
 
                 {entryPct != null && (
                   <div className="flex flex-col items-center shrink-0">
-                    <span className="text-[9px] font-bold text-[#a3aac4]/50 uppercase tracking-[0.8px] mb-0.5">{t.profile.historyEntryProb}</span>
+                    <span className="text-[9px] font-bold text-[#a3aac4]/50 tracking-wide mb-0.5">{t.profile.historyEntryProb}</span>
                     <span className="text-[13px] font-bold text-[#a3aac4]/80">@ {entryPct}%</span>
                   </div>
                 )}
 
                 {holdingStr && (
                   <div className="flex flex-col items-center shrink-0">
-                    <span className="text-[9px] font-bold text-[#a3aac4]/50 uppercase tracking-[0.8px] mb-0.5">{t.profile.historyHoldingTime}</span>
+                    <span className="text-[9px] font-bold text-[#a3aac4]/50 tracking-wide mb-0.5">{t.profile.historyHoldingTime}</span>
                     <span className="text-[13px] font-bold text-[#a3aac4]/80">{holdingStr}</span>
                   </div>
                 )}
