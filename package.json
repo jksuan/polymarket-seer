@@ -21,6 +21,7 @@
     "html-to-image": "^1.11.13",
     "html2canvas": "^1.4.1",
     "https-proxy-agent": "^9.0.0",
+    "lottie-react": "^2.4.1",
     "lucide-react": "^0.577.0",
     "motion": "^12.38.0",
     "nanoid": "^5.1.6",

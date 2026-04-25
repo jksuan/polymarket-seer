@@ -2,6 +2,8 @@
 
 import { Home, Search, Compass, User } from 'lucide-react';
 import { useTranslation } from '@/i18n';
+import Lottie from 'lottie-react';
+import trophyData from '@/assets/lottie/trophy.json';
 
 interface BottomNavProps {
   activeTab: string;
@@ -53,49 +55,40 @@ export function BottomNav({ activeTab, onChange }: BottomNavProps) {
           </button>
         ))}
 
-        {/* Center Challenge Button */}
-        <div className="flex flex-col items-center flex-1 relative" style={{ marginTop: '-36px' }}>
+        <div className="flex flex-col items-center flex-1 py-2 relative">
           <button
             onClick={() => onChange('challenge')}
-            className="flex items-center justify-center rounded-full transition-all active:scale-90 animate-pulse"
+            className="absolute flex items-center justify-center transition-all active:scale-90"
             style={{
-              width: '60px',
-              height: '60px',
-              background: isActive('challenge')
-                ? 'linear-gradient(135deg, #00FF88 0%, #00CC66 100%)'
-                : 'linear-gradient(135deg, #ADFF2F 0%, #00CC44 100%)',
-              boxShadow: '0 8px 24px rgba(0,255,80,0.45), 0 0 0 4px rgba(13,5,24,1)',
-              border: '3px solid rgba(13,5,24,0.8)',
+              top: '-25px',
+              width: '70px',
+              height: '70px',
+              background: 'transparent',
+              outline: 'none'
             }}
           >
-            {/* Trophy / Lightning icon */}
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="28"
-              height="28"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="#0D0518"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" />
-              <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" />
-              <path d="M4 22h16" />
-              <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22" />
-              <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22" />
-              <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" />
-            </svg>
+            <div className={`
+              w-full h-full flex items-center justify-center transition-transform duration-300
+              ${isActive('challenge') ? 'scale-110' : 'scale-100'}
+            `}>
+              <Lottie 
+                animationData={trophyData} 
+                loop={true}
+                style={{ width: '100%', height: '100%' }}
+              />
+            </div>
           </button>
+          {/* Spacer to push text down to align with other icons */}
+          <div style={{ width: 22, height: 29 }} />
           <span
-            className="absolute -bottom-5"
+            className="mt-1 tracking-wide"
             style={{
               fontSize: '13px',
               fontFamily: 'Inter',
-              fontWeight: 900,
-              color: '#ADFF2F',
-              textShadow: '0 0 6px rgba(173,255,47,0.7)',
+              fontWeight: 800,
+              color: isActive('challenge') ? '#FFFFFF' : '#888',
+              textShadow: isActive('challenge') ? '0 0 8px rgba(255,255,255,0.3)' : 'none',
+              letterSpacing: '0.05em'
             }}
           >
             {t.nav.challenge}
