@@ -16,7 +16,7 @@ import { ChallengePage } from '@/components/pages/ChallengePage';
 import TxOverlay from "@/components/TxOverlay";
 
 function AppRouterContent() {
-  const [activeTab, setActiveTabRaw] = useState('discover');
+  const [activeTab, setActiveTabRaw] = useState('home');
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
