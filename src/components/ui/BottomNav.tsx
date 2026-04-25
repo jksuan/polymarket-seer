@@ -2,8 +2,6 @@
 
 import { Home, Search, Compass, User } from 'lucide-react';
 import { useTranslation } from '@/i18n';
-import Lottie from 'lottie-react';
-import footballData from '@/assets/lottie/football.json';
 
 interface BottomNavProps {
   activeTab: string;
@@ -58,41 +56,45 @@ export function BottomNav({ activeTab, onChange }: BottomNavProps) {
         <div className="flex flex-col items-center flex-1 py-2 relative">
           <button
             onClick={() => onChange('challenge')}
-            className="absolute flex items-center justify-center transition-all active:scale-90"
+            className="absolute flex items-center justify-center transition-all active:scale-90 animate-pulse"
             style={{
-              top: '8px',
-              width: '30px',
-              height: '30px',
+              top: '-8px',
+              width: '60px',
+              height: '60px',
               background: 'transparent',
-              outline: 'none'
+              borderRadius: '50%',
+              outline: 'none',
+              transition: 'all 0.3s ease'
             }}
           >
             <div className={`
               w-full h-full flex items-center justify-center transition-transform duration-300
               ${isActive('challenge') ? 'scale-110' : 'scale-100'}
             `}>
-              <Lottie 
-                animationData={footballData} 
-                loop={true}
+              <img 
+                src="/worldcuplogo.png" 
+                alt="World Cup" 
                 style={{ 
-                  width: '100%', 
-                  height: '100%',
-                  filter: 'brightness(1.05) saturate(1.1) drop-shadow(0 4px 6px rgba(0,0,0,0.5))'
-                }}
+                  width: '58px', 
+                  height: '58px',
+                  opacity: isActive('challenge') ? 1 : 0.6,
+                  transition: 'opacity 0.3s ease'
+                }} 
               />
             </div>
           </button>
           {/* Spacer to push text down to align with other icons */}
-          <div style={{ width: 22, height: 29 }} />
+          <div style={{ width: 22, height: 38 }} />
           <span
-            className="mt-1 tracking-wide"
+            className={`mt-1 tracking-wide transition-colors duration-200 ${
+              isActive('challenge') 
+                ? 'text-cyan-400 drop-shadow-[0_0_8px_rgba(34,211,238,0.5)]' 
+                : 'text-gray-500 hover:text-gray-400'
+            }`}
             style={{
               fontSize: '13px',
               fontFamily: 'Inter',
-              fontWeight: 800,
-              color: isActive('challenge') ? '#FFFFFF' : '#888',
-              textShadow: isActive('challenge') ? '0 0 8px rgba(255,255,255,0.3)' : 'none',
-              letterSpacing: '0.05em'
+              fontWeight: 700
             }}
           >
             {t.nav.challenge}
