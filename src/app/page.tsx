@@ -83,7 +83,22 @@ function AppRouterContent() {
              <HomePage onPlaceBet={handlePlaceBetWrap} positions={positions} />
           )}
           {activeTab === 'search' && <SearchPage onPlaceBet={handlePlaceBetWrap} positions={positions} />}
-          {activeTab === 'discover' && <DiscoverPage onPlaceBet={handlePlaceBetWrap} positions={positions} />}
+          {/* 
+            UI/UX 调整说明：
+            底部导航栏的 "发现(discover)" 标签在此处渲染了 `ChallengePage` 组件 (包含了左右划动的Tinder式卡片)。
+            这是因为左右划动卡片本质上是一个低门槛的探索过程，更符合“发现”的语义逻辑与直觉。
+          */}
+          {activeTab === 'discover' && (
+            <ChallengePage
+              onPlaceBet={async (amount, tokenId, executionPrice) => {
+                const action = () => handlePlaceRealBet(amount, tokenId, executionPrice);
+                lastActionRef.current = action;
+                setLastBetAmount(amount);
+                await action();
+              }}
+              positions={positions}
+            />
+          )}
           {activeTab === 'profile' && (
             <ProfilePage 
               authenticated={authenticated}
@@ -126,17 +141,12 @@ function AppRouterContent() {
               }}
             />
           )}
-          {activeTab === 'challenge' && (
-            <ChallengePage
-              onPlaceBet={async (amount, tokenId, executionPrice) => {
-                const action = () => handlePlaceRealBet(amount, tokenId, executionPrice);
-                lastActionRef.current = action;
-                setLastBetAmount(amount);
-                await action();
-              }}
-              positions={positions}
-            />
-          )}
+          {/* 
+            UI/UX 调整说明：
+            底部导航栏上的中心奖杯 "挑战(challenge)" 标签在此处渲染了 `DiscoverPage` 组件 (包含了夺冠热门等精美大卡片)。
+            夺冠热门本身直指最高悬念，将其放在象征最高荣誉的中央“奖杯(挑战)”按钮下，既满足视觉分量匹配，又在语义上极具仪式感。
+          */}
+          {activeTab === 'challenge' && <DiscoverPage onPlaceBet={handlePlaceBetWrap} positions={positions} />}
         </motion.div>
       </AnimatePresence>
       <BottomNav activeTab={activeTab} onChange={setActiveTab} />
