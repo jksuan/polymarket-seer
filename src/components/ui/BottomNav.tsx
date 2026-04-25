@@ -3,7 +3,7 @@
 import { Home, Search, Compass, User } from 'lucide-react';
 import { useTranslation } from '@/i18n';
 import Lottie from 'lottie-react';
-import trophyData from '@/assets/lottie/trophy.json';
+import footballData from '@/assets/lottie/football.json';
 
 interface BottomNavProps {
   activeTab: string;
@@ -60,9 +60,9 @@ export function BottomNav({ activeTab, onChange }: BottomNavProps) {
             onClick={() => onChange('challenge')}
             className="absolute flex items-center justify-center transition-all active:scale-90"
             style={{
-              top: '-25px',
-              width: '70px',
-              height: '70px',
+              top: '-5px',
+              width: '42px',
+              height: '42px',
               background: 'transparent',
               outline: 'none'
             }}
@@ -72,9 +72,13 @@ export function BottomNav({ activeTab, onChange }: BottomNavProps) {
               ${isActive('challenge') ? 'scale-110' : 'scale-100'}
             `}>
               <Lottie 
-                animationData={trophyData} 
+                animationData={footballData} 
                 loop={true}
-                style={{ width: '100%', height: '100%' }}
+                style={{ 
+                  width: '100%', 
+                  height: '100%',
+                  filter: 'brightness(1.05) saturate(1.1) drop-shadow(0 4px 6px rgba(0,0,0,0.5))'
+                }}
               />
             </div>
           </button>
