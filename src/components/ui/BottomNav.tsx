@@ -84,7 +84,7 @@ export function BottomNav({ activeTab, onChange }: BottomNavProps) {
             </div>
           </button>
           {/* Spacer to push text down to align with other icons */}
-          <div style={{ width: 22, height: 38 }} />
+          <div style={{ width: 22, height: 35 }} />
           <span
             className={`mt-1 tracking-wide transition-colors duration-200 ${
               isActive('challenge') 
