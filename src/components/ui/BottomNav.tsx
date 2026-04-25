@@ -13,11 +13,11 @@ export function BottomNav({ activeTab, onChange }: BottomNavProps) {
   const isActive = (p: string) => activeTab === p;
 
   const navItems = [
+    { path: 'discover', icon: Compass, label: t.nav.discover },
     { path: 'home', icon: Home, label: t.nav.home },
-    { path: 'search', icon: Search, label: t.nav.search },
   ];
   const rightItems = [
-    { path: 'discover', icon: Compass, label: t.nav.discover },
+    { path: 'search', icon: Search, label: t.nav.search },
     { path: 'profile', icon: User, label: t.nav.profile },
   ];
 

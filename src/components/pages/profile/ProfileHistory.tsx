@@ -1,7 +1,5 @@
 import { motion } from "motion/react";
 import { useProfileHistory } from "./useProfileHistory";
-import { ShareCardModal } from "@/components/ui/ShareCardModal";
-import { useShareCard } from "@/hooks/useShareCard";
 import { GlassCard } from "./components/GlassCard";
 import { OutcomePill } from "./components/OutcomePill";
 import { ProfileEmptyState } from "./components/ProfileEmptyState";
@@ -17,36 +15,12 @@ export function ProfileHistory({ portfolioLoading, trades }: ProfileHistoryProps
   const { t } = useTranslation();
   const historyData = useProfileHistory(trades, t);
 
-  const {
-    isGenerating, showModal, cardImageUrl, cardData,
-    generateCard, saveCard, shareToX, closeModal,
-  } = useShareCard();
 
-  const handleShareWin = (row: typeof historyData[0]) => {
-    generateCard({
-      type: 'history',
-      icon: row.item.icon,          // raw URL — hook will fetch as base64
-      title: row.item.title || t.profile.historyUnknown,
-      outcome: row.outcome,
-      isWon: true,
-      netProfit: row.netProfit,
-      entryPct: row.entryPct != null ? Number(row.entryPct) : undefined,
-      holdingStr: row.holdingStr,
-      timeStr: row.timeStr,
-    });
-  };
+
+
 
   return (
     <>
-      <ShareCardModal
-        isOpen={showModal}
-        isGenerating={isGenerating}
-        cardImageUrl={cardImageUrl}
-        cardData={cardData}
-        onClose={closeModal}
-        onSaveCard={saveCard}
-        onShareToX={() => shareToX(cardData?.title)}
-      />
 
       <motion.div
         initial={{ opacity: 0, x: 10 }}
@@ -124,16 +98,7 @@ export function ProfileHistory({ portfolioLoading, trades }: ProfileHistoryProps
                   </div>
                 )}
 
-                {/* 仅"赢"显示分享按钮，"输"不显示（已删除分享复盘） */}
-                {isWon && (
-                  <button
-                    onClick={() => handleShareWin({ item, idx, usdcAmt, netProfit, isWon, lossCost, entryPct, holdingStr, timeStr, outcome })}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors font-bold text-[12px] active:scale-95 shrink-0"
-                    style={{ background: '#192540', color: '#60a5fa', border: '1px solid rgba(96,165,250,0.2)' }}
-                  >
-                    {t.profile.historyShareWin}
-                  </button>
-                )}
+
               </div>
             </GlassCard>
           ))

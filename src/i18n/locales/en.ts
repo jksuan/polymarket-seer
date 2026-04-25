@@ -289,7 +289,7 @@ const en: TranslationKeys = {
     historyLost: 'Lost',
     historyEmpty: 'No trade history',
     historyUnknown: 'Unknown Market',
-    historyShareWin: '🎉 Share',
+
     // Orders labels
     orderFilled: 'Filled',
     orderTargetProb: 'Target Prob.',
@@ -357,12 +357,7 @@ const en: TranslationKeys = {
     title: 'Deposit USDC',
   },
 
-  // ─── Share ───
-  share: {
-    shareCard: 'Share Card',
-    saveImage: 'Save Image',
-    shareTo: 'Share to',
-  },
+
 
   // ─── Date Formatting ───
   date: {

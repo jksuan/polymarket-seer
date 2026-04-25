@@ -2,11 +2,10 @@
 
 import { useState, useCallback, useRef, memo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ChevronLeft, ChevronRight, Zap, Loader2, Share2, Activity } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Zap, Loader2, Activity } from 'lucide-react';
 import { useMatchData } from '@/hooks/useMatchData';
 import { ParsedMatch } from '@/components/ui/MatchCard';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
-import { ShareModal } from '@/components/ui/ShareModal';
 import { TopHeader } from '@/components/ui/TopHeader';
 import { formatVolume } from '@/lib/utils';
 import { getCountryFlagUrl } from '@/lib/countryFlags';
@@ -114,10 +113,9 @@ function FlagBadge({
 interface CarouselCardProps {
   match: ParsedMatch;
   positions?: any[];
-  onShare: (match: ParsedMatch) => void;
 }
 
-const CarouselCard = memo(function CarouselCard({ match, positions, onShare }: CarouselCardProps) {
+const CarouselCard = memo(function CarouselCard({ match, positions }: CarouselCardProps) {
   const isLive = match.status === 'live';
   const { t, locale } = useTranslation();
   const cn = (name: string, short?: boolean) => translateCountryName(name, locale, short);
@@ -343,17 +341,7 @@ const CarouselCard = memo(function CarouselCard({ match, positions, onShare }: C
               )}
             </div>
 
-            <div className="flex items-center gap-2">
-              <button
-                className="w-10 h-10 rounded-full flex items-center justify-center active:scale-90 transition-transform"
-                style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.05)' }}
-                onClick={() => {
-                  onShare(match);
-                }}
-              >
-                <Share2 size={16} color="rgba(255,255,255,0.7)" />
-              </button>
-            </div>
+
           </div>
 
         </div>
@@ -388,7 +376,7 @@ export function ChallengePage({ onPlaceBet, positions }: ChallengePageProps) {
   }, [currentIndex]);
 
   const [confirmSide, setConfirmSide] = useState<'home' | 'away' | 'draw' | null>(null);
-  const [sharingMatch, setSharingMatch] = useState<ParsedMatch | null>(null);
+
 
   // ── 接入真实数据管线 ──
   const { allMatches, isLoading } = useMatchData(true);
@@ -546,7 +534,7 @@ export function ChallengePage({ onPlaceBet, positions }: ChallengePageProps) {
               style={{ scrollBehavior: 'smooth' }}
             >
               {swipeMatches.map((m) => (
-                <CarouselCard key={m.id} match={m} positions={positions} onShare={setSharingMatch} />
+                <CarouselCard key={m.id} match={m} positions={positions} />
               ))}
             </div>
 
@@ -698,13 +686,7 @@ export function ChallengePage({ onPlaceBet, positions }: ChallengePageProps) {
             />
           )}
 
-          {/* ── 海报分享弹窗 ── */}
-          <ShareModal 
-            isOpen={!!sharingMatch}
-            onClose={() => setSharingMatch(null)}
-            match={sharingMatch}
-            positions={positions}
-          />
+
         </>
       )}
     </div>

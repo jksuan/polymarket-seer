@@ -287,7 +287,7 @@ const zh = {
     historyLost: '输',
     historyEmpty: '暂无历史战绩',
     historyUnknown: '未知市场',
-    historyShareWin: '🎉 分享胜利',
+
     // Orders
     orderFilled: '已成交',
     orderTargetProb: '目标胜率',
@@ -355,12 +355,7 @@ const zh = {
     title: '充值 USDC',
   },
 
-  // ─── 分享 ───
-  share: {
-    shareCard: '分享卡片',
-    saveImage: '保存图片',
-    shareTo: '分享到',
-  },
+
 
   // ─── 日期格式化 ───
   date: {
