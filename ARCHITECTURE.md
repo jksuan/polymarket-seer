@@ -1,6 +1,6 @@
 # Polymarket Seer — 工程架构文档 (ARCHITECTURE)
 
-> **版本**：v1.1 · 最后更新：2026-04-22
+> **版本**：v1.2 · 最后更新：2026-04-26
 > **技术栈**：Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS v4 · SWR · ethers.js · Privy
 
 ---
@@ -72,8 +72,9 @@ polymarket-seer/
 │   │       ├── MarketCard.tsx      # 通用市场卡片
 │   │       ├── BinaryOutrightCard.tsx # 二元/Outright 市场卡片
 │   │       ├── OutrightListView.tsx   # Outright 列表视图
-│   │       ├── ConfirmModal.tsx    # 下单确认弹窗（金额/赔率/滑点）
-│   │       ├── SellDrawer.tsx      # 卖出抽屉（市价/限价）
+│   │       ├── ConfirmModal.tsx    # 下单确认弹窗（金额/赔率/滑点，100% i18n 支持）
+│   │       ├── ChooseSideDrawer.tsx# 独立阵营选择弹窗（支持 SVG 高保真国旗与动态 i18n 映射）
+│   │       ├── SellDrawer.tsx      # 卖出抽屉（市价/限价，i18n适配）
 │   │       ├── RedeemDrawer.tsx    # 兑现抽屉
 │   │       ├── DepositDrawer.tsx   # 充值抽屉
 │   │       ├── SettingsDrawer.tsx  # 设置抽屉（账户/钱包信息）
@@ -101,6 +102,12 @@ polymarket-seer/
 │   │   ├── useOutrightData.ts      # 趣味投注数据获取 Hook
 │   │   ├── useShareCard.ts         # 分享卡片生成 Hook
 │   │   └── useSportCategories.ts   # 运动分类映射 Hook
+│   │
+│   ├── i18n/                       # ★ 全局国际化体系
+│   │   ├── locales/                # 字典目录 (zh.ts / en.ts)
+│   │   ├── I18nContext.tsx         # 国际化上下文 Provider
+│   │   ├── useTranslation.ts       # t / locale 获取 Hook
+│   │   └── countryNames.ts         # 体育垂直领域专用：国家名词典映射引擎
 │   │
 │   ├── lib/                        # 工具库 & 静态数据
 │   │   ├── constants.ts            # 全局常量（合约地址、API 端点等）
@@ -277,11 +284,16 @@ polymarket-seer/
 
 2. **全局组件交互 (Master-Detail Portals)**
    - 痛点：在长列表中弹出确认交易单时，常遇到 CSS z-index 和父节点 overflow 截断问题。
-   - 解决方案：`DiscoverPage` 广泛使用 `createPortal` 以及 Framer Motion 的 `AnimatePresence` 处理抽屉或全屏 Overlay 弹起逻辑。弹窗直接附着于 `document.body`，剥离了内部上下文的视觉耦合。
+   - 解决方案：`DiscoverPage` 广泛使用 `createPortal` 以及 Framer Motion 的 `AnimatePresence` 处理抽屉或全屏 Overlay 弹起逻辑。像 `ChooseSideDrawer` 和 `ConfirmModal` 均直接附着于 `document.body`，剥离了内部上下文的视觉耦合。
 
 3. **色彩令牌工厂 (Color Tokens Abstraction)**
    - 我们抛弃了随地写死的 Tailwind hex 色值，统一提取主题配置引擎，如 `DISCOVER_THEME`。
    - 通过 JS 常量管理 `accentGold` (TITLE RACE金)、`dangerMagenta` (LONG SHOT危险紫红) 及其自带的高斯模糊光晕变量 `dangerMagentaGlow`，使得后续可无痛拓展皮肤和调整色阶。
+
+4. **全球化自适应渲染 (i18n Engine)**
+   - 基于纯 Context 打造了轻量级、完全类型安全的国际化引擎字典 (`zh.ts` 与 `en.ts`)。
+   - 实现了特殊的 `countryNames.ts` 翻译器，确保由于 API 返回的原生国家名称（甚至特殊变体如 `BIH/ITA/NIR/WAL`）可以无缝、原子化地翻译，不再出现中英混杂硬编码问题。
+   - 全局图文架构中，涉及到 `国旗` 的场景，全部使用 `getCountryFlagUrl(name, 'svg')` 请求统一的正规 4:3 矢量 SVG 资源，取代失真 PNG，强化“转播级”专业感。
 
 ---
 
