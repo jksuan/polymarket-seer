@@ -60,9 +60,9 @@ export function BottomNav({ activeTab, onChange }: BottomNavProps) {
             onClick={() => onChange('challenge')}
             className="absolute flex items-center justify-center transition-all active:scale-90"
             style={{
-              top: '-5px',
-              width: '42px',
-              height: '42px',
+              top: '8px',
+              width: '30px',
+              height: '30px',
               background: 'transparent',
               outline: 'none'
             }}
