@@ -396,7 +396,7 @@ export function SettingsDrawer(props: SettingsDrawerProps) {
 function PrivacyContent() {
   return (
     <>
-      <p className="text-white/50 text-xs mb-8 uppercase tracking-widest font-bold">
+      <p className="text-white/40 text-xs mb-8 tracking-widest font-bold">
         Last Updated: April 2026
       </p>
       <h3 className="text-white text-lg font-bold mb-3">1. Information Collection</h3>
@@ -411,6 +411,11 @@ function PrivacyContent() {
       <p className="text-white/70 text-[15px] leading-relaxed mb-6">
         This application utilizes third-party infrastructure including Polymarket for market matching and Privy for wallet generation. Please refer to their respective privacy policies to understand how they handle your data on the blockchain.
       </p>
+
+      <div className="mt-16 pt-8 border-t border-white/5 flex flex-col items-center gap-2">
+        <span className="text-white/40 text-[11px] font-bold tracking-widest italic">Secured by Polymarket Protocol</span>
+        <p className="text-white/40 text-[11px] font-medium">© 2026 seer.sports. All rights reserved.</p>
+      </div>
     </>
   );
 }
@@ -418,7 +423,7 @@ function PrivacyContent() {
 function TermsContent() {
   return (
     <>
-      <p className="text-white/50 text-xs mb-8 uppercase tracking-widest font-bold">
+      <p className="text-white/40 text-xs mb-8 tracking-widest font-bold">
         Last Updated: April 2026
       </p>
       <h3 className="text-white text-lg font-bold mb-3">1. Acceptance of Terms</h3>
@@ -433,6 +438,11 @@ function TermsContent() {
       <p className="text-white/70 text-[15px] leading-relaxed mb-6">
         Trading in prediction markets involves significant risk of potential loss. You should carefully consider your financial situation and risk tolerance before trading. Smart contracts are subject to vulnerabilities. SEER.SPORTS acts solely as a UI interface and is not liable for any losses incurred.
       </p>
+
+      <div className="mt-16 pt-8 border-t border-white/5 flex flex-col items-center gap-2">
+        <span className="text-white/40 text-[11px] font-bold tracking-widest italic">Secured by Polymarket Protocol</span>
+        <p className="text-white/40 text-[11px] font-medium">© 2026 seer.sports. All rights reserved.</p>
+      </div>
     </>
   );
 }
@@ -451,17 +461,18 @@ function AboutContent() {
         Trade the outcome of major sporting events securely and globally.
       </p>
 
-      <div className="flex gap-4 w-full">
-        <a href="#" className="flex-1 bg-white/5 border border-white/10 p-4 rounded-2xl flex flex-col items-center gap-2 active:bg-white/10 transition-colors">
-          <Globe size={24} className="text-white/80" />
-          <span className="text-white text-sm font-bold">Website</span>
-        </a>
-        <a href="#" className="flex-1 bg-[#1DA1F2]/10 border border-[#1DA1F2]/20 p-4 rounded-2xl flex flex-col items-center gap-2 active:bg-[#1DA1F2]/20 transition-colors">
+      <div className="flex justify-center w-full">
+        <a href="#" className="w-full max-w-[160px] bg-[#1DA1F2]/10 border border-[#1DA1F2]/20 p-4 rounded-2xl flex flex-col items-center gap-2 active:bg-[#1DA1F2]/20 transition-colors">
           <svg className="w-6 h-6 text-[#1DA1F2]" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
           </svg>
           <span className="text-[#1DA1F2] text-sm font-bold">Twitter</span>
         </a>
+      </div>
+
+      <div className="mt-16 pt-8 border-t border-white/5 flex flex-col items-center gap-2 w-full">
+        <span className="text-white/40 text-[11px] font-bold tracking-widest italic">Next-gen Sports Prediction Interface</span>
+        <p className="text-white/40 text-[11px] font-medium">© 2026 seer.sports. All rights reserved.</p>
       </div>
     </div>
   );
