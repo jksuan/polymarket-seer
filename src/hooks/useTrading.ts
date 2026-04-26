@@ -7,6 +7,7 @@ import { RelayClient, RelayerTxType } from "@polymarket/builder-relayer-client";
 import { BuilderConfig } from "@polymarket/builder-relayer-client/node_modules/@polymarket/builder-signing-sdk";
 import { deriveSafe } from "@polymarket/builder-relayer-client/dist/builder/derive";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
+import { useTranslation } from "@/i18n";
 
 import {
   POLYGON_CHAIN_ID,
@@ -35,6 +36,7 @@ export function useTrading(
 ) {
   const { authenticated, login } = usePrivy();
   const { wallets } = useWallets();
+  const { t } = useTranslation();
 
   // --- Transaction Progress Overlay States ---
   const [txStep, setTxStep] = useState<TxStep>("idle");
@@ -233,7 +235,7 @@ export function useTrading(
     if (!pos || !proxyAddress) return;
 
     setTxStep("preparing");
-    setTxMessage(mode === "archive" ? "正在准备归档交易..." : "正在构造领奖交易请求...");
+    setTxMessage(mode === "archive" ? t.tx.preparingArchive : t.tx.preparingRedeem);
     setTxError(null);
 
     try {
@@ -267,8 +269,8 @@ export function useTrading(
       if (isNegRisk) {
         // ▸ NegRisk 市场 → 调用 NegRiskAdapter.redeemPositions(conditionId, amounts)
         setTxMessage(mode === "archive"
-          ? "检测到多结果市场，正在查询链上代币余额..."
-          : "检测到多结果市场，正在查询可领取奖励..."
+          ? t.tx.checkingArchiveBalance
+          : t.tx.checkingRedeemReward
         );
 
         // 查询链上 ERC1155 代币的实际余额
@@ -308,22 +310,22 @@ export function useTrading(
       // ── Step 4: 通过 Relayer 提交交易 ──
       setTxStep("placing");
       setTxMessage(mode === "archive"
-        ? "正在通过 Relayer 激活归档交易..."
-        : "正在通过 Relayer 激活资产并提取奖励..."
+        ? t.tx.activatingArchive
+        : t.tx.activatingRedeem
       );
 
       const tx = await relayClient.execute([redeemTx], mode === "archive" ? "Archive Position" : "Redeem Positions");
 
       setTxMessage(mode === "archive"
-        ? "归档交易已广播，等待链上确认..."
-        : "领奖交易已广播，等待区块链状态更新..."
+        ? t.tx.archiveBroadcasted
+        : t.tx.redeemBroadcasted
       );
       await tx.wait();
 
       setTxStep("success");
       setTxMessage(mode === "archive"
-        ? "持仓已归档，链上代币已清理完成。"
-        : "恭喜！奖励已成功领取，资金已划转至您的金库。"
+        ? t.tx.archiveSuccess
+        : t.tx.redeemSuccess
       );
       
       // Auto-refresh positions after 1.5s to allow for indexing
@@ -334,15 +336,15 @@ export function useTrading(
       
       if (errMsg.toLowerCase().includes("timeout")) {
         setTxStep("error");
-        setTxMessage("⚠️ 签名通道休眠，交易未发送，资产安全。即将为您重新激活页面...");
-        setTxError("签名通道因长时间休眠已断开。页面将自动刷新以恢复连接，届时您可重新操作。");
+        setTxMessage(t.tx.signatureTimeout);
+        setTxError(t.tx.signatureTimeoutDesc);
         setTimeout(() => { window.location.reload(); }, 2000);
         return;
       }
 
       setTxStep("error");
       setTxError(errMsg);
-      setTxMessage(mode === "archive" ? "归档请求执行失败" : "领奖请求执行失败");
+      setTxMessage(mode === "archive" ? t.tx.archiveFailed : t.tx.redeemFailed);
     }
   };
 
@@ -350,7 +352,7 @@ export function useTrading(
     if (!authenticated || !wallets || wallets.length === 0) { login(); return; }
 
     setTxStep("preparing");
-    setTxMessage("正在切换至 Polygon 网络...");
+    setTxMessage(t.tx.switchingNetwork);
     setTxOrderId(null);
     setTxError(null);
 
@@ -363,14 +365,14 @@ export function useTrading(
 
       try { await wallet.switchChain(POLYGON_CHAIN_ID); } catch (e) { console.warn("Switch chain skipped", e); }
 
-      setTxMessage("正在初始化交易环境...");
+      setTxMessage(t.tx.initTradingEnv);
       const ethereumProvider = await wallet.getEthereumProvider();
       const provider = new ethers.providers.Web3Provider(ethereumProvider as any);
       const signer = provider.getSigner();
 
       let creds = getCachedCreds(wallet.address);
       if (!creds) {
-        setTxMessage("初次交易，正在自动为您生成交易凭据...");
+        setTxMessage(t.tx.generatingCreds);
         const clobClient = new ClobClient(CLOB_API_URL, POLYGON_CHAIN_ID, signer as any);
         try {
           creds = await clobClient.deriveApiKey();
@@ -399,7 +401,7 @@ export function useTrading(
       const derivedProxy = proxyAddress || deriveSafe(wallet.address, SAFE_FACTORY_POLYGON);
 
       // --- Step 1: Pre-flight Check (Balance) ---
-      setTxMessage("正在检查金库余额...");
+      setTxMessage(t.tx.checkingBalance);
       const clobClientWithCreds = new ClobClient(CLOB_API_URL, POLYGON_CHAIN_ID, signer as any, creds, SIGNATURE_TYPE_GNOSIS_SAFE, derivedProxy as string);
       try {
         const balanceData = await clobClientWithCreds.getBalanceAllowance({ asset_type: "COLLATERAL" as any });
@@ -428,25 +430,25 @@ export function useTrading(
         }
       }
 
-      setTxMessage(customTokenId ? "已关联目标市场..." : "正在获取活跃市场数据...");
+      setTxMessage(customTokenId ? t.tx.linkedTargetMarket : t.tx.fetchingActiveMarket);
       let finalTokenId = customTokenId;
       if (!finalTokenId) throw new Error("未获取到有效的交易代币 ID，请从市场列表重新选择下注目标");
 
       // --- Step 2: Deploy Safe Wallet ---
       setTxStep("deploying");
-      setTxMessage("正在检查金库部署状态...");
+      setTxMessage(t.tx.checkingVaultState);
       const builderConfig = new BuilderConfig({ remoteBuilderConfig: { url: `${window.location.origin}/api/sign` } });
       const relayClient = new RelayClient(RELAYER_URL, POLYGON_CHAIN_ID, signer as any, builderConfig, RelayerTxType.SAFE);
 
       try {
         const isDeployed = await relayClient.getDeployed(derivedProxy as string);
         if (!isDeployed) {
-          setTxMessage("金库尚未激活，正在通过 Relayer 免费部署...");
+          setTxMessage(t.tx.vaultNotActivated);
           const d = await relayClient.deploy();
-          setTxMessage("部署交易已提交，等待链上确认...");
+          setTxMessage(t.tx.deployTxSubmitted);
           await d.wait();
         } else {
-          setTxMessage("金库已激活 ✓");
+          setTxMessage(t.tx.vaultActivated);
         }
       } catch (deployErr: any) {
         if (!String(deployErr.message || deployErr).includes("deployed")) {
@@ -456,7 +458,7 @@ export function useTrading(
 
       // --- Step 2: Batch Token Approvals ---
       setTxStep("approving");
-      setTxMessage("正在设置代币交易授权 (一次性操作)...");
+      setTxMessage(t.tx.settingApproval);
       const erc20 = new ethers.utils.Interface(ERC20_ABI);
       const erc1155 = new ethers.utils.Interface(ERC1155_ABI);
       const MAX = ethers.constants.MaxUint256;
@@ -468,10 +470,10 @@ export function useTrading(
           { to: ADDRESSES.USDCe, data: erc20.encodeFunctionData("approve", [ADDRESSES.NEG_RISK_CTF_EXCHANGE, MAX]), value: "0" },
           { to: ADDRESSES.CTF, data: erc1155.encodeFunctionData("setApprovalForAll", [ADDRESSES.CTF_EXCHANGE, true]), value: "0" }
         ], "Batch Approve");
-        setTxMessage("授权完成 ✓，正在同步余额...");
+        setTxMessage(t.tx.approveSuccess);
       } catch (approveErr: any) {
         console.warn("Approval may have already been set:", approveErr);
-        setTxMessage("授权已存在，跳过 ✓");
+        setTxMessage(t.tx.approvalExists);
       }
 
       try {
@@ -480,7 +482,7 @@ export function useTrading(
 
       // --- Step 3: Place Market Order ---
       setTxStep("placing");
-      setTxMessage("正在向 Polymarket 提交限制吃单保护(FOK)...");
+      setTxMessage(t.tx.submittingBuyOrder);
       const parsedAmount = Number(amount);
       if (isNaN(parsedAmount) || parsedAmount <= 0) throw new Error("下注金额无效");
 
@@ -499,7 +501,7 @@ export function useTrading(
 
       if (resp && resp.success) {
         setTxStep("success");
-        setTxMessage("下注成功！订单已被 Polymarket 撮合引擎接受。");
+        setTxMessage(t.tx.placeSuccess);
         setTxOrderId(resp.orderID || null);
         syncData(1500);
       } else {
@@ -520,8 +522,8 @@ export function useTrading(
 
       if (finalMsg.toLowerCase().includes("timeout")) {
         setTxStep("error");
-        setTxMessage("⚠️ 签名通道休眠，交易未发送，资产安全。即将为您重新激活页面...");
-        setTxError("签名通道因长时间休眠已断开。页面将自动刷新以恢复连接，届时您可重新操作。");
+        setTxMessage(t.tx.signatureTimeout);
+        setTxError(t.tx.signatureTimeoutDesc);
         setTimeout(() => { window.location.reload(); }, 2000);
         return;
       }
@@ -531,9 +533,9 @@ export function useTrading(
       if (finalMsg.includes("user rejected")) finalMsg = "用户取消了签名请求。";
 
       if (finalMsg.includes("余额不足") || finalMsg.includes("not enough balance")) {
-        setTxMessage("账户余额不足，请充值后重试");
+        setTxMessage(t.tx.insufficientBalance);
       } else {
-        setTxMessage("交易出错或被中断");
+        setTxMessage(t.tx.tradeError);
       }
 
       setTxError(finalMsg);
@@ -562,13 +564,13 @@ export function useTrading(
       const clobClient = new ClobClient(CLOB_API_URL, POLYGON_CHAIN_ID, signer as any, creds, SIGNATURE_TYPE_GNOSIS_SAFE, proxyAddress);
 
       setTxStep("placing");
-      setTxMessage("正在取消订单...");
+      setTxMessage(t.tx.cancelingOrder);
 
       const resp = await clobClient.cancelOrder({ orderID: orderId });
 
       if (resp && resp.canceled && resp.canceled.includes(orderId)) {
         setTxStep("success");
-        setTxMessage("订单已成功取消");
+        setTxMessage(t.tx.cancelSuccess);
         syncData(1000); // Cancellation usually indexes faster
       } else {
         throw new Error("取消失败，订单可能已成交或已被处理");
@@ -579,15 +581,15 @@ export function useTrading(
 
       if (errMsg.toLowerCase().includes("timeout")) {
         setTxStep("error");
-        setTxMessage("⚠️ 签名通道休眠，交易未发送，资产安全。即将为您重新激活页面...");
-        setTxError("签名通道因长时间休眠已断开。页面将自动刷新以恢复连接，届时您可重新操作。");
+        setTxMessage(t.tx.signatureTimeout);
+        setTxError(t.tx.signatureTimeoutDesc);
         setTimeout(() => { window.location.reload(); }, 2000);
         return;
       }
 
       setTxStep("error");
       setTxError(errMsg);
-      setTxMessage("取消请求执行失败");
+      setTxMessage(t.tx.cancelFailed);
     }
   };
 
@@ -595,7 +597,7 @@ export function useTrading(
     if (!authenticated || !wallets || wallets.length === 0 || !proxyAddress) return;
 
     setTxStep("preparing");
-    setTxMessage("正在计算市场参数准备出售...");
+    setTxMessage(t.tx.preparingSell);
     setTxError(null);
 
     try {
@@ -618,7 +620,7 @@ export function useTrading(
       }
 
       setTxStep("placing");
-      setTxMessage("正在向 Polymarket 提交限制卖单保护(FOK)...");
+      setTxMessage(t.tx.submittingSellOrder);
 
       const tickSize = await clobClient.getTickSize(tokenId).catch(() => "0.01") as "0.1" | "0.01" | "0.001" | "0.0001";
       const negRisk = await clobClient.getNegRisk(tokenId).catch(() => false);
@@ -638,7 +640,7 @@ export function useTrading(
 
       if (resp && resp.success) {
         setTxStep("success");
-        setTxMessage("卖出成功！大部分或全部份额已按市价被撮合。");
+        setTxMessage(t.tx.sellSuccess);
         setTxOrderId(resp.orderID || null);
         syncData(1500);
       } else {
@@ -655,8 +657,8 @@ export function useTrading(
 
       if (finalMsg.toLowerCase().includes("timeout")) {
         setTxStep("error");
-        setTxMessage("⚠️ 签名通道休眠，交易未发送，资产安全。即将为您重新激活页面...");
-        setTxError("签名通道因长时间休眠已断开。页面将自动刷新以恢复连接，届时您可重新操作。");
+        setTxMessage(t.tx.signatureTimeout);
+        setTxError(t.tx.signatureTimeoutDesc);
         setTimeout(() => { window.location.reload(); }, 2000);
         return;
       }
@@ -665,7 +667,7 @@ export function useTrading(
       if (finalMsg.includes("user rejected")) finalMsg = "用户取消了签名请求。";
       
       setTxError(finalMsg);
-      setTxMessage("出售操作执行失败");
+      setTxMessage(t.tx.sellFailed);
     }
   };
 
@@ -673,7 +675,7 @@ export function useTrading(
     if (!authenticated || !wallets || wallets.length === 0 || !proxyAddress) return;
 
     setTxStep("preparing");
-    setTxMessage("正在计算市场参数准备限价挂单...");
+    setTxMessage(t.tx.preparingLimitOrder);
     setTxError(null);
 
     try {
@@ -696,7 +698,7 @@ export function useTrading(
       }
 
       setTxStep("placing");
-      setTxMessage("正在向 Polygon 提交限价卖单...");
+      setTxMessage(t.tx.submittingLimitOrder);
 
       const tickSize = await clobClient.getTickSize(tokenId).catch(() => "0.01") as "0.1" | "0.01" | "0.001" | "0.0001";
       const negRisk = await clobClient.getNegRisk(tokenId).catch(() => false);
@@ -710,7 +712,7 @@ export function useTrading(
 
       if (resp && resp.success) {
         setTxStep("success");
-        setTxMessage("限价卖单提交成功！等待市场买方吃单。");
+        setTxMessage(t.tx.limitOrderSuccess);
         setTxOrderId(resp.orderID || null);
         syncData(1500);
       } else {
@@ -727,8 +729,8 @@ export function useTrading(
 
       if (finalMsg.toLowerCase().includes("timeout")) {
         setTxStep("error");
-        setTxMessage("⚠️ 签名通道休眠，交易未发送，资产安全。即将为您重新激活页面...");
-        setTxError("签名通道因长时间休眠已断开。页面将自动刷新以恢复连接，届时您可重新操作。");
+        setTxMessage(t.tx.signatureTimeout);
+        setTxError(t.tx.signatureTimeoutDesc);
         setTimeout(() => { window.location.reload(); }, 2000);
         return;
       }
@@ -737,7 +739,7 @@ export function useTrading(
       if (finalMsg.includes("user rejected")) finalMsg = "用户取消了签名请求。";
       
       setTxError(finalMsg);
-      setTxMessage("限价卖出操作执行失败");
+      setTxMessage(t.tx.limitSellFailed);
     }
   };
 

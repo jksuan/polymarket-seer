@@ -75,8 +75,8 @@ export function BottomNav({ activeTab, onChange }: BottomNavProps) {
                 src="/world-cup-2026-football-logo.svg" 
                 alt="World Cup" 
                 style={{ 
-                  width: '68px', 
-                  height: '68px',
+                  width: '60px', 
+                  height: '60px',
                   opacity: isActive('challenge') ? 1 : 0.6,
                   transition: 'opacity 0.3s ease',
                   filter: 'brightness(1.3) saturate(1.5)'
@@ -89,8 +89,8 @@ export function BottomNav({ activeTab, onChange }: BottomNavProps) {
           <span
             className={`mt-1 tracking-wide transition-colors duration-200 ${
               isActive('challenge') 
-                ? 'text-cyan-400 drop-shadow-[0_0_8px_rgba(34,211,238,0.5)]' 
-                : 'text-gray-500 hover:text-gray-400'
+                ? 'text-[#00F0FF] drop-shadow-[0_0_8px_rgba(0,240,255,0.5)]' 
+                : 'text-[#888] hover:text-[#aaa]'
             }`}
             style={{
               fontSize: '13px',
