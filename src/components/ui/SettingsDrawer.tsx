@@ -15,6 +15,7 @@ import {
   CheckCircle2,
   Wallet,
   Building2,
+  ChevronLeft,
 } from "lucide-react";
 import { usePolymarketAuth } from "@/contexts/PolymarketAuthContext";
 import { shortenAddress } from "@/lib/utils";
@@ -33,6 +34,7 @@ interface SettingsDrawerProps {
 function DrawerContent({ isOpen, onClose, authenticated = false, onLogout }: SettingsDrawerProps) {
   const { displayIdentifier, proxyAddress, walletAddress } = usePolymarketAuth();
   const { t, locale, setLocale } = useTranslation();
+  const [activePanel, setActivePanel] = useState<'main' | 'privacy' | 'terms' | 'about'>('main');
   const [copiedProxy, setCopiedProxy] = useState(false);
   const [copiedEoa, setCopiedEoa] = useState(false);
 
@@ -246,6 +248,12 @@ function DrawerContent({ isOpen, onClose, authenticated = false, onLogout }: Set
                           onClick={() => {
                             if (item.id === 'language') {
                               setLocale(locale === 'zh' ? 'en' : 'zh' as Locale);
+                            } else if (item.id === 'privacy') {
+                              setActivePanel('privacy');
+                            } else if (item.id === 'terms') {
+                              setActivePanel('terms');
+                            } else if (item.id === 'about') {
+                              setActivePanel('about');
                             }
                           }}
                           className="w-full flex items-center gap-3 px-4 py-3.5 active:bg-white/5 transition-colors"
@@ -308,12 +316,62 @@ function DrawerContent({ isOpen, onClose, authenticated = false, onLogout }: Set
                     fontSize: "15px",
                   }}
                 >
-                  <LogOut size={16} />
+                 <LogOut size={16} />
                   {t.common.logout}
                 </button>
               )}
             </div>
           </motion.div>
+
+          {/* Sub Panels */}
+          <AnimatePresence>
+            {activePanel !== 'main' && (
+              <motion.div
+                key="sub-panel"
+                initial={{ x: "100%" }}
+                animate={{ x: 0 }}
+                exit={{ x: "100%" }}
+                transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                style={{
+                  position: "fixed",
+                  inset: 0,
+                  zIndex: 10000,
+                  maxWidth: "448px",
+                  margin: "0 auto",
+                  background: "#0D0518",
+                  display: "flex",
+                  flexDirection: "column",
+                  borderLeft: "1px solid rgba(255,255,255,0.08)",
+                  borderRight: "1px solid rgba(255,255,255,0.08)",
+                }}
+              >
+                {/* Sub Panel Header */}
+                <div className="sticky top-0 z-50 bg-[#0D0518]/90 backdrop-blur-xl border-b border-white/5">
+                  <div className="flex items-center justify-between px-4 h-14">
+                    <button
+                      onClick={() => setActivePanel('main')}
+                      className="w-10 h-10 -ml-2 rounded-full flex items-center justify-center active:bg-white/5 transition-colors"
+                    >
+                      <ChevronLeft size={24} className="text-white" />
+                    </button>
+                    <span className="font-bold text-lg">
+                      {activePanel === 'privacy' && t.settings.privacy}
+                      {activePanel === 'terms' && t.settings.terms}
+                      {activePanel === 'about' && t.settings.about}
+                    </span>
+                    <div className="w-10" />
+                  </div>
+                </div>
+
+                {/* Sub Panel Content */}
+                <div className="flex-1 overflow-y-auto p-6 pb-12">
+                  {activePanel === 'privacy' && <PrivacyContent />}
+                  {activePanel === 'terms' && <TermsContent />}
+                  {activePanel === 'about' && <AboutContent />}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </>
       )}
     </AnimatePresence>
@@ -332,5 +390,79 @@ export function SettingsDrawer(props: SettingsDrawerProps) {
   return createPortal(
     <DrawerContent {...props} />,
     document.body
+  );
+}
+
+function PrivacyContent() {
+  return (
+    <>
+      <p className="text-white/50 text-xs mb-8 uppercase tracking-widest font-bold">
+        Last Updated: April 2026
+      </p>
+      <h3 className="text-white text-lg font-bold mb-3">1. Information Collection</h3>
+      <p className="text-white/70 text-[15px] leading-relaxed mb-6">
+        We collect standard information required for Web3 authentication via Privy and usage analytics. Your wallet address, transaction history, and interactions with smart contracts are recorded on public blockchains and are naturally public.
+      </p>
+      <h3 className="text-white text-lg font-bold mb-3">2. Data Usage</h3>
+      <p className="text-white/70 text-[15px] leading-relaxed mb-6">
+        The information we collect locally or through our servers is primarily used to provide betting services, display your portfolio, and enhance your overall application experience. We do not sell your personal data to third parties.
+      </p>
+      <h3 className="text-white text-lg font-bold mb-3">3. Third-Party Services</h3>
+      <p className="text-white/70 text-[15px] leading-relaxed mb-6">
+        This application utilizes third-party infrastructure including Polymarket for market matching and Privy for wallet generation. Please refer to their respective privacy policies to understand how they handle your data on the blockchain.
+      </p>
+    </>
+  );
+}
+
+function TermsContent() {
+  return (
+    <>
+      <p className="text-white/50 text-xs mb-8 uppercase tracking-widest font-bold">
+        Last Updated: April 2026
+      </p>
+      <h3 className="text-white text-lg font-bold mb-3">1. Acceptance of Terms</h3>
+      <p className="text-white/70 text-[15px] leading-relaxed mb-6">
+        By accessing and using SEER.SPORTS, you agree to be bound by these Terms of Service. If you do not agree to these terms, please do not use our services.
+      </p>
+      <h3 className="text-white text-lg font-bold mb-3">2. Restricted Territories</h3>
+      <p className="text-white/70 text-[15px] leading-relaxed mb-6">
+        You must not access this application if you are located in, or are a citizen or resident of, the United States of America or any other jurisdiction where such services are restricted or prohibited by law.
+      </p>
+      <h3 className="text-white text-lg font-bold mb-3">3. Risk Acknowledgement</h3>
+      <p className="text-white/70 text-[15px] leading-relaxed mb-6">
+        Trading in prediction markets involves significant risk of potential loss. You should carefully consider your financial situation and risk tolerance before trading. Smart contracts are subject to vulnerabilities. SEER.SPORTS acts solely as a UI interface and is not liable for any losses incurred.
+      </p>
+    </>
+  );
+}
+
+function AboutContent() {
+  return (
+    <div className="flex flex-col items-center pt-8 text-center">
+      <div className="w-24 h-24 bg-gradient-to-tr from-[#00F0FF] to-[#007AFF] rounded-3xl shadow-[0_0_30px_rgba(0,240,255,0.3)] flex items-center justify-center mb-6">
+        <span className="text-white text-4xl font-black">S</span>
+      </div>
+      <h2 className="text-2xl font-black text-white mb-2">SEER.SPORTS</h2>
+      <p className="text-[#00F0FF] font-bold text-sm mb-8 tracking-widest">v1.0.0</p>
+      
+      <p className="text-white/70 text-[15px] leading-relaxed mb-12">
+        Next-generation sports prediction market built on top of Polymarket. 
+        Trade the outcome of major sporting events securely and globally.
+      </p>
+
+      <div className="flex gap-4 w-full">
+        <a href="#" className="flex-1 bg-white/5 border border-white/10 p-4 rounded-2xl flex flex-col items-center gap-2 active:bg-white/10 transition-colors">
+          <Globe size={24} className="text-white/80" />
+          <span className="text-white text-sm font-bold">Website</span>
+        </a>
+        <a href="#" className="flex-1 bg-[#1DA1F2]/10 border border-[#1DA1F2]/20 p-4 rounded-2xl flex flex-col items-center gap-2 active:bg-[#1DA1F2]/20 transition-colors">
+          <svg className="w-6 h-6 text-[#1DA1F2]" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+          </svg>
+          <span className="text-[#1DA1F2] text-sm font-bold">Twitter</span>
+        </a>
+      </div>
+    </div>
   );
 }
