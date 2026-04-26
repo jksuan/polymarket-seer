@@ -21,6 +21,9 @@ import { usePolymarketAuth } from "@/contexts/PolymarketAuthContext";
 import { shortenAddress } from "@/lib/utils";
 import { useTranslation } from "@/i18n";
 import type { Locale } from "@/i18n";
+import PrivacyContent from "./settings/PrivacyContent";
+import TermsContent from "./settings/TermsContent";
+import AboutContent from "./settings/AboutContent";
 
 interface SettingsDrawerProps {
   isOpen: boolean;
@@ -390,90 +393,5 @@ export function SettingsDrawer(props: SettingsDrawerProps) {
   return createPortal(
     <DrawerContent {...props} />,
     document.body
-  );
-}
-
-function PrivacyContent() {
-  return (
-    <>
-      <p className="text-white/40 text-xs mb-8 tracking-widest font-bold">
-        Last Updated: April 2026
-      </p>
-      <h3 className="text-white text-lg font-bold mb-3">1. Information Collection</h3>
-      <p className="text-white/70 text-[15px] leading-relaxed mb-6">
-        We collect standard information required for Web3 authentication via Privy and usage analytics. Your wallet address, transaction history, and interactions with smart contracts are recorded on public blockchains and are naturally public.
-      </p>
-      <h3 className="text-white text-lg font-bold mb-3">2. Data Usage</h3>
-      <p className="text-white/70 text-[15px] leading-relaxed mb-6">
-        The information we collect locally or through our servers is primarily used to provide betting services, display your portfolio, and enhance your overall application experience. We do not sell your personal data to third parties.
-      </p>
-      <h3 className="text-white text-lg font-bold mb-3">3. Third-Party Services</h3>
-      <p className="text-white/70 text-[15px] leading-relaxed mb-6">
-        This application utilizes third-party infrastructure including Polymarket for market matching and Privy for wallet generation. Please refer to their respective privacy policies to understand how they handle your data on the blockchain.
-      </p>
-
-      <div className="mt-16 pt-8 border-t border-white/5 flex flex-col items-center gap-2">
-        <span className="text-white/40 text-[11px] font-bold tracking-widest italic">Secured by Polymarket Protocol</span>
-        <p className="text-white/40 text-[11px] font-medium">© 2026 seer.sports. All rights reserved.</p>
-      </div>
-    </>
-  );
-}
-
-function TermsContent() {
-  return (
-    <>
-      <p className="text-white/40 text-xs mb-8 tracking-widest font-bold">
-        Last Updated: April 2026
-      </p>
-      <h3 className="text-white text-lg font-bold mb-3">1. Acceptance of Terms</h3>
-      <p className="text-white/70 text-[15px] leading-relaxed mb-6">
-        By accessing and using SEER.SPORTS, you agree to be bound by these Terms of Service. If you do not agree to these terms, please do not use our services.
-      </p>
-      <h3 className="text-white text-lg font-bold mb-3">2. Restricted Territories</h3>
-      <p className="text-white/70 text-[15px] leading-relaxed mb-6">
-        You must not access this application if you are located in, or are a citizen or resident of, the United States of America or any other jurisdiction where such services are restricted or prohibited by law.
-      </p>
-      <h3 className="text-white text-lg font-bold mb-3">3. Risk Acknowledgement</h3>
-      <p className="text-white/70 text-[15px] leading-relaxed mb-6">
-        Trading in prediction markets involves significant risk of potential loss. You should carefully consider your financial situation and risk tolerance before trading. Smart contracts are subject to vulnerabilities. SEER.SPORTS acts solely as a UI interface and is not liable for any losses incurred.
-      </p>
-
-      <div className="mt-16 pt-8 border-t border-white/5 flex flex-col items-center gap-2">
-        <span className="text-white/40 text-[11px] font-bold tracking-widest italic">Secured by Polymarket Protocol</span>
-        <p className="text-white/40 text-[11px] font-medium">© 2026 seer.sports. All rights reserved.</p>
-      </div>
-    </>
-  );
-}
-
-function AboutContent() {
-  return (
-    <div className="flex flex-col items-center pt-8 text-center">
-      <div className="w-24 h-24 bg-gradient-to-tr from-[#00F0FF] to-[#007AFF] rounded-3xl shadow-[0_0_30px_rgba(0,240,255,0.3)] flex items-center justify-center mb-6">
-        <span className="text-white text-4xl font-black">S</span>
-      </div>
-      <h2 className="text-2xl font-black text-white mb-2">SEER.SPORTS</h2>
-      <p className="text-[#00F0FF] font-bold text-sm mb-8 tracking-widest">v1.0.0</p>
-      
-      <p className="text-white/70 text-[15px] leading-relaxed mb-12">
-        Next-generation sports prediction market built on top of Polymarket. 
-        Trade the outcome of major sporting events securely and globally.
-      </p>
-
-      <div className="flex justify-center w-full">
-        <a href="#" className="w-full max-w-[160px] bg-[#1DA1F2]/10 border border-[#1DA1F2]/20 p-4 rounded-2xl flex flex-col items-center gap-2 active:bg-[#1DA1F2]/20 transition-colors">
-          <svg className="w-6 h-6 text-[#1DA1F2]" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-          </svg>
-          <span className="text-[#1DA1F2] text-sm font-bold">Twitter</span>
-        </a>
-      </div>
-
-      <div className="mt-16 pt-8 border-t border-white/5 flex flex-col items-center gap-2 w-full">
-        <span className="text-white/40 text-[11px] font-bold tracking-widest italic">Next-gen Sports Prediction Interface</span>
-        <p className="text-white/40 text-[11px] font-medium">© 2026 seer.sports. All rights reserved.</p>
-      </div>
-    </div>
   );
 }
