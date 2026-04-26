@@ -53,7 +53,7 @@ export function BottomNav({ activeTab, onChange }: BottomNavProps) {
           </button>
         ))}
 
-        <div className="flex flex-col items-center flex-1 py-2 relative">
+        <div className="flex flex-col items-center justify-center flex-1 py-2 relative">
           <button
             onClick={() => onChange('challenge')}
             className="absolute flex items-center justify-center transition-all active:scale-90 animate-pulse"
@@ -72,13 +72,14 @@ export function BottomNav({ activeTab, onChange }: BottomNavProps) {
               ${isActive('challenge') ? 'scale-110' : 'scale-100'}
             `}>
               <img 
-                src="/worldcuplogo.png" 
+                src="/world-cup-2026-football-logo.svg" 
                 alt="World Cup" 
                 style={{ 
-                  width: '58px', 
-                  height: '58px',
+                  width: '68px', 
+                  height: '68px',
                   opacity: isActive('challenge') ? 1 : 0.6,
-                  transition: 'opacity 0.3s ease'
+                  transition: 'opacity 0.3s ease',
+                  filter: 'brightness(1.3) saturate(1.5)'
                 }} 
               />
             </div>
