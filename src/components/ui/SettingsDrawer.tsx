@@ -8,10 +8,7 @@ import {
   Globe,
   Shield,
   FileText,
-  HelpCircle,
   ChevronRight,
-  Bell,
-  Moon,
   LogOut,
   Info,
   Copy,
@@ -44,15 +41,6 @@ function DrawerContent({ isOpen, onClose, authenticated = false, onLogout }: Set
       title: t.settings.preferences,
       items: [
         { id: 'language', icon: Globe, label: t.settings.language, value: locale === 'zh' ? t.settings.languageZh : t.settings.languageEn, color: "#00F0FF" },
-        { id: 'notifications', icon: Bell, label: t.settings.notifications, value: t.settings.notificationsOn, color: "#ADFF2F" },
-        { id: 'appearance', icon: Moon, label: t.settings.appearance, value: t.settings.darkMode, color: "#A78BFA" },
-      ],
-    },
-    {
-      title: t.settings.helpSupport,
-      items: [
-        { id: 'help', icon: HelpCircle, label: t.settings.helpCenter, value: "", color: "#60A5FA" },
-        { id: 'about', icon: Info, label: t.settings.about, value: "v1.0.0", color: "#F59E0B" },
       ],
     },
     {
@@ -60,6 +48,7 @@ function DrawerContent({ isOpen, onClose, authenticated = false, onLogout }: Set
       items: [
         { id: 'privacy', icon: Shield, label: t.settings.privacy, value: "", color: "#34D399" },
         { id: 'terms', icon: FileText, label: t.settings.terms, value: "", color: "#34D399" },
+        { id: 'about', icon: Info, label: t.settings.about, value: "v1.0.0", color: "#F59E0B" },
       ],
     },
   ];
