@@ -70,8 +70,8 @@ export function TopHeader({ isSticky = false }: TopHeaderProps = {}) {
           </div>
         ) : (
           // 已登录状态
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 mr-1">
+          <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-2">
               <button
                 onClick={() => setDepositOpen(true)}
                 className="flex items-center h-8 bg-[#ADFF2F]/10 hover:bg-[#ADFF2F]/20 border border-[#ADFF2F]/30 rounded-full transition-all active:scale-95 overflow-hidden shadow-[0_0_12px_rgba(173,255,47,0.1)]"
@@ -91,7 +91,7 @@ export function TopHeader({ isSticky = false }: TopHeaderProps = {}) {
 
             <button 
               onClick={() => setSettingsOpen(true)}
-              className="flex items-center justify-center pl-3 pr-1 border-l border-white/10 active:scale-95 transition-all outline-none"
+              className="flex items-center justify-center pl-2 pr-1 border-l border-white/10 active:scale-95 transition-all outline-none"
             >
               <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#00F0FF] to-[#007AFF] flex items-center justify-center text-white font-black text-[14px] shadow-[0_0_12px_rgba(0,240,255,0.4)] shrink-0">
                 {displayIdentifier[0] === '@' ? displayIdentifier[1]?.toUpperCase() || 'S' : displayIdentifier[0]?.toUpperCase() || 'S'}
