@@ -6,6 +6,7 @@ import { usePrivy } from '@privy-io/react-auth';
 import { usePolymarketAuth } from '@/contexts/PolymarketAuthContext';
 import { SettingsDrawer } from '@/components/ui/SettingsDrawer';
 import { DepositDrawer } from '@/components/ui/DepositDrawer';
+import { LanguageDrawer } from '@/components/ui/LanguageDrawer';
 import { useTranslation } from '@/i18n';
 import type { Locale } from '@/i18n';
 
@@ -16,15 +17,16 @@ interface TopHeaderProps {
 export function TopHeader({ isSticky = false }: TopHeaderProps = {}) {
   const { login, authenticated, logout } = usePrivy();
   const { proxyAddress, displayIdentifier, usdcBalance } = usePolymarketAuth();
-  const { t, locale, setLocale } = useTranslation();
+  const { t, locale } = useTranslation();
 
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [depositOpen, setDepositOpen] = useState(false);
+  const [langOpen, setLangOpen] = useState(false);
 
   const LangToggle = () => (
     <button
-      onClick={() => setLocale(locale === 'zh' ? 'en' : 'zh' as Locale)}
-      title={locale === 'zh' ? 'Switch to English' : '切换为中文'}
+      onClick={() => setLangOpen(true)}
+      title={locale === 'zh' ? 'Switch Language' : '切换语言'}
       className="flex items-center gap-1 h-8 px-2.5 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 active:scale-95 transition-all shrink-0"
     >
       <Globe size={13} className="text-[#00F0FF]" />
@@ -113,6 +115,10 @@ export function TopHeader({ isSticky = false }: TopHeaderProps = {}) {
         isOpen={depositOpen}
         onClose={() => setDepositOpen(false)}
         proxyAddress={proxyAddress || ""}
+      />
+      <LanguageDrawer
+        isOpen={langOpen}
+        onClose={() => setLangOpen(false)}
       />
     </>
   );
