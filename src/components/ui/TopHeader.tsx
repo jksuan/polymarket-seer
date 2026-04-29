@@ -1,12 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { Zap, Wallet, ArrowDownToLine } from 'lucide-react';
+import { Zap, Wallet, ArrowDownToLine, Globe } from 'lucide-react';
 import { usePrivy } from '@privy-io/react-auth';
 import { usePolymarketAuth } from '@/contexts/PolymarketAuthContext';
 import { SettingsDrawer } from '@/components/ui/SettingsDrawer';
 import { DepositDrawer } from '@/components/ui/DepositDrawer';
 import { useTranslation } from '@/i18n';
+import type { Locale } from '@/i18n';
 
 interface TopHeaderProps {
   isSticky?: boolean;
@@ -15,10 +16,23 @@ interface TopHeaderProps {
 export function TopHeader({ isSticky = false }: TopHeaderProps = {}) {
   const { login, authenticated, logout } = usePrivy();
   const { proxyAddress, displayIdentifier, usdcBalance } = usePolymarketAuth();
-  const { t } = useTranslation();
+  const { t, locale, setLocale } = useTranslation();
 
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [depositOpen, setDepositOpen] = useState(false);
+
+  const LangToggle = () => (
+    <button
+      onClick={() => setLocale(locale === 'zh' ? 'en' : 'zh' as Locale)}
+      title={locale === 'zh' ? 'Switch to English' : '切换为中文'}
+      className="flex items-center gap-1 h-8 px-2.5 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 active:scale-95 transition-all shrink-0"
+    >
+      <Globe size={13} className="text-[#00F0FF]" />
+      <span className="text-white/70 text-[11px] font-bold tracking-wide">
+        {locale === 'zh' ? '中' : 'EN'}
+      </span>
+    </button>
+  );
 
   return (
     <>
@@ -44,14 +58,19 @@ export function TopHeader({ isSticky = false }: TopHeaderProps = {}) {
         </div>
 
         {!authenticated ? (
-          <button
-            onClick={login}
-            className="flex items-center gap-2 px-4 py-2 rounded-full active:scale-95 transition-all shadow-[0_0_12px_rgba(173,255,47,0.15)] bg-[#ADFF2F]/10 border border-[#ADFF2F]/50 text-[#ADFF2F] font-bold text-[12px]"
-          >
-            <Wallet size={14} />
-            {t.common.login}
-          </button>
+          // 未登录状态
+          <div className="flex items-center gap-2">
+            <LangToggle />
+            <button
+              onClick={login}
+              className="flex items-center gap-2 px-4 py-2 rounded-full active:scale-95 transition-all shadow-[0_0_12px_rgba(173,255,47,0.15)] bg-[#ADFF2F]/10 border border-[#ADFF2F]/50 text-[#ADFF2F] font-bold text-[12px]"
+            >
+              <Wallet size={14} />
+              {t.common.login}
+            </button>
+          </div>
         ) : (
+          // 已登录状态
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-3 mr-1">
               <div className="flex flex-col items-end justify-center">
@@ -69,6 +88,7 @@ export function TopHeader({ isSticky = false }: TopHeaderProps = {}) {
                 <ArrowDownToLine size={12} strokeWidth={2.5} />
                 {t.header.deposit}
               </button>
+              <LangToggle />
             </div>
 
             <button 

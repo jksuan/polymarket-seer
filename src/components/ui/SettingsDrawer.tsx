@@ -5,7 +5,6 @@ import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "motion/react";
 import {
   X,
-  Globe,
   Shield,
   FileText,
   ChevronRight,
@@ -20,7 +19,6 @@ import {
 import { usePolymarketAuth } from "@/contexts/PolymarketAuthContext";
 import { shortenAddress } from "@/lib/utils";
 import { useTranslation } from "@/i18n";
-import type { Locale } from "@/i18n";
 import PrivacyContent from "./settings/PrivacyContent";
 import TermsContent from "./settings/TermsContent";
 import AboutContent from "./settings/AboutContent";
@@ -42,12 +40,6 @@ function DrawerContent({ isOpen, onClose, authenticated = false, onLogout }: Set
   const [copiedEoa, setCopiedEoa] = useState(false);
 
   const SETTINGS_GROUPS = [
-    {
-      title: t.settings.preferences,
-      items: [
-        { id: 'language', icon: Globe, label: t.settings.language, value: locale === 'zh' ? t.settings.languageZh : t.settings.languageEn, color: "#00F0FF" },
-      ],
-    },
     {
       title: t.settings.legal,
       items: [
@@ -249,9 +241,7 @@ function DrawerContent({ isOpen, onClose, authenticated = false, onLogout }: Set
                         <button
                           key={item.label}
                           onClick={() => {
-                            if (item.id === 'language') {
-                              setLocale(locale === 'zh' ? 'en' : 'zh' as Locale);
-                            } else if (item.id === 'privacy') {
+                            if (item.id === 'privacy') {
                               setActivePanel('privacy');
                             } else if (item.id === 'terms') {
                               setActivePanel('terms');
