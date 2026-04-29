@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "motion/react";
 import { X, Copy, CheckCircle2, AlertTriangle, Info } from "lucide-react";
 import QRCode from "react-qr-code";
+import { useTranslation } from "@/i18n";
 
 interface DepositDrawerProps {
   isOpen: boolean;
@@ -11,6 +12,7 @@ interface DepositDrawerProps {
 }
 
 function DrawerContent({ isOpen, onClose, proxyAddress }: DepositDrawerProps) {
+  const { locale } = useTranslation();
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
@@ -57,7 +59,7 @@ function DrawerContent({ isOpen, onClose, proxyAddress }: DepositDrawerProps) {
             <div className="px-6 pb-8 overflow-y-auto">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-black text-white tracking-wide">
-                  充值到金库
+                  {locale === 'zh' ? '充值到金库' : 'Deposit to Vault'}
                 </h2>
                 <button
                   onClick={onClose}
@@ -87,10 +89,10 @@ function DrawerContent({ isOpen, onClose, proxyAddress }: DepositDrawerProps) {
                 >
                   <div className="flex flex-col mr-3 flex-1 min-w-0">
                     <span className="text-[10px] text-white/40 uppercase tracking-widest font-bold mb-1">
-                      充值地址 (Proxy Address)
+                      {locale === 'zh' ? '充值地址 (Proxy Address)' : 'Deposit Address (Proxy)'}
                     </span>
                     <span className="text-[11px] text-white font-mono break-all leading-tight">
-                      {proxyAddress || "未分配"}
+                      {proxyAddress || (locale === 'zh' ? '未分配' : 'Unassigned')}
                     </span>
                   </div>
                   <div className={`w-8 h-8 shrink-0 flex items-center justify-center rounded-lg transition-colors ${copied ? 'bg-green-500/20 text-green-400' : 'bg-white/10 text-white/60 group-hover:bg-white/20'}`}>
@@ -104,9 +106,15 @@ function DrawerContent({ isOpen, onClose, proxyAddress }: DepositDrawerProps) {
                 <div className="flex items-start gap-3 bg-blue-500/10 border border-blue-500/20 p-4 rounded-2xl">
                   <Info className="text-blue-400 mt-0.5 shrink-0" size={18} />
                   <div className="flex flex-col">
-                    <span className="text-sm font-bold text-blue-100 mb-1">必须选择 Polygon 网络</span>
+                    <span className="text-sm font-bold text-blue-100 mb-1">
+                      {locale === 'zh' ? '必须选择 Polygon 网络' : 'Polygon Network Only'}
+                    </span>
                     <span className="text-xs text-blue-200/70 leading-relaxed">
-                      请确保在交易所提币时选择 <strong className="text-[#ADFF2F]">Polygon (MATIC)</strong> 网络，选择错误网络将导致资产永久丢失。
+                      {locale === 'zh' ? (
+                        <>请确保在交易所提币时选择 <strong className="text-[#ADFF2F]">Polygon (MATIC)</strong> 网络，选择错误网络将导致资产永久丢失。</>
+                      ) : (
+                        <>Please ensure you select the <strong className="text-[#ADFF2F]">Polygon (MATIC)</strong> network when withdrawing from an exchange. Choosing the wrong network will result in permanent loss of assets.</>
+                      )}
                     </span>
                   </div>
                 </div>
@@ -116,9 +124,13 @@ function DrawerContent({ isOpen, onClose, proxyAddress }: DepositDrawerProps) {
                     <div className="w-1.5 h-1.5 rounded-full bg-purple-400" />
                   </div>
                   <div className="flex flex-col">
-                    <span className="text-sm font-bold text-purple-100 mb-1">仅支持 USDC.e 或 USDC</span>
+                    <span className="text-sm font-bold text-purple-100 mb-1">
+                      {locale === 'zh' ? '仅支持 USDC.e 或 USDC' : 'Only USDC.e or USDC Supported'}
+                    </span>
                     <span className="text-xs text-purple-200/70 leading-relaxed">
-                      请勿充值任何其他代币，金库目前仅支持原生 USDC 及跨链桥 USDC.e 计价。
+                      {locale === 'zh' ? 
+                        '请勿充值任何其他代币，金库目前仅支持原生 USDC 及跨链桥 USDC.e 计价。' : 
+                        'Do not deposit any other tokens. The vault currently only supports native USDC and bridged USDC.e for valuation.'}
                     </span>
                   </div>
                 </div>
@@ -126,9 +138,15 @@ function DrawerContent({ isOpen, onClose, proxyAddress }: DepositDrawerProps) {
                 <div className="flex items-start gap-3 bg-[#ff6b6b]/10 border border-[#ff6b6b]/20 p-4 rounded-2xl">
                   <AlertTriangle className="text-[#ff6b6b] mt-0.5 shrink-0" size={18} />
                   <div className="flex flex-col">
-                    <span className="text-sm font-bold text-[#ffcad4] mb-1">切勿直接充值至登录钱包</span>
+                    <span className="text-sm font-bold text-[#ffcad4] mb-1">
+                      {locale === 'zh' ? '切勿直接充值至登录钱包' : 'Do Not Deposit to Login Wallet'}
+                    </span>
                     <span className="text-xs text-[#ffcad4]/70 leading-relaxed">
-                      请严格使用上方的专属金库地址。充值到您的登录授权或邮箱生成的 EOA 钱包将<strong>无法用于下注</strong>。
+                      {locale === 'zh' ? (
+                        <>请严格使用上方的专属金库地址。充值到您的登录授权或邮箱生成的 EOA 钱包将<strong>无法用于下注</strong>。</>
+                      ) : (
+                        <>Please strictly use the dedicated vault address above. Depositing to the EOA wallet generated by your login authorization or email will <strong>not be available for betting</strong>.</>
+                      )}
                     </span>
                   </div>
                 </div>
