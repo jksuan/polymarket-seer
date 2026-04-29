@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Zap, Wallet, ArrowDownToLine, Globe } from 'lucide-react';
+import { Zap, Wallet, ArrowDownToLine, Globe, Plus } from 'lucide-react';
 import { usePrivy } from '@privy-io/react-auth';
 import { usePolymarketAuth } from '@/contexts/PolymarketAuthContext';
 import { SettingsDrawer } from '@/components/ui/SettingsDrawer';
@@ -27,12 +27,9 @@ export function TopHeader({ isSticky = false }: TopHeaderProps = {}) {
     <button
       onClick={() => setLangOpen(true)}
       title={locale === 'zh' ? 'Switch Language' : '切换语言'}
-      className="flex items-center gap-1 h-8 px-2.5 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 active:scale-95 transition-all shrink-0"
+      className="w-8 h-8 rounded-full flex items-center justify-center bg-white/5 border border-white/10 hover:bg-white/10 active:scale-95 transition-all shrink-0"
     >
-      <Globe size={13} className="text-[#00F0FF]" />
-      <span className="text-white/70 text-[11px] font-bold tracking-wide">
-        {locale === 'zh' ? '中' : 'EN'}
-      </span>
+      <Globe size={14} className="text-[#00F0FF]" />
     </button>
   );
 
@@ -74,22 +71,21 @@ export function TopHeader({ isSticky = false }: TopHeaderProps = {}) {
         ) : (
           // 已登录状态
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-3 mr-1">
-              <div className="flex flex-col items-end justify-center">
-                <span className="text-[9px] font-bold text-white/40 uppercase tracking-widest mb-0.5">
-                  {t.header.balance}
-                </span>
-                <span className="text-[15px] font-black text-[#ADFF2F] leading-none" style={{ textShadow: "0 0 10px rgba(173,255,47,0.4)" }}>
-                  ${Number(usdcBalance || 0).toFixed(2)}
-                </span>
-              </div>
-              <button 
+            <div className="flex items-center gap-2 mr-1">
+              <button
                 onClick={() => setDepositOpen(true)}
-                className="flex items-center gap-1 bg-[#ADFF2F] hover:bg-[#8CEE1C] text-[#0D0518] px-3 py-1.5 rounded-lg text-[12px] font-bold tracking-wider transition-all shadow-[0_0_12px_rgba(173,255,47,0.3)] active:scale-95"
+                className="flex items-center h-8 bg-[#ADFF2F]/10 hover:bg-[#ADFF2F]/20 border border-[#ADFF2F]/30 rounded-full transition-all active:scale-95 overflow-hidden shadow-[0_0_12px_rgba(173,255,47,0.1)]"
               >
-                <ArrowDownToLine size={12} strokeWidth={2.5} />
-                {t.header.deposit}
+                <div className="px-3 flex items-center justify-center h-full">
+                  <span className="text-[13px] font-black text-[#ADFF2F] tracking-wide" style={{ textShadow: "0 0 10px rgba(173,255,47,0.4)" }}>
+                    ${Number(usdcBalance || 0).toFixed(2)}
+                  </span>
+                </div>
+                <div className="w-8 h-8 bg-[#ADFF2F] flex items-center justify-center text-[#0D0518] shrink-0 shadow-[-2px_0_8px_rgba(173,255,47,0.2)]">
+                  <Plus size={15} strokeWidth={3} />
+                </div>
               </button>
+              
               <LangToggle />
             </div>
 
