@@ -1,6 +1,6 @@
 # Polymarket Seer — 工程架构文档 (ARCHITECTURE)
 
-> **版本**：v1.2 · 最后更新：2026-04-26
+> **版本**：v1.3 · 最后更新：2026-04-30
 > **技术栈**：Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS v4 · SWR · ethers.js · Privy
 
 ---
@@ -76,8 +76,13 @@ polymarket-seer/
 │   │       ├── ChooseSideDrawer.tsx# 独立阵营选择弹窗（支持 SVG 高保真国旗与动态 i18n 映射）
 │   │       ├── SellDrawer.tsx      # 卖出抽屉（市价/限价，i18n适配）
 │   │       ├── RedeemDrawer.tsx    # 兑现抽屉
-│   │       ├── DepositDrawer.tsx   # 充值抽屉
-│   │       ├── SettingsDrawer.tsx  # 设置抽屉（账户/钱包信息）
+│   │       ├── DepositDrawer.tsx   # 充值抽屉（含 i18n 适配与 Polygon 风险提示）
+│   │       ├── SettingsDrawer.tsx  # 设置抽屉（账户信息、法律文档入口）
+│   │       ├── LanguageDrawer.tsx  # ★ 语言选择抽屉（全局一级入口，Portaled 底部滑出）
+│   │       ├── settings/           # ★ 模块化设置内容组件
+│   │       │   ├── AboutContent.tsx    # 关于我们（中英双语自研渲染）
+│   │       │   ├── PrivacyContent.tsx  # 隐私政策
+│   │       │   └── TermsContent.tsx    # 用户协议
 │   │       ├── ShareModal.tsx      # 分享弹窗
 │   │       ├── SharePoster.tsx     # 分享海报生成器
 │   │       ├── ShareCardModal.tsx  # 分享卡片弹窗
@@ -258,7 +263,7 @@ polymarket-seer/
 | **兑现/归档** | `handleRedeem()` → 调用 Builder Relayer Client 执行链上兑现 |
 | **取消订单** | `handleCancelOrder()` → CLOB Cancel API |
 | **交易状态管理** | `txStep` 状态机：idle → signing → submitting → confirming → done/error |
-| **Loading 状态** | `portfolioLoading = isLoading \|\| isAuthInitializing`（覆盖凭据初始化缝隙） |
+| **Loading 状态** | `portfolioLoading = isLoading || isAuthInitializing`（覆盖凭据初始化缝隙） |
 
 **关键设计**：
 - `isAuthInitializing`：当 `authenticated=true` 但 `swrKey=null && !data` 时强制为 loading，消除空态文字闪现
@@ -294,7 +299,9 @@ polymarket-seer/
    - 基于纯 Context 打造了轻量级、完全类型安全的国际化引擎字典 (`zh.ts` 与 `en.ts`)。
    - 实现了特殊的 `countryNames.ts` 翻译器，确保由于 API 返回的原生国家名称（甚至特殊变体如 `BIH/ITA/NIR/WAL`）可以无缝、原子化地翻译，不再出现中英混杂硬编码问题。
    - 全局图文架构中，涉及到 `国旗` 的场景，全部使用 `getCountryFlagUrl(name, 'svg')` 请求统一的正规 4:3 矢量 SVG 资源，取代失真 PNG，强化“转播级”专业感。
-   - 【已完结】完成了核心交易流（`useTrading.ts` 及其挂载弹窗等）的状态文案与语言系统的深度解耦，实现了 40+ 交易进度文案的多语言自动化映射，保障 100% 服务端及交互级的环境适配。
+   - 【核心演进】将语言切换提升为全局一级交互，使用 **LanguageDrawer** 配合 `createPortal` 挂载至 `document.body`，彻底解决了 `fixed` 定位在嵌套容器中的渲染冲突，确保在移动端始终能稳固贴底。
+   - 【核心演进】完成了核心交易流（`useTrading.ts` 及其挂载弹窗等）的状态文案与语言系统的深度解耦，实现了 40+ 交易进度文案的多语言自动化映射，并针对 `DepositDrawer` 补齐了高风险场景的中英双语引导。
+   - 【核心演进】推行“组件级双语渲染”模式处理复杂文档（如隐私政策等），绕过传统的 JSON 字典，确保了富文本排版的灵活性与开发效率。
 
 ---
 
