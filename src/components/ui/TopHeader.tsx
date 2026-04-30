@@ -1,37 +1,43 @@
 'use client';
 
 import { useState } from 'react';
-import { Zap, Wallet, ArrowDownToLine, Globe, Plus } from 'lucide-react';
+import { Zap, Wallet, Globe, Plus } from 'lucide-react';
 import { usePrivy } from '@privy-io/react-auth';
 import { usePolymarketAuth } from '@/contexts/PolymarketAuthContext';
 import { SettingsDrawer } from '@/components/ui/SettingsDrawer';
 import { DepositDrawer } from '@/components/ui/DepositDrawer';
 import { LanguageDrawer } from '@/components/ui/LanguageDrawer';
 import { useTranslation } from '@/i18n';
-import type { Locale } from '@/i18n';
 
 interface TopHeaderProps {
   isSticky?: boolean;
 }
 
-export function TopHeader({ isSticky = false }: TopHeaderProps = {}) {
-  const { login, authenticated, logout } = usePrivy();
-  const { proxyAddress, displayIdentifier, usdcBalance } = usePolymarketAuth();
-  const { t, locale } = useTranslation();
+interface LangToggleProps {
+  locale: string;
+  onOpen: () => void;
+}
 
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const [depositOpen, setDepositOpen] = useState(false);
-  const [langOpen, setLangOpen] = useState(false);
-
-  const LangToggle = () => (
+function LangToggle({ locale, onOpen }: LangToggleProps) {
+  return (
     <button
-      onClick={() => setLangOpen(true)}
+      onClick={onOpen}
       title={locale === 'zh' ? 'Switch Language' : '切换语言'}
       className="w-8 h-8 rounded-full flex items-center justify-center bg-white/5 border border-white/10 hover:bg-white/10 active:scale-95 transition-all shrink-0"
     >
       <Globe size={14} className="text-[#00F0FF]" />
     </button>
   );
+}
+
+export function TopHeader({ isSticky = false }: TopHeaderProps = {}) {
+  const { login, authenticated, logout } = usePrivy();
+  const { proxyAddress, displayIdentifier, usdcBalance, fetchBalance } = usePolymarketAuth();
+  const { t, locale } = useTranslation();
+
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [depositOpen, setDepositOpen] = useState(false);
+  const [langOpen, setLangOpen] = useState(false);
 
   return (
     <>
@@ -59,7 +65,7 @@ export function TopHeader({ isSticky = false }: TopHeaderProps = {}) {
         {!authenticated ? (
           // 未登录状态
           <div className="flex items-center gap-2">
-            <LangToggle />
+            <LangToggle locale={locale} onOpen={() => setLangOpen(true)} />
             <button
               onClick={login}
               className="flex items-center gap-2 px-4 py-2 rounded-full active:scale-95 transition-all shadow-[0_0_12px_rgba(173,255,47,0.15)] bg-[#ADFF2F]/10 border border-[#ADFF2F]/50 text-[#ADFF2F] font-bold text-[12px]"
@@ -86,7 +92,7 @@ export function TopHeader({ isSticky = false }: TopHeaderProps = {}) {
                 </div>
               </button>
               
-              <LangToggle />
+              <LangToggle locale={locale} onOpen={() => setLangOpen(true)} />
             </div>
 
             <button 
@@ -111,6 +117,8 @@ export function TopHeader({ isSticky = false }: TopHeaderProps = {}) {
         isOpen={depositOpen}
         onClose={() => setDepositOpen(false)}
         proxyAddress={proxyAddress || ""}
+        balanceUsd={usdcBalance}
+        onBalanceRefresh={() => fetchBalance(true)}
       />
       <LanguageDrawer
         isOpen={langOpen}

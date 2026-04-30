@@ -25,6 +25,7 @@ import {
   ZERO_PARENT_COLLECTION_ID,
 } from "@/lib/constants";
 import { getCachedCreds, setCachedCreds } from "@/lib/utils";
+import { selectPrimaryWallet } from "@/lib/primaryWallet";
 
 export type TxStep = "idle" | "preparing" | "deploying" | "approving" | "placing" | "success" | "error";
 
@@ -34,7 +35,7 @@ export function useTrading(
   hasCreds: boolean,
   fetchBalance: () => void
 ) {
-  const { authenticated, login } = usePrivy();
+  const { authenticated, login, user } = usePrivy();
   const { wallets } = useWallets();
   const { t } = useTranslation();
 
@@ -59,9 +60,7 @@ export function useTrading(
 
     // Find the right wallet to sign with clob
     const currentWallets = walletsRef.current;
-    const walletInfo = currentWallets.find(w => w.address.toLowerCase() === walletAddr?.toLowerCase())
-      || currentWallets.find(w => w.walletClientType === "privy")
-      || currentWallets[0];
+    const walletInfo = selectPrimaryWallet(currentWallets, walletAddr || user?.wallet?.address);
     if (!walletInfo) return { positions: [], openOrders: [], trades: [] };
 
     const ethereumProvider = await walletInfo.getEthereumProvider();
@@ -176,7 +175,7 @@ export function useTrading(
       }
 
       return { positions: posArr, trades: actData, openOrders: [] };
-  }, []);
+  }, [user?.wallet?.address]);
 
   // --- SWR 集成 ---
   const swrKey = (authenticated && proxyAddress && walletAddress && hasCreds)
@@ -239,7 +238,8 @@ export function useTrading(
     setTxError(null);
 
     try {
-      const wallet = wallets.find(w => w.address.toLowerCase() === walletAddress?.toLowerCase()) || wallets[0];
+      const wallet = selectPrimaryWallet(wallets, walletAddress || user?.wallet?.address);
+      if (!wallet) throw new Error("未找到已连接钱包");
       const ethereumProvider = await wallet.getEthereumProvider();
       const provider = new ethers.providers.Web3Provider(ethereumProvider as any);
       const signer = provider.getSigner();
@@ -358,9 +358,7 @@ export function useTrading(
 
     try {
       // --- Step 0: Wallet preparation ---
-      let wallet = wallets.find(w => w.address.toLowerCase() === walletAddress?.toLowerCase())
-        || wallets.find(w => w.walletClientType === 'privy')
-        || wallets[0];
+      const wallet = selectPrimaryWallet(wallets, walletAddress || user?.wallet?.address);
       if (!wallet) throw new Error("未找到已连接钱包");
 
       try { await wallet.switchChain(POLYGON_CHAIN_ID); } catch (e) { console.warn("Switch chain skipped", e); }
@@ -550,9 +548,8 @@ export function useTrading(
     setTxError(null);
 
     try {
-      const wallet = wallets.find(w => w.address.toLowerCase() === walletAddress?.toLowerCase())
-        || wallets.find(w => w.walletClientType === "privy")
-        || wallets[0];
+      const wallet = selectPrimaryWallet(wallets, walletAddress || user?.wallet?.address);
+      if (!wallet) throw new Error("未找到已连接钱包");
         
       const ethereumProvider = await wallet.getEthereumProvider();
       const provider = new ethers.providers.Web3Provider(ethereumProvider as any);
@@ -601,9 +598,8 @@ export function useTrading(
     setTxError(null);
 
     try {
-      const wallet = wallets.find(w => w.address.toLowerCase() === walletAddress?.toLowerCase())
-        || wallets.find(w => w.walletClientType === "privy")
-        || wallets[0];
+      const wallet = selectPrimaryWallet(wallets, walletAddress || user?.wallet?.address);
+      if (!wallet) throw new Error("未找到已连接钱包");
 
       const ethereumProvider = await wallet.getEthereumProvider();
       const provider = new ethers.providers.Web3Provider(ethereumProvider as any);
@@ -679,9 +675,8 @@ export function useTrading(
     setTxError(null);
 
     try {
-      const wallet = wallets.find(w => w.address.toLowerCase() === walletAddress?.toLowerCase())
-        || wallets.find(w => w.walletClientType === "privy")
-        || wallets[0];
+      const wallet = selectPrimaryWallet(wallets, walletAddress || user?.wallet?.address);
+      if (!wallet) throw new Error("未找到已连接钱包");
 
       const ethereumProvider = await wallet.getEthereumProvider();
       const provider = new ethers.providers.Web3Provider(ethereumProvider as any);

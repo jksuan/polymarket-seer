@@ -1,24 +1,209 @@
-import React, { useState, useEffect } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "motion/react";
-import { X, Copy, CheckCircle2, AlertTriangle, Info } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowLeft,
+  ArrowRight,
+  CheckCircle2,
+  Copy,
+  Loader2,
+  QrCode,
+  Store,
+  Wallet,
+  X,
+} from "lucide-react";
 import QRCode from "react-qr-code";
+import { ethers } from "ethers";
+import { usePrivy, useWallets } from "@privy-io/react-auth";
+import {
+  createDepositAddress,
+  getBridgeQuote,
+  useBridgeStatus,
+  useSupportedAssets,
+} from "@/hooks/useBridge";
+import { ADDRESSES, ERC20_ABI, POLYGON_CHAIN_ID } from "@/lib/constants";
+import { selectPrimaryWallet } from "@/lib/primaryWallet";
+import { shortenAddress } from "@/lib/utils";
 import { useTranslation } from "@/i18n";
+import type {
+  BridgeAddressType,
+  CreateDepositResponse,
+  QuoteResponse,
+} from "@/types/bridge";
 
 interface DepositDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   proxyAddress: string;
+  balanceUsd?: string;
+  onBalanceRefresh?: () => void;
 }
 
-function DrawerContent({ isOpen, onClose, proxyAddress }: DepositDrawerProps) {
-  const { locale } = useTranslation();
-  const [copied, setCopied] = useState(false);
+type FlowStep = "home" | "asset" | "amount" | "confirm" | "transfer";
 
-  const handleCopy = async () => {
-    if (!proxyAddress) return;
+type DepositAsset = {
+  id: string;
+  chainId: string;
+  chainName: string;
+  symbol: string;
+  name: string;
+  tokenAddress: string;
+  iconUrl?: string;
+  decimals: number;
+  minCheckoutUsd?: number;
+  balance?: string;
+  usdValue?: number;
+  isNative?: boolean;
+};
+
+type DepositAddressMap = Partial<Record<BridgeAddressType, string>>;
+
+const PUSD_ADDRESS = "0xC011a7E12a19f7B1f670d46F03B03f3342E82DFB";
+const ADDRESS_TYPES: BridgeAddressType[] = ["evm", "svm", "btc", "tvm"];
+const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
+const NATIVE_TOKEN_ADDRESSES = new Set([
+  ZERO_ADDRESS.toLowerCase(),
+  "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+  "0x0000000000000000000000000000000000001010",
+]);
+const PUBLIC_RPC_URLS: Record<string, string> = {
+  "1": "https://ethereum.publicnode.com",
+  "10": "https://optimism-rpc.publicnode.com",
+  "56": "https://bsc-rpc.publicnode.com",
+  "137": "https://polygon-bor-rpc.publicnode.com",
+  "8453": "https://base-rpc.publicnode.com",
+  "42161": "https://arbitrum-one-rpc.publicnode.com",
+};
+const TOKEN_ICON_URLS: Record<string, string> = {
+  ETH: "https://assets.coingecko.com/coins/images/279/small/ethereum.png",
+  POL: "https://assets.coingecko.com/coins/images/32440/small/polygon.png",
+  MATIC: "https://assets.coingecko.com/coins/images/4713/small/polygon.png",
+  USDC: "https://assets.coingecko.com/coins/images/6319/small/usdc.png",
+  "USDC.E": "https://assets.coingecko.com/coins/images/6319/small/usdc.png",
+  PUSD: "https://assets.coingecko.com/coins/images/6319/small/usdc.png",
+};
+
+function DrawerContent({
+  balanceUsd = "0.00",
+  isOpen,
+  onClose,
+  proxyAddress,
+  onBalanceRefresh,
+}: DepositDrawerProps) {
+  const { locale } = useTranslation();
+  const { user } = usePrivy();
+  const { wallets } = useWallets();
+  const { data: supportedAssets, isLoading: assetsLoading } = useSupportedAssets();
+  const [step, setStep] = useState<FlowStep>("home");
+  const [selectedAsset, setSelectedAsset] = useState<DepositAsset | null>(null);
+  const [amountUsd, setAmountUsd] = useState("3");
+  const [quote, setQuote] = useState<QuoteResponse | null>(null);
+  const [quotedSendAmount, setQuotedSendAmount] = useState("");
+  const [quoteError, setQuoteError] = useState("");
+  const [isQuoting, setIsQuoting] = useState(false);
+  const [depositResponse, setDepositResponse] = useState<CreateDepositResponse | null>(null);
+  const [transferAddress, setTransferAddress] = useState("");
+  const [isCreatingTransferAddress, setIsCreatingTransferAddress] = useState(false);
+  const [transferError, setTransferError] = useState("");
+  const [copied, setCopied] = useState(false);
+  const [assetBalances, setAssetBalances] = useState<Record<string, string>>({});
+  const [assetUsdValues, setAssetUsdValues] = useState<Record<string, number>>({});
+  const [hasRefreshedBalance, setHasRefreshedBalance] = useState(false);
+
+  const activeWallet = useMemo(
+    () => selectPrimaryWallet(wallets, user?.wallet?.address),
+    [wallets, user?.wallet?.address]
+  );
+  const walletAddress = activeWallet?.address ?? "";
+  const walletLabel = walletAddress ? `Wallet (${shortenAddress(walletAddress, 4, 4)})` : "Wallet";
+  const depositAssets = useMemo(
+    () => normalizeSupportedAssets(supportedAssets),
+    [supportedAssets]
+  );
+  const assetsWithBalances = useMemo(
+    () => depositAssets.map((asset) => ({
+      ...asset,
+      balance: assetBalances[asset.id],
+      usdValue: assetUsdValues[asset.id] ?? 0,
+    })),
+    [assetBalances, assetUsdValues, depositAssets]
+  );
+  const totalWalletUsd = useMemo(
+    () => assetsWithBalances.reduce((sum, asset) => sum + (asset.usdValue ?? 0), 0),
+    [assetsWithBalances]
+  );
+  const amountNumber = Number(amountUsd || 0);
+  const selectedUsdValue = selectedAsset ? assetUsdValues[selectedAsset.id] : undefined;
+  const estimatedSendAmount = selectedAsset
+    ? quotedSendAmount || getPreQuoteSendLabel(amountNumber, selectedAsset)
+    : "-";
+  const estimatedReceive = quote?.estToTokenBaseUnit
+    ? Number(ethers.utils.formatUnits(quote.estToTokenBaseUnit, 6)).toFixed(4)
+    : amountNumber > 0
+      ? amountNumber.toFixed(4)
+      : "0.0000";
+
+  const transferStatus = useBridgeStatus(transferAddress, Boolean(transferAddress && isOpen));
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setStep("home");
+    setSelectedAsset(null);
+    setQuote(null);
+    setQuotedSendAmount("");
+    setQuoteError("");
+    setTransferError("");
+    setCopied(false);
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (transferStatus.latestStatus === "COMPLETED" && !hasRefreshedBalance) {
+      setHasRefreshedBalance(true);
+      onBalanceRefresh?.();
+    }
+  }, [hasRefreshedBalance, onBalanceRefresh, transferStatus.latestStatus]);
+
+  useEffect(() => {
+    if (!isOpen || !activeWallet || depositAssets.length === 0) return;
+
+    let cancelled = false;
+
+    async function loadBalances() {
+      try {
+        const balances = await Promise.all(
+          depositAssets.map((asset) => readAssetBalance(asset, walletAddress))
+        );
+        const balanceMap = Object.fromEntries(balances);
+        const usdValues = await Promise.all(
+          depositAssets.map(async (asset) => {
+            const balance = balanceMap[asset.id] ?? "0";
+            return [asset.id, await estimateUsdValue(asset, balance, proxyAddress)] as const;
+          })
+        );
+
+        if (!cancelled) {
+          setAssetBalances(balanceMap);
+          setAssetUsdValues(Object.fromEntries(usdValues));
+        }
+      } catch {
+        if (!cancelled) {
+          setAssetBalances({});
+          setAssetUsdValues({});
+        }
+      }
+    }
+
+    loadBalances();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeWallet, depositAssets, isOpen, proxyAddress, walletAddress]);
+
+  const handleCopy = async (value: string) => {
+    if (!value) return;
     try {
-      await navigator.clipboard.writeText(proxyAddress);
+      await navigator.clipboard.writeText(value);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
@@ -26,11 +211,99 @@ function DrawerContent({ isOpen, onClose, proxyAddress }: DepositDrawerProps) {
     }
   };
 
+  const handleSelectAsset = (asset: DepositAsset) => {
+    setSelectedAsset(asset);
+    setQuote(null);
+    setQuotedSendAmount("");
+    setQuoteError("");
+    setStep("amount");
+  };
+
+  const handlePercent = (percent: number) => {
+    if (!selectedAsset) return;
+    const value = Number(selectedUsdValue || 0);
+    if (!Number.isFinite(value) || value <= 0) return;
+    setAmountUsd((value * percent).toFixed(2));
+  };
+
+  const handleQuote = useCallback(async () => {
+    if (!selectedAsset || !proxyAddress || amountNumber <= 0) return;
+    setIsQuoting(true);
+    setQuoteError("");
+
+    try {
+      const fromAmountBaseUnit = await estimateBaseUnitForUsd({
+        amountUsd: amountNumber,
+        asset: selectedAsset,
+        proxyAddress,
+      });
+      const result = await getBridgeQuote({
+        fromAmountBaseUnit,
+        fromChainId: selectedAsset.chainId,
+        fromTokenAddress: selectedAsset.tokenAddress,
+        recipientAddress: proxyAddress,
+        toChainId: String(POLYGON_CHAIN_ID),
+        toTokenAddress: PUSD_ADDRESS,
+      });
+      setQuotedSendAmount(`${formatCompactBalance(ethers.utils.formatUnits(fromAmountBaseUnit, selectedAsset.decimals))} ${selectedAsset.symbol}`);
+      setQuote(result);
+      setStep("confirm");
+    } catch (error) {
+      setQuoteError(
+        error instanceof Error
+          ? error.message
+          : locale === "zh"
+            ? "获取报价失败，请稍后重试。"
+            : "Failed to get a quote. Please try again."
+      );
+    } finally {
+      setIsQuoting(false);
+    }
+  }, [amountNumber, locale, proxyAddress, selectedAsset]);
+
+  const handleCreateTransferAddress = async () => {
+    if (!proxyAddress) {
+      setTransferError(locale === "zh" ? "Polymarket 钱包尚未就绪。" : "Polymarket wallet is not ready.");
+      return;
+    }
+
+    setIsCreatingTransferAddress(true);
+    setTransferError("");
+    setHasRefreshedBalance(false);
+
+    try {
+      const response = await createDepositAddress({ address: proxyAddress });
+      const address = extractDepositAddress(response, "evm") || extractAnyDepositAddress(response);
+      setDepositResponse(response);
+      setTransferAddress(address);
+
+      if (!address) {
+        setTransferError(locale === "zh" ? "未找到可用充值地址。" : "No deposit address returned.");
+      }
+    } catch (error) {
+      setTransferError(
+        error instanceof Error
+          ? error.message
+          : locale === "zh"
+            ? "创建转账地址失败。"
+            : "Failed to create transfer address."
+      );
+    } finally {
+      setIsCreatingTransferAddress(false);
+    }
+  };
+
+  const goBack = () => {
+    if (step === "home") return;
+    if (step === "asset" || step === "transfer") setStep("home");
+    if (step === "amount") setStep("asset");
+    if (step === "confirm") setStep("amount");
+  };
+
   return (
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -39,119 +312,106 @@ function DrawerContent({ isOpen, onClose, proxyAddress }: DepositDrawerProps) {
             className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
           />
 
-          {/* Drawer */}
           <motion.div
             initial={{ y: "100%" }}
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="fixed bottom-0 left-0 right-0 z-50 flex flex-col max-h-[85vh] rounded-t-3xl border-t border-white/10 mx-auto w-full max-w-[448px]"
+            className="fixed bottom-0 left-0 right-0 z-50 flex max-h-[90vh] w-full max-w-[448px] flex-col rounded-t-3xl border-t border-white/10 mx-auto"
             style={{
-              background: "linear-gradient(180deg, #1c0f2e 0%, #0d0518 100%)",
+              background: "linear-gradient(180deg, #151922 0%, #0d1118 100%)",
               boxShadow: "0 -20px 40px rgba(0,0,0,0.5)",
             }}
           >
-            {/* Grabber */}
-            <div className="w-full flex justify-center pt-3 pb-2 cursor-pointer" onClick={onClose}>
+            <div className="w-full flex justify-center pt-3 pb-2">
               <div className="w-12 h-1.5 rounded-full bg-white/20" />
             </div>
 
-            <div className="px-6 pb-8 overflow-y-auto">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-black text-white tracking-wide">
-                  {locale === 'zh' ? '充值到金库' : 'Deposit to Vault'}
-                </h2>
+            <div className="px-6 pb-7 overflow-y-auto">
+              <div className="relative mb-6 flex items-center justify-center">
+                {step !== "home" && (
+                  <button
+                    onClick={goBack}
+                    className="absolute left-0 flex h-8 w-8 items-center justify-center rounded-full text-white/50 hover:bg-white/10 hover:text-white"
+                  >
+                    <ArrowLeft size={18} />
+                  </button>
+                )}
+                <div className="text-center">
+                  <h2 className="text-xl font-black text-white">
+                    {locale === "zh" ? "充值" : "Deposit"}
+                  </h2>
+                  <p className="text-xs text-white/40">
+                    Polymarket {locale === "zh" ? "余额" : "Balance"}: ${Number(balanceUsd || 0).toFixed(2)}
+                  </p>
+                </div>
                 <button
                   onClick={onClose}
-                  className="w-8 h-8 flex items-center justify-center rounded-full bg-white/5 text-white/50 hover:bg-white/10 hover:text-white transition-all"
+                  className="absolute right-0 flex h-8 w-8 items-center justify-center rounded-full text-white/50 hover:bg-white/10 hover:text-white"
                 >
                   <X size={18} />
                 </button>
               </div>
 
-              {/* QR Code Section */}
-              <div className="flex flex-col items-center justify-center bg-white/5 rounded-3xl p-6 mb-6 border border-white/5 relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-[#ADFF2F] opacity-10 blur-[50px] rounded-full pointer-events-none" />
-                <div className="absolute bottom-0 left-0 w-32 h-32 bg-[#00F0FF] opacity-10 blur-[50px] rounded-full pointer-events-none" />
-                
-                <div className="bg-white p-3 rounded-2xl shadow-[0_0_20px_rgba(173,255,47,0.2)] mb-5 relative z-10">
-                  <QRCode
-                    value={proxyAddress || "0x"}
-                    size={160}
-                    style={{ height: "auto", maxWidth: "100%", width: "100%" }}
-                    viewBox={`0 0 160 160`}
-                  />
-                </div>
+              {step === "home" && (
+                <HomeStep
+                  locale={locale}
+                  walletLabel={walletLabel}
+                  walletUsd={totalWalletUsd}
+                  onWallet={() => setStep("asset")}
+                  onTransfer={() => setStep("transfer")}
+                />
+              )}
 
-                <div 
-                  onClick={handleCopy}
-                  className="flex items-center justify-between w-full bg-black/40 rounded-xl p-3 border border-white/10 cursor-pointer active:scale-[0.98] transition-all group"
-                >
-                  <div className="flex flex-col mr-3 flex-1 min-w-0">
-                    <span className="text-[10px] text-white/40 uppercase tracking-widest font-bold mb-1">
-                      {locale === 'zh' ? '充值地址 (Proxy Address)' : 'Deposit Address (Proxy)'}
-                    </span>
-                    <span className="text-[11px] text-white font-mono break-all leading-tight">
-                      {proxyAddress || (locale === 'zh' ? '未分配' : 'Unassigned')}
-                    </span>
-                  </div>
-                  <div className={`w-8 h-8 shrink-0 flex items-center justify-center rounded-lg transition-colors ${copied ? 'bg-green-500/20 text-green-400' : 'bg-white/10 text-white/60 group-hover:bg-white/20'}`}>
-                    {copied ? <CheckCircle2 size={16} /> : <Copy size={16} />}
-                  </div>
-                </div>
-              </div>
+              {step === "asset" && (
+                <AssetStep
+                  assets={assetsWithBalances}
+                  assetsLoading={assetsLoading}
+                  locale={locale}
+                  onSelect={handleSelectAsset}
+                />
+              )}
 
-              {/* Warning Checklist */}
-              <div className="flex flex-col gap-3 mb-2">
-                <div className="flex items-start gap-3 bg-blue-500/10 border border-blue-500/20 p-4 rounded-2xl">
-                  <Info className="text-blue-400 mt-0.5 shrink-0" size={18} />
-                  <div className="flex flex-col">
-                    <span className="text-sm font-bold text-blue-100 mb-1">
-                      {locale === 'zh' ? '必须选择 Polygon 网络' : 'Polygon Network Only'}
-                    </span>
-                    <span className="text-xs text-blue-200/70 leading-relaxed">
-                      {locale === 'zh' ? (
-                        <>请确保在交易所提币时选择 <strong className="text-[#ADFF2F]">Polygon (MATIC)</strong> 网络，选择错误网络将导致资产永久丢失。</>
-                      ) : (
-                        <>Please ensure you select the <strong className="text-[#ADFF2F]">Polygon (MATIC)</strong> network when withdrawing from an exchange. Choosing the wrong network will result in permanent loss of assets.</>
-                      )}
-                    </span>
-                  </div>
-                </div>
+              {step === "amount" && selectedAsset && (
+                <AmountStep
+                  amountUsd={amountUsd}
+                  asset={selectedAsset}
+                  error={quoteError}
+                  estimatedSendAmount={estimatedSendAmount}
+                  estimatedReceive={estimatedReceive}
+                  isQuoting={isQuoting}
+                  locale={locale}
+                  onAmountChange={setAmountUsd}
+                  onContinue={handleQuote}
+                  onPercent={handlePercent}
+                />
+              )}
 
-                <div className="flex items-start gap-3 bg-purple-500/10 border border-purple-500/20 p-4 rounded-2xl">
-                  <div className="w-4 h-4 shrink-0 mt-1 rounded-full border-[2px] border-purple-400 flex items-center justify-center">
-                    <div className="w-1.5 h-1.5 rounded-full bg-purple-400" />
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-sm font-bold text-purple-100 mb-1">
-                      {locale === 'zh' ? '仅支持 USDC.e 或 USDC' : 'Only USDC.e or USDC Supported'}
-                    </span>
-                    <span className="text-xs text-purple-200/70 leading-relaxed">
-                      {locale === 'zh' ? 
-                        '请勿充值任何其他代币，金库目前仅支持原生 USDC 及跨链桥 USDC.e 计价。' : 
-                        'Do not deposit any other tokens. The vault currently only supports native USDC and bridged USDC.e for valuation.'}
-                    </span>
-                  </div>
-                </div>
+              {step === "confirm" && selectedAsset && (
+                <ConfirmStep
+                  amountUsd={amountUsd}
+                  estimatedReceive={estimatedReceive}
+                  estimatedSendAmount={estimatedSendAmount}
+                  isQuoting={isQuoting}
+                  locale={locale}
+                  quote={quote}
+                  walletLabel={walletLabel}
+                />
+              )}
 
-                <div className="flex items-start gap-3 bg-[#ff6b6b]/10 border border-[#ff6b6b]/20 p-4 rounded-2xl">
-                  <AlertTriangle className="text-[#ff6b6b] mt-0.5 shrink-0" size={18} />
-                  <div className="flex flex-col">
-                    <span className="text-sm font-bold text-[#ffcad4] mb-1">
-                      {locale === 'zh' ? '切勿直接充值至登录钱包' : 'Do Not Deposit to Login Wallet'}
-                    </span>
-                    <span className="text-xs text-[#ffcad4]/70 leading-relaxed">
-                      {locale === 'zh' ? (
-                        <>请严格使用上方的专属金库地址。充值到您的登录授权或邮箱生成的 EOA 钱包将<strong>无法用于下注</strong>。</>
-                      ) : (
-                        <>Please strictly use the dedicated vault address above. Depositing to the EOA wallet generated by your login authorization or email will <strong>not be available for betting</strong>.</>
-                      )}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
+              {step === "transfer" && (
+                <TransferStep
+                  copied={copied}
+                  depositResponse={depositResponse}
+                  error={transferError}
+                  isCreating={isCreatingTransferAddress}
+                  locale={locale}
+                  onCopy={handleCopy}
+                  onCreate={handleCreateTransferAddress}
+                  statusText={getStatusText(locale, transferStatus.latestStatus)}
+                  transferAddress={transferAddress}
+                />
+              )}
             </div>
           </motion.div>
         </>
@@ -160,17 +420,737 @@ function DrawerContent({ isOpen, onClose, proxyAddress }: DepositDrawerProps) {
   );
 }
 
-export function DepositDrawer(props: DepositDrawerProps) {
-  const [mounted, setMounted] = useState(false);
+function HomeStep({
+  locale,
+  walletLabel,
+  walletUsd,
+  onWallet,
+  onTransfer,
+}: {
+  locale: string;
+  walletLabel: string;
+  walletUsd: number;
+  onWallet: () => void;
+  onTransfer: () => void;
+}) {
+  return (
+    <div className="space-y-5">
+      <div className="grid grid-cols-2 gap-2 rounded-2xl bg-black/20 p-1">
+        <div className="flex items-center justify-center gap-2 rounded-xl bg-white/10 py-3 text-sm font-black text-white">
+          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-black">₿</span>
+          Use Crypto
+        </div>
+        <div className="flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-black text-white/30">
+          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/20">$</span>
+          Use Cash
+        </div>
+      </div>
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+      <section>
+        <p className="mb-2 text-sm font-bold text-white/45">Connected</p>
+        <button
+          onClick={onWallet}
+          className="flex w-full items-center justify-between rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-left transition-all active:scale-[0.98] hover:bg-white/[0.06]"
+        >
+          <div className="flex items-center gap-3">
+            <Wallet className="text-white/70" size={24} />
+            <div>
+              <p className="text-sm font-black text-white">{walletLabel}</p>
+              <p className="text-xs text-white/40">${walletUsd.toFixed(2)} • Instant</p>
+            </div>
+          </div>
+          <ArrowRight className="text-white/30" size={18} />
+        </button>
+      </section>
 
-  if (!mounted) return null;
-
-  return createPortal(
-    <DrawerContent {...props} />,
-    document.body
+      <section>
+        <p className="mb-2 text-sm font-bold text-white/45">Other options</p>
+        <button
+          onClick={onTransfer}
+          className="mb-2 flex w-full items-center justify-between rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-left transition-all active:scale-[0.98] hover:bg-white/[0.06]"
+        >
+          <div className="flex items-center gap-3">
+            <QrCode className="text-white/70" size={24} />
+            <div>
+              <p className="text-sm font-black text-white">Transfer Crypto</p>
+              <p className="text-xs text-white/40">No limit • Instant</p>
+            </div>
+          </div>
+          <span className="text-xs text-white/30">EVM • SOL • BTC</span>
+        </button>
+        <div className="flex w-full items-center justify-between rounded-2xl border border-white/10 bg-white/[0.02] p-4 opacity-50">
+          <div className="flex items-center gap-3">
+            <Store className="text-white/70" size={24} />
+            <div>
+              <p className="text-sm font-black text-white">Connect Exchange</p>
+              <p className="text-xs text-white/40">{locale === "zh" ? "暂不支持" : "Not supported yet"}</p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
   );
+}
+
+function AssetStep({
+  assets,
+  assetsLoading,
+  locale,
+  onSelect,
+}: {
+  assets: DepositAsset[];
+  assetsLoading: boolean;
+  locale: string;
+  onSelect: (asset: DepositAsset) => void;
+}) {
+  const displayAssets = sortVisibleAssets(assets).slice(0, 8);
+
+  return (
+    <div className="space-y-2">
+      {assetsLoading && (
+        <div className="flex items-center justify-center py-12 text-white/40">
+          <Loader2 className="mr-2 animate-spin" size={18} />
+          {locale === "zh" ? "正在加载资产..." : "Loading assets..."}
+        </div>
+      )}
+
+      {!assetsLoading && displayAssets.length === 0 && (
+        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 text-sm text-white/50">
+          {locale === "zh" ? "暂无可用资产列表，请稍后重试。" : "No supported assets found. Please try again later."}
+        </div>
+      )}
+
+      {displayAssets.map((asset) => {
+        const balance = Number(asset.balance || 0);
+        const usdValue = asset.usdValue ?? 0;
+        const isLow = usdValue > 0 && usdValue < (asset.minCheckoutUsd ?? 1);
+        return (
+          <button
+            key={asset.id}
+            onClick={() => onSelect(asset)}
+            className={`flex w-full items-center justify-between rounded-2xl border p-4 text-left transition-all active:scale-[0.98] ${
+              balance > 0
+                ? "border-white/30 bg-white/[0.04] hover:bg-white/[0.07]"
+                : "border-transparent bg-transparent opacity-55"
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <TokenIcon iconUrl={asset.iconUrl} symbol={asset.symbol} />
+              <div>
+                <p className="text-base font-black text-white">{asset.symbol}</p>
+                <p className="text-xs text-white/40">
+                  {formatCompactBalance(asset.balance)} {asset.symbol}
+                </p>
+              </div>
+            </div>
+            <div className="text-right">
+              {isLow && <p className="text-xs text-white/25">Low Balance</p>}
+              <p className="text-sm font-black text-white/80">${(asset.usdValue ?? 0).toFixed(2)}</p>
+            </div>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function AmountStep({
+  amountUsd,
+  asset,
+  error,
+  estimatedSendAmount,
+  estimatedReceive,
+  isQuoting,
+  locale,
+  onAmountChange,
+  onContinue,
+  onPercent,
+}: {
+  amountUsd: string;
+  asset: DepositAsset;
+  error: string;
+  estimatedSendAmount: string;
+  estimatedReceive: string;
+  isQuoting: boolean;
+  locale: string;
+  onAmountChange: (value: string) => void;
+  onContinue: () => void;
+  onPercent: (percent: number) => void;
+}) {
+  return (
+    <div className="flex min-h-[520px] flex-col justify-between">
+      <div>
+        <div className="mt-16 flex justify-center">
+          <div className="flex items-center text-6xl font-black text-white">
+            <span>$</span>
+            <input
+              value={amountUsd}
+              onChange={(event) => onAmountChange(event.target.value.replace(/[^\d.]/g, ""))}
+              className="w-[180px] bg-transparent text-center outline-none"
+              inputMode="decimal"
+            />
+          </div>
+        </div>
+        <div className="mt-10 flex justify-center gap-3">
+          {[0.25, 0.5, 0.75, 1].map((percent) => (
+            <button
+              key={percent}
+              onClick={() => onPercent(percent)}
+              className="rounded-xl bg-white/10 px-5 py-3 text-sm font-black text-white active:scale-95"
+            >
+              {percent === 1 ? "Max" : `${Math.round(percent * 100)}%`}
+            </button>
+          ))}
+        </div>
+        {error && (
+          <div className="mt-6 rounded-2xl border border-[#ff6b6b]/20 bg-[#ff6b6b]/10 p-3 text-xs text-[#ffcad4]">
+            {error}
+          </div>
+        )}
+      </div>
+
+      <div>
+        <div className="mx-auto mb-9 flex w-fit items-center gap-4 rounded-full bg-white/10 px-4 py-3">
+          <TokenIcon iconUrl={asset.iconUrl} symbol={asset.symbol} />
+          <div>
+            <p className="text-[10px] text-white/35">You send</p>
+            <p className="text-xs font-black text-white">{estimatedSendAmount}</p>
+          </div>
+          <ArrowRight className="text-white/35" size={18} />
+          <TokenIcon symbol="pUSD" />
+          <div>
+            <p className="text-[10px] text-white/35">You receive</p>
+            <p className="text-xs font-black text-white">{estimatedReceive} pUSD</p>
+          </div>
+        </div>
+        <button
+          onClick={onContinue}
+          disabled={isQuoting || Number(amountUsd || 0) <= 0}
+          className="flex h-14 w-full items-center justify-center rounded-2xl bg-[#159bff] text-base font-black text-white active:scale-[0.98] disabled:opacity-50"
+        >
+          {isQuoting ? <Loader2 className="animate-spin" size={18} /> : locale === "zh" ? "继续" : "Continue"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ConfirmStep({
+  amountUsd,
+  estimatedReceive,
+  estimatedSendAmount,
+  isQuoting,
+  locale,
+  quote,
+  walletLabel,
+}: {
+  amountUsd: string;
+  estimatedReceive: string;
+  estimatedSendAmount: string;
+  isQuoting: boolean;
+  locale: string;
+  quote: QuoteResponse | null;
+  walletLabel: string;
+}) {
+  const fee = quote?.estFeeBreakdown;
+
+  return (
+    <div className="space-y-5">
+      <div className="py-5 text-center text-6xl font-black text-white">
+        ${Number(amountUsd || 0).toFixed(2)}
+      </div>
+
+      <InfoBox
+        rows={[
+          ["Source", walletLabel],
+          ["Destination", "Polymarket Wallet"],
+          ["Estimated time", formatMs(quote?.estCheckoutTimeMs)],
+        ]}
+      />
+
+      <InfoBox
+        rows={[
+          ["You send", estimatedSendAmount],
+          ["You receive", `${estimatedReceive} pUSD`],
+        ]}
+      />
+
+      <div>
+        <p className="mb-3 text-sm font-bold text-white/35">Transaction breakdown</p>
+        <InfoBox
+          rows={[
+            ["Network cost", formatUsd(fee?.gasUsd)],
+            ["Price impact", formatPercent(fee?.swapImpact)],
+            ["Max slippage", fee?.maxSlippage === undefined ? "Auto" : `Auto • ${formatPercent(fee.maxSlippage)}`],
+          ]}
+        />
+      </div>
+
+      <div className="rounded-2xl bg-white/8 p-3 text-xs text-white/60">
+        {locale === "zh"
+          ? "公开 Bridge 文档当前只提供报价与地址生成接口；连接钱包的一键确认执行接口仍待接入。"
+          : "Public Bridge docs currently expose quote and address APIs only. Connected-wallet execution still needs an execution endpoint."}
+      </div>
+
+      <button
+        disabled
+        className="flex h-14 w-full items-center justify-center rounded-2xl bg-[#159bff] text-base font-black text-white opacity-50"
+      >
+        {isQuoting ? <Loader2 className="animate-spin" size={18} /> : "Confirm Order"}
+      </button>
+    </div>
+  );
+}
+
+function TransferStep({
+  copied,
+  depositResponse,
+  error,
+  isCreating,
+  locale,
+  onCopy,
+  onCreate,
+  statusText,
+  transferAddress,
+}: {
+  copied: boolean;
+  depositResponse: CreateDepositResponse | null;
+  error: string;
+  isCreating: boolean;
+  locale: string;
+  onCopy: (value: string) => void;
+  onCreate: () => void;
+  statusText: string;
+  transferAddress: string;
+}) {
+  const note = typeof depositResponse?.note === "string" ? depositResponse.note : "";
+
+  return (
+    <div className="space-y-4">
+      <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-5">
+        <p className="text-sm font-black text-white">Transfer Crypto</p>
+        <p className="mt-1 text-xs leading-relaxed text-white/45">
+          {locale === "zh"
+            ? "这是 Polymarket 的备用手动转账路径：生成地址后，从外部钱包或交易所转入支持资产。"
+            : "This is the fallback transfer flow: generate a deposit address, then send supported assets from another wallet or exchange."}
+        </p>
+        <button
+          onClick={onCreate}
+          disabled={isCreating}
+          className="mt-4 flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-[#ADFF2F] text-sm font-black text-[#0D0518] active:scale-[0.98] disabled:opacity-50"
+        >
+          {isCreating ? <Loader2 className="animate-spin" size={16} /> : <QrCode size={16} />}
+          {transferAddress
+            ? locale === "zh" ? "刷新地址" : "Refresh Address"
+            : locale === "zh" ? "生成转账地址" : "Create Transfer Address"}
+        </button>
+      </div>
+
+      {error && (
+        <div className="flex gap-3 rounded-2xl border border-[#ff6b6b]/20 bg-[#ff6b6b]/10 p-4">
+          <AlertTriangle className="mt-0.5 shrink-0 text-[#ff6b6b]" size={18} />
+          <p className="text-xs leading-relaxed text-[#ffcad4]/80">{error}</p>
+        </div>
+      )}
+
+      {transferAddress && (
+        <>
+          <div className="flex flex-col items-center rounded-3xl border border-white/5 bg-white/5 p-6">
+            <div className="mb-5 rounded-2xl bg-white p-3">
+              <QRCode value={transferAddress} size={160} viewBox="0 0 160 160" />
+            </div>
+            <button
+              onClick={() => onCopy(transferAddress)}
+              className="flex w-full items-center justify-between rounded-xl border border-white/10 bg-black/40 p-3 active:scale-[0.98]"
+            >
+              <span className="mr-3 break-all text-left font-mono text-[11px] text-white">
+                {transferAddress}
+              </span>
+              {copied ? <CheckCircle2 className="text-green-400" size={18} /> : <Copy className="text-white/60" size={18} />}
+            </button>
+          </div>
+
+          <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-bold text-white">{locale === "zh" ? "状态" : "Status"}</p>
+              <span className="rounded-full border border-white/10 bg-white/10 px-2 py-1 text-[10px] font-black uppercase text-white/60">
+                {statusText}
+              </span>
+            </div>
+            {note && <p className="mt-2 text-xs text-white/45">{note}</p>}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function InfoBox({ rows }: { rows: Array<[string, string]> }) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/[0.03]">
+      {rows.map(([label, value], index) => (
+        <div
+          key={label}
+          className={`flex items-center justify-between px-4 py-3 text-sm ${
+            index > 0 ? "border-t border-white/5" : ""
+          }`}
+        >
+          <span className="text-white/40">{label}</span>
+          <span className="font-black text-white">{value}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function TokenIcon({ iconUrl, symbol }: { iconUrl?: string; symbol: string }) {
+  const label = symbol.slice(0, 1).toUpperCase();
+  const fallbackUrl = TOKEN_ICON_URLS[symbol.toUpperCase()];
+  const imageUrl = iconUrl || fallbackUrl;
+
+  if (imageUrl) {
+    return (
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/10 shadow-[0_0_16px_rgba(99,125,255,0.25)]">
+        <span
+          aria-label={symbol}
+          className="h-8 w-8 rounded-full bg-cover bg-center"
+          role="img"
+          style={{ backgroundImage: `url(${imageUrl})` }}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#637dff] to-[#9c4dff] text-sm font-black text-white shadow-[0_0_16px_rgba(99,125,255,0.3)]">
+      {label}
+    </div>
+  );
+}
+
+export function DepositDrawer(props: DepositDrawerProps) {
+  if (typeof document === "undefined") return null;
+
+  return createPortal(<DrawerContent {...props} />, document.body);
+}
+
+function normalizeSupportedAssets(data: unknown): DepositAsset[] {
+  const record = data && typeof data === "object" ? data as Record<string, unknown> : {};
+  const rawAssets = Array.isArray(record.supportedAssets)
+    ? record.supportedAssets
+    : Array.isArray(record.assets)
+      ? record.assets
+      : [];
+
+  const normalized = rawAssets
+    .map((item) => normalizeSupportedAsset(item as Record<string, unknown>))
+    .filter((asset): asset is DepositAsset => Boolean(asset));
+
+  if (normalized.length > 0) return sortPreferredAssets(normalized);
+
+  return sortPreferredAssets([
+    {
+      id: "137-pol",
+      chainId: String(POLYGON_CHAIN_ID),
+      chainName: "Polygon",
+      symbol: "POL",
+      name: "Polygon",
+      tokenAddress: ZERO_ADDRESS,
+      iconUrl: TOKEN_ICON_URLS.POL,
+      decimals: 18,
+      isNative: true,
+    },
+    {
+      id: "137-usdce",
+      chainId: String(POLYGON_CHAIN_ID),
+      chainName: "Polygon",
+      symbol: "USDC.e",
+      name: "Bridged USDC",
+      tokenAddress: ADDRESSES.USDCe,
+      iconUrl: TOKEN_ICON_URLS["USDC.E"],
+      decimals: 6,
+    },
+  ]);
+}
+
+function normalizeSupportedAsset(item: Record<string, unknown>): DepositAsset | null {
+  const token = item.token && typeof item.token === "object"
+    ? item.token as Record<string, unknown>
+    : item;
+  const chainId = String(item.chainId ?? item.chain_id ?? "");
+  const tokenAddress = String(token.address ?? token.tokenAddress ?? token.contractAddress ?? "");
+  const symbol = String(token.symbol ?? "");
+  const decimals = Number(token.decimals ?? 18);
+  const iconUrl = getTokenIconUrl(item, token, symbol);
+
+  if (!chainId || !tokenAddress || !symbol) return null;
+
+  return {
+    id: `${chainId}-${tokenAddress.toLowerCase()}-${symbol}`,
+    chainId,
+    chainName: String(item.chainName ?? item.network ?? `Chain ${chainId}`),
+    symbol,
+    name: String(token.name ?? symbol),
+    tokenAddress,
+    iconUrl,
+    decimals: Number.isFinite(decimals) ? decimals : 18,
+    minCheckoutUsd: toNumber(item.minCheckoutUsd),
+    isNative: NATIVE_TOKEN_ADDRESSES.has(tokenAddress.toLowerCase()) || isNativeSymbol(symbol, chainId),
+  };
+}
+
+function sortPreferredAssets(assets: DepositAsset[]): DepositAsset[] {
+  const priority = ["ETH", "POL", "USDC.E", "USDC", "PUSD"];
+  return [...assets].sort((a, b) => {
+    const ap = priority.indexOf(a.symbol.toUpperCase());
+    const bp = priority.indexOf(b.symbol.toUpperCase());
+    return (ap === -1 ? 99 : ap) - (bp === -1 ? 99 : bp);
+  });
+}
+
+function sortVisibleAssets(assets: DepositAsset[]): DepositAsset[] {
+  const visibleAssets = assets
+    .filter((asset) => isSupportedReadableChain(asset.chainId))
+    .filter((asset) => Number(asset.balance || 0) > 0 || (asset.usdValue ?? 0) > 0.005);
+
+  return dedupeAssetsBySymbol(visibleAssets)
+    .sort((a, b) => {
+      const aValue = a.usdValue ?? 0;
+      const bValue = b.usdValue ?? 0;
+      if (bValue !== aValue) return bValue - aValue;
+      return sortPreferredAssets([a, b])[0].id === a.id ? -1 : 1;
+    });
+}
+
+function dedupeAssetsBySymbol(assets: DepositAsset[]): DepositAsset[] {
+  const bySymbol = new Map<string, DepositAsset>();
+
+  for (const asset of assets) {
+    const key = asset.symbol.toUpperCase();
+    const existing = bySymbol.get(key);
+    if (!existing || (asset.usdValue ?? 0) > (existing.usdValue ?? 0)) {
+      bySymbol.set(key, asset);
+    }
+  }
+
+  return [...bySymbol.values()];
+}
+
+async function readAssetBalance(
+  asset: DepositAsset,
+  walletAddress: string
+): Promise<readonly [string, string]> {
+  const rpcUrl = PUBLIC_RPC_URLS[asset.chainId];
+  if (!rpcUrl || !walletAddress) return [asset.id, "0"] as const;
+
+  try {
+    const provider = new ethers.providers.JsonRpcProvider(rpcUrl);
+    if (asset.isNative) {
+      const balance = await provider.getBalance(walletAddress);
+      return [asset.id, ethers.utils.formatUnits(balance, asset.decimals)] as const;
+    }
+
+    if (!ethers.utils.isAddress(asset.tokenAddress)) {
+      return [asset.id, "0"] as const;
+    }
+
+    const contract = new ethers.Contract(asset.tokenAddress, ERC20_ABI, provider);
+    const balance = await contract.balanceOf(walletAddress);
+    return [asset.id, ethers.utils.formatUnits(balance, asset.decimals)] as const;
+  } catch {
+    return [asset.id, "0"] as const;
+  }
+}
+
+function amountNumberToBaseUnit(amountUsd: number, decimals: number): string {
+  if (!Number.isFinite(amountUsd) || amountUsd <= 0) return "0";
+  return ethers.utils.parseUnits(amountUsd.toFixed(Math.min(decimals, 6)), decimals).toString();
+}
+
+async function estimateBaseUnitForUsd({
+  amountUsd,
+  asset,
+  proxyAddress,
+}: {
+  amountUsd: number;
+  asset: DepositAsset;
+  proxyAddress: string;
+}): Promise<string> {
+  if (isStableLike(asset.symbol)) {
+    return amountNumberToBaseUnit(amountUsd, asset.decimals);
+  }
+
+  const oneTokenBaseUnit = ethers.utils.parseUnits("1", asset.decimals).toString();
+  const unitQuote = await getBridgeQuote({
+    fromAmountBaseUnit: oneTokenBaseUnit,
+    fromChainId: asset.chainId,
+    fromTokenAddress: asset.tokenAddress,
+    recipientAddress: proxyAddress,
+    toChainId: String(POLYGON_CHAIN_ID),
+    toTokenAddress: PUSD_ADDRESS,
+  });
+  const unitUsd = unitQuote.estInputUsd || unitQuote.estOutputUsd || 0;
+  if (!unitUsd) {
+    return amountNumberToBaseUnit(amountUsd, asset.decimals);
+  }
+
+  return ethers.utils.parseUnits((amountUsd / unitUsd).toFixed(Math.min(asset.decimals, 8)), asset.decimals).toString();
+}
+
+function getPreQuoteSendLabel(amountUsd: number, asset: DepositAsset): string {
+  if (isStableLike(asset.symbol)) return formatTokenAmount(amountUsd, asset.symbol);
+  return `~$${amountUsd.toFixed(2)} ${asset.symbol}`;
+}
+
+function isStableLike(symbol: string): boolean {
+  const normalized = symbol.toUpperCase();
+  return normalized.includes("USDC") || normalized.includes("USDT") || normalized.includes("DAI") || normalized.includes("PUSD");
+}
+
+async function estimateUsdValue(
+  asset: DepositAsset,
+  balance?: string,
+  proxyAddress?: string
+): Promise<number> {
+  const value = Number(balance || 0);
+  if (!Number.isFinite(value) || value <= 0) return 0;
+  if (isStableLike(asset.symbol)) return value;
+  if (!proxyAddress) return 0;
+
+  try {
+    const oneTokenBaseUnit = ethers.utils.parseUnits("1", asset.decimals).toString();
+    const quote = await getBridgeQuote({
+      fromAmountBaseUnit: oneTokenBaseUnit,
+      fromChainId: asset.chainId,
+      fromTokenAddress: asset.tokenAddress,
+      recipientAddress: proxyAddress,
+      toChainId: String(POLYGON_CHAIN_ID),
+      toTokenAddress: PUSD_ADDRESS,
+    });
+    const unitUsd = quote.estInputUsd || quote.estOutputUsd || 0;
+    return unitUsd * value;
+  } catch {
+    return 0;
+  }
+}
+
+function isSupportedReadableChain(chainId: string): boolean {
+  return Boolean(PUBLIC_RPC_URLS[chainId]);
+}
+
+function isNativeSymbol(symbol: string, chainId: string): boolean {
+  const normalized = symbol.toUpperCase();
+  return (
+    (chainId === "1" && normalized === "ETH") ||
+    (chainId === String(POLYGON_CHAIN_ID) && normalized === "POL") ||
+    (chainId === String(POLYGON_CHAIN_ID) && normalized === "MATIC") ||
+    (chainId === "10" && normalized === "ETH") ||
+    (chainId === "8453" && normalized === "ETH") ||
+    (chainId === "42161" && normalized === "ETH") ||
+    (chainId === "56" && normalized === "BNB")
+  );
+}
+
+function getTokenIconUrl(
+  item: Record<string, unknown>,
+  token: Record<string, unknown>,
+  symbol: string
+): string | undefined {
+  const candidates = [
+    token.logoURI,
+    token.logoUri,
+    token.logoUrl,
+    token.icon,
+    token.image,
+    item.logoURI,
+    item.logoUri,
+    item.logoUrl,
+    item.icon,
+    item.image,
+  ];
+
+  const fromApi = candidates.find(
+    (value): value is string => typeof value === "string" && value.startsWith("http")
+  );
+  return fromApi || TOKEN_ICON_URLS[symbol.toUpperCase()];
+}
+
+function formatCompactBalance(balance?: string): string {
+  const value = Number(balance || 0);
+  if (!Number.isFinite(value)) return "0";
+  if (value === 0) return "0";
+  if (value < 0.0001) return "<0.0001";
+  return value.toFixed(value < 1 ? 4 : 3);
+}
+
+function formatTokenAmount(amountUsd: number, symbol: string): string {
+  if (!Number.isFinite(amountUsd) || amountUsd <= 0) return `0 ${symbol}`;
+  return `${amountUsd.toFixed(symbol.toUpperCase().includes("USDC") ? 2 : 5)} ${symbol}`;
+}
+
+function formatUsd(value?: number): string {
+  return value === undefined ? "-" : `$${value.toFixed(2)}`;
+}
+
+function formatPercent(value?: number): string {
+  return value === undefined ? "-" : `${value.toFixed(2)}%`;
+}
+
+function formatMs(value?: number): string {
+  if (!value) return "< 1 min";
+  const minutes = Math.max(1, Math.ceil(value / 60_000));
+  return minutes <= 1 ? "< 1 min" : `${minutes} min`;
+}
+
+function toNumber(value: unknown): number | undefined {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && value.trim()) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }
+  return undefined;
+}
+
+function extractDepositAddress(
+  response: CreateDepositResponse,
+  addressType: BridgeAddressType
+): string {
+  const record = response as Record<string, unknown>;
+  const nested = record.address ?? record.depositAddresses ?? record.addresses;
+
+  if (nested && typeof nested === "object") {
+    const address = (nested as DepositAddressMap)[addressType];
+    if (typeof address === "string") return address;
+  }
+
+  const direct = record[addressType] ?? record[`${addressType}Address`];
+  return typeof direct === "string" ? direct : "";
+}
+
+function extractAnyDepositAddress(response: CreateDepositResponse): string {
+  for (const addressType of ADDRESS_TYPES) {
+    const address = extractDepositAddress(response, addressType);
+    if (address) return address;
+  }
+  return "";
+}
+
+function getStatusText(locale: string, status?: string): string {
+  const zh = locale === "zh";
+  switch (status) {
+    case "DEPOSIT_DETECTED":
+      return zh ? "已检测" : "Detected";
+    case "PROCESSING":
+      return zh ? "处理中" : "Processing";
+    case "ORIGIN_TX_CONFIRMED":
+      return zh ? "源链已确认" : "Origin Confirmed";
+    case "SUBMITTED":
+      return zh ? "已提交" : "Submitted";
+    case "COMPLETED":
+      return zh ? "已到账" : "Completed";
+    case "FAILED":
+      return zh ? "失败" : "Failed";
+    default:
+      return zh ? "等待转账" : "Waiting";
+  }
 }

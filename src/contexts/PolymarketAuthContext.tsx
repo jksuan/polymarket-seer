@@ -16,6 +16,7 @@ import {
   SIGNATURE_TYPE_GNOSIS_SAFE,
 } from "@/lib/constants";
 import { getCachedCreds, setCachedCreds, clearCredsCache, shortenAddress } from "@/lib/utils";
+import { selectPrimaryWallet } from "@/lib/primaryWallet";
 
 // --- Context Value Type ---
 interface PolymarketAuthContextValue {
@@ -117,9 +118,7 @@ export function PolymarketAuthProvider({ children }: { children: ReactNode }) {
     if (showLoading) setIsRefreshingBalance(true);
 
     try {
-      const wallet = wallets.find(w => w.address.toLowerCase() === user?.wallet?.address?.toLowerCase()) 
-                     || wallets.find(w => w.walletClientType === "privy") 
-                     || wallets[0];
+      const wallet = selectPrimaryWallet(wallets, user?.wallet?.address);
       if (!wallet) throw new Error("No connected wallet found");
 
       setWalletAddress(wallet.address);
