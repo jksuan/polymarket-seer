@@ -28,6 +28,20 @@ export type BridgeApiResponse<T> =
   | BridgeApiSuccessResponse<T>
   | BridgeApiErrorResponse;
 
+export interface BridgeError {
+  code: BridgeApiErrorCode;
+  message: string;
+  requestId?: string;
+  details?: unknown;
+}
+
+export type BridgeStatusUiState =
+  | "idle"
+  | "pending"
+  | "processing"
+  | "completed"
+  | "failed";
+
 export interface SupportedAsset {
   symbol: string;
   tokenAddress: string;
