@@ -22,6 +22,11 @@ import {
   useBridgeStatus,
   useSupportedAssets,
 } from "@/hooks/useBridge";
+import {
+  getDlnQuote,
+  getDlnSameChainSwap,
+  useDlnOrderStatus,
+} from "@/hooks/useDln";
 import { ADDRESSES, ERC20_ABI, POLYGON_CHAIN_ID } from "@/lib/constants";
 import { selectPrimaryWallet } from "@/lib/primaryWallet";
 import { shortenAddress } from "@/lib/utils";
@@ -31,6 +36,7 @@ import type {
   CreateDepositResponse,
   QuoteResponse,
 } from "@/types/bridge";
+import type { DlnTx } from "@/types/dln";
 
 interface DepositDrawerProps {
   isOpen: boolean;
@@ -58,10 +64,23 @@ type DepositAsset = {
 };
 
 type DepositAddressMap = Partial<Record<BridgeAddressType, string>>;
+type ExecutionKind = "idle" | "direct" | "same-chain" | "cross-chain";
+type ExecutionTx = DlnTx & {
+  allowanceTarget?: string;
+};
+type Eip1193Provider = {
+  request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
+};
 
 const PUSD_ADDRESS = "0xC011a7E12a19f7B1f670d46F03B03f3342E82DFB";
+const POLYGON_USDC_ADDRESS = "0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359";
 const ADDRESS_TYPES: BridgeAddressType[] = ["evm", "svm", "btc", "tvm"];
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
+const ERC20_EXECUTION_ABI = [
+  ...ERC20_ABI,
+  "function allowance(address owner, address spender) view returns (uint256)",
+  "function transfer(address to, uint256 amount) returns (bool)",
+];
 const NATIVE_TOKEN_ADDRESSES = new Set([
   ZERO_ADDRESS.toLowerCase(),
   "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
@@ -100,8 +119,14 @@ function DrawerContent({
   const [amountUsd, setAmountUsd] = useState("3");
   const [quote, setQuote] = useState<QuoteResponse | null>(null);
   const [quotedSendAmount, setQuotedSendAmount] = useState("");
+  const [sourceAmountBaseUnit, setSourceAmountBaseUnit] = useState("");
   const [quoteError, setQuoteError] = useState("");
   const [isQuoting, setIsQuoting] = useState(false);
+  const [executionKind, setExecutionKind] = useState<ExecutionKind>("idle");
+  const [isExecuting, setIsExecuting] = useState(false);
+  const [executionError, setExecutionError] = useState("");
+  const [executionTxHash, setExecutionTxHash] = useState("");
+  const [dlnOrderId, setDlnOrderId] = useState("");
   const [depositResponse, setDepositResponse] = useState<CreateDepositResponse | null>(null);
   const [transferAddress, setTransferAddress] = useState("");
   const [isCreatingTransferAddress, setIsCreatingTransferAddress] = useState(false);
@@ -145,6 +170,7 @@ function DrawerContent({
       : "0.0000";
 
   const transferStatus = useBridgeStatus(transferAddress, Boolean(transferAddress && isOpen));
+  const dlnStatus = useDlnOrderStatus(dlnOrderId, Boolean(dlnOrderId && isOpen));
 
   useEffect(() => {
     if (!isOpen) return;
@@ -152,7 +178,13 @@ function DrawerContent({
     setSelectedAsset(null);
     setQuote(null);
     setQuotedSendAmount("");
+    setSourceAmountBaseUnit("");
     setQuoteError("");
+    setExecutionKind("idle");
+    setIsExecuting(false);
+    setExecutionError("");
+    setExecutionTxHash("");
+    setDlnOrderId("");
     setTransferError("");
     setCopied(false);
   }, [isOpen]);
@@ -215,7 +247,12 @@ function DrawerContent({
     setSelectedAsset(asset);
     setQuote(null);
     setQuotedSendAmount("");
+    setSourceAmountBaseUnit("");
     setQuoteError("");
+    setExecutionKind("idle");
+    setExecutionError("");
+    setExecutionTxHash("");
+    setDlnOrderId("");
     setStep("amount");
   };
 
@@ -245,6 +282,7 @@ function DrawerContent({
         toChainId: String(POLYGON_CHAIN_ID),
         toTokenAddress: PUSD_ADDRESS,
       });
+      setSourceAmountBaseUnit(fromAmountBaseUnit);
       setQuotedSendAmount(`${formatCompactBalance(ethers.utils.formatUnits(fromAmountBaseUnit, selectedAsset.decimals))} ${selectedAsset.symbol}`);
       setQuote(result);
       setStep("confirm");
@@ -260,6 +298,109 @@ function DrawerContent({
       setIsQuoting(false);
     }
   }, [amountNumber, locale, proxyAddress, selectedAsset]);
+
+  const handleConfirmOrder = useCallback(async () => {
+    if (!selectedAsset || !activeWallet || !walletAddress || !sourceAmountBaseUnit) {
+      setExecutionError(locale === "zh" ? "钱包或报价尚未就绪，请返回重试。" : "Wallet or quote is not ready. Please go back and retry.");
+      return;
+    }
+
+    setIsExecuting(true);
+    setExecutionError("");
+    setExecutionTxHash("");
+    setDlnOrderId("");
+    setHasRefreshedBalance(false);
+
+    try {
+      const depositAddress = await ensureEvmDepositAddress({
+        existingAddress: transferAddress,
+        onAddress: setTransferAddress,
+        onResponse: setDepositResponse,
+        proxyAddress,
+      });
+      const ethereumProvider = await getWalletEthereumProvider(activeWallet);
+      await switchEvmChain(ethereumProvider, selectedAsset.chainId);
+
+      if (isDirectPolygonStableDeposit(selectedAsset)) {
+        setExecutionKind("direct");
+        const txHash = await sendDirectErc20Transfer({
+          amountBaseUnit: sourceAmountBaseUnit,
+          provider: ethereumProvider,
+          recipient: depositAddress,
+          tokenAddress: selectedAsset.tokenAddress,
+        });
+        setExecutionTxHash(txHash);
+        return;
+      }
+
+      if (selectedAsset.chainId === String(POLYGON_CHAIN_ID)) {
+        setExecutionKind("same-chain");
+        const swap = await getDlnSameChainSwap({
+          chainId: selectedAsset.chainId,
+          tokenIn: toDlnTokenAddress(selectedAsset),
+          tokenInAmount: sourceAmountBaseUnit,
+          tokenOut: POLYGON_USDC_ADDRESS,
+          tokenOutRecipient: depositAddress,
+          senderAddress: walletAddress,
+          slippage: "auto",
+        });
+        await approveDlnIfNeeded({
+          amountBaseUnit: sourceAmountBaseUnit,
+          asset: selectedAsset,
+          owner: walletAddress,
+          provider: ethereumProvider,
+          tx: swap.tx,
+        });
+        const txHash = await sendPreparedEvmTx(ethereumProvider, swap.tx);
+        setExecutionTxHash(txHash);
+        return;
+      }
+
+      setExecutionKind("cross-chain");
+      const dlnQuote = await getDlnQuote({
+        srcChainId: selectedAsset.chainId,
+        srcChainTokenIn: toDlnTokenAddress(selectedAsset),
+        srcChainTokenInAmount: sourceAmountBaseUnit,
+        dstChainId: String(POLYGON_CHAIN_ID),
+        dstChainTokenOut: POLYGON_USDC_ADDRESS,
+        dstChainTokenOutAmount: "auto",
+        dstChainTokenOutRecipient: depositAddress,
+        srcChainOrderAuthorityAddress: walletAddress,
+        dstChainOrderAuthorityAddress: walletAddress,
+        senderAddress: walletAddress,
+        prependOperatingExpenses: true,
+      });
+      setDlnOrderId(dlnQuote.orderId);
+      await approveDlnIfNeeded({
+        amountBaseUnit: sourceAmountBaseUnit,
+        asset: selectedAsset,
+        owner: walletAddress,
+        provider: ethereumProvider,
+        tx: dlnQuote.tx,
+      });
+      const txHash = await sendPreparedEvmTx(ethereumProvider, dlnQuote.tx);
+      setExecutionTxHash(txHash);
+    } catch (error) {
+      setExecutionError(
+        error instanceof Error
+          ? error.message
+          : locale === "zh"
+            ? "确认订单失败，请稍后重试。"
+            : "Failed to confirm order. Please try again."
+      );
+      setExecutionKind("idle");
+    } finally {
+      setIsExecuting(false);
+    }
+  }, [
+    activeWallet,
+    locale,
+    proxyAddress,
+    selectedAsset,
+    sourceAmountBaseUnit,
+    transferAddress,
+    walletAddress,
+  ]);
 
   const handleCreateTransferAddress = async () => {
     if (!proxyAddress) {
@@ -390,10 +531,24 @@ function DrawerContent({
               {step === "confirm" && selectedAsset && (
                 <ConfirmStep
                   amountUsd={amountUsd}
+                  dlnStatus={dlnStatus.status}
+                  error={executionError}
+                  executionKind={executionKind}
+                  executionStatusText={getExecutionStatusText({
+                    bridgeStatus: transferStatus.latestStatus,
+                    dlnStatus: dlnStatus.status,
+                    executionKind,
+                    isExecuting,
+                    locale,
+                    txHash: executionTxHash,
+                  })}
+                  executionTxHash={executionTxHash}
                   estimatedReceive={estimatedReceive}
                   estimatedSendAmount={estimatedSendAmount}
+                  isExecuting={isExecuting}
                   isQuoting={isQuoting}
                   locale={locale}
+                  onConfirm={handleConfirmOrder}
                   quote={quote}
                   walletLabel={walletLabel}
                 />
@@ -637,22 +792,42 @@ function AmountStep({
 
 function ConfirmStep({
   amountUsd,
+  dlnStatus,
+  error,
+  executionKind,
+  executionStatusText,
+  executionTxHash,
   estimatedReceive,
   estimatedSendAmount,
+  isExecuting,
   isQuoting,
   locale,
+  onConfirm,
   quote,
   walletLabel,
 }: {
   amountUsd: string;
+  dlnStatus?: string;
+  error: string;
+  executionKind: ExecutionKind;
+  executionStatusText: string;
+  executionTxHash: string;
   estimatedReceive: string;
   estimatedSendAmount: string;
+  isExecuting: boolean;
   isQuoting: boolean;
   locale: string;
+  onConfirm: () => void;
   quote: QuoteResponse | null;
   walletLabel: string;
 }) {
   const fee = quote?.estFeeBreakdown;
+  const hasSubmitted = Boolean(executionTxHash || dlnStatus);
+  const buttonText = isExecuting
+    ? locale === "zh" ? "等待钱包确认..." : "Waiting for wallet..."
+    : hasSubmitted
+      ? locale === "zh" ? "已提交" : "Submitted"
+      : "Confirm Order";
 
   return (
     <div className="space-y-5">
@@ -664,6 +839,7 @@ function ConfirmStep({
         rows={[
           ["Source", walletLabel],
           ["Destination", "Polymarket Wallet"],
+          ["Execution", getExecutionKindText(locale, executionKind)],
           ["Estimated time", formatMs(quote?.estCheckoutTimeMs)],
         ]}
       />
@@ -686,18 +862,48 @@ function ConfirmStep({
         />
       </div>
 
-      <div className="rounded-2xl bg-white/8 p-3 text-xs text-white/60">
+      <div className="rounded-2xl bg-white/8 p-3 text-xs leading-relaxed text-white/60">
         {locale === "zh"
-          ? "公开 Bridge 文档当前只提供报价与地址生成接口；连接钱包的一键确认执行接口仍待接入。"
-          : "Public Bridge docs currently expose quote and address APIs only. Connected-wallet execution still needs an execution endpoint."}
+          ? "确认后会通过 deBridge 生成并提交预填交易，资金将发送到 Polymarket 的 EVM 充值地址并自动入账为 pUSD。钱包弹窗中的最终 gas 与发送金额为准。"
+          : "Confirming creates a prefilled deBridge transaction to the Polymarket EVM deposit address. Final gas and sent amount are shown in your wallet."}
       </div>
 
+      {(hasSubmitted || isExecuting) && (
+        <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-white/40">{locale === "zh" ? "执行状态" : "Execution status"}</span>
+            <span className="font-black text-white">{executionStatusText}</span>
+          </div>
+          {executionTxHash && (
+            <p className="mt-2 break-all font-mono text-[11px] text-white/35">
+              {executionTxHash}
+            </p>
+          )}
+        </div>
+      )}
+
+      {error && (
+        <div className="flex gap-3 rounded-2xl border border-[#ff6b6b]/20 bg-[#ff6b6b]/10 p-4">
+          <AlertTriangle className="mt-0.5 shrink-0 text-[#ff6b6b]" size={18} />
+          <p className="text-xs leading-relaxed text-[#ffcad4]/80">{error}</p>
+        </div>
+      )}
+
       <button
-        disabled
-        className="flex h-14 w-full items-center justify-center rounded-2xl bg-[#159bff] text-base font-black text-white opacity-50"
+        onClick={onConfirm}
+        disabled={isQuoting || isExecuting || hasSubmitted}
+        className="flex h-14 w-full items-center justify-center rounded-2xl bg-[#159bff] text-base font-black text-white active:scale-[0.98] disabled:opacity-50"
       >
-        {isQuoting ? <Loader2 className="animate-spin" size={18} /> : "Confirm Order"}
+        {isExecuting ? <Loader2 className="animate-spin" size={18} /> : buttonText}
       </button>
+
+      {hasSubmitted && (
+        <div className="text-center text-xs text-white/35">
+          {locale === "zh"
+            ? "交易提交后请等待 deBridge 完成兑换，再等待 Polymarket 检测入账。"
+            : "After submission, wait for deBridge fulfillment and Polymarket deposit detection."}
+        </div>
+      )}
     </div>
   );
 }
@@ -826,6 +1032,145 @@ function TokenIcon({ iconUrl, symbol }: { iconUrl?: string; symbol: string }) {
       {label}
     </div>
   );
+}
+
+async function ensureEvmDepositAddress({
+  existingAddress,
+  onAddress,
+  onResponse,
+  proxyAddress,
+}: {
+  existingAddress: string;
+  onAddress: (address: string) => void;
+  onResponse: (response: CreateDepositResponse) => void;
+  proxyAddress: string;
+}): Promise<string> {
+  if (ethers.utils.isAddress(existingAddress)) return existingAddress;
+  if (!proxyAddress) throw new Error("Polymarket wallet is not ready.");
+
+  const response = await createDepositAddress({ address: proxyAddress });
+  const address = extractDepositAddress(response, "evm");
+  onResponse(response);
+  onAddress(address);
+
+  if (!ethers.utils.isAddress(address)) {
+    throw new Error("No valid EVM deposit address returned.");
+  }
+
+  return address;
+}
+
+async function getWalletEthereumProvider(wallet: unknown): Promise<Eip1193Provider> {
+  const maybeWallet = wallet as {
+    getEthereumProvider?: () => Promise<Eip1193Provider>;
+  };
+
+  if (!maybeWallet.getEthereumProvider) {
+    throw new Error("Selected wallet does not expose an Ethereum provider.");
+  }
+
+  return maybeWallet.getEthereumProvider();
+}
+
+async function switchEvmChain(provider: Eip1193Provider, chainId: string) {
+  const targetChainId = `0x${Number(chainId).toString(16)}`;
+  const currentChainId = await provider.request({ method: "eth_chainId" });
+  if (typeof currentChainId === "string" && currentChainId.toLowerCase() === targetChainId) {
+    return;
+  }
+
+  try {
+    await provider.request({
+      method: "wallet_switchEthereumChain",
+      params: [{ chainId: targetChainId }],
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`Please switch your wallet to chain ${chainId}. ${message}`);
+  }
+}
+
+async function sendDirectErc20Transfer({
+  amountBaseUnit,
+  provider,
+  recipient,
+  tokenAddress,
+}: {
+  amountBaseUnit: string;
+  provider: Eip1193Provider;
+  recipient: string;
+  tokenAddress: string;
+}): Promise<string> {
+  const signer = getEthersSigner(provider);
+  const token = new ethers.Contract(tokenAddress, ERC20_EXECUTION_ABI, signer);
+  const tx = await token.transfer(recipient, amountBaseUnit);
+  const receipt = await tx.wait();
+  return receipt.transactionHash ?? tx.hash;
+}
+
+async function approveDlnIfNeeded({
+  amountBaseUnit,
+  asset,
+  owner,
+  provider,
+  tx,
+}: {
+  amountBaseUnit: string;
+  asset: DepositAsset;
+  owner: string;
+  provider: Eip1193Provider;
+  tx: ExecutionTx;
+}) {
+  if (asset.isNative) return;
+  if (!ethers.utils.isAddress(asset.tokenAddress)) return;
+
+  const spender = tx.allowanceTarget || tx.to;
+  if (!ethers.utils.isAddress(spender)) {
+    throw new Error("deBridge transaction did not include a valid spender.");
+  }
+
+  const signer = getEthersSigner(provider);
+  const token = new ethers.Contract(asset.tokenAddress, ERC20_EXECUTION_ABI, signer);
+  const allowance = await token.allowance(owner, spender);
+  const amount = ethers.BigNumber.from(amountBaseUnit);
+  if (allowance.gte(amount)) return;
+
+  const approval = await token.approve(spender, amount);
+  await approval.wait();
+}
+
+async function sendPreparedEvmTx(
+  provider: Eip1193Provider,
+  tx: ExecutionTx
+): Promise<string> {
+  const signer = getEthersSigner(provider);
+  const response = await signer.sendTransaction({
+    to: tx.to,
+    data: tx.data,
+    value: ethers.BigNumber.from(tx.value || "0"),
+  });
+  const receipt = await response.wait();
+  return receipt.transactionHash ?? response.hash;
+}
+
+function getEthersSigner(provider: Eip1193Provider) {
+  return new ethers.providers.Web3Provider(
+    provider as ethers.providers.ExternalProvider
+  ).getSigner();
+}
+
+function isDirectPolygonStableDeposit(asset: DepositAsset): boolean {
+  const address = asset.tokenAddress.toLowerCase();
+  return (
+    asset.chainId === String(POLYGON_CHAIN_ID) &&
+    isStableLike(asset.symbol) &&
+    (address === POLYGON_USDC_ADDRESS.toLowerCase() ||
+      address === ADDRESSES.USDCe.toLowerCase())
+  );
+}
+
+function toDlnTokenAddress(asset: DepositAsset): string {
+  return asset.isNative ? ZERO_ADDRESS : asset.tokenAddress;
 }
 
 export function DepositDrawer(props: DepositDrawerProps) {
@@ -1152,5 +1497,66 @@ function getStatusText(locale: string, status?: string): string {
       return zh ? "失败" : "Failed";
     default:
       return zh ? "等待转账" : "Waiting";
+  }
+}
+
+function getExecutionKindText(locale: string, kind: ExecutionKind): string {
+  const zh = locale === "zh";
+  switch (kind) {
+    case "direct":
+      return zh ? "Polygon 稳定币直转" : "Polygon stablecoin transfer";
+    case "same-chain":
+      return zh ? "deBridge 同链兑换" : "deBridge same-chain swap";
+    case "cross-chain":
+      return zh ? "deBridge 跨链兑换" : "deBridge cross-chain swap";
+    default:
+      return zh ? "连接钱包充值" : "Connected wallet deposit";
+  }
+}
+
+function getExecutionStatusText({
+  bridgeStatus,
+  dlnStatus,
+  executionKind,
+  isExecuting,
+  locale,
+  txHash,
+}: {
+  bridgeStatus?: string;
+  dlnStatus?: string;
+  executionKind: ExecutionKind;
+  isExecuting: boolean;
+  locale: string;
+  txHash: string;
+}): string {
+  const zh = locale === "zh";
+  if (isExecuting) return zh ? "等待钱包确认" : "Waiting for wallet";
+  if (bridgeStatus === "COMPLETED") return zh ? "已入账" : "Deposited";
+  if (bridgeStatus) return getStatusText(locale, bridgeStatus);
+  if (dlnStatus === "ClaimedUnlock") return zh ? "兑换完成，等待入账" : "Swap fulfilled, waiting deposit";
+  if (dlnStatus) return getDlnStatusText(locale, dlnStatus);
+  if (txHash && executionKind === "direct") return zh ? "转账已提交" : "Transfer submitted";
+  if (txHash) return zh ? "订单已提交" : "Order submitted";
+  return zh ? "等待确认" : "Ready";
+}
+
+function getDlnStatusText(locale: string, status?: string): string {
+  const zh = locale === "zh";
+  switch (status) {
+    case "Created":
+      return zh ? "订单已创建" : "Order created";
+    case "Fulfilled":
+      return zh ? "目标链已兑付" : "Fulfilled";
+    case "SentUnlock":
+      return zh ? "解锁中" : "Unlock sent";
+    case "ClaimedUnlock":
+      return zh ? "已完成" : "Completed";
+    case "SentOrderCancel":
+      return zh ? "取消中" : "Cancel sent";
+    case "OrderCancelled":
+    case "ClaimedOrderCancel":
+      return zh ? "已取消" : "Cancelled";
+    default:
+      return zh ? "处理中" : "Processing";
   }
 }
