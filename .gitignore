@@ -17,8 +17,6 @@
 /.next/
 /out/
 
-/.cursor
-
 # production
 /build
 
@@ -42,6 +40,11 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Cursor：忽略本地 IDE 数据，仅将共享项目规则纳入版本库
+/.cursor/*
+!/.cursor/rules/
+!/.cursor/rules/**
 
 # others
 .notes
