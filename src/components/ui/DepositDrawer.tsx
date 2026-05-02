@@ -189,13 +189,13 @@ function DrawerContent({
         setSnapshot(next);
         if (priceChanged) {
           setQuoteWarning(locale === "zh"
-            ? "\u62a5\u4ef7\u5df2\u81ea\u52a8\u5237\u65b0\uff0c\u8bf7\u786e\u8ba4\u5f53\u524d\u4ef7\u683c\u540e\u518d\u63d0\u4ea4\u3002"
+            ? "报价已自动刷新，请确认当前价格后再提交。"
             : "Quote refreshed automatically. Please review the current price before submitting.");
         }
       } catch {
         if (quoteRequestRef.current === requestId) {
           setQuoteWarning(locale === "zh"
-            ? "\u62a5\u4ef7\u53ef\u80fd\u5df2\u8fc7\u671f\uff0c\u63d0\u4ea4\u65f6\u4f1a\u518d\u6b21\u5237\u65b0\u3002"
+            ? "报价可能已过期，提交时会再次刷新。"
             : "Quote may be stale. It will refresh again before submission.");
         }
       }
@@ -294,7 +294,7 @@ function DrawerContent({
 
   const handleConfirmOrder = useCallback(async () => {
     if (!selectedAsset || !activeWallet || !walletAddress || !snapshot) {
-      setExecutionError(locale === "zh" ? "\u94b1\u5305\u6216\u62a5\u4ef7\u5c1a\u672a\u5c31\u7eea\uff0c\u8bf7\u8fd4\u56de\u91cd\u8bd5\u3002" : "Wallet or quote is not ready. Please go back and retry.");
+      setExecutionError(locale === "zh" ? "钱包或报价尚未就绪，请返回重试。" : "Wallet or quote is not ready. Please go back and retry.");
       return;
     }
 
@@ -338,7 +338,7 @@ function DrawerContent({
         });
         if (quoteRequestRef.current !== requestId) {
           setExecutionError(locale === "zh"
-            ? "\u62a5\u4ef7\u6b63\u5728\u5237\u65b0\uff0c\u8bf7\u7a0d\u540e\u518d\u8bd5\u3002"
+            ? "报价正在刷新，请稍后再试。"
             : "Quote is still refreshing. Please retry shortly.");
           return;
         }
@@ -347,7 +347,7 @@ function DrawerContent({
         activeSnapshot = refreshed;
         if (priceChanged) {
           setQuoteWarning(locale === "zh"
-            ? "\u62a5\u4ef7\u5df2\u66f4\u65b0\u4e14\u4ef7\u683c\u53d8\u5316\u8d85\u8fc7 1%\uff0c\u8bf7\u786e\u8ba4\u65b0\u4ef7\u683c\u540e\u518d\u6b21\u63d0\u4ea4\u3002"
+            ? "报价已更新且价格变化超过 1%，请确认新价格后再次提交。"
             : "Quote updated by more than 1%. Please review the new quote and confirm again.");
           return;
         }
@@ -410,7 +410,7 @@ function DrawerContent({
 
   const handleCreateTransferAddress = async () => {
     if (!proxyAddress) {
-      setTransferError(locale === "zh" ? "Polymarket \u94b1\u5305\u5c1a\u672a\u5c31\u7eea\u3002" : "Polymarket wallet is not ready.");
+      setTransferError(locale === "zh" ? "Polymarket 钱包尚未就绪。" : "Polymarket wallet is not ready.");
       return;
     }
 
@@ -425,14 +425,14 @@ function DrawerContent({
       setTransferAddress(address);
 
       if (!address) {
-        setTransferError(locale === "zh" ? "\u672a\u627e\u5230\u53ef\u7528\u5145\u503c\u5730\u5740\u3002" : "No deposit address returned.");
+        setTransferError(locale === "zh" ? "未找到可用充值地址。" : "No deposit address returned.");
       }
     } catch (error) {
       setTransferError(
         error instanceof Error
           ? error.message
           : locale === "zh"
-            ? "\u521b\u5efa\u8f6c\u8d26\u5730\u5740\u5931\u8d25\u3002"
+            ? "创建转账地址失败。"
             : "Failed to create transfer address."
       );
     } finally {
@@ -486,10 +486,10 @@ function DrawerContent({
                 )}
                 <div className="text-center">
                   <h2 className="text-xl font-black text-white">
-                    {locale === "zh" ? "\u5145\u503c" : "Deposit"}
+                    {locale === "zh" ? "充值" : "Deposit"}
                   </h2>
                   <p className="text-xs text-white/40">
-                    Polymarket {locale === "zh" ? "\u4f59\u989d" : "Balance"}: ${Number(balanceUsd || 0).toFixed(2)}
+                    Polymarket {locale === "zh" ? "余额" : "Balance"}: ${Number(balanceUsd || 0).toFixed(2)}
                   </p>
                 </div>
                 <button
