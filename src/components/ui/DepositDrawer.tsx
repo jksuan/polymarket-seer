@@ -16,7 +16,7 @@ import type {
   ExecutionSnapshot,
   FlowStep,
 } from "./deposit/types";
-import { MAX_DEPOSIT_BALANCE_RATIO } from "./deposit/constants";
+import { DEPOSIT_SINGLE_TX_CAP_USD, MAX_DEPOSIT_BALANCE_RATIO } from "./deposit/constants";
 import { ensureEvmDepositAddress, extractAnyDepositAddress, extractDepositAddress } from "./deposit/addresses";
 import {
   estimateUsdValue,
@@ -237,7 +237,7 @@ function DrawerContent({
     const value = Number(selectedUsdValue || 0);
     if (!Number.isFinite(value) || value <= 0) return;
     const nextAmount = percent === 1
-      ? value * MAX_DEPOSIT_BALANCE_RATIO
+      ? Math.min(value * MAX_DEPOSIT_BALANCE_RATIO, DEPOSIT_SINGLE_TX_CAP_USD)
       : value * percent;
     setAmountUsd(formatAmountUsdInput(nextAmount));
   };
@@ -252,7 +252,10 @@ function DrawerContent({
   };
 
   const handleQuote = useCallback(async () => {
-    const maxDepositUsd = Number(selectedUsdValue ?? 0) * MAX_DEPOSIT_BALANCE_RATIO;
+    const maxDepositUsd = Math.min(
+      Number(selectedUsdValue ?? 0) * MAX_DEPOSIT_BALANCE_RATIO,
+      DEPOSIT_SINGLE_TX_CAP_USD
+    );
     if (!selectedAsset || !proxyAddress || amountNumber < 1 || amountNumber > maxDepositUsd + 0.01) return;
     const requestId = ++quoteRequestRef.current;
     setIsQuoting(true);

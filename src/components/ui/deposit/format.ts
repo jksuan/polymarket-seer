@@ -15,6 +15,14 @@ export function formatUsd(value?: number): string {
   return value === undefined ? "-" : `$${value.toFixed(2)}`;
 }
 
+export function formatUsdWithCommas(value?: number): string {
+  if (value === undefined) return "-";
+  return `$${value.toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+}
+
 export function formatPercent(value?: number): string {
   return value === undefined ? "-" : `${value.toFixed(2)}%`;
 }

@@ -1,3 +1,5 @@
+import { useLayoutEffect, useRef } from "react";
+import type { ChangeEvent } from "react";
 import {
   AlertTriangle,
   ArrowRight,
@@ -12,8 +14,8 @@ import QRCode from "react-qr-code";
 import type { CreateDepositResponse } from "@/types/bridge";
 import type { DepositAsset, ExecutionSnapshot } from "./types";
 import { sortVisibleAssets } from "./assets";
-import { CONNECTED_LOW_BALANCE_USD, MAX_DEPOSIT_BALANCE_RATIO, QUOTE_STALE_THRESHOLD_MS, TOKEN_ICON_URLS } from "./constants";
-import { formatCompactBalance, formatMs, formatPercent, formatUsd, parseAmountUsd } from "./format";
+import { CONNECTED_LOW_BALANCE_USD, DEPOSIT_SINGLE_TX_CAP_USD, MAX_DEPOSIT_BALANCE_RATIO, QUOTE_STALE_THRESHOLD_MS, TOKEN_ICON_URLS } from "./constants";
+import { formatCompactBalance, formatMs, formatPercent, formatUsd, formatUsdWithCommas, parseAmountUsd } from "./format";
 import { getExecutionKindText } from "./status";
 
 export function HomeStep({
@@ -176,15 +178,39 @@ export function AmountStep({
   onPercent: (percent: number) => void;
 }) {
   const amountNumber = parseAmountUsd(amountUsd);
-  const maxDepositUsd = Number(asset.usdValue ?? 0) * MAX_DEPOSIT_BALANCE_RATIO;
+  const inputRef = useRef<HTMLInputElement>(null);
+  const pendingCaretCountRef = useRef<number | null>(null);
+  const balanceMaxDepositUsd = Number(asset.usdValue ?? 0) * MAX_DEPOSIT_BALANCE_RATIO;
+  const maxDepositUsd = Math.min(balanceMaxDepositUsd, DEPOSIT_SINGLE_TX_CAP_USD);
   const isAmountTooLow = amountNumber < 1;
+  const isAmountOverSingleTxCap = amountNumber > DEPOSIT_SINGLE_TX_CAP_USD + 0.01;
   const isAmountOverBalance = amountNumber > maxDepositUsd + 0.01;
   const amountWarning = isAmountTooLow
     ? locale === "zh" ? "最低充值金额$1" : "$1.00 minimum deposit"
-    : isAmountOverBalance
+    : isAmountOverSingleTxCap
+      ? locale === "zh"
+        ? `单笔最高充值${formatUsdWithCommas(DEPOSIT_SINGLE_TX_CAP_USD)}，请分笔充值`
+        : `Single deposit limit is ${formatUsdWithCommas(DEPOSIT_SINGLE_TX_CAP_USD)}. Please split your deposit.`
+      : isAmountOverBalance
       ? locale === "zh" ? "钱包余额不足" : "Insufficient balance"
       : "";
   const amountInputWidth = `${Math.max(amountUsd.length || 1, 1)}ch`;
+
+  useLayoutEffect(() => {
+    const caretCount = pendingCaretCountRef.current;
+    const input = inputRef.current;
+    if (caretCount === null || !input) return;
+
+    const nextCaret = getCaretPositionFromAmountCharCount(amountUsd, caretCount);
+    input.setSelectionRange(nextCaret, nextCaret);
+    pendingCaretCountRef.current = null;
+  }, [amountUsd]);
+
+  const handleInputChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const caret = event.currentTarget.selectionStart ?? event.currentTarget.value.length;
+    pendingCaretCountRef.current = countAmountInputChars(event.currentTarget.value.slice(0, caret));
+    onAmountChange(event.currentTarget.value);
+  };
 
   return (
     <div className="flex min-h-[520px] flex-col justify-between">
@@ -193,9 +219,10 @@ export function AmountStep({
           <div className="inline-flex items-center justify-center text-5xl font-black text-white">
             <span>$</span>
             <input
+              ref={inputRef}
               value={amountUsd}
               onBlur={onAmountBlur}
-              onChange={(event) => onAmountChange(event.target.value)}
+              onChange={handleInputChange}
               placeholder="0"
               style={{ width: amountInputWidth }}
               className="min-w-[1ch] max-w-[360px] bg-transparent text-left text-5xl font-black text-white outline-none placeholder:text-white/35"
@@ -556,4 +583,21 @@ function TokenIcon({ iconUrl, symbol }: { iconUrl?: string; symbol: string }) {
       {label}
     </div>
   );
+}
+
+function countAmountInputChars(value: string): number {
+  return Array.from(value).filter((char) => /[\d.]/.test(char)).length;
+}
+
+function getCaretPositionFromAmountCharCount(value: string, targetCount: number): number {
+  if (targetCount <= 0) return 0;
+
+  let seen = 0;
+  for (let index = 0; index < value.length; index += 1) {
+    if (!/[\d.]/.test(value[index])) continue;
+    seen += 1;
+    if (seen >= targetCount) return index + 1;
+  }
+
+  return value.length;
 }
