@@ -1,0 +1,69 @@
+import type { BridgeAddressType } from "@/types/bridge";
+import type { DlnTx } from "@/types/dln";
+
+export interface DepositDrawerProps {
+  isOpen: boolean;
+  onClose: () => void;
+  proxyAddress: string;
+  balanceUsd?: string;
+  onBalanceRefresh?: () => void;
+}
+
+export type FlowStep = "home" | "asset" | "amount" | "confirm" | "transfer";
+
+export type DepositAsset = {
+  id: string;
+  chainId: string;
+  chainName: string;
+  symbol: string;
+  name: string;
+  tokenAddress: string;
+  iconUrl?: string;
+  decimals: number;
+  minCheckoutUsd?: number;
+  balance?: string;
+  usdValue?: number;
+  isNative?: boolean;
+};
+
+export type DepositAddressMap = Partial<Record<BridgeAddressType, string>>;
+
+export type ExecutionKind = "idle" | "direct" | "same-chain" | "cross-chain";
+
+export type ExecutionTx = DlnTx & {
+  allowanceTarget?: string;
+};
+
+export type Eip1193Provider = {
+  request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
+};
+
+export type ExecutionSnapshot = {
+  kind: Exclude<ExecutionKind, "idle">;
+  asset: DepositAsset;
+  amountUsd: number;
+  sourceAmountBaseUnit: string;
+  sendBaseUnit: string;
+  sendAmountFloat: number;
+  sendDisplay: string;
+  sendUsd?: number;
+  receiveBaseUnit: string;
+  receiveDecimals: number;
+  receiveDisplay: string;
+  receiveUsd?: number;
+  networkCostUsd?: number;
+  routeCostUsd?: number;
+  priceImpact?: number;
+  slippage?: number;
+  estCheckoutTimeMs?: number;
+  recipientAddress: string;
+  tx: ExecutionTx;
+  approveSpender?: string;
+  fixedFeeDisplay?: string;
+  fixedFeeUsd?: number;
+  walletTotalDisplay?: string;
+  walletTotalUsd?: number;
+  orderId?: string;
+  quotedAtMs: number;
+  expiresAtMs: number;
+};

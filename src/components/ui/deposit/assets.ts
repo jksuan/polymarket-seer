@@ -1,0 +1,259 @@
+import { ethers } from "ethers";
+import { getBridgeQuote } from "@/hooks/useBridge";
+import { ADDRESSES, ERC20_ABI, POLYGON_CHAIN_ID } from "@/lib/constants";
+import {
+  NATIVE_TOKEN_ADDRESSES,
+  PUBLIC_RPC_URLS,
+  PUSD_ADDRESS,
+  TOKEN_ICON_URLS,
+  ZERO_ADDRESS,
+} from "./constants";
+import { formatTokenAmount, toNumber } from "./format";
+import type { DepositAsset } from "./types";
+
+export function normalizeSupportedAssets(data: unknown): DepositAsset[] {
+  const record = data && typeof data === "object" ? data as Record<string, unknown> : {};
+  const rawAssets = Array.isArray(record.supportedAssets)
+    ? record.supportedAssets
+    : Array.isArray(record.assets)
+      ? record.assets
+      : [];
+
+  const normalized = rawAssets
+    .map((item) => normalizeSupportedAsset(item as Record<string, unknown>))
+    .filter((asset): asset is DepositAsset => Boolean(asset));
+
+  if (normalized.length > 0) return sortPreferredAssets(normalized);
+
+  return sortPreferredAssets([
+    {
+      id: "137-pol",
+      chainId: String(POLYGON_CHAIN_ID),
+      chainName: "Polygon",
+      symbol: "POL",
+      name: "Polygon",
+      tokenAddress: ZERO_ADDRESS,
+      iconUrl: TOKEN_ICON_URLS.POL,
+      decimals: 18,
+      isNative: true,
+    },
+    {
+      id: "137-usdce",
+      chainId: String(POLYGON_CHAIN_ID),
+      chainName: "Polygon",
+      symbol: "USDC.e",
+      name: "Bridged USDC",
+      tokenAddress: ADDRESSES.USDCe,
+      iconUrl: TOKEN_ICON_URLS["USDC.E"],
+      decimals: 6,
+    },
+  ]);
+}
+
+function normalizeSupportedAsset(item: Record<string, unknown>): DepositAsset | null {
+  const token = item.token && typeof item.token === "object"
+    ? item.token as Record<string, unknown>
+    : item;
+  const chainId = String(item.chainId ?? item.chain_id ?? "");
+  const tokenAddress = String(token.address ?? token.tokenAddress ?? token.contractAddress ?? "");
+  const symbol = String(token.symbol ?? "");
+  const decimals = Number(token.decimals ?? 18);
+  const iconUrl = getTokenIconUrl(item, token, symbol);
+
+  if (!chainId || !tokenAddress || !symbol) return null;
+
+  return {
+    id: `${chainId}-${tokenAddress.toLowerCase()}-${symbol}`,
+    chainId,
+    chainName: String(item.chainName ?? item.network ?? `Chain ${chainId}`),
+    symbol,
+    name: String(token.name ?? symbol),
+    tokenAddress,
+    iconUrl,
+    decimals: Number.isFinite(decimals) ? decimals : 18,
+    minCheckoutUsd: toNumber(item.minCheckoutUsd),
+    isNative: NATIVE_TOKEN_ADDRESSES.has(tokenAddress.toLowerCase()) || isNativeSymbol(symbol, chainId),
+  };
+}
+
+function sortPreferredAssets(assets: DepositAsset[]): DepositAsset[] {
+  const priority = ["ETH", "POL", "USDC.E", "USDC", "PUSD"];
+  return [...assets].sort((a, b) => {
+    const ap = priority.indexOf(a.symbol.toUpperCase());
+    const bp = priority.indexOf(b.symbol.toUpperCase());
+    return (ap === -1 ? 99 : ap) - (bp === -1 ? 99 : bp);
+  });
+}
+
+export function sortVisibleAssets(assets: DepositAsset[]): DepositAsset[] {
+  const visibleAssets = assets
+    .filter((asset) => isSupportedReadableChain(asset.chainId))
+    .filter((asset) => Number(asset.balance || 0) > 0 || (asset.usdValue ?? 0) > 0.005);
+
+  return dedupeAssetsBySymbol(visibleAssets)
+    .sort((a, b) => {
+      const aValue = a.usdValue ?? 0;
+      const bValue = b.usdValue ?? 0;
+      if (bValue !== aValue) return bValue - aValue;
+      return sortPreferredAssets([a, b])[0].id === a.id ? -1 : 1;
+    });
+}
+
+function dedupeAssetsBySymbol(assets: DepositAsset[]): DepositAsset[] {
+  const bySymbol = new Map<string, DepositAsset>();
+
+  for (const asset of assets) {
+    const key = asset.symbol.toUpperCase();
+    const existing = bySymbol.get(key);
+    if (!existing || (asset.usdValue ?? 0) > (existing.usdValue ?? 0)) {
+      bySymbol.set(key, asset);
+    }
+  }
+
+  return [...bySymbol.values()];
+}
+
+export async function readAssetBalance(
+  asset: DepositAsset,
+  walletAddress: string
+): Promise<readonly [string, string]> {
+  const rpcUrl = PUBLIC_RPC_URLS[asset.chainId];
+  if (!rpcUrl || !walletAddress) return [asset.id, "0"] as const;
+
+  try {
+    const provider = new ethers.providers.JsonRpcProvider(rpcUrl);
+    if (asset.isNative) {
+      const balance = await provider.getBalance(walletAddress);
+      return [asset.id, ethers.utils.formatUnits(balance, asset.decimals)] as const;
+    }
+
+    if (!ethers.utils.isAddress(asset.tokenAddress)) {
+      return [asset.id, "0"] as const;
+    }
+
+    const contract = new ethers.Contract(asset.tokenAddress, ERC20_ABI, provider);
+    const balance = await contract.balanceOf(walletAddress);
+    return [asset.id, ethers.utils.formatUnits(balance, asset.decimals)] as const;
+  } catch {
+    return [asset.id, "0"] as const;
+  }
+}
+
+export function amountNumberToBaseUnit(amountUsd: number, decimals: number): string {
+  if (!Number.isFinite(amountUsd) || amountUsd <= 0) return "0";
+  return ethers.utils.parseUnits(amountUsd.toFixed(Math.min(decimals, 6)), decimals).toString();
+}
+
+export async function estimateBaseUnitForUsd({
+  amountUsd,
+  asset,
+  proxyAddress,
+}: {
+  amountUsd: number;
+  asset: DepositAsset;
+  proxyAddress: string;
+}): Promise<string> {
+  if (isStableLike(asset.symbol)) {
+    return amountNumberToBaseUnit(amountUsd, asset.decimals);
+  }
+
+  const oneTokenBaseUnit = ethers.utils.parseUnits("1", asset.decimals).toString();
+  const unitQuote = await getBridgeQuote({
+    fromAmountBaseUnit: oneTokenBaseUnit,
+    fromChainId: asset.chainId,
+    fromTokenAddress: asset.tokenAddress,
+    recipientAddress: proxyAddress,
+    toChainId: String(POLYGON_CHAIN_ID),
+    toTokenAddress: PUSD_ADDRESS,
+  });
+  const unitUsd = unitQuote.estInputUsd || unitQuote.estOutputUsd || 0;
+  if (!unitUsd) {
+    return amountNumberToBaseUnit(amountUsd, asset.decimals);
+  }
+
+  return ethers.utils.parseUnits((amountUsd / unitUsd).toFixed(Math.min(asset.decimals, 8)), asset.decimals).toString();
+}
+
+export function getPreQuoteSendLabel(amountUsd: number, asset: DepositAsset): string {
+  if (isStableLike(asset.symbol)) return formatTokenAmount(amountUsd, asset.symbol);
+  return `~$${amountUsd.toFixed(2)} ${asset.symbol}`;
+}
+
+export function isStableLike(symbol: string): boolean {
+  const normalized = symbol.toUpperCase();
+  return normalized.includes("USDC") || normalized.includes("USDT") || normalized.includes("DAI") || normalized.includes("PUSD");
+}
+
+export async function estimateUsdValue(
+  asset: DepositAsset,
+  balance?: string,
+  proxyAddress?: string
+): Promise<number> {
+  const value = Number(balance || 0);
+  if (!Number.isFinite(value) || value <= 0) return 0;
+  if (isStableLike(asset.symbol)) return value;
+  if (!proxyAddress) return 0;
+
+  try {
+    const oneTokenBaseUnit = ethers.utils.parseUnits("1", asset.decimals).toString();
+    const quote = await getBridgeQuote({
+      fromAmountBaseUnit: oneTokenBaseUnit,
+      fromChainId: asset.chainId,
+      fromTokenAddress: asset.tokenAddress,
+      recipientAddress: proxyAddress,
+      toChainId: String(POLYGON_CHAIN_ID),
+      toTokenAddress: PUSD_ADDRESS,
+    });
+    const unitUsd = quote.estInputUsd || quote.estOutputUsd || 0;
+    return unitUsd * value;
+  } catch {
+    return 0;
+  }
+}
+
+export function isSupportedReadableChain(chainId: string): boolean {
+  return Boolean(PUBLIC_RPC_URLS[chainId]);
+}
+
+function isNativeSymbol(symbol: string, chainId: string): boolean {
+  const normalized = symbol.toUpperCase();
+  return (
+    (chainId === "1" && normalized === "ETH") ||
+    (chainId === String(POLYGON_CHAIN_ID) && normalized === "POL") ||
+    (chainId === String(POLYGON_CHAIN_ID) && normalized === "MATIC") ||
+    (chainId === "10" && normalized === "ETH") ||
+    (chainId === "8453" && normalized === "ETH") ||
+    (chainId === "42161" && normalized === "ETH") ||
+    (chainId === "56" && normalized === "BNB")
+  );
+}
+
+export function getNativeFeeSymbol(chainId: string): string {
+  if (chainId === "56") return "BNB";
+  if (chainId === String(POLYGON_CHAIN_ID)) return "POL";
+  return "ETH";
+}
+
+function getTokenIconUrl(
+  item: Record<string, unknown>,
+  token: Record<string, unknown>,
+  symbol: string
+): string | undefined {
+  const candidates = [
+    token.logoURI,
+    token.logoUri,
+    token.logoUrl,
+    token.icon,
+    token.image,
+    item.logoURI,
+    item.logoUri,
+    item.logoUrl,
+    item.icon,
+    item.image,
+  ];
+
+  const fromApi = candidates.find(
+    (value): value is string => typeof value === "string" && value.startsWith("http")
+  );
+  return fromApi || TOKEN_ICON_URLS[symbol.toUpperCase()];
+}

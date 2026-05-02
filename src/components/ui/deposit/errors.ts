@@ -1,0 +1,62 @@
+export function formatExecutionError(
+  error: unknown,
+  locale: string,
+  fallback: "quote" | "execute" | "cancel"
+): string {
+  const zh = locale === "zh";
+  const raw = extractErrorText(error);
+  const upper = raw.toUpperCase();
+
+  if (upper.includes("USER_REJECTED") || upper.includes("USER DENIED") || upper.includes("REJECTED")) {
+    return zh ? "用户已取消钱包操作。" : "Wallet request was rejected.";
+  }
+  if (upper.includes("ERROR_LOW_GIVE_AMOUNT") || upper.includes("LOW_GIVE") || upper.includes("MINIMUM")) {
+    return zh ? "金额低于 deBridge 当前路线的最低要求，请提高金额后重试。" : "Amount is below the current deBridge route minimum. Increase the amount and retry.";
+  }
+  if (upper.includes("IMPOSSIBLE_ROUTE")) {
+    return zh ? "当前链和资产没有可用的 deBridge 路线。" : "No deBridge route is currently available for this chain and asset.";
+  }
+  if (upper.includes("UNSUPPORTED_TOKEN_IN") || upper.includes("UNSUPPORTED_TOKEN_OUT")) {
+    return zh ? "当前资产暂不支持一键充值，请改用 Transfer Crypto。" : "This asset is not supported for one-click deposit. Use Transfer Crypto instead.";
+  }
+  if (upper.includes("ESTIMATION_FAILED")) {
+    return zh ? "交易估算失败，请稍后重试或降低金额。" : "Transaction estimation failed. Try again later or lower the amount.";
+  }
+  if (upper.includes("INSUFFICIENT") || upper.includes("NOT ENOUGH")) {
+    return zh ? "钱包余额不足，无法覆盖金额或 gas。" : "Insufficient wallet balance for the amount or gas.";
+  }
+  if (upper.includes("UNKNOWN_ORDER")) {
+    return zh ? "未找到该 deBridge 订单，可能尚未被索引。" : "deBridge order was not found yet. It may still be indexing.";
+  }
+  if (upper.includes("ORDER_ALREADY_FULFILLED")) {
+    return zh ? "该订单已完成，不能取消退款。" : "This order has already been fulfilled and cannot be cancelled.";
+  }
+
+  if (raw) return raw;
+
+  if (fallback === "quote") {
+    return zh ? "获取报价失败，请稍后重试。" : "Failed to get a quote. Please try again.";
+  }
+  if (fallback === "cancel") {
+    return zh ? "生成或提交退款交易失败。" : "Failed to create or submit the refund transaction.";
+  }
+  return zh ? "确认订单失败，请稍后重试。" : "Failed to confirm order. Please try again.";
+}
+
+function extractErrorText(error: unknown): string {
+  if (error instanceof Error) {
+    const details = "details" in error ? (error as { details?: unknown }).details : undefined;
+    return [error.message, stringifyErrorDetails(details)].filter(Boolean).join(" ");
+  }
+  return String(error ?? "");
+}
+
+function stringifyErrorDetails(details: unknown): string {
+  if (!details) return "";
+  if (typeof details === "string") return details;
+  try {
+    return JSON.stringify(details);
+  } catch {
+    return String(details);
+  }
+}
