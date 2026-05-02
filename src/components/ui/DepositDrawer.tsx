@@ -16,6 +16,7 @@ import type {
   ExecutionSnapshot,
   FlowStep,
 } from "./deposit/types";
+import { MAX_DEPOSIT_BALANCE_RATIO } from "./deposit/constants";
 import { ensureEvmDepositAddress, extractAnyDepositAddress, extractDepositAddress } from "./deposit/addresses";
 import {
   estimateUsdValue,
@@ -235,7 +236,10 @@ function DrawerContent({
     if (!selectedAsset) return;
     const value = Number(selectedUsdValue || 0);
     if (!Number.isFinite(value) || value <= 0) return;
-    setAmountUsd(formatAmountUsdInput(value * percent));
+    const nextAmount = percent === 1
+      ? value * MAX_DEPOSIT_BALANCE_RATIO
+      : value * percent;
+    setAmountUsd(formatAmountUsdInput(nextAmount));
   };
 
   const handleAmountChange = (value: string) => {
@@ -248,7 +252,8 @@ function DrawerContent({
   };
 
   const handleQuote = useCallback(async () => {
-    if (!selectedAsset || !proxyAddress || amountNumber < 1) return;
+    const maxDepositUsd = Number(selectedUsdValue ?? 0) * MAX_DEPOSIT_BALANCE_RATIO;
+    if (!selectedAsset || !proxyAddress || amountNumber < 1 || amountNumber > maxDepositUsd + 0.01) return;
     const requestId = ++quoteRequestRef.current;
     setIsQuoting(true);
     setQuoteError("");
@@ -290,7 +295,7 @@ function DrawerContent({
         setIsQuoting(false);
       }
     }
-  }, [amountNumber, locale, proxyAddress, selectedAsset, transferAddress, walletAddress]);
+  }, [amountNumber, locale, proxyAddress, selectedAsset, selectedUsdValue, transferAddress, walletAddress]);
 
   const handleConfirmOrder = useCallback(async () => {
     if (!selectedAsset || !activeWallet || !walletAddress || !snapshot) {

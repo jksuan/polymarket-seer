@@ -12,7 +12,7 @@ import QRCode from "react-qr-code";
 import type { CreateDepositResponse } from "@/types/bridge";
 import type { DepositAsset, ExecutionSnapshot } from "./types";
 import { sortVisibleAssets } from "./assets";
-import { CONNECTED_LOW_BALANCE_USD, QUOTE_STALE_THRESHOLD_MS, TOKEN_ICON_URLS } from "./constants";
+import { CONNECTED_LOW_BALANCE_USD, MAX_DEPOSIT_BALANCE_RATIO, QUOTE_STALE_THRESHOLD_MS, TOKEN_ICON_URLS } from "./constants";
 import { formatCompactBalance, formatMs, formatPercent, formatUsd, parseAmountUsd } from "./format";
 import { getExecutionKindText } from "./status";
 
@@ -176,14 +176,21 @@ export function AmountStep({
   onPercent: (percent: number) => void;
 }) {
   const amountNumber = parseAmountUsd(amountUsd);
+  const maxDepositUsd = Number(asset.usdValue ?? 0) * MAX_DEPOSIT_BALANCE_RATIO;
   const isAmountTooLow = amountNumber < 1;
+  const isAmountOverBalance = amountNumber > maxDepositUsd + 0.01;
+  const amountWarning = isAmountTooLow
+    ? locale === "zh" ? "最低充值金额$1" : "$1.00 minimum deposit"
+    : isAmountOverBalance
+      ? locale === "zh" ? "钱包余额不足" : "Insufficient balance"
+      : "";
   const amountInputWidth = `${Math.max(amountUsd.length || 1, 1)}ch`;
 
   return (
     <div className="flex min-h-[520px] flex-col justify-between">
       <div>
         <div className="mt-16 flex justify-center">
-          <div className="inline-flex items-center justify-center text-6xl font-black text-white">
+          <div className="inline-flex items-center justify-center text-5xl font-black text-white">
             <span>$</span>
             <input
               value={amountUsd}
@@ -191,7 +198,7 @@ export function AmountStep({
               onChange={(event) => onAmountChange(event.target.value)}
               placeholder="0"
               style={{ width: amountInputWidth }}
-              className="min-w-[1ch] max-w-[360px] bg-transparent text-left text-6xl font-black text-white outline-none placeholder:text-white/35"
+              className="min-w-[1ch] max-w-[360px] bg-transparent text-left text-5xl font-black text-white outline-none placeholder:text-white/35"
               inputMode="decimal"
             />
           </div>
@@ -215,6 +222,11 @@ export function AmountStep({
       </div>
 
       <div className="pb-5">
+        {amountWarning && (
+          <p className="mb-4 text-center text-xs font-semibold text-[#ffb25c]">
+            {amountWarning}
+          </p>
+        )}
         <div className="mx-auto mb-7 flex w-fit items-center gap-4 rounded-full bg-white/10 px-4 py-3">
           <TokenIcon iconUrl={asset.iconUrl} symbol={asset.symbol} />
           <div>
@@ -230,7 +242,7 @@ export function AmountStep({
         </div>
         <button
           onClick={onContinue}
-          disabled={isQuoting || isAmountTooLow}
+          disabled={isQuoting || isAmountTooLow || isAmountOverBalance}
           className="flex h-14 w-full items-center justify-center rounded-2xl bg-[#159bff] text-base font-black text-white active:scale-[0.98] disabled:opacity-50"
         >
           {isQuoting ? <Loader2 className="animate-spin" size={18} /> : locale === "zh" ? "继续" : "Continue"}
