@@ -473,25 +473,6 @@ function DrawerContent({
         });
       }
 
-      // #region agent log
-      debugDlnDeposit("H1,H2,H4,H5", "pre wallet send", {
-        amountUsd: activeSnapshot.amountUsd,
-        asset: {
-          symbol: activeSnapshot.asset.symbol,
-          chainId: activeSnapshot.asset.chainId,
-          isNative: activeSnapshot.asset.isNative,
-        },
-        kind: activeSnapshot.kind,
-        sourceAmountBaseUnit: activeSnapshot.sourceAmountBaseUnit,
-        sendDisplay: activeSnapshot.sendDisplay,
-        fixedFeeDisplay: activeSnapshot.fixedFeeDisplay,
-        walletTotalDisplay: activeSnapshot.walletTotalDisplay,
-        txValueBaseUnit: activeSnapshot.tx.value,
-        txValueDisplay: formatTxValueForDebug(activeSnapshot.tx.value, activeSnapshot.asset),
-        txDataSelector: activeSnapshot.tx.data?.slice(0, 10),
-      });
-      // #endregion
-
       const txHash = await sendPreparedEvmTx(ethereumProvider, activeSnapshot.tx);
       setExecutionTxHash(txHash);
       if (activeSnapshot.orderId) {
@@ -1322,14 +1303,6 @@ async function approveErc20IfNeeded({
   const amount = ethers.BigNumber.from(amountBaseUnit);
   if (allowance.gte(amount)) return;
 
-  // #region agent log
-  debugDlnDeposit("H3", "approval transaction requested", {
-    asset: { symbol: asset.symbol, chainId: asset.chainId, isNative: asset.isNative },
-    amountBaseUnit,
-    spenderPresent: Boolean(spender),
-  });
-  // #endregion
-
   const approval = await token.approve(spender, amount);
   await approval.wait();
 }
@@ -1341,55 +1314,20 @@ async function sendPreparedEvmTx(
   const valueBn = ethers.BigNumber.from(tx.value || "0");
   const valueHex = ethers.utils.hexlify(valueBn);
 
-  // #region agent log
-  debugDlnDeposit("H5", "sendTransaction params", {
-    txValueBaseUnit: tx.value || "0",
-    valueHex,
-    txToPresent: Boolean(tx.to),
-    txDataSelector: tx.data?.slice(0, 10),
-  }, "post-fix");
-  // #endregion
-
   const web3Provider = new ethers.providers.Web3Provider(
     provider as ethers.providers.ExternalProvider
   );
   const signer = web3Provider.getSigner();
   const from = await signer.getAddress();
 
-  const populated = await signer.populateTransaction({
-    to: tx.to,
-    data: tx.data,
-    value: valueBn,
-  });
-  // #region agent log
-  debugDlnDeposit("H6", "populateTransaction result", {
-    inputValueBaseUnit: valueBn.toString(),
-    populatedValueBaseUnit: populated.value?.toString(),
-    populatedValueHex: populated.value === undefined ? "" : ethers.utils.hexlify(populated.value),
-  }, "post-fix");
-  // #endregion
-
-  const walletRequest = {
-    from,
-    to: tx.to,
-    data: tx.data,
-    value: valueHex,
-  };
-
-  // #region agent log
-  debugDlnDeposit("H8", "eth_sendTransaction request object", {
-    request: walletRequest,
-    valueBaseUnit: valueBn.toString(),
-    dataLength: walletRequest.data?.length ?? 0,
-    dataSelector: walletRequest.data?.slice(0, 10),
-  }, "wallet-request");
-  // #endregion
-
-  const txHash = (await web3Provider.send("eth_sendTransaction", [walletRequest])) as string;
-
-  // #region agent log
-  debugDlnDeposit("H7", "eth_sendTransaction returned", { txHash }, "post-fix");
-  // #endregion
+  const txHash = (await web3Provider.send("eth_sendTransaction", [
+    {
+      from,
+      to: tx.to,
+      data: tx.data,
+      value: valueHex,
+    },
+  ])) as string;
 
   const receipt = await web3Provider.waitForTransaction(txHash);
   return receipt.transactionHash ?? txHash;
@@ -1399,39 +1337,6 @@ function getEthersSigner(provider: Eip1193Provider) {
   return new ethers.providers.Web3Provider(
     provider as ethers.providers.ExternalProvider
   ).getSigner();
-}
-
-function debugDlnDeposit(
-  hypothesisId: string,
-  message: string,
-  data: Record<string, unknown>,
-  runId = "pre-fix"
-) {
-  if (process.env.NODE_ENV === "production") return;
-  fetch("http://127.0.0.1:7579/ingest/5b001da7-2a74-4b5f-8879-8c097e24c7ba", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Debug-Session-Id": "fbd18a",
-    },
-    body: JSON.stringify({
-      sessionId: "fbd18a",
-      runId,
-      hypothesisId,
-      location: "src/components/ui/DepositDrawer.tsx",
-      message,
-      data,
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {});
-}
-
-function formatTxValueForDebug(value: string | undefined, asset: DepositAsset): string {
-  try {
-    return `${ethers.utils.formatUnits(value || "0", asset.decimals)} ${asset.symbol}`;
-  } catch {
-    return "unformattable";
-  }
 }
 
 function isDirectPolygonStableDeposit(asset: DepositAsset): boolean {
@@ -1620,27 +1525,6 @@ function snapshotFromDlnQuote({
   const sendDisplay = `${formatCompactBalance(String(sendAmountFloat))} ${asset.symbol}`;
   const routeCostUsd = computeRouteCostUsd(srcIn.approximateUsdValue, dst.approximateUsdValue);
 
-  // #region agent log
-  debugDlnDeposit("H1,H2,H4", "dln quote snapshot built", {
-    amountUsd,
-    asset: { symbol: asset.symbol, chainId: asset.chainId, isNative: asset.isNative },
-    sourceAmountBaseUnit,
-    srcAmountBaseUnit: srcIn.amount,
-    srcApproxUsd: srcIn.approximateUsdValue,
-    fixedFeeBaseUnit: dlnQuote.fixFee,
-    fixedFeeDisplay: fixedFee.display,
-    txValueBaseUnit: tx.value,
-    txValueDisplay: formatTxValueForDebug(tx.value, asset),
-    sendBaseUnit,
-    sendDisplay,
-    walletTotalDisplay: asset.isNative
-      ? `${formatCompactBalance(String(txValueFloat))} ${asset.symbol}`
-      : fixedFee.display
-        ? `${sendDisplay} + ${fixedFee.display}`
-        : sendDisplay,
-  });
-  // #endregion
-
   return {
     kind: "cross-chain",
     asset,
@@ -1713,20 +1597,6 @@ function snapshotFromSameChainSwap({
   const receiveFloat = Number(ethers.utils.formatUnits(swap.tokenOut.amount, receiveDecimals));
   const routeCostUsd = computeRouteCostUsd(swap.tokenIn.approximateUsdValue, swap.tokenOut.approximateUsdValue);
   const sendDisplay = `${formatCompactBalance(String(sendAmountFloat))} ${asset.symbol}`;
-
-  // #region agent log
-  debugDlnDeposit("H1,H4", "same-chain snapshot built", {
-    amountUsd,
-    asset: { symbol: asset.symbol, chainId: asset.chainId, isNative: asset.isNative },
-    sourceAmountBaseUnit,
-    tokenInAmount: swap.tokenIn.amount,
-    tokenInApproxUsd: swap.tokenIn.approximateUsdValue,
-    txValueBaseUnit: tx.value,
-    txValueDisplay: formatTxValueForDebug(tx.value, asset),
-    sendBaseUnit,
-    sendDisplay,
-  });
-  // #endregion
 
   return {
     kind: "same-chain",
