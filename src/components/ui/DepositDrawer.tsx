@@ -32,7 +32,6 @@ import { CONNECTED_LOW_BALANCE_USD, QUOTE_STALE_THRESHOLD_MS, TOKEN_ICON_URLS } 
 import { ensureEvmDepositAddress, extractAnyDepositAddress, extractDepositAddress } from "./deposit/addresses";
 import {
   estimateUsdValue,
-  getPreQuoteSendLabel,
   normalizeSupportedAssets,
   readAssetBalance,
   sortVisibleAssets,
@@ -56,7 +55,7 @@ function DrawerContent({
   const { data: supportedAssets, isLoading: assetsLoading } = useSupportedAssets();
   const [step, setStep] = useState<FlowStep>("home");
   const [selectedAsset, setSelectedAsset] = useState<DepositAsset | null>(null);
-  const [amountUsd, setAmountUsd] = useState("3");
+  const [amountUsd, setAmountUsd] = useState("10.00");
   const [snapshot, setSnapshot] = useState<ExecutionSnapshot | null>(null);
   const [quoteError, setQuoteError] = useState("");
   const [quoteWarning, setQuoteWarning] = useState("");
@@ -101,12 +100,8 @@ function DrawerContent({
     () => assetsWithBalances.reduce((sum, asset) => sum + (asset.usdValue ?? 0), 0),
     [assetsWithBalances]
   );
-  const amountNumber = Number(amountUsd || 0);
+  const amountNumber = parseAmountUsd(amountUsd);
   const selectedUsdValue = selectedAsset ? assetUsdValues[selectedAsset.id] : undefined;
-  const previewSendDisplay = selectedAsset
-    ? getPreQuoteSendLabel(amountNumber, selectedAsset)
-    : "-";
-  const previewReceiveDisplay = amountNumber > 0 ? amountNumber.toFixed(4) : "0.0000";
   const hasSubmittedTx = Boolean(executionTxHash || submittedOrderId);
 
   const transferStatus = useBridgeStatus(transferAddress, Boolean(transferAddress && isOpen));
@@ -117,6 +112,7 @@ function DrawerContent({
     quoteRequestRef.current += 1;
     setStep("home");
     setSelectedAsset(null);
+    setAmountUsd("10.00");
     setSnapshot(null);
     setQuoteError("");
     setQuoteWarning("");
@@ -206,13 +202,13 @@ function DrawerContent({
         setSnapshot(next);
         if (priceChanged) {
           setQuoteWarning(locale === "zh"
-            ? "报价已自动刷新，请确认当前价格后再提交。"
+            ? "\u62a5\u4ef7\u5df2\u81ea\u52a8\u5237\u65b0\uff0c\u8bf7\u786e\u8ba4\u5f53\u524d\u4ef7\u683c\u540e\u518d\u63d0\u4ea4\u3002"
             : "Quote refreshed automatically. Please review the current price before submitting.");
         }
       } catch {
         if (quoteRequestRef.current === requestId) {
           setQuoteWarning(locale === "zh"
-            ? "报价可能已过期，提交时会再次刷新。"
+            ? "\u62a5\u4ef7\u53ef\u80fd\u5df2\u8fc7\u671f\uff0c\u63d0\u4ea4\u65f6\u4f1a\u518d\u6b21\u5237\u65b0\u3002"
             : "Quote may be stale. It will refresh again before submission.");
         }
       }
@@ -252,11 +248,20 @@ function DrawerContent({
     if (!selectedAsset) return;
     const value = Number(selectedUsdValue || 0);
     if (!Number.isFinite(value) || value <= 0) return;
-    setAmountUsd((value * percent).toFixed(2));
+    setAmountUsd(formatAmountUsdInput(value * percent));
+  };
+
+  const handleAmountChange = (value: string) => {
+    setAmountUsd(sanitizeAmountUsdInput(value));
+  };
+
+  const handleAmountBlur = () => {
+    if (!amountUsd) return;
+    setAmountUsd(formatAmountUsdInput(amountNumber));
   };
 
   const handleQuote = useCallback(async () => {
-    if (!selectedAsset || !proxyAddress || amountNumber <= 0) return;
+    if (!selectedAsset || !proxyAddress || amountNumber < 1) return;
     const requestId = ++quoteRequestRef.current;
     setIsQuoting(true);
     setQuoteError("");
@@ -302,7 +307,7 @@ function DrawerContent({
 
   const handleConfirmOrder = useCallback(async () => {
     if (!selectedAsset || !activeWallet || !walletAddress || !snapshot) {
-      setExecutionError(locale === "zh" ? "钱包或报价尚未就绪，请返回重试。" : "Wallet or quote is not ready. Please go back and retry.");
+      setExecutionError(locale === "zh" ? "\u94b1\u5305\u6216\u62a5\u4ef7\u5c1a\u672a\u5c31\u7eea\uff0c\u8bf7\u8fd4\u56de\u91cd\u8bd5\u3002" : "Wallet or quote is not ready. Please go back and retry.");
       return;
     }
 
@@ -346,7 +351,7 @@ function DrawerContent({
         });
         if (quoteRequestRef.current !== requestId) {
           setExecutionError(locale === "zh"
-            ? "报价正在刷新，请稍后再试。"
+            ? "\u62a5\u4ef7\u6b63\u5728\u5237\u65b0\uff0c\u8bf7\u7a0d\u540e\u518d\u8bd5\u3002"
             : "Quote is still refreshing. Please retry shortly.");
           return;
         }
@@ -355,7 +360,7 @@ function DrawerContent({
         activeSnapshot = refreshed;
         if (priceChanged) {
           setQuoteWarning(locale === "zh"
-            ? "报价已更新且价格变化超过 1%，请确认新价格后再次提交。"
+            ? "\u62a5\u4ef7\u5df2\u66f4\u65b0\u4e14\u4ef7\u683c\u53d8\u5316\u8d85\u8fc7 1%\uff0c\u8bf7\u786e\u8ba4\u65b0\u4ef7\u683c\u540e\u518d\u6b21\u63d0\u4ea4\u3002"
             : "Quote updated by more than 1%. Please review the new quote and confirm again.");
           return;
         }
@@ -418,7 +423,7 @@ function DrawerContent({
 
   const handleCreateTransferAddress = async () => {
     if (!proxyAddress) {
-      setTransferError(locale === "zh" ? "Polymarket 钱包尚未就绪。" : "Polymarket wallet is not ready.");
+      setTransferError(locale === "zh" ? "Polymarket \u94b1\u5305\u5c1a\u672a\u5c31\u7eea\u3002" : "Polymarket wallet is not ready.");
       return;
     }
 
@@ -433,14 +438,14 @@ function DrawerContent({
       setTransferAddress(address);
 
       if (!address) {
-        setTransferError(locale === "zh" ? "未找到可用充值地址。" : "No deposit address returned.");
+        setTransferError(locale === "zh" ? "\u672a\u627e\u5230\u53ef\u7528\u5145\u503c\u5730\u5740\u3002" : "No deposit address returned.");
       }
     } catch (error) {
       setTransferError(
         error instanceof Error
           ? error.message
           : locale === "zh"
-            ? "创建转账地址失败。"
+            ? "\u521b\u5efa\u8f6c\u8d26\u5730\u5740\u5931\u8d25\u3002"
             : "Failed to create transfer address."
       );
     } finally {
@@ -494,10 +499,10 @@ function DrawerContent({
                 )}
                 <div className="text-center">
                   <h2 className="text-xl font-black text-white">
-                    {locale === "zh" ? "充值" : "Deposit"}
+                    {locale === "zh" ? "\u5145\u503c" : "Deposit"}
                   </h2>
                   <p className="text-xs text-white/40">
-                    Polymarket {locale === "zh" ? "余额" : "Balance"}: ${Number(balanceUsd || 0).toFixed(2)}
+                    Polymarket {locale === "zh" ? "\u4f59\u989d" : "Balance"}: ${Number(balanceUsd || 0).toFixed(2)}
                   </p>
                 </div>
                 <button
@@ -532,11 +537,10 @@ function DrawerContent({
                   amountUsd={amountUsd}
                   asset={selectedAsset}
                   error={quoteError}
-                  estimatedSendAmount={previewSendDisplay}
-                  estimatedReceive={previewReceiveDisplay}
                   isQuoting={isQuoting}
                   locale={locale}
-                  onAmountChange={setAmountUsd}
+                  onAmountBlur={handleAmountBlur}
+                  onAmountChange={handleAmountChange}
                   onContinue={handleQuote}
                   onPercent={handlePercent}
                 />
@@ -607,7 +611,7 @@ function HomeStep({
     <div className="space-y-5">
       <div className="grid grid-cols-2 gap-2 rounded-2xl bg-black/20 p-1">
         <div className="flex items-center justify-center gap-2 rounded-xl bg-white/10 py-3 text-sm font-black text-white">
-          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-black">₿</span>
+          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-black">{"\u20bf"}</span>
           Use Crypto
         </div>
         <div className="flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-black text-white/30">
@@ -627,7 +631,7 @@ function HomeStep({
             <div>
               <p className="text-sm font-black text-white">{walletLabel}</p>
               <p className="text-xs text-white/40">
-                ${walletUsd.toFixed(2)} • {locale === "zh" ? "按实时路由校验" : "Route-checked"}
+                ${walletUsd.toFixed(2)} {"\u2022"} {locale === "zh" ? "\u5373\u65f6" : "Instant"}
               </p>
             </div>
           </div>
@@ -646,18 +650,18 @@ function HomeStep({
             <div>
               <p className="text-sm font-black text-white">Transfer Crypto</p>
               <p className="text-xs text-white/40">
-                {locale === "zh" ? "最低金额按支持资产表" : "Minimums from supported assets"}
+                {locale === "zh" ? "\u4e0d\u9650 \u2022 \u5373\u65f6" : "No limit \u2022 Instant"}
               </p>
             </div>
           </div>
-          <span className="text-xs text-white/30">EVM • SOL • BTC</span>
+          <span className="text-xs text-white/30">{"EVM \u2022 SOL \u2022 BTC"}</span>
         </button>
         <div className="flex w-full items-center justify-between rounded-2xl border border-white/10 bg-white/[0.02] p-4 opacity-50">
           <div className="flex items-center gap-3">
             <Store className="text-white/70" size={24} />
             <div>
               <p className="text-sm font-black text-white">Connect Exchange</p>
-              <p className="text-xs text-white/40">{locale === "zh" ? "暂不支持" : "Not supported yet"}</p>
+              <p className="text-xs text-white/40">{locale === "zh" ? "\u6682\u4e0d\u652f\u6301" : "Not supported yet"}</p>
             </div>
           </div>
         </div>
@@ -684,13 +688,13 @@ function AssetStep({
       {assetsLoading && (
         <div className="flex items-center justify-center py-12 text-white/40">
           <Loader2 className="mr-2 animate-spin" size={18} />
-          {locale === "zh" ? "正在加载资产..." : "Loading assets..."}
+          {locale === "zh" ? "\u6b63\u5728\u52a0\u8f7d\u8d44\u4ea7..." : "Loading assets..."}
         </div>
       )}
 
       {!assetsLoading && displayAssets.length === 0 && (
         <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 text-sm text-white/50">
-          {locale === "zh" ? "暂无可用资产列表，请稍后重试。" : "No supported assets found. Please try again later."}
+          {locale === "zh" ? "\u6682\u65e0\u53ef\u7528\u8d44\u4ea7\u5217\u8868\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5\u3002" : "No supported assets found. Please try again later."}
         </div>
       )}
 
@@ -732,10 +736,9 @@ function AmountStep({
   amountUsd,
   asset,
   error,
-  estimatedSendAmount,
-  estimatedReceive,
   isQuoting,
   locale,
+  onAmountBlur,
   onAmountChange,
   onContinue,
   onPercent,
@@ -743,24 +746,30 @@ function AmountStep({
   amountUsd: string;
   asset: DepositAsset;
   error: string;
-  estimatedSendAmount: string;
-  estimatedReceive: string;
   isQuoting: boolean;
   locale: string;
+  onAmountBlur: () => void;
   onAmountChange: (value: string) => void;
   onContinue: () => void;
   onPercent: (percent: number) => void;
 }) {
+  const amountNumber = parseAmountUsd(amountUsd);
+  const isAmountTooLow = amountNumber < 1;
+  const amountInputWidth = `${Math.max(amountUsd.length || 1, 1)}ch`;
+
   return (
     <div className="flex min-h-[520px] flex-col justify-between">
       <div>
         <div className="mt-16 flex justify-center">
-          <div className="flex items-center text-6xl font-black text-white">
+          <div className="inline-flex items-center justify-center text-6xl font-black text-white">
             <span>$</span>
             <input
               value={amountUsd}
-              onChange={(event) => onAmountChange(event.target.value.replace(/[^\d.]/g, ""))}
-              className="w-[180px] bg-transparent text-center outline-none"
+              onBlur={onAmountBlur}
+              onChange={(event) => onAmountChange(event.target.value)}
+              placeholder="0"
+              style={{ width: amountInputWidth }}
+              className="min-w-[1ch] max-w-[360px] bg-transparent text-left text-6xl font-black text-white outline-none placeholder:text-white/35"
               inputMode="decimal"
             />
           </div>
@@ -783,26 +792,26 @@ function AmountStep({
         )}
       </div>
 
-      <div>
-        <div className="mx-auto mb-9 flex w-fit items-center gap-4 rounded-full bg-white/10 px-4 py-3">
+      <div className="pb-5">
+        <div className="mx-auto mb-7 flex w-fit items-center gap-4 rounded-full bg-white/10 px-4 py-3">
           <TokenIcon iconUrl={asset.iconUrl} symbol={asset.symbol} />
           <div>
             <p className="text-[10px] text-white/35">You send</p>
-            <p className="text-xs font-black text-white">{estimatedSendAmount}</p>
+            <p className="text-xs font-black text-white">{asset.symbol}</p>
           </div>
           <ArrowRight className="text-white/35" size={18} />
           <TokenIcon symbol="pUSD" />
           <div>
             <p className="text-[10px] text-white/35">You receive</p>
-            <p className="text-xs font-black text-white">{estimatedReceive} pUSD</p>
+            <p className="text-xs font-black text-white">pUSD</p>
           </div>
         </div>
         <button
           onClick={onContinue}
-          disabled={isQuoting || Number(amountUsd || 0) <= 0}
+          disabled={isQuoting || isAmountTooLow}
           className="flex h-14 w-full items-center justify-center rounded-2xl bg-[#159bff] text-base font-black text-white active:scale-[0.98] disabled:opacity-50"
         >
-          {isQuoting ? <Loader2 className="animate-spin" size={18} /> : locale === "zh" ? "继续" : "Continue"}
+          {isQuoting ? <Loader2 className="animate-spin" size={18} /> : locale === "zh" ? "\u7ee7\u7eed" : "Continue"}
         </button>
       </div>
     </div>
@@ -847,40 +856,40 @@ function ConfirmStep({
     !["ClaimedUnlock", "OrderCancelled", "ClaimedOrderCancel"].includes(dlnStatus)
   );
   const buttonText = isExecuting
-    ? locale === "zh" ? "等待钱包确认..." : "Waiting for wallet..."
+    ? locale === "zh" ? "\u7b49\u5f85\u94b1\u5305\u786e\u8ba4..." : "Waiting for wallet..."
     : hasSubmittedTx
-      ? locale === "zh" ? "已提交" : "Submitted"
-      : locale === "zh" ? "确认订单" : "Confirm Order";
+      ? locale === "zh" ? "\u5df2\u63d0\u4ea4" : "Submitted"
+      : locale === "zh" ? "\u786e\u8ba4\u8ba2\u5355" : "Confirm Order";
 
   const slippageText =
     snapshot.slippage === undefined
       ? "Auto"
-      : `Auto • ${formatPercent(snapshot.slippage)}`;
+      : `Auto \u2022 ${formatPercent(snapshot.slippage)}`;
 
   const sendUsdText = snapshot.sendUsd !== undefined
-    ? ` ≈ ${formatUsd(snapshot.sendUsd)}`
+    ? ` \u2248 ${formatUsd(snapshot.sendUsd)}`
     : "";
   const receiveUsdText = snapshot.receiveUsd !== undefined
-    ? ` ≈ ${formatUsd(snapshot.receiveUsd)}`
+    ? ` \u2248 ${formatUsd(snapshot.receiveUsd)}`
     : "";
 
   const fixedFeeText = snapshot.fixedFeeDisplay
-    ? `${snapshot.fixedFeeDisplay}${snapshot.fixedFeeUsd === undefined ? "" : ` ≈ ${formatUsd(snapshot.fixedFeeUsd)}`}`
+    ? `${snapshot.fixedFeeDisplay}${snapshot.fixedFeeUsd === undefined ? "" : ` \u2248 ${formatUsd(snapshot.fixedFeeUsd)}`}`
     : "-";
   const walletTotalText = snapshot.walletTotalDisplay
-    ? `${snapshot.walletTotalDisplay}${snapshot.walletTotalUsd === undefined ? "" : ` ≈ ${formatUsd(snapshot.walletTotalUsd)}`}`
+    ? `${snapshot.walletTotalDisplay}${snapshot.walletTotalUsd === undefined ? "" : ` \u2248 ${formatUsd(snapshot.walletTotalUsd)}`}`
     : "-";
   const youSendText = snapshot.fixedFeeDisplay ? walletTotalText : `${snapshot.sendDisplay}${sendUsdText}`;
   const walletPromptText = snapshot.asset.isNative
     ? (locale === "zh"
-        ? `You send 包含下方的 deBridge fixed fee，钱包弹窗可能显示 ${walletTotalText}。`
+        ? `You send \u5305\u542b\u4e0b\u65b9\u7684 deBridge fixed fee\uff0c\u94b1\u5305\u5f39\u7a97\u53ef\u80fd\u663e\u793a ${walletTotalText}\u3002`
         : `You send includes the deBridge fixed fee below. Your wallet may prompt ${walletTotalText}.`)
     : snapshot.kind === "direct"
       ? (locale === "zh"
-          ? `钱包将弹出一笔 ${snapshot.sendDisplay}${sendUsdText} 的 ERC20 转账，与上方"You send"完全一致。`
+          ? `\u94b1\u5305\u5c06\u5f39\u51fa\u4e00\u7b14 ${snapshot.sendDisplay}${sendUsdText} \u7684 ERC20 \u8f6c\u8d26\uff0c\u4e0e\u4e0a\u65b9"You send"\u5b8c\u5168\u4e00\u81f4\u3002`
           : `Your wallet will prompt for an ERC20 transfer of ${snapshot.sendDisplay}${sendUsdText}, matching "You send" exactly.`)
       : (locale === "zh"
-          ? `You send 包含下方的 deBridge fixed fee，钱包弹窗可能显示 ${walletTotalText}。`
+          ? `You send \u5305\u542b\u4e0b\u65b9\u7684 deBridge fixed fee\uff0c\u94b1\u5305\u5f39\u7a97\u53ef\u80fd\u663e\u793a ${walletTotalText}\u3002`
           : `You send includes the deBridge fixed fee below. Your wallet may prompt ${walletTotalText}.`);
 
   return (
@@ -919,7 +928,7 @@ function ConfirmStep({
             ["Price impact", formatPercent(snapshot.priceImpact)],
             ["Max slippage", slippageText],
             ["Wallet total", walletTotalText],
-            ["Quote refresh", locale === "zh" ? `每 ${Math.round(QUOTE_STALE_THRESHOLD_MS / 1000)}s 自动刷新` : `Auto every ${Math.round(QUOTE_STALE_THRESHOLD_MS / 1000)}s`],
+            ["Quote refresh", locale === "zh" ? `\u6bcf ${Math.round(QUOTE_STALE_THRESHOLD_MS / 1000)}s \u81ea\u52a8\u5237\u65b0` : `Auto every ${Math.round(QUOTE_STALE_THRESHOLD_MS / 1000)}s`],
           ]}
         />
       </div>
@@ -933,7 +942,7 @@ function ConfirmStep({
       {(hasSubmittedTx || isExecuting) && (
         <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-sm">
           <div className="flex items-center justify-between">
-            <span className="text-white/40">{locale === "zh" ? "执行状态" : "Execution status"}</span>
+            <span className="text-white/40">{locale === "zh" ? "\u6267\u884c\u72b6\u6001" : "Execution status"}</span>
             <span className="font-black text-white">{executionStatusText}</span>
           </div>
           {executionTxHash && (
@@ -943,7 +952,7 @@ function ConfirmStep({
           )}
           {cancelTxHash && (
             <p className="mt-2 break-all font-mono text-[11px] text-[#ADFF2F]/70">
-              {locale === "zh" ? "退款交易：" : "Refund tx:"} {cancelTxHash}
+              {locale === "zh" ? "\u9000\u6b3e\u4ea4\u6613\uff1a" : "Refund tx:"} {cancelTxHash}
             </p>
           )}
         </div>
@@ -967,7 +976,7 @@ function ConfirmStep({
       {hasSubmittedTx && (
         <div className="text-center text-xs text-white/35">
           {locale === "zh"
-            ? "交易提交后请等待 deBridge 完成兑换，再等待 Polymarket 检测入账。"
+            ? "\u4ea4\u6613\u63d0\u4ea4\u540e\u8bf7\u7b49\u5f85 deBridge \u5b8c\u6210\u5151\u6362\uff0c\u518d\u7b49\u5f85 Polymarket \u68c0\u6d4b\u5165\u8d26\u3002"
             : "After submission, wait for deBridge fulfillment and Polymarket deposit detection."}
         </div>
       )}
@@ -981,8 +990,8 @@ function ConfirmStep({
           {isCancellingOrder
             ? <Loader2 className="animate-spin" size={16} />
             : cancelTxHash
-              ? locale === "zh" ? "退款交易已提交" : "Refund submitted"
-              : locale === "zh" ? "取消订单并退款" : "Cancel order and refund"}
+              ? locale === "zh" ? "\u9000\u6b3e\u4ea4\u6613\u5df2\u63d0\u4ea4" : "Refund submitted"
+              : locale === "zh" ? "\u53d6\u6d88\u8ba2\u5355\u5e76\u9000\u6b3e" : "Cancel order and refund"}
         </button>
       )}
     </div>
@@ -1018,7 +1027,7 @@ function TransferStep({
         <p className="text-sm font-black text-white">Transfer Crypto</p>
         <p className="mt-1 text-xs leading-relaxed text-white/45">
           {locale === "zh"
-            ? "这是 Polymarket 的备用手动转账路径：生成地址后，从外部钱包或交易所转入支持资产。最低金额严格遵循 supported-assets。"
+            ? "\u8fd9\u662f Polymarket \u7684\u5907\u7528\u624b\u52a8\u8f6c\u8d26\u8def\u5f84\uff1a\u751f\u6210\u5730\u5740\u540e\uff0c\u4ece\u5916\u90e8\u94b1\u5305\u6216\u4ea4\u6613\u6240\u8f6c\u5165\u652f\u6301\u8d44\u4ea7\u3002\u6700\u4f4e\u91d1\u989d\u4e25\u683c\u9075\u5faa supported-assets\u3002"
             : "This is the fallback transfer flow for wallets or exchanges. Minimums strictly follow supported-assets."}
         </p>
         <button
@@ -1028,8 +1037,8 @@ function TransferStep({
         >
           {isCreating ? <Loader2 className="animate-spin" size={16} /> : <QrCode size={16} />}
           {transferAddress
-            ? locale === "zh" ? "刷新地址" : "Refresh Address"
-            : locale === "zh" ? "生成转账地址" : "Create Transfer Address"}
+            ? locale === "zh" ? "\u5237\u65b0\u5730\u5740" : "Refresh Address"
+            : locale === "zh" ? "\u751f\u6210\u8f6c\u8d26\u5730\u5740" : "Create Transfer Address"}
         </button>
       </div>
 
@@ -1059,7 +1068,7 @@ function TransferStep({
 
           <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
             <div className="flex items-center justify-between">
-              <p className="text-sm font-bold text-white">{locale === "zh" ? "状态" : "Status"}</p>
+              <p className="text-sm font-bold text-white">{locale === "zh" ? "\u72b6\u6001" : "Status"}</p>
               <span className="rounded-full border border-white/10 bg-white/10 px-2 py-1 text-[10px] font-black uppercase text-white/60">
                 {statusText}
               </span>
@@ -1113,6 +1122,36 @@ function TokenIcon({ iconUrl, symbol }: { iconUrl?: string; symbol: string }) {
       {label}
     </div>
   );
+}
+
+function sanitizeAmountUsdInput(value: string): string {
+  const normalized = value.replace(/,/g, "").replace(/[^\d.]/g, "");
+  const [integerPart = "", ...decimalParts] = normalized.split(".");
+  const decimalPart = decimalParts.join("").slice(0, 2);
+  const trimmedInteger = integerPart.replace(/^0+(?=\d)/, "");
+  const nextInteger = trimmedInteger || (integerPart ? "0" : "");
+  const formattedInteger = nextInteger
+    ? Number(nextInteger).toLocaleString("en-US")
+    : "";
+
+  if (normalized.includes(".")) {
+    return (formattedInteger || "0") + "." + decimalPart;
+  }
+
+  return formattedInteger;
+}
+
+function parseAmountUsd(value: string): number {
+  const parsed = Number(value.replace(/,/g, ""));
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
+}
+
+function formatAmountUsdInput(value: number): string {
+  const normalized = Number.isFinite(value) && value >= 0 ? value : 0;
+  return normalized.toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 }
 
 export function DepositDrawer(props: DepositDrawerProps) {
