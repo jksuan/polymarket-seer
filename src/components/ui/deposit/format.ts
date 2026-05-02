@@ -33,3 +33,33 @@ export function toNumber(value: unknown): number | undefined {
   }
   return undefined;
 }
+
+export function sanitizeAmountUsdInput(value: string): string {
+  const normalized = value.replace(/,/g, "").replace(/[^\d.]/g, "");
+  const [integerPart = "", ...decimalParts] = normalized.split(".");
+  const decimalPart = decimalParts.join("").slice(0, 2);
+  const trimmedInteger = integerPart.replace(/^0+(?=\d)/, "");
+  const nextInteger = trimmedInteger || (integerPart ? "0" : "");
+  const formattedInteger = nextInteger
+    ? Number(nextInteger).toLocaleString("en-US")
+    : "";
+
+  if (normalized.includes(".")) {
+    return (formattedInteger || "0") + "." + decimalPart;
+  }
+
+  return formattedInteger;
+}
+
+export function parseAmountUsd(value: string): number {
+  const parsed = Number(value.replace(/,/g, ""));
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
+}
+
+export function formatAmountUsdInput(value: number): string {
+  const normalized = Number.isFinite(value) && value >= 0 ? value : 0;
+  return normalized.toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
