@@ -1,8 +1,9 @@
-import { useLayoutEffect, useRef } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import type { ChangeEvent, ReactNode } from "react";
 import {
   AlertTriangle,
   ArrowRight,
+  ChevronDown,
   CheckCircle2,
   Copy,
   Loader2,
@@ -313,6 +314,7 @@ export function ConfirmStep({
   snapshot: ExecutionSnapshot;
   walletLabel: string;
 }) {
+  const [isBreakdownOpen, setIsBreakdownOpen] = useState(false);
   const canCancel = Boolean(
     dlnStatus &&
     !["ClaimedUnlock", "OrderCancelled", "ClaimedOrderCancel"].includes(dlnStatus)
@@ -338,6 +340,10 @@ export function ConfirmStep({
   const fixedFeeText = snapshot.fixedFeeDisplay
     ? `${snapshot.fixedFeeDisplay}${snapshot.fixedFeeUsd === undefined ? "" : ` ≈ ${formatUsd(snapshot.fixedFeeUsd)}`}`
     : "-";
+  const breakdownFeeUsd = snapshot.fixedFeeUsd === undefined && snapshot.routeCostUsd === undefined
+    ? undefined
+    : (snapshot.fixedFeeUsd ?? 0) + (snapshot.routeCostUsd ?? 0);
+  const breakdownSummaryText = `${formatUsd(breakdownFeeUsd)} • ${formatPercent(snapshot.priceImpact)}`;
   const walletTotalText = snapshot.walletTotalDisplay
     ? `${snapshot.walletTotalDisplay}${snapshot.walletTotalUsd === undefined ? "" : ` ≈ ${formatUsd(snapshot.walletTotalUsd)}`}`
     : "-";
@@ -426,19 +432,37 @@ export function ConfirmStep({
         {walletPromptText}
       </div>
 
-      <div>
-        <p className="mb-3 text-sm font-bold text-white/35">Transaction breakdown</p>
-        <InfoBox
-          rows={[
-            ["Network cost", formatUsd(snapshot.networkCostUsd)],
-            ["deBridge fixed fee", fixedFeeText],
-            ["Route cost", formatUsd(snapshot.routeCostUsd)],
-            ["Price impact", formatPercent(snapshot.priceImpact)],
-            ["Max slippage", slippageText],
-            ["Wallet total", walletTotalText],
-            ["Quote refresh", locale === "zh" ? `每 ${Math.round(QUOTE_STALE_THRESHOLD_MS / 1000)}s 自动刷新` : `Auto every ${Math.round(QUOTE_STALE_THRESHOLD_MS / 1000)}s`],
-          ]}
-        />
+      <div className="space-y-3">
+        <button
+          type="button"
+          aria-expanded={isBreakdownOpen}
+          onClick={() => setIsBreakdownOpen((open) => !open)}
+          className="flex w-full items-center justify-between gap-3 text-left text-sm"
+        >
+          <span className="font-bold text-white/35">Transaction breakdown</span>
+          <span className="flex min-w-0 items-center gap-1 text-white/40">
+            {!isBreakdownOpen && (
+              <span className="min-w-0 truncate font-bold">
+                {breakdownSummaryText}
+              </span>
+            )}
+            <ChevronDown
+              className={`shrink-0 transition-transform ${isBreakdownOpen ? "rotate-180" : ""}`}
+              size={16}
+            />
+          </span>
+        </button>
+        {isBreakdownOpen && (
+          <InfoBox
+            rows={[
+              ["deBridge fixed fee", fixedFeeText],
+              ["Route cost", formatUsd(snapshot.routeCostUsd)],
+              ["Price impact", formatPercent(snapshot.priceImpact)],
+              ["Max slippage", slippageText],
+              ["Quote refresh", locale === "zh" ? `每 ${Math.round(QUOTE_STALE_THRESHOLD_MS / 1000)}s 自动刷新` : `Auto every ${Math.round(QUOTE_STALE_THRESHOLD_MS / 1000)}s`],
+            ]}
+          />
+        )}
       </div>
 
       {quoteWarning && (
