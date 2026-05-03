@@ -23,12 +23,14 @@ import { getExecutionKindText } from "./status";
 export function HomeStep({
   locale,
   walletLabel,
+  walletUsdLoading,
   walletUsd,
   onWallet,
   onTransfer,
 }: {
   locale: string;
   walletLabel: string;
+  walletUsdLoading: boolean;
   walletUsd: number;
   onWallet: () => void;
   onTransfer: () => void;
@@ -50,14 +52,26 @@ export function HomeStep({
         <p className="mb-2 text-sm font-bold text-white/45">Connected</p>
         <button
           onClick={onWallet}
-          className="flex w-full items-center justify-between rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-left transition-all active:scale-[0.98] hover:bg-white/[0.06]"
+          disabled={walletUsdLoading}
+          className={`flex w-full items-center justify-between rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-left transition-all ${
+            walletUsdLoading ? "cursor-not-allowed opacity-70" : "active:scale-[0.98] hover:bg-white/[0.06]"
+          }`}
         >
           <div className="flex items-center gap-3">
             <Wallet className="text-white/70" size={24} />
             <div>
               <p className="text-sm font-black text-white">{walletLabel}</p>
               <p className="text-xs text-white/40">
-                ${walletUsd.toFixed(2)} {"•"} {locale === "zh" ? "即时" : "Instant"}
+                {walletUsdLoading ? (
+                  <span className="inline-flex items-center gap-1.5">
+                    <Loader2 className="animate-spin" size={12} />
+                    {locale === "zh" ? "更新余额 ..." : "Updating balance ..."}
+                  </span>
+                ) : (
+                  <>
+                    ${walletUsd.toFixed(2)} {"•"} {locale === "zh" ? "即时" : "Instant"}
+                  </>
+                )}
               </p>
             </div>
           </div>

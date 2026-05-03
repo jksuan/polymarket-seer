@@ -62,6 +62,7 @@ function DrawerContent({
   const [copied, setCopied] = useState(false);
   const [assetBalances, setAssetBalances] = useState<Record<string, string>>({});
   const [assetUsdValues, setAssetUsdValues] = useState<Record<string, number>>({});
+  const [walletBalancesLoading, setWalletBalancesLoading] = useState(false);
   const [hasRefreshedBalance, setHasRefreshedBalance] = useState(false);
   const quoteRequestRef = useRef(0);
   const isExecutingRef = useRef(false);
@@ -124,9 +125,18 @@ function DrawerContent({
   }, [hasRefreshedBalance, onBalanceRefresh, transferStatus.latestStatus]);
 
   useEffect(() => {
-    if (!isOpen || !activeWallet || depositAssets.length === 0) return;
+    if (!isOpen || !activeWallet) {
+      setWalletBalancesLoading(false);
+      return;
+    }
+
+    if (depositAssets.length === 0) {
+      setWalletBalancesLoading(assetsLoading);
+      return;
+    }
 
     let cancelled = false;
+    setWalletBalancesLoading(true);
 
     async function loadBalances() {
       try {
@@ -150,6 +160,10 @@ function DrawerContent({
           setAssetBalances({});
           setAssetUsdValues({});
         }
+      } finally {
+        if (!cancelled) {
+          setWalletBalancesLoading(false);
+        }
       }
     }
 
@@ -157,7 +171,7 @@ function DrawerContent({
     return () => {
       cancelled = true;
     };
-  }, [activeWallet, depositAssets, isOpen, proxyAddress, walletAddress]);
+  }, [activeWallet, assetsLoading, depositAssets, isOpen, proxyAddress, walletAddress]);
 
   useEffect(() => {
     if (step !== "confirm" || !snapshot || isExecuting || hasSubmittedTx) {
@@ -519,6 +533,7 @@ function DrawerContent({
                 <HomeStep
                   locale={locale}
                   walletLabel={walletLabel}
+                  walletUsdLoading={walletBalancesLoading}
                   walletUsd={totalWalletUsd}
                   onWallet={() => setStep("asset")}
                   onTransfer={() => setStep("transfer")}
