@@ -367,7 +367,7 @@ export function ConfirmStep({
             value: walletLabel,
             icon: (
               <div className="flex h-5 w-5 shrink-0 items-center justify-center">
-                <Wallet aria-hidden className="text-white/70" size={20} strokeWidth={1.75} />
+                <Wallet aria-hidden className="text-white/70" size={18} strokeWidth={1.75} />
               </div>
             ),
           },
