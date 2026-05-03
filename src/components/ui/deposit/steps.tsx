@@ -205,6 +205,9 @@ export function AmountStep({
       ? locale === "zh" ? "钱包余额不足" : "Insufficient balance"
       : "";
   const amountInputWidth = `${Math.max(amountUsd.length || 1, 1)}ch`;
+  const amountDisplayLength = Math.max((amountUsd || "0").length + 1, 2);
+  const amountFontSizeRem = Math.max(1.75, Math.min(3, 3 - Math.max(0, amountDisplayLength - 7) * 0.12));
+  const amountFontSize = `${amountFontSizeRem}rem`;
 
   useLayoutEffect(() => {
     const caretCount = pendingCaretCountRef.current;
@@ -225,8 +228,11 @@ export function AmountStep({
   return (
     <div className="flex min-h-[clamp(420px,65dvh,520px)] flex-col justify-between">
       <div>
-        <div className="mt-10 flex justify-center">
-          <div className="inline-flex items-center justify-center text-5xl font-black text-white">
+        <div className="mt-10 flex justify-center px-2">
+          <div
+            className="inline-flex max-w-full items-center justify-center font-black leading-none text-white"
+            style={{ fontSize: amountFontSize }}
+          >
             <span>$</span>
             <input
               ref={inputRef}
@@ -234,8 +240,8 @@ export function AmountStep({
               onBlur={onAmountBlur}
               onChange={handleInputChange}
               placeholder="0"
-              style={{ width: amountInputWidth }}
-              className="min-w-[1ch] max-w-[360px] bg-transparent text-left text-5xl font-black text-white outline-none placeholder:text-white/35"
+              style={{ width: amountInputWidth, fontSize: "inherit" }}
+              className="min-w-[1ch] max-w-[calc(100%-1ch)] bg-transparent text-left font-black leading-none text-white outline-none placeholder:text-white/35"
               inputMode="decimal"
             />
           </div>
@@ -293,8 +299,6 @@ export function ConfirmStep({
   cancelTxHash,
   dlnStatus,
   error,
-  executionStatusText,
-  executionTxHash,
   hasSubmittedTx,
   isCancellingOrder,
   isExecuting,
@@ -309,8 +313,6 @@ export function ConfirmStep({
   cancelTxHash: string;
   dlnStatus?: string;
   error: string;
-  executionStatusText: string;
-  executionTxHash: string;
   hasSubmittedTx: boolean;
   isCancellingOrder: boolean;
   isExecuting: boolean;
@@ -495,25 +497,6 @@ export function ConfirmStep({
       {quoteWarning && (
         <div className="rounded-2xl border border-[#ffd166]/20 bg-[#ffd166]/10 p-3 text-[11px] leading-relaxed text-[#ffe6a6]">
           {quoteWarning}
-        </div>
-      )}
-
-      {(hasSubmittedTx || isExecuting) && (
-        <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3 text-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-white/40">{locale === "zh" ? "执行状态" : "Execution status"}</span>
-            <span className="font-normal text-white">{executionStatusText}</span>
-          </div>
-          {executionTxHash && (
-            <p className="mt-2 break-all font-mono text-[11px] text-white/35">
-              {executionTxHash}
-            </p>
-          )}
-          {cancelTxHash && (
-            <p className="mt-2 break-all font-mono text-[11px] text-[#ADFF2F]/70">
-              {locale === "zh" ? "退款交易：" : "Refund tx:"} {cancelTxHash}
-            </p>
-          )}
         </div>
       )}
 

@@ -27,7 +27,7 @@ import { approveErc20IfNeeded, getWalletEthereumProvider, sendPreparedEvmTx, swi
 import { buildExecutionSnapshot, isQuotePriceChanged, validateDepositSelection } from "./deposit/execution";
 import { formatExecutionError } from "./deposit/errors";
 import { formatAmountUsdInput, parseAmountUsd, sanitizeAmountUsdInput } from "./deposit/format";
-import { getExecutionStatusText, getStatusText } from "./deposit/status";
+import { getStatusText } from "./deposit/status";
 import { AmountStep, AssetStep, ConfirmStep, HomeStep, TransferStep } from "./deposit/steps";
 
 function DrawerContent({
@@ -553,15 +553,6 @@ function DrawerContent({
                   cancelTxHash={cancelTxHash}
                   dlnStatus={dlnStatus.status}
                   error={executionError}
-                  executionStatusText={getExecutionStatusText({
-                    bridgeStatus: transferStatus.latestStatus,
-                    dlnStatus: dlnStatus.status,
-                    executionKind,
-                    isExecuting,
-                    locale,
-                    txHash: executionTxHash,
-                  })}
-                  executionTxHash={executionTxHash}
                   hasSubmittedTx={hasSubmittedTx}
                   isExecuting={isExecuting}
                   isQuoting={isQuoting}

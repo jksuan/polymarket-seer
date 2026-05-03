@@ -8,7 +8,7 @@ export function formatExecutionError(
   const upper = raw.toUpperCase();
 
   if (upper.includes("USER_REJECTED") || upper.includes("USER DENIED") || upper.includes("REJECTED")) {
-    return zh ? "用户已取消钱包操作。" : "Wallet request was rejected.";
+    return "";
   }
   if (upper.includes("ERROR_LOW_GIVE_AMOUNT") || upper.includes("LOW_GIVE") || upper.includes("MINIMUM")) {
     return zh ? "金额低于 deBridge 当前路线的最低要求，请提高金额后重试。" : "Amount is below the current deBridge route minimum. Increase the amount and retry.";
