@@ -30,6 +30,22 @@ import { formatAmountUsdInput, parseAmountUsd, sanitizeAmountUsdInput } from "./
 import { getStatusText } from "./deposit/status";
 import { AmountStep, AssetStep, ConfirmStep, HomeStep, TransferStep } from "./deposit/steps";
 
+type PrivyLoginIdentity = {
+  email?: { address?: string | null } | null;
+  google?: { email?: string | null } | null;
+  twitter?: { username?: string | null; subject?: string | null } | null;
+};
+
+function isEmailOrSocialLogin(user: unknown): boolean {
+  const identity = user as PrivyLoginIdentity | null | undefined;
+  return Boolean(
+    identity?.email?.address ||
+    identity?.google?.email ||
+    identity?.twitter?.username ||
+    identity?.twitter?.subject
+  );
+}
+
 function DrawerContent({
   balanceUsd = "0.00",
   isOpen,
@@ -70,6 +86,11 @@ function DrawerContent({
   const activeWallet = useMemo(
     () => selectPrimaryWallet(wallets, user?.wallet?.address),
     [wallets, user?.wallet?.address]
+  );
+  /** 邮箱、Google、X 登录视为独立的 Polymarket 账户，不展示外部钱包 Connected 入口 */
+  const showConnectedWalletOption = useMemo(
+    () => Boolean(activeWallet) && !isEmailOrSocialLogin(user),
+    [activeWallet, user]
   );
   const walletAddress = activeWallet?.address ?? "";
   const walletLabel = walletAddress ? `Wallet (${shortenAddress(walletAddress, 4, 4)})` : "Wallet";
@@ -130,6 +151,11 @@ function DrawerContent({
       return;
     }
 
+    if (!showConnectedWalletOption) {
+      setWalletBalancesLoading(false);
+      return;
+    }
+
     if (depositAssets.length === 0) {
       setWalletBalancesLoading(assetsLoading);
       return;
@@ -171,7 +197,7 @@ function DrawerContent({
     return () => {
       cancelled = true;
     };
-  }, [activeWallet, assetsLoading, depositAssets, isOpen, proxyAddress, walletAddress]);
+  }, [activeWallet, assetsLoading, depositAssets, isOpen, proxyAddress, showConnectedWalletOption, walletAddress]);
 
   useEffect(() => {
     if (step !== "confirm" || !snapshot || isExecuting || hasSubmittedTx) {
@@ -532,6 +558,7 @@ function DrawerContent({
               {step === "home" && (
                 <HomeStep
                   locale={locale}
+                  showConnectedWalletOption={showConnectedWalletOption}
                   walletLabel={walletLabel}
                   walletUsdLoading={walletBalancesLoading}
                   walletUsd={totalWalletUsd}

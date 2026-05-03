@@ -22,6 +22,7 @@ import { getExecutionKindText } from "./status";
 
 export function HomeStep({
   locale,
+  showConnectedWalletOption,
   walletLabel,
   walletUsdLoading,
   walletUsd,
@@ -29,6 +30,8 @@ export function HomeStep({
   onTransfer,
 }: {
   locale: string;
+  /** 仅当用户已连接外部钱包（非 Privy 嵌入式）时展示 Connected 入口；邮箱或社交登录仅有嵌入式钱包时为 false */
+  showConnectedWalletOption: boolean;
   walletLabel: string;
   walletUsdLoading: boolean;
   walletUsd: number;
@@ -48,36 +51,38 @@ export function HomeStep({
         </div>
       </div>
 
-      <section>
-        <p className="mb-2 text-sm font-bold text-white/45">Connected</p>
-        <button
-          onClick={onWallet}
-          disabled={walletUsdLoading}
-          className={`flex w-full items-center justify-between rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-left transition-all ${
-            walletUsdLoading ? "cursor-not-allowed opacity-70" : "active:scale-[0.98] hover:bg-white/[0.06]"
-          }`}
-        >
-          <div className="flex items-center gap-3">
-            <Wallet className="text-white/70" size={24} />
-            <div>
-              <p className="text-sm font-black text-white">{walletLabel}</p>
-              <p className="text-xs text-white/40">
-                {walletUsdLoading ? (
-                  <span className="inline-flex items-center gap-1.5">
-                    <Loader2 className="animate-spin" size={12} />
-                    {locale === "zh" ? "更新余额 ..." : "Updating balance ..."}
-                  </span>
-                ) : (
-                  <>
-                    ${walletUsd.toFixed(2)} {"•"} {locale === "zh" ? "即时" : "Instant"}
-                  </>
-                )}
-              </p>
+      {showConnectedWalletOption && (
+        <section>
+          <p className="mb-2 text-sm font-bold text-white/45">Connected</p>
+          <button
+            onClick={onWallet}
+            disabled={walletUsdLoading}
+            className={`flex w-full items-center justify-between rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-left transition-all ${
+              walletUsdLoading ? "cursor-not-allowed opacity-70" : "active:scale-[0.98] hover:bg-white/[0.06]"
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <Wallet className="text-white/70" size={24} />
+              <div>
+                <p className="text-sm font-black text-white">{walletLabel}</p>
+                <p className="text-xs text-white/40">
+                  {walletUsdLoading ? (
+                    <span className="inline-flex items-center gap-1.5">
+                      <Loader2 className="animate-spin" size={12} />
+                      {locale === "zh" ? "更新余额 ..." : "Updating balance ..."}
+                    </span>
+                  ) : (
+                    <>
+                      ${walletUsd.toFixed(2)} {"•"} {locale === "zh" ? "即时" : "Instant"}
+                    </>
+                  )}
+                </p>
+              </div>
             </div>
-          </div>
-          <ArrowRight className="text-white/30" size={18} />
-        </button>
-      </section>
+            <ArrowRight className="text-white/30" size={18} />
+          </button>
+        </section>
+      )}
 
       <section>
         <p className="mb-2 text-sm font-bold text-white/45">Other options</p>
