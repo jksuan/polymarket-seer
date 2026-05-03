@@ -223,9 +223,9 @@ export function AmountStep({
   };
 
   return (
-    <div className="flex min-h-[520px] flex-col justify-between">
+    <div className="flex min-h-[clamp(420px,65dvh,520px)] flex-col justify-between">
       <div>
-        <div className="mt-16 flex justify-center">
+        <div className="mt-10 flex justify-center">
           <div className="inline-flex items-center justify-center text-5xl font-black text-white">
             <span>$</span>
             <input
@@ -240,7 +240,7 @@ export function AmountStep({
             />
           </div>
         </div>
-        <div className="mt-10 flex justify-center gap-3">
+        <div className="mb-10 mt-10 flex justify-center gap-3">
           {[0.25, 0.5, 0.75, 1].map((percent) => (
             <button
               key={percent}
