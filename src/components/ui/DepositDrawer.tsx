@@ -170,6 +170,8 @@ function DrawerContent({
     const timeout = window.setTimeout(async () => {
       if (isExecutingRef.current) return;
       const requestId = ++quoteRequestRef.current;
+      setIsQuoting(true);
+      setQuoteWarning("");
       try {
         const depositAddress = await ensureEvmDepositAddress({
           existingAddress: transferAddress,
@@ -186,18 +188,16 @@ function DrawerContent({
         });
         if (quoteRequestRef.current !== requestId) return;
         if (isExecutingRef.current) return;
-        const priceChanged = isQuotePriceChanged(snapshot, next);
         setSnapshot(next);
-        if (priceChanged) {
-          setQuoteWarning(locale === "zh"
-            ? "报价已自动刷新，请确认当前价格后再提交。"
-            : "Quote refreshed automatically. Please review the current price before submitting.");
-        }
       } catch {
         if (quoteRequestRef.current === requestId) {
           setQuoteWarning(locale === "zh"
             ? "报价可能已过期，提交时会再次刷新。"
             : "Quote may be stale. It will refresh again before submission.");
+        }
+      } finally {
+        if (quoteRequestRef.current === requestId) {
+          setIsQuoting(false);
         }
       }
     }, delay);
@@ -472,18 +472,18 @@ function DrawerContent({
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="fixed bottom-0 left-0 right-0 z-50 flex max-h-[90vh] w-full max-w-[448px] flex-col rounded-t-3xl border-t border-white/10 mx-auto"
+            className="fixed bottom-0 left-0 right-0 z-50 flex max-h-[90vh] min-h-0 w-full max-w-[448px] flex-col rounded-t-3xl border-t border-white/10 mx-auto"
             style={{
               background: "linear-gradient(180deg, #151922 0%, #0d1118 100%)",
               boxShadow: "0 -20px 40px rgba(0,0,0,0.5)",
             }}
           >
-            <div className="w-full flex justify-center pt-3 pb-2">
+            <div className="flex w-full shrink-0 justify-center pt-3 pb-2">
               <div className="w-12 h-1.5 rounded-full bg-white/20" />
             </div>
 
-            <div className="px-6 pb-7 overflow-y-auto">
-              <div className="relative mb-6 flex items-center justify-center">
+            <div className="flex min-h-0 flex-1 flex-col px-6 pb-7">
+              <div className="relative mb-6 flex shrink-0 items-center justify-center">
                 {step !== "home" && (
                   <button
                     onClick={goBack}
@@ -508,6 +508,13 @@ function DrawerContent({
                 </button>
               </div>
 
+              <div
+                className={
+                  step === "confirm"
+                    ? "flex min-h-0 flex-1 flex-col overflow-hidden"
+                    : "min-h-0 flex-1 overflow-y-auto"
+                }
+              >
               {step === "home" && (
                 <HomeStep
                   locale={locale}
@@ -581,6 +588,7 @@ function DrawerContent({
                   transferAddress={transferAddress}
                 />
               )}
+              </div>
             </div>
           </motion.div>
         </>

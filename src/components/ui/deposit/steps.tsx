@@ -323,15 +323,18 @@ export function ConfirmStep({
   walletLabel: string;
 }) {
   const [isBreakdownOpen, setIsBreakdownOpen] = useState(false);
+  const breakdownDetailsRef = useRef<HTMLDivElement>(null);
   const canCancel = Boolean(
     dlnStatus &&
     !["ClaimedUnlock", "OrderCancelled", "ClaimedOrderCancel"].includes(dlnStatus)
   );
-  const buttonText = isExecuting
-    ? locale === "zh" ? "等待钱包确认..." : "Waiting for wallet..."
-    : hasSubmittedTx
-      ? locale === "zh" ? "已提交" : "Submitted"
-      : locale === "zh" ? "确认订单" : "Confirm Order";
+  const buttonText = isQuoting
+    ? locale === "zh" ? "重新获取最新价格" : "Refreshing latest price..."
+    : isExecuting
+      ? locale === "zh" ? "等待钱包确认..." : "Waiting for wallet..."
+      : hasSubmittedTx
+        ? locale === "zh" ? "已提交" : "Submitted"
+        : locale === "zh" ? "确认订单" : "Confirm Order";
 
   const slippageText =
     snapshot.slippage === undefined
@@ -368,9 +371,23 @@ export function ConfirmStep({
           ? `You send 包含下方的 deBridge fixed fee，钱包弹窗可能显示 ${walletTotalText}。`
           : `You send includes the deBridge fixed fee below. Your wallet may prompt ${walletTotalText}.`);
 
+  useLayoutEffect(() => {
+    if (!isBreakdownOpen) return undefined;
+
+    const frame = window.requestAnimationFrame(() => {
+      breakdownDetailsRef.current?.scrollIntoView({
+        block: "end",
+        behavior: "smooth",
+      });
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [isBreakdownOpen]);
+
   return (
-    <div className="space-y-5">
-      <div className="py-5 text-center text-6xl font-black text-white">
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-y-contain pb-2">
+      <div className="py-4 text-center text-4xl font-black text-white">
         ${snapshot.amountUsd.toFixed(2)}
       </div>
 
@@ -436,21 +453,21 @@ export function ConfirmStep({
         ]}
       />
 
-      <div className="rounded-2xl bg-white/8 p-3 text-xs leading-relaxed text-white/60">
+      <div className="rounded-2xl bg-white/8 p-3 text-[11px] leading-relaxed text-white/60">
         {walletPromptText}
       </div>
 
-      <div className="space-y-3">
+      <div className="space-y-2">
         <button
           type="button"
           aria-expanded={isBreakdownOpen}
           onClick={() => setIsBreakdownOpen((open) => !open)}
-          className="flex w-full items-center justify-between gap-3 text-left text-sm"
+          className="flex w-full items-center justify-between gap-3 text-left text-xs"
         >
-          <span className="font-bold text-white/35">Transaction breakdown</span>
-          <span className="flex min-w-0 items-center gap-1 text-white/40">
+          <span className="font-medium text-white/35">Transaction breakdown</span>
+          <span className="flex min-w-0 items-center gap-1 text-white/50">
             {!isBreakdownOpen && (
-              <span className="min-w-0 truncate font-bold">
+              <span className="min-w-0 truncate font-normal">
                 {breakdownSummaryText}
               </span>
             )}
@@ -461,29 +478,31 @@ export function ConfirmStep({
           </span>
         </button>
         {isBreakdownOpen && (
-          <InfoBox
-            rows={[
-              ["deBridge fixed fee", fixedFeeText],
-              ["Route cost", formatUsd(snapshot.routeCostUsd)],
-              ["Price impact", formatPercent(snapshot.priceImpact)],
-              ["Max slippage", slippageText],
-              ["Quote refresh", locale === "zh" ? `每 ${Math.round(QUOTE_STALE_THRESHOLD_MS / 1000)}s 自动刷新` : `Auto every ${Math.round(QUOTE_STALE_THRESHOLD_MS / 1000)}s`],
-            ]}
-          />
+          <div ref={breakdownDetailsRef}>
+            <InfoBox
+              rows={[
+                ["deBridge fixed fee", fixedFeeText],
+                ["Route cost", formatUsd(snapshot.routeCostUsd)],
+                ["Price impact", formatPercent(snapshot.priceImpact)],
+                ["Max slippage", slippageText],
+                ["Quote refresh", locale === "zh" ? `每 ${Math.round(QUOTE_STALE_THRESHOLD_MS / 1000)}s 自动刷新` : `Auto every ${Math.round(QUOTE_STALE_THRESHOLD_MS / 1000)}s`],
+              ]}
+            />
+          </div>
         )}
       </div>
 
       {quoteWarning && (
-        <div className="rounded-2xl border border-[#ffd166]/20 bg-[#ffd166]/10 p-4 text-xs leading-relaxed text-[#ffe6a6]">
+        <div className="rounded-2xl border border-[#ffd166]/20 bg-[#ffd166]/10 p-3 text-[11px] leading-relaxed text-[#ffe6a6]">
           {quoteWarning}
         </div>
       )}
 
       {(hasSubmittedTx || isExecuting) && (
-        <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-sm">
+        <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3 text-xs">
           <div className="flex items-center justify-between">
             <span className="text-white/40">{locale === "zh" ? "执行状态" : "Execution status"}</span>
-            <span className="font-black text-white">{executionStatusText}</span>
+            <span className="font-normal text-white">{executionStatusText}</span>
           </div>
           {executionTxHash && (
             <p className="mt-2 break-all font-mono text-[11px] text-white/35">
@@ -499,18 +518,21 @@ export function ConfirmStep({
       )}
 
       {error && (
-        <div className="flex gap-3 rounded-2xl border border-[#ff6b6b]/20 bg-[#ff6b6b]/10 p-4">
-          <AlertTriangle className="mt-0.5 shrink-0 text-[#ff6b6b]" size={18} />
-          <p className="text-xs leading-relaxed text-[#ffcad4]/80">{error}</p>
+        <div className="flex gap-3 rounded-2xl border border-[#ff6b6b]/20 bg-[#ff6b6b]/10 p-3">
+          <AlertTriangle className="mt-0.5 shrink-0 text-[#ff6b6b]" size={16} />
+          <p className="text-[11px] leading-relaxed text-[#ffcad4]/80">{error}</p>
         </div>
       )}
+      </div>
 
+      <div className="shrink-0 space-y-3 pt-4">
       <button
         onClick={onConfirm}
         disabled={isQuoting || isExecuting || hasSubmittedTx}
-        className="flex h-14 w-full items-center justify-center rounded-2xl bg-[#159bff] text-base font-black text-white active:scale-[0.98] disabled:opacity-50"
+        className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-[#159bff] text-base font-black text-white active:scale-[0.98] disabled:opacity-50"
       >
-        {isExecuting ? <Loader2 className="animate-spin" size={18} /> : buttonText}
+        {isExecuting || isQuoting ? <Loader2 className="animate-spin" size={18} /> : null}
+        {buttonText}
       </button>
 
       {hasSubmittedTx && (
@@ -534,6 +556,7 @@ export function ConfirmStep({
               : locale === "zh" ? "取消订单并退款" : "Cancel order and refund"}
         </button>
       )}
+      </div>
     </div>
   );
 }
@@ -635,14 +658,14 @@ function InfoBox({ rows }: { rows: InfoBoxRow[] }) {
         return (
           <div
             key={`${label}-${index}`}
-            className={`flex items-center justify-between gap-3 px-4 py-3 text-sm ${
+            className={`flex items-center justify-between gap-3 px-3 py-2.5 text-xs ${
               index > 0 ? "border-t border-white/5" : ""
             }`}
           >
             <span className="shrink-0 text-white/40">{label}</span>
             <div className="flex min-w-0 max-w-[70%] items-center justify-end gap-2">
               {icon != null ? <span className="inline-flex shrink-0">{icon}</span> : null}
-              <span className="min-w-0 truncate text-right font-black text-white">{value}</span>
+              <span className="min-w-0 truncate text-right font-normal text-white/90">{value}</span>
             </div>
           </div>
         );
