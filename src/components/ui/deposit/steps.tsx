@@ -128,14 +128,18 @@ export function AssetStep({
         const balance = Number(asset.balance || 0);
         const usdValue = asset.usdValue ?? 0;
         const isLow = usdValue > 0 && usdValue < CONNECTED_LOW_BALANCE_USD;
+        const isBelowMinUsd = usdValue < CONNECTED_LOW_BALANCE_USD;
+        const isSelectable = balance > 0 && !isBelowMinUsd;
         return (
           <button
             key={asset.id}
+            type="button"
+            disabled={!isSelectable}
             onClick={() => onSelect(asset)}
-            className={`flex w-full items-center justify-between rounded-2xl border p-4 text-left transition-all active:scale-[0.98] ${
-              balance > 0
-                ? "border-white/30 bg-white/[0.04] hover:bg-white/[0.07]"
-                : "border-transparent bg-transparent opacity-55"
+            className={`flex w-full items-center justify-between rounded-2xl border p-4 text-left transition-all ${
+              isSelectable
+                ? "border-white/30 bg-white/[0.04] active:scale-[0.98] hover:bg-white/[0.07]"
+                : "cursor-not-allowed border-white/10 bg-white/[0.02] opacity-50"
             }`}
           >
             <div className="flex items-center gap-3">
@@ -148,7 +152,11 @@ export function AssetStep({
               </div>
             </div>
             <div className="text-right">
-              {isLow && <p className="text-xs text-white/25">Low Balance</p>}
+              {isLow && (
+                <p className="text-xs text-white/25">
+                  {locale === "zh" ? "余额过低" : "Low Balance"}
+                </p>
+              )}
               <p className="text-sm font-black text-white/80">${(asset.usdValue ?? 0).toFixed(2)}</p>
             </div>
           </button>
@@ -675,7 +683,7 @@ function TokenIcon({
       {imageUrl ? (
         <div
           className={`flex ${outerSize} items-center justify-center rounded-full ${
-            isPolymarketUsd ? "bg-[#2B5BED]" : isEth ? "bg-transparent" : "bg-white/10"
+            isPolymarketUsd ? "bg-[#2B5BED]" : "bg-transparent"
           }`}
         >
           <span
