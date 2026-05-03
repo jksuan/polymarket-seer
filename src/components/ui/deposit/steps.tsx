@@ -11,10 +11,11 @@ import {
   Wallet,
 } from "lucide-react";
 import QRCode from "react-qr-code";
+import { POLYGON_CHAIN_ID } from "@/lib/constants";
 import type { CreateDepositResponse } from "@/types/bridge";
 import type { DepositAsset, ExecutionSnapshot } from "./types";
 import { sortVisibleAssets } from "./assets";
-import { CONNECTED_LOW_BALANCE_USD, DEPOSIT_SINGLE_TX_CAP_USD, MAX_DEPOSIT_BALANCE_RATIO, QUOTE_STALE_THRESHOLD_MS, TOKEN_ICON_URLS } from "./constants";
+import { CHAIN_ICON_URLS, CONNECTED_LOW_BALANCE_USD, DEPOSIT_SINGLE_TX_CAP_USD, MAX_DEPOSIT_BALANCE_RATIO, QUOTE_STALE_THRESHOLD_MS, TOKEN_ICON_URLS } from "./constants";
 import { formatCompactBalance, formatMs, formatPercent, formatUsd, formatUsdWithCommas, parseAmountUsd } from "./format";
 import { getExecutionKindText } from "./status";
 
@@ -137,7 +138,7 @@ export function AssetStep({
             }`}
           >
             <div className="flex items-center gap-3">
-              <TokenIcon iconUrl={asset.iconUrl} symbol={asset.symbol} />
+              <TokenIcon chainId={asset.chainId} iconUrl={asset.iconUrl} symbol={asset.symbol} />
               <div>
                 <p className="text-base font-black text-white">{asset.symbol}</p>
                 <p className="text-xs text-white/40">
@@ -255,13 +256,13 @@ export function AmountStep({
           </p>
         )}
         <div className="mx-auto mb-7 flex w-fit items-center gap-4 rounded-full bg-white/10 px-4 py-3">
-          <TokenIcon iconUrl={asset.iconUrl} symbol={asset.symbol} />
+          <TokenIcon chainId={asset.chainId} iconUrl={asset.iconUrl} symbol={asset.symbol} />
           <div>
             <p className="text-[10px] text-white/35">You send</p>
             <p className="text-xs font-black text-white">{asset.symbol}</p>
           </div>
           <ArrowRight className="text-white/35" size={18} />
-          <TokenIcon symbol="pUSD" />
+          <TokenIcon chainId={String(POLYGON_CHAIN_ID)} symbol="pUSD" />
           <div>
             <p className="text-[10px] text-white/35">You receive</p>
             <p className="text-xs font-black text-white">pUSD</p>
@@ -560,27 +561,48 @@ function InfoBox({ rows }: { rows: Array<[string, string]> }) {
   );
 }
 
-function TokenIcon({ iconUrl, symbol }: { iconUrl?: string; symbol: string }) {
+function TokenIcon({ chainId, iconUrl, symbol }: { chainId?: string; iconUrl?: string; symbol: string }) {
   const label = symbol.slice(0, 1).toUpperCase();
   const fallbackUrl = TOKEN_ICON_URLS[symbol.toUpperCase()];
   const imageUrl = iconUrl || fallbackUrl;
-
-  if (imageUrl) {
-    return (
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/10 shadow-[0_0_16px_rgba(99,125,255,0.25)]">
-        <span
-          aria-label={symbol}
-          className="h-8 w-8 rounded-full bg-cover bg-center"
-          role="img"
-          style={{ backgroundImage: `url(${imageUrl})` }}
-        />
-      </div>
-    );
-  }
+  const chainIconUrl = chainId ? CHAIN_ICON_URLS[chainId] : undefined;
+  const isPolymarketUsd = symbol.toUpperCase() === "PUSD";
+  const isEth = symbol.toUpperCase() === "ETH";
 
   return (
-    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#637dff] to-[#9c4dff] text-sm font-black text-white shadow-[0_0_16px_rgba(99,125,255,0.3)]">
-      {label}
+    <div className="relative h-10 w-10 shrink-0">
+      {imageUrl ? (
+        <div
+          className={`flex h-10 w-10 items-center justify-center rounded-full shadow-[0_0_16px_rgba(99,125,255,0.25)] ${
+            isPolymarketUsd ? "bg-[#2B5BED]" : isEth ? "bg-transparent" : "bg-white/10"
+          }`}
+        >
+          <span
+            aria-label={symbol}
+            className={`rounded-full bg-center bg-no-repeat ${
+              isPolymarketUsd
+                ? "h-8 w-8 bg-contain"
+                : isEth
+                  ? "h-10 w-10 bg-cover"
+                  : "h-8 w-8 bg-cover"
+            }`}
+            role="img"
+            style={{ backgroundImage: `url(${imageUrl})` }}
+          />
+        </div>
+      ) : (
+        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-[#637dff] to-[#9c4dff] text-sm font-black text-white shadow-[0_0_16px_rgba(99,125,255,0.3)]">
+          {label}
+        </div>
+      )}
+      {chainIconUrl && (
+        <span
+          aria-label={`Chain ${chainId}`}
+          className="absolute -bottom-1 -right-1 h-[18px] w-[18px] rounded-full border-2 border-[#151922] bg-[#151922] bg-cover bg-center shadow-sm"
+          role="img"
+          style={{ backgroundImage: `url(${chainIconUrl})` }}
+        />
+      )}
     </div>
   );
 }

@@ -31,11 +31,23 @@ export const PUBLIC_RPC_URLS: Record<string, string> = {
   "8453": "https://base-rpc.publicnode.com",
   "42161": "https://arbitrum-one-rpc.publicnode.com",
 };
+
+/** CoinGecko 小图，偏中性灰，仅作以太坊主网角标，避免与主代币大图混用 */
+const COINGECKO_ETH_SMALL_URL =
+  "https://assets.coingecko.com/coins/images/279/small/ethereum.png";
+
 export const TOKEN_ICON_URLS: Record<string, string> = {
-  ETH: "https://assets.coingecko.com/coins/images/279/small/ethereum.png",
+  /** 主列表 ETH，对应 public/ethereum-eth.svg */
+  ETH: "/ethereum-eth.svg",
   POL: "https://assets.coingecko.com/coins/images/32440/small/polygon.png",
   MATIC: "https://assets.coingecko.com/coins/images/4713/small/polygon.png",
   USDC: "https://assets.coingecko.com/coins/images/6319/small/usdc.png",
   "USDC.E": "https://assets.coingecko.com/coins/images/6319/small/usdc.png",
-  PUSD: "https://assets.coingecko.com/coins/images/6319/small/usdc.png",
+  /** pUSD 主图标，对应仓库 public/polymarket-icon.png */
+  PUSD: "/polymarket-icon.png",
+};
+
+export const CHAIN_ICON_URLS: Record<string, string> = {
+  "1": COINGECKO_ETH_SMALL_URL,
+  "137": TOKEN_ICON_URLS.POL,
 };
