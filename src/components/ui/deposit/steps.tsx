@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef } from "react";
-import type { ChangeEvent } from "react";
+import type { ChangeEvent, ReactNode } from "react";
 import {
   AlertTriangle,
   ArrowRight,
@@ -362,17 +362,63 @@ export function ConfirmStep({
 
       <InfoBox
         rows={[
-          ["Source", walletLabel],
-          ["Destination", "Polymarket Wallet"],
-          ["Execution", getExecutionKindText(locale, snapshot.kind)],
+          {
+            label: "Source",
+            value: walletLabel,
+            icon: (
+              <div className="flex h-5 w-5 shrink-0 items-center justify-center">
+                <Wallet aria-hidden className="text-white/70" size={20} strokeWidth={1.75} />
+              </div>
+            ),
+          },
+          {
+            label: "Destination",
+            value: "Polymarket Wallet",
+            icon: (
+              <span
+                aria-hidden
+                className="block h-5 w-5 shrink-0 rounded-full bg-cover bg-center"
+                style={{ backgroundImage: "url(/polymarket-icon.png)" }}
+              />
+            ),
+          },
+          {
+            label: "Execution",
+            value: getExecutionKindText(locale, snapshot.kind),
+            icon: (
+              <img
+                alt=""
+                aria-hidden
+                className="block h-5 w-5 shrink-0 object-contain"
+                height={20}
+                src="/debridge.svg"
+                width={20}
+              />
+            ),
+          },
           ["Estimated time", formatMs(snapshot.estCheckoutTimeMs)],
         ]}
       />
 
       <InfoBox
         rows={[
-          ["You send", youSendText],
-          ["You receive", `${snapshot.receiveDisplay} pUSD${receiveUsdText}`],
+          {
+            label: "You send",
+            value: youSendText,
+            icon: (
+              <TokenIcon
+                compact
+                chainId={snapshot.asset.chainId}
+                iconUrl={snapshot.asset.iconUrl}
+                symbol={snapshot.asset.symbol}
+              />
+            ),
+          },
+          {
+            label: "You receive",
+            value: `${snapshot.receiveDisplay} pUSD${receiveUsdText}`,
+            icon: <TokenIcon compact chainId={String(POLYGON_CHAIN_ID)} symbol="pUSD" />,
+          },
         ]}
       />
 
@@ -543,25 +589,47 @@ export function TransferStep({
   );
 }
 
-function InfoBox({ rows }: { rows: Array<[string, string]> }) {
+type InfoBoxRow =
+  | [string, string]
+  | { label: string; value: string; icon?: ReactNode };
+
+function InfoBox({ rows }: { rows: InfoBoxRow[] }) {
   return (
     <div className="rounded-2xl border border-white/10 bg-white/[0.03]">
-      {rows.map(([label, value], index) => (
-        <div
-          key={label}
-          className={`flex items-center justify-between px-4 py-3 text-sm ${
-            index > 0 ? "border-t border-white/5" : ""
-          }`}
-        >
-          <span className="text-white/40">{label}</span>
-          <span className="font-black text-white">{value}</span>
-        </div>
-      ))}
+      {rows.map((row, index) => {
+        const label = Array.isArray(row) ? row[0] : row.label;
+        const value = Array.isArray(row) ? row[1] : row.value;
+        const icon = Array.isArray(row) ? undefined : row.icon;
+        return (
+          <div
+            key={`${label}-${index}`}
+            className={`flex items-center justify-between gap-3 px-4 py-3 text-sm ${
+              index > 0 ? "border-t border-white/5" : ""
+            }`}
+          >
+            <span className="shrink-0 text-white/40">{label}</span>
+            <div className="flex min-w-0 max-w-[70%] items-center justify-end gap-2">
+              {icon != null ? <span className="inline-flex shrink-0">{icon}</span> : null}
+              <span className="min-w-0 truncate text-right font-black text-white">{value}</span>
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
 
-function TokenIcon({ chainId, iconUrl, symbol }: { chainId?: string; iconUrl?: string; symbol: string }) {
+function TokenIcon({
+  chainId,
+  compact = false,
+  iconUrl,
+  symbol,
+}: {
+  chainId?: string;
+  compact?: boolean;
+  iconUrl?: string;
+  symbol: string;
+}) {
   const label = symbol.slice(0, 1).toUpperCase();
   const fallbackUrl = TOKEN_ICON_URLS[symbol.toUpperCase()];
   const imageUrl = iconUrl || fallbackUrl;
@@ -569,36 +637,45 @@ function TokenIcon({ chainId, iconUrl, symbol }: { chainId?: string; iconUrl?: s
   const isPolymarketUsd = symbol.toUpperCase() === "PUSD";
   const isEth = symbol.toUpperCase() === "ETH";
 
+  /** compact：外圈约 text-sm 行高 h-5，内层略小；角标同比缩小；无阴影 */
+  const outerSize = compact ? "h-5 w-5" : "h-10 w-10";
+  const innerPusd = compact ? "h-4 w-4" : "h-8 w-8";
+  const innerEth = compact ? "h-5 w-5" : "h-10 w-10";
+  const innerDefault = compact ? "h-4 w-4" : "h-8 w-8";
+  const badgeClass = compact
+    ? "absolute -bottom-px -right-px h-2.5 w-2.5 rounded-full border border-[#151922] bg-[#151922] bg-cover bg-center"
+    : "absolute -bottom-1 -right-1 h-[18px] w-[18px] rounded-full border-2 border-[#151922] bg-[#151922] bg-cover bg-center";
+
   return (
-    <div className="relative h-10 w-10 shrink-0">
+    <div className={`relative shrink-0 ${outerSize}`}>
       {imageUrl ? (
         <div
-          className={`flex h-10 w-10 items-center justify-center rounded-full shadow-[0_0_16px_rgba(99,125,255,0.25)] ${
+          className={`flex ${outerSize} items-center justify-center rounded-full ${
             isPolymarketUsd ? "bg-[#2B5BED]" : isEth ? "bg-transparent" : "bg-white/10"
           }`}
         >
           <span
             aria-label={symbol}
             className={`rounded-full bg-center bg-no-repeat ${
-              isPolymarketUsd
-                ? "h-8 w-8 bg-contain"
-                : isEth
-                  ? "h-10 w-10 bg-cover"
-                  : "h-8 w-8 bg-cover"
+              isPolymarketUsd ? `${innerPusd} bg-contain` : isEth ? `${innerEth} bg-cover` : `${innerDefault} bg-cover`
             }`}
             role="img"
             style={{ backgroundImage: `url(${imageUrl})` }}
           />
         </div>
       ) : (
-        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-[#637dff] to-[#9c4dff] text-sm font-black text-white shadow-[0_0_16px_rgba(99,125,255,0.3)]">
+        <div
+          className={`flex ${outerSize} items-center justify-center rounded-full bg-gradient-to-br from-[#637dff] to-[#9c4dff] font-black text-white ${
+            compact ? "text-[8px] leading-none" : "text-sm"
+          }`}
+        >
           {label}
         </div>
       )}
       {chainIconUrl && (
         <span
           aria-label={`Chain ${chainId}`}
-          className="absolute -bottom-1 -right-1 h-[18px] w-[18px] rounded-full border-2 border-[#151922] bg-[#151922] bg-cover bg-center shadow-sm"
+          className={badgeClass}
           role="img"
           style={{ backgroundImage: `url(${chainIconUrl})` }}
         />
