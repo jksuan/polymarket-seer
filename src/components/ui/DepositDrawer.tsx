@@ -141,7 +141,9 @@ function DrawerContent({
   }, [isOpen]);
 
   useEffect(() => {
-    if (transferStatus.latestStatus === "COMPLETED" && !hasRefreshedBalance) {
+    const completed =
+      transferStatus.latestStatus?.toUpperCase() === "COMPLETED";
+    if (completed && !hasRefreshedBalance) {
       setHasRefreshedBalance(true);
       onBalanceRefresh?.();
     }
