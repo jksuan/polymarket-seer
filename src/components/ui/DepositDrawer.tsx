@@ -12,7 +12,6 @@ import type { CreateDepositResponse } from "@/types/bridge";
 import type {
   DepositAsset,
   DepositDrawerProps,
-  ExecutionKind,
   ExecutionSnapshot,
   FlowStep,
 } from "./deposit/types";
@@ -24,7 +23,7 @@ import {
   readAssetBalance,
 } from "./deposit/assets";
 import { approveErc20IfNeeded, getWalletEthereumProvider, sendPreparedEvmTx, switchEvmChain } from "./deposit/evm";
-import { buildExecutionSnapshot, isQuotePriceChanged, validateDepositSelection } from "./deposit/execution";
+import { buildExecutionSnapshot, isQuotePriceChanged, validateBridgeReceiveMinimum, validateDepositSelection } from "./deposit/execution";
 import { formatExecutionError } from "./deposit/errors";
 import { formatAmountUsdInput, parseAmountUsd, sanitizeAmountUsdInput } from "./deposit/format";
 import { getStatusText } from "./deposit/status";
@@ -64,7 +63,6 @@ function DrawerContent({
   const [quoteError, setQuoteError] = useState("");
   const [quoteWarning, setQuoteWarning] = useState("");
   const [isQuoting, setIsQuoting] = useState(false);
-  const [executionKind, setExecutionKind] = useState<ExecutionKind>("idle");
   const [isExecuting, setIsExecuting] = useState(false);
   const [executionError, setExecutionError] = useState("");
   const [executionTxHash, setExecutionTxHash] = useState("");
@@ -116,6 +114,11 @@ function DrawerContent({
 
   const transferStatus = useBridgeStatus(transferAddress, Boolean(transferAddress && isOpen));
   const dlnStatus = useDlnOrderStatus(submittedOrderId, Boolean(submittedOrderId && isOpen));
+  const depositBridgeComplete = Boolean(
+    hasSubmittedTx &&
+      transferAddress &&
+      transferStatus.latestStatus?.toUpperCase() === "COMPLETED"
+  );
 
   useEffect(() => {
     if (!isOpen) return;
@@ -126,7 +129,6 @@ function DrawerContent({
     setSnapshot(null);
     setQuoteError("");
     setQuoteWarning("");
-    setExecutionKind("idle");
     setIsExecuting(false);
     isExecutingRef.current = false;
     setExecutionError("");
@@ -264,7 +266,6 @@ function DrawerContent({
     setSnapshot(null);
     setQuoteError("");
     setQuoteWarning("");
-    setExecutionKind("idle");
     setExecutionError("");
     setExecutionTxHash("");
     setSubmittedOrderId("");
@@ -328,6 +329,11 @@ function DrawerContent({
         walletAddress,
       });
       if (quoteRequestRef.current !== requestId) return;
+      const receiveMinimumError = validateBridgeReceiveMinimum(next, locale);
+      if (receiveMinimumError) {
+        setQuoteError(receiveMinimumError);
+        return;
+      }
       setSnapshot(next);
       setStep("confirm");
     } catch (error) {
@@ -401,12 +407,16 @@ function DrawerContent({
         }
       }
 
+      const receiveMinimumError = validateBridgeReceiveMinimum(activeSnapshot, locale);
+      if (receiveMinimumError) {
+        setExecutionError(receiveMinimumError);
+        return;
+      }
+
       const ethereumProvider = await getWalletEthereumProvider(activeWallet);
       await switchEvmChain(ethereumProvider, activeSnapshot.asset.chainId);
 
-      setExecutionKind(activeSnapshot.kind);
-
-      if (activeSnapshot.kind !== "direct" && activeSnapshot.approveSpender && !activeSnapshot.asset.isNative) {
+      if (activeSnapshot.approveSpender && !activeSnapshot.asset.isNative) {
         await approveErc20IfNeeded({
           amountBaseUnit: activeSnapshot.sourceAmountBaseUnit,
           asset: activeSnapshot.asset,
@@ -423,7 +433,6 @@ function DrawerContent({
       }
     } catch (error) {
       setExecutionError(formatExecutionError(error, locale, "execute"));
-      setExecutionKind("idle");
     } finally {
       isExecutingRef.current = false;
       setIsExecuting(false);
@@ -593,6 +602,7 @@ function DrawerContent({
               {step === "confirm" && selectedAsset && snapshot && (
                 <ConfirmStep
                   cancelTxHash={cancelTxHash}
+                  depositBridgeComplete={depositBridgeComplete}
                   dlnStatus={dlnStatus.status}
                   error={executionError}
                   hasSubmittedTx={hasSubmittedTx}

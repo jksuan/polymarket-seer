@@ -2,14 +2,14 @@ import { ethers } from "ethers";
 import { getDlnQuote, getDlnSameChainSwap } from "@/hooks/useDln";
 import { ADDRESSES, POLYGON_CHAIN_ID } from "@/lib/constants";
 import type { DlnQuoteResponse, DlnSameChainSwapResponse } from "@/types/dln";
-import { estimateBaseUnitForUsd, getNativeFeeSymbol, isStableLike } from "./assets";
+import { estimateBaseUnitForUsd, getNativeFeeSymbol } from "./assets";
 import {
-  ERC20_EXECUTION_ABI,
   POLYGON_USDC_ADDRESS,
   QUOTE_PRICE_CHANGE_THRESHOLD,
   QUOTE_STALE_THRESHOLD_MS,
   SUPPORTED_DLN_EVM_CHAIN_IDS,
   ZERO_ADDRESS,
+  getConnectedMinDepositUsd,
 } from "./constants";
 import { formatCompactBalance } from "./format";
 import type { DepositAsset, ExecutionSnapshot, ExecutionTx } from "./types";
@@ -38,23 +38,12 @@ export async function buildExecutionSnapshot({
   const quotedAtMs = Date.now();
   const expiresAtMs = quotedAtMs + QUOTE_STALE_THRESHOLD_MS;
 
-  if (isDirectPolygonStableDeposit(asset)) {
-    return buildDirectSnapshot({
-      amountUsd,
-      asset,
-      depositAddress,
-      sourceAmountBaseUnit,
-      quotedAtMs,
-      expiresAtMs,
-    });
-  }
-
   if (asset.chainId === String(POLYGON_CHAIN_ID)) {
     const swap = await getDlnSameChainSwap({
       chainId: asset.chainId,
       tokenIn: toDlnTokenAddress(asset),
       tokenInAmount: sourceAmountBaseUnit,
-      tokenOut: POLYGON_USDC_ADDRESS,
+      tokenOut: getPolygonSameChainTokenOut(asset),
       tokenOutRecipient: depositAddress,
       senderAddress: walletAddress,
       slippage: "auto",
@@ -92,55 +81,6 @@ export async function buildExecutionSnapshot({
     quotedAtMs,
     expiresAtMs,
   });
-}
-
-function buildDirectSnapshot({
-  amountUsd,
-  asset,
-  depositAddress,
-  sourceAmountBaseUnit,
-  quotedAtMs,
-  expiresAtMs,
-}: {
-  amountUsd: number;
-  asset: DepositAsset;
-  depositAddress: string;
-  sourceAmountBaseUnit: string;
-  quotedAtMs: number;
-  expiresAtMs: number;
-}): ExecutionSnapshot {
-  const tx = buildErc20TransferTx(asset.tokenAddress, depositAddress, sourceAmountBaseUnit);
-  const sendFloat = Number(ethers.utils.formatUnits(sourceAmountBaseUnit, asset.decimals));
-
-  return {
-    kind: "direct",
-    asset,
-    amountUsd,
-    sourceAmountBaseUnit,
-    sendBaseUnit: sourceAmountBaseUnit,
-    sendAmountFloat: sendFloat,
-    sendDisplay: `${formatCompactBalance(String(sendFloat))} ${asset.symbol}`,
-    sendUsd: amountUsd,
-    receiveBaseUnit: sourceAmountBaseUnit,
-    receiveDecimals: asset.decimals,
-    receiveDisplay: sendFloat.toFixed(4),
-    receiveUsd: amountUsd,
-    networkCostUsd: undefined,
-    routeCostUsd: 0,
-    priceImpact: 0,
-    slippage: 0,
-    estCheckoutTimeMs: 60_000,
-    recipientAddress: depositAddress,
-    tx,
-    approveSpender: undefined,
-    fixedFeeDisplay: undefined,
-    fixedFeeUsd: undefined,
-    walletTotalDisplay: `${formatCompactBalance(String(sendFloat))} ${asset.symbol}`,
-    walletTotalUsd: amountUsd,
-    orderId: undefined,
-    quotedAtMs,
-    expiresAtMs,
-  };
 }
 
 function snapshotFromDlnQuote({
@@ -198,6 +138,7 @@ function snapshotFromDlnQuote({
     receiveBaseUnit: dst.amount,
     receiveDecimals,
     receiveDisplay: receiveFloat.toFixed(4),
+    receiveSymbol: dst.symbol ?? "USDC",
     receiveUsd: dst.approximateUsdValue,
     networkCostUsd: dlnQuote.estimatedTransactionFee?.approximateUsdValue,
     routeCostUsd,
@@ -271,6 +212,7 @@ function snapshotFromSameChainSwap({
     receiveBaseUnit: swap.tokenOut.amount,
     receiveDecimals,
     receiveDisplay: receiveFloat.toFixed(4),
+    receiveSymbol: swap.tokenOut.symbol ?? "USDC",
     receiveUsd: swap.tokenOut.approximateUsdValue,
     networkCostUsd: swap.estimatedTransactionFee?.approximateUsdValue,
     routeCostUsd,
@@ -292,28 +234,14 @@ function snapshotFromSameChainSwap({
   };
 }
 
-function buildErc20TransferTx(
-  tokenAddress: string,
-  recipient: string,
-  amountBaseUnit: string
-): ExecutionTx {
-  const iface = new ethers.utils.Interface(ERC20_EXECUTION_ABI);
-  const data = iface.encodeFunctionData("transfer", [recipient, amountBaseUnit]);
-  return { to: tokenAddress, data, value: "0" };
-}
-
-function isDirectPolygonStableDeposit(asset: DepositAsset): boolean {
-  const address = asset.tokenAddress.toLowerCase();
-  return (
-    asset.chainId === String(POLYGON_CHAIN_ID) &&
-    isStableLike(asset.symbol) &&
-    (address === POLYGON_USDC_ADDRESS.toLowerCase() ||
-      address === ADDRESSES.USDCe.toLowerCase())
-  );
-}
-
 function toDlnTokenAddress(asset: DepositAsset): string {
   return asset.isNative ? ZERO_ADDRESS : asset.tokenAddress;
+}
+
+function getPolygonSameChainTokenOut(asset: DepositAsset): string {
+  return asset.tokenAddress.toLowerCase() === POLYGON_USDC_ADDRESS.toLowerCase()
+    ? ADDRESSES.USDCe
+    : POLYGON_USDC_ADDRESS;
 }
 
 function getFixedFeeBreakdown({
@@ -374,6 +302,13 @@ export function validateDepositSelection({
       : "Connected Wallet currently supports EVM assets only. Use Transfer Crypto for Solana, Tron, or Bitcoin.";
   }
 
+  const minDepositUsd = getConnectedMinDepositUsd(asset.minCheckoutUsd);
+  if (amountUsd < minDepositUsd) {
+    return zh
+      ? `当前资产最低充值金额为 $${minDepositUsd.toFixed(2)}。`
+      : `Minimum deposit for this asset is $${minDepositUsd.toFixed(2)}.`;
+  }
+
   const availableUsd = asset.usdValue ?? 0;
   if (availableUsd > 0 && amountUsd > availableUsd * 1.01) {
     return zh
@@ -382,4 +317,19 @@ export function validateDepositSelection({
   }
 
   return null;
+}
+
+export function validateBridgeReceiveMinimum(
+  snapshot: ExecutionSnapshot,
+  locale: string
+): string | null {
+  const minOutputUsd = Math.max(snapshot.asset.minCheckoutUsd ?? 1, 1);
+  const receiveUsd = snapshot.receiveUsd ?? Number(snapshot.receiveDisplay);
+  if (!Number.isFinite(receiveUsd) || receiveUsd + 0.000001 >= minOutputUsd) {
+    return null;
+  }
+
+  return locale === "zh"
+    ? `扣除路由费后预计到账 $${receiveUsd.toFixed(4)}，低于 Polymarket Bridge 最低 $${minOutputUsd.toFixed(2)}，请提高充值金额。`
+    : `Estimated received amount after route costs is $${receiveUsd.toFixed(4)}, below the Polymarket Bridge minimum of $${minOutputUsd.toFixed(2)}. Increase the deposit amount.`;
 }

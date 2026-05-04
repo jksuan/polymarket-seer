@@ -9,6 +9,7 @@ export const QUOTE_STALE_THRESHOLD_MS = 45_000;
 export const QUOTE_PRICE_CHANGE_THRESHOLD = 0.01;
 export const CONNECTED_LOW_BALANCE_USD = 1;
 export const MAX_DEPOSIT_BALANCE_RATIO = 0.95;
+export const BRIDGE_MIN_OUTPUT_BUFFER_USD = 0.05;
 export const DEFAULT_SINGLE_TX_CAP_USD = 100_000;
 export const DEPOSIT_SINGLE_TX_CAP_USD =
   Number(process.env.NEXT_PUBLIC_DEPOSIT_SINGLE_TX_CAP_USD) || DEFAULT_SINGLE_TX_CAP_USD;
@@ -31,6 +32,10 @@ export const PUBLIC_RPC_URLS: Record<string, string> = {
   "8453": "https://base-rpc.publicnode.com",
   "42161": "https://arbitrum-one-rpc.publicnode.com",
 };
+
+export function getConnectedMinDepositUsd(minCheckoutUsd?: number): number {
+  return Math.max(minCheckoutUsd ?? 1, 1) + BRIDGE_MIN_OUTPUT_BUFFER_USD;
+}
 
 /** CoinGecko 小图，偏中性灰，仅作以太坊主网角标，避免与主代币大图混用 */
 const COINGECKO_ETH_SMALL_URL =

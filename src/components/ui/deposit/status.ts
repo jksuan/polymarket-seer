@@ -23,8 +23,6 @@ export function getStatusText(locale: string, status?: string): string {
 export function getExecutionKindText(locale: string, kind: ExecutionKind): string {
   const zh = locale === "zh";
   switch (kind) {
-    case "direct":
-      return zh ? "Polygon 稳定币直转" : "Polygon stablecoin transfer";
     case "same-chain":
       return zh ? "deBridge 同链兑换" : "deBridge same-chain swap";
     case "cross-chain":
@@ -37,14 +35,12 @@ export function getExecutionKindText(locale: string, kind: ExecutionKind): strin
 export function getExecutionStatusText({
   bridgeStatus,
   dlnStatus,
-  executionKind,
   isExecuting,
   locale,
   txHash,
 }: {
   bridgeStatus?: string;
   dlnStatus?: string;
-  executionKind: ExecutionKind;
   isExecuting: boolean;
   locale: string;
   txHash: string;
@@ -55,7 +51,6 @@ export function getExecutionStatusText({
   if (bridgeStatus) return getStatusText(locale, bridgeStatus);
   if (dlnStatus === "ClaimedUnlock") return zh ? "兑换完成，等待入账" : "Swap fulfilled, waiting deposit";
   if (dlnStatus) return getDlnStatusText(locale, dlnStatus);
-  if (txHash && executionKind === "direct") return zh ? "转账已提交" : "Transfer submitted";
   if (txHash) return zh ? "订单已提交" : "Order submitted";
   return zh ? "等待确认" : "Ready";
 }

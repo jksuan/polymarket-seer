@@ -16,7 +16,7 @@ import { POLYGON_CHAIN_ID } from "@/lib/constants";
 import type { CreateDepositResponse } from "@/types/bridge";
 import type { DepositAsset, ExecutionSnapshot } from "./types";
 import { sortVisibleAssets } from "./assets";
-import { CHAIN_ICON_URLS, CONNECTED_LOW_BALANCE_USD, DEPOSIT_SINGLE_TX_CAP_USD, MAX_DEPOSIT_BALANCE_RATIO, QUOTE_STALE_THRESHOLD_MS, TOKEN_ICON_URLS } from "./constants";
+import { CHAIN_ICON_URLS, CONNECTED_LOW_BALANCE_USD, DEPOSIT_SINGLE_TX_CAP_USD, getConnectedMinDepositUsd, MAX_DEPOSIT_BALANCE_RATIO, QUOTE_STALE_THRESHOLD_MS, TOKEN_ICON_URLS } from "./constants";
 import { formatCompactBalance, formatMs, formatPercent, formatUsd, formatUsdWithCommas, parseAmountUsd } from "./format";
 import { getExecutionKindText } from "./status";
 
@@ -211,11 +211,12 @@ export function AmountStep({
   const pendingCaretCountRef = useRef<number | null>(null);
   const balanceMaxDepositUsd = Number(asset.usdValue ?? 0) * MAX_DEPOSIT_BALANCE_RATIO;
   const maxDepositUsd = Math.min(balanceMaxDepositUsd, DEPOSIT_SINGLE_TX_CAP_USD);
-  const isAmountTooLow = amountNumber < 1;
+  const minDepositUsd = getConnectedMinDepositUsd(asset.minCheckoutUsd);
+  const isAmountTooLow = amountNumber < minDepositUsd;
   const isAmountOverSingleTxCap = amountNumber > DEPOSIT_SINGLE_TX_CAP_USD + 0.01;
   const isAmountOverBalance = amountNumber > maxDepositUsd + 0.01;
   const amountWarning = isAmountTooLow
-    ? locale === "zh" ? "最低充值金额$1" : "$1.00 minimum deposit"
+    ? locale === "zh" ? `最低充值金额${formatUsdWithCommas(minDepositUsd)}` : `${formatUsdWithCommas(minDepositUsd)} minimum deposit`
     : isAmountOverSingleTxCap
       ? locale === "zh"
         ? `单笔最高充值${formatUsdWithCommas(DEPOSIT_SINGLE_TX_CAP_USD)}，请分笔充值`
@@ -316,6 +317,7 @@ export function AmountStep({
 
 export function ConfirmStep({
   cancelTxHash,
+  depositBridgeComplete,
   dlnStatus,
   error,
   hasSubmittedTx,
@@ -330,6 +332,8 @@ export function ConfirmStep({
   walletLabel,
 }: {
   cancelTxHash: string;
+  /** Polymarket Bridge 对该充值地址返回 COMPLETED 时置为 true */
+  depositBridgeComplete: boolean;
   dlnStatus?: string;
   error: string;
   hasSubmittedTx: boolean;
@@ -353,9 +357,11 @@ export function ConfirmStep({
     ? locale === "zh" ? "重新获取最新价格" : "Refreshing latest price..."
     : isExecuting
       ? locale === "zh" ? "等待钱包确认..." : "Waiting for wallet..."
-      : hasSubmittedTx
-        ? locale === "zh" ? "已提交" : "Submitted"
-        : locale === "zh" ? "确认订单" : "Confirm Order";
+      : depositBridgeComplete
+        ? locale === "zh" ? "充值成功" : "Deposit complete"
+        : hasSubmittedTx
+          ? locale === "zh" ? "已提交" : "Submitted"
+          : locale === "zh" ? "确认订单" : "Confirm Order";
 
   const slippageText =
     snapshot.slippage === undefined
@@ -368,6 +374,7 @@ export function ConfirmStep({
   const receiveUsdText = snapshot.receiveUsd !== undefined
     ? ` ≈ ${formatUsd(snapshot.receiveUsd)}`
     : "";
+  const receiveSymbol = snapshot.receiveSymbol ?? "pUSD";
 
   const fixedFeeText = snapshot.fixedFeeDisplay
     ? `${snapshot.fixedFeeDisplay}${snapshot.fixedFeeUsd === undefined ? "" : ` ≈ ${formatUsd(snapshot.fixedFeeUsd)}`}`
@@ -384,13 +391,9 @@ export function ConfirmStep({
     ? (locale === "zh"
         ? `You send 包含下方的 deBridge fixed fee，钱包弹窗可能显示 ${walletTotalText}。`
         : `You send includes the deBridge fixed fee below. Your wallet may prompt ${walletTotalText}.`)
-    : snapshot.kind === "direct"
-      ? (locale === "zh"
-          ? `钱包将弹出一笔 ${snapshot.sendDisplay}${sendUsdText} 的 ERC20 转账，与上方"You send"完全一致。`
-          : `Your wallet will prompt for an ERC20 transfer of ${snapshot.sendDisplay}${sendUsdText}, matching "You send" exactly.`)
-      : (locale === "zh"
-          ? `You send 包含下方的 deBridge fixed fee，钱包弹窗可能显示 ${walletTotalText}。`
-          : `You send includes the deBridge fixed fee below. Your wallet may prompt ${walletTotalText}.`);
+    : (locale === "zh"
+        ? `钱包可能先要求授权，然后提交 deBridge 交易；最终签名金额以钱包弹窗为准。`
+        : `Your wallet may ask for approval first, then submit the deBridge transaction. Confirm the final amount in your wallet prompt.`);
 
   useLayoutEffect(() => {
     if (!isBreakdownOpen) return undefined;
@@ -468,8 +471,8 @@ export function ConfirmStep({
           },
           {
             label: "You receive",
-            value: `${snapshot.receiveDisplay} pUSD${receiveUsdText}`,
-            icon: <TokenIcon compact chainId={String(POLYGON_CHAIN_ID)} symbol="pUSD" />,
+            value: `${snapshot.receiveDisplay} ${receiveSymbol}${receiveUsdText}`,
+            icon: <TokenIcon compact chainId={String(POLYGON_CHAIN_ID)} symbol={receiveSymbol} />,
           },
         ]}
       />
@@ -531,17 +534,27 @@ export function ConfirmStep({
       <button
         onClick={onConfirm}
         disabled={isQuoting || isExecuting || hasSubmittedTx}
-        className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-[#159bff] text-base font-black text-white active:scale-[0.98] disabled:opacity-50"
+        className={`flex h-14 w-full items-center justify-center gap-2 rounded-2xl text-base font-black text-white active:scale-[0.98] disabled:opacity-50 ${
+          depositBridgeComplete ? "bg-emerald-600 disabled:opacity-100" : "bg-[#159bff]"
+        }`}
       >
         {isExecuting || isQuoting ? <Loader2 className="animate-spin" size={18} /> : null}
         {buttonText}
       </button>
 
       {hasSubmittedTx && (
-        <div className="text-center text-xs text-white/35">
-          {locale === "zh"
-            ? "交易提交后请等待 deBridge 完成兑换，再等待 Polymarket 检测入账。"
-            : "After submission, wait for deBridge fulfillment and Polymarket deposit detection."}
+        <div
+          className={`text-center text-xs ${
+            depositBridgeComplete ? "text-emerald-400/90" : "text-white/35"
+          }`}
+        >
+          {depositBridgeComplete
+            ? locale === "zh"
+              ? "Polymarket 已检测到入账，余额将更新；可关闭本面板。"
+              : "Polymarket has credited your deposit. You can close this panel."
+            : locale === "zh"
+              ? "交易提交后请等待 deBridge 完成兑换，再等待 Polymarket 检测入账。"
+              : "After submission, wait for deBridge fulfillment and Polymarket deposit detection."}
         </div>
       )}
 
