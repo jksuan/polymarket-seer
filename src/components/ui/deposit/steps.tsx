@@ -387,7 +387,11 @@ export function ConfirmStep({
     ? `${snapshot.walletTotalDisplay}${snapshot.walletTotalUsd === undefined ? "" : ` ≈ ${formatUsd(snapshot.walletTotalUsd)}`}`
     : "-";
   const youSendText = snapshot.fixedFeeDisplay ? walletTotalText : `${snapshot.sendDisplay}${sendUsdText}`;
-  const walletPromptText = snapshot.asset.isNative
+  const walletPromptText = snapshot.kind === "direct-transfer"
+    ? (locale === "zh"
+        ? "本次为 USDC.e 直转到 Polymarket 充值地址，钱包弹窗中的发送金额应与 You send 接近。"
+        : "This is a direct USDC.e transfer to your Polymarket deposit address. Wallet send amount should be close to You send.")
+    : snapshot.asset.isNative
     ? (locale === "zh"
         ? `You send 包含下方的 deBridge fixed fee，钱包弹窗可能显示 ${walletTotalText}。`
         : `You send includes the deBridge fixed fee below. Your wallet may prompt ${walletTotalText}.`)
@@ -440,16 +444,18 @@ export function ConfirmStep({
           {
             label: "Execution",
             value: getExecutionKindText(locale, snapshot.kind),
-            icon: (
-              <img
-                alt=""
-                aria-hidden
-                className="block h-5 w-5 shrink-0 object-contain"
-                height={20}
-                src="/debridge.svg"
-                width={20}
-              />
-            ),
+            icon: snapshot.kind === "direct-transfer"
+              ? <TokenIcon compact chainId={snapshot.asset.chainId} symbol={snapshot.asset.symbol} />
+              : (
+                <img
+                  alt=""
+                  aria-hidden
+                  className="block h-5 w-5 shrink-0 object-contain"
+                  height={20}
+                  src="/debridge.svg"
+                  width={20}
+                />
+              ),
           },
           ["Estimated time", formatMs(snapshot.estCheckoutTimeMs)],
         ]}

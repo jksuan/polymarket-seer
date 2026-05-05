@@ -8,7 +8,7 @@ import { getDlnCancelTx, useDlnOrderStatus } from "@/hooks/useDln";
 import { selectPrimaryWallet } from "@/lib/primaryWallet";
 import { shortenAddress } from "@/lib/utils";
 import { useTranslation } from "@/i18n";
-import type { CreateDepositResponse } from "@/types/bridge";
+import type { BridgeTransaction, CreateDepositResponse } from "@/types/bridge";
 import type {
   DepositAsset,
   DepositDrawerProps,
@@ -52,6 +52,7 @@ function DrawerContent({
   proxyAddress,
   onBalanceRefresh,
 }: DepositDrawerProps) {
+  const BRIDGE_STATUS_FALLBACK_WINDOW_MS = 30 * 60_000;
   const { locale } = useTranslation();
   const { user } = usePrivy();
   const { wallets } = useWallets();
@@ -66,6 +67,7 @@ function DrawerContent({
   const [isExecuting, setIsExecuting] = useState(false);
   const [executionError, setExecutionError] = useState("");
   const [executionTxHash, setExecutionTxHash] = useState("");
+  const [executionSubmittedAtMs, setExecutionSubmittedAtMs] = useState(0);
   const [submittedOrderId, setSubmittedOrderId] = useState("");
   const [isCancellingOrder, setIsCancellingOrder] = useState(false);
   const [cancelTxHash, setCancelTxHash] = useState("");
@@ -80,6 +82,7 @@ function DrawerContent({
   const [hasRefreshedBalance, setHasRefreshedBalance] = useState(false);
   const quoteRequestRef = useRef(0);
   const isExecutingRef = useRef(false);
+  const balanceRefreshRetryTimersRef = useRef<number[]>([]);
 
   const activeWallet = useMemo(
     () => selectPrimaryWallet(wallets, user?.wallet?.address),
@@ -114,10 +117,37 @@ function DrawerContent({
 
   const transferStatus = useBridgeStatus(transferAddress, Boolean(transferAddress && isOpen));
   const dlnStatus = useDlnOrderStatus(submittedOrderId, Boolean(submittedOrderId && isOpen));
+  const currentSubmissionTransaction = useMemo(() => {
+    const transactions = transferStatus.data?.transactions ?? [];
+    const normalizeHash = (hash?: string) => hash?.trim().toLowerCase();
+    const submittedTxHash = normalizeHash(executionTxHash);
+    if (submittedTxHash) {
+      const matchedByTxHash = transactions.find((tx: BridgeTransaction) =>
+        normalizeHash(tx.txHash) === submittedTxHash
+      );
+      if (matchedByTxHash) return matchedByTxHash;
+    }
+
+    const threshold = executionSubmittedAtMs > 0
+      ? executionSubmittedAtMs - BRIDGE_STATUS_FALLBACK_WINDOW_MS
+      : 0;
+    const fallbackCandidates = transactions.filter((tx: BridgeTransaction) => {
+      if (executionSubmittedAtMs <= 0) return true;
+      const createdTimeMs = Number(tx.createdTimeMs ?? 0);
+      return Number.isFinite(createdTimeMs) && createdTimeMs >= threshold;
+    });
+
+    return fallbackCandidates.reduce<BridgeTransaction | undefined>((latest, tx) => {
+      if (!latest) return tx;
+      const latestTime = Number(latest.createdTimeMs ?? 0);
+      const txTime = Number(tx.createdTimeMs ?? 0);
+      return txTime >= latestTime ? tx : latest;
+    }, undefined);
+  }, [executionSubmittedAtMs, executionTxHash, transferStatus.data?.transactions]);
   const depositBridgeComplete = Boolean(
     hasSubmittedTx &&
       transferAddress &&
-      transferStatus.latestStatus?.toUpperCase() === "COMPLETED"
+      currentSubmissionTransaction?.status?.toUpperCase() === "COMPLETED"
   );
 
   useEffect(() => {
@@ -133,6 +163,7 @@ function DrawerContent({
     isExecutingRef.current = false;
     setExecutionError("");
     setExecutionTxHash("");
+    setExecutionSubmittedAtMs(0);
     setSubmittedOrderId("");
     setIsCancellingOrder(false);
     setCancelTxHash("");
@@ -141,13 +172,30 @@ function DrawerContent({
   }, [isOpen]);
 
   useEffect(() => {
-    const completed =
-      transferStatus.latestStatus?.toUpperCase() === "COMPLETED";
-    if (completed && !hasRefreshedBalance) {
+    return () => {
+      balanceRefreshRetryTimersRef.current.forEach((timerId) =>
+        window.clearTimeout(timerId)
+      );
+      balanceRefreshRetryTimersRef.current = [];
+    };
+  }, []);
+
+  useEffect(() => {
+    if (depositBridgeComplete && !hasRefreshedBalance) {
       setHasRefreshedBalance(true);
       onBalanceRefresh?.();
+      // Bridge/CLOB 同步可能晚于首个 COMPLETED，短时补几次刷新避免顶部余额停留旧值。
+      const retryDelays = [8_000, 20_000];
+      balanceRefreshRetryTimersRef.current.forEach((timerId) =>
+        window.clearTimeout(timerId)
+      );
+      balanceRefreshRetryTimersRef.current = retryDelays.map((delayMs) =>
+        window.setTimeout(() => {
+          onBalanceRefresh?.();
+        }, delayMs)
+      );
     }
-  }, [hasRefreshedBalance, onBalanceRefresh, transferStatus.latestStatus]);
+  }, [depositBridgeComplete, hasRefreshedBalance, onBalanceRefresh]);
 
   useEffect(() => {
     if (!isOpen || !activeWallet) {
@@ -360,6 +408,7 @@ function DrawerContent({
     setExecutionError("");
     setQuoteWarning("");
     setExecutionTxHash("");
+    setExecutionSubmittedAtMs(0);
     setSubmittedOrderId("");
     setCancelTxHash("");
     setHasRefreshedBalance(false);
@@ -429,6 +478,7 @@ function DrawerContent({
       }
 
       const txHash = await sendPreparedEvmTx(ethereumProvider, activeSnapshot.tx);
+      setExecutionSubmittedAtMs(Date.now());
       setExecutionTxHash(txHash);
       if (activeSnapshot.orderId) {
         setSubmittedOrderId(activeSnapshot.orderId);

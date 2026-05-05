@@ -38,6 +38,17 @@ export async function buildExecutionSnapshot({
   const quotedAtMs = Date.now();
   const expiresAtMs = quotedAtMs + QUOTE_STALE_THRESHOLD_MS;
 
+  if (isPolygonUsdcEStraightTransfer(asset)) {
+    return snapshotFromPolygonUsdcEDirectTransfer({
+      amountUsd,
+      asset,
+      depositAddress,
+      sourceAmountBaseUnit,
+      quotedAtMs,
+      expiresAtMs,
+    });
+  }
+
   if (asset.chainId === String(POLYGON_CHAIN_ID)) {
     const swap = await getDlnSameChainSwap({
       chainId: asset.chainId,
@@ -81,6 +92,69 @@ export async function buildExecutionSnapshot({
     quotedAtMs,
     expiresAtMs,
   });
+}
+
+function snapshotFromPolygonUsdcEDirectTransfer({
+  amountUsd,
+  asset,
+  depositAddress,
+  sourceAmountBaseUnit,
+  quotedAtMs,
+  expiresAtMs,
+}: {
+  amountUsd: number;
+  asset: DepositAsset;
+  depositAddress: string;
+  sourceAmountBaseUnit: string;
+  quotedAtMs: number;
+  expiresAtMs: number;
+}): ExecutionSnapshot {
+  const transferInterface = new ethers.utils.Interface([
+    "function transfer(address to, uint256 amount) returns (bool)",
+  ]);
+  const tx: ExecutionTx = {
+    to: asset.tokenAddress,
+    data: transferInterface.encodeFunctionData("transfer", [
+      depositAddress,
+      sourceAmountBaseUnit,
+    ]),
+    value: "0",
+  };
+  const sendAmountFloat = Number(
+    ethers.utils.formatUnits(sourceAmountBaseUnit, asset.decimals)
+  );
+  const sendDisplay = `${formatCompactBalance(String(sendAmountFloat))} ${asset.symbol}`;
+
+  return {
+    kind: "direct-transfer",
+    asset,
+    amountUsd,
+    sourceAmountBaseUnit,
+    sendBaseUnit: sourceAmountBaseUnit,
+    sendAmountFloat,
+    sendDisplay,
+    sendUsd: amountUsd,
+    receiveBaseUnit: sourceAmountBaseUnit,
+    receiveDecimals: asset.decimals,
+    receiveDisplay: sendAmountFloat.toFixed(4),
+    receiveSymbol: asset.symbol,
+    receiveUsd: amountUsd,
+    networkCostUsd: undefined,
+    routeCostUsd: 0,
+    priceImpact: 0,
+    slippage: undefined,
+    estCheckoutTimeMs: undefined,
+    recipientAddress: depositAddress,
+    tx,
+    approveSpender: undefined,
+    fixedFeeDisplay: undefined,
+    fixedFeeUsd: undefined,
+    walletTotalDisplay: sendDisplay,
+    walletTotalUsd: amountUsd,
+    orderId: undefined,
+    quotedAtMs,
+    expiresAtMs,
+  };
 }
 
 function snapshotFromDlnQuote({
@@ -236,6 +310,14 @@ function snapshotFromSameChainSwap({
 
 function toDlnTokenAddress(asset: DepositAsset): string {
   return asset.isNative ? ZERO_ADDRESS : asset.tokenAddress;
+}
+
+function isPolygonUsdcEStraightTransfer(asset: DepositAsset): boolean {
+  return (
+    !asset.isNative &&
+    asset.chainId === String(POLYGON_CHAIN_ID) &&
+    asset.tokenAddress.toLowerCase() === ADDRESSES.USDCe.toLowerCase()
+  );
 }
 
 function getPolygonSameChainTokenOut(asset: DepositAsset): string {

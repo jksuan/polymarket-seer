@@ -28,7 +28,7 @@ export type DepositAsset = {
 
 export type DepositAddressMap = Partial<Record<BridgeAddressType, string>>;
 
-export type ExecutionKind = "idle" | "same-chain" | "cross-chain";
+export type ExecutionKind = "idle" | "direct-transfer" | "same-chain" | "cross-chain";
 
 export type ExecutionTx = DlnTx & {
   allowanceTarget?: string;

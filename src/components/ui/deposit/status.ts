@@ -23,6 +23,8 @@ export function getStatusText(locale: string, status?: string): string {
 export function getExecutionKindText(locale: string, kind: ExecutionKind): string {
   const zh = locale === "zh";
   switch (kind) {
+    case "direct-transfer":
+      return zh ? "USDC.e 直转入金" : "USDC.e direct transfer";
     case "same-chain":
       return zh ? "deBridge 同链兑换" : "deBridge same-chain swap";
     case "cross-chain":
