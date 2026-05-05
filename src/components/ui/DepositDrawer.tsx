@@ -52,7 +52,8 @@ function DrawerContent({
   proxyAddress,
   onBalanceRefresh,
 }: DepositDrawerProps) {
-  const BRIDGE_STATUS_FALLBACK_WINDOW_MS = 30 * 60_000;
+  const BRIDGE_STATUS_FALLBACK_BEFORE_SUBMIT_MS = 45_000;
+  const BRIDGE_STATUS_FALLBACK_AFTER_SUBMIT_MS = 10 * 60_000;
   const { locale } = useTranslation();
   const { user } = usePrivy();
   const { wallets } = useWallets();
@@ -66,6 +67,8 @@ function DrawerContent({
   const [isQuoting, setIsQuoting] = useState(false);
   const [isExecuting, setIsExecuting] = useState(false);
   const [executionError, setExecutionError] = useState("");
+  const [executionRiskWarning, setExecutionRiskWarning] = useState("");
+  const [hasAcknowledgedRiskWarning, setHasAcknowledgedRiskWarning] = useState(false);
   const [executionTxHash, setExecutionTxHash] = useState("");
   const [executionSubmittedAtMs, setExecutionSubmittedAtMs] = useState(0);
   const [submittedOrderId, setSubmittedOrderId] = useState("");
@@ -128,13 +131,17 @@ function DrawerContent({
       if (matchedByTxHash) return matchedByTxHash;
     }
 
-    const threshold = executionSubmittedAtMs > 0
-      ? executionSubmittedAtMs - BRIDGE_STATUS_FALLBACK_WINDOW_MS
+    const lowerBound = executionSubmittedAtMs > 0
+      ? executionSubmittedAtMs - BRIDGE_STATUS_FALLBACK_BEFORE_SUBMIT_MS
       : 0;
+    const upperBound = executionSubmittedAtMs > 0
+      ? executionSubmittedAtMs + BRIDGE_STATUS_FALLBACK_AFTER_SUBMIT_MS
+      : Number.POSITIVE_INFINITY;
     const fallbackCandidates = transactions.filter((tx: BridgeTransaction) => {
       if (executionSubmittedAtMs <= 0) return true;
       const createdTimeMs = Number(tx.createdTimeMs ?? 0);
-      return Number.isFinite(createdTimeMs) && createdTimeMs >= threshold;
+      if (!Number.isFinite(createdTimeMs) || createdTimeMs <= 0) return false;
+      return createdTimeMs >= lowerBound && createdTimeMs <= upperBound;
     });
 
     return fallbackCandidates.reduce<BridgeTransaction | undefined>((latest, tx) => {
@@ -149,6 +156,10 @@ function DrawerContent({
       transferAddress &&
       currentSubmissionTransaction?.status?.toUpperCase() === "COMPLETED"
   );
+  const hasHighWalletMismatchRisk = useMemo(
+    () => (snapshot ? isHighWalletMismatchRisk(snapshot) : false),
+    [snapshot]
+  );
 
   useEffect(() => {
     if (!isOpen) return;
@@ -162,6 +173,8 @@ function DrawerContent({
     setIsExecuting(false);
     isExecutingRef.current = false;
     setExecutionError("");
+    setExecutionRiskWarning("");
+    setHasAcknowledgedRiskWarning(false);
     setExecutionTxHash("");
     setExecutionSubmittedAtMs(0);
     setSubmittedOrderId("");
@@ -172,6 +185,11 @@ function DrawerContent({
   }, [isOpen]);
 
   useEffect(() => {
+    setHasAcknowledgedRiskWarning(false);
+    setExecutionRiskWarning("");
+  }, [snapshot?.quotedAtMs]);
+
+  useEffect(() => {
     return () => {
       balanceRefreshRetryTimersRef.current.forEach((timerId) =>
         window.clearTimeout(timerId)
@@ -179,6 +197,11 @@ function DrawerContent({
       balanceRefreshRetryTimersRef.current = [];
     };
   }, []);
+
+  useEffect(() => {
+    if (!isOpen || !transferAddress || !executionTxHash) return;
+    void transferStatus.mutate();
+  }, [executionTxHash, isOpen, transferAddress, transferStatus]);
 
   useEffect(() => {
     if (depositBridgeComplete && !hasRefreshedBalance) {
@@ -276,7 +299,6 @@ function DrawerContent({
           asset: snapshot.asset,
           depositAddress,
           proxyAddress,
-          walletAddress,
         });
         if (quoteRequestRef.current !== requestId) return;
         if (isExecutingRef.current) return;
@@ -376,7 +398,6 @@ function DrawerContent({
         asset: selectedAsset,
         depositAddress,
         proxyAddress,
-        walletAddress,
       });
       if (quoteRequestRef.current !== requestId) return;
       const receiveMinimumError = validateBridgeReceiveMinimum(next, locale);
@@ -406,6 +427,7 @@ function DrawerContent({
     quoteRequestRef.current += 1;
     setIsExecuting(true);
     setExecutionError("");
+    setExecutionRiskWarning("");
     setQuoteWarning("");
     setExecutionTxHash("");
     setExecutionSubmittedAtMs(0);
@@ -439,7 +461,6 @@ function DrawerContent({
           asset: activeSnapshot.asset,
           depositAddress,
           proxyAddress,
-          walletAddress,
         });
         if (quoteRequestRef.current !== requestId) {
           setExecutionError(locale === "zh"
@@ -463,6 +484,14 @@ function DrawerContent({
         setExecutionError(receiveMinimumError);
         return;
       }
+      if (isHighWalletMismatchRisk(activeSnapshot) && !hasAcknowledgedRiskWarning) {
+        setHasAcknowledgedRiskWarning(true);
+        setExecutionRiskWarning(locale === "zh"
+          ? "钱包签名页的接收金额可能与本页预计到账差异较大。请确认最终收款地址为 Polymarket 充值地址后，再次点击确认继续。"
+          : "Wallet receive preview may differ significantly from this quote. Verify the Polymarket deposit address, then tap confirm again to continue.");
+        return;
+      }
+      setExecutionRiskWarning("");
 
       const ethereumProvider = await getWalletEthereumProvider(activeWallet);
       await switchEvmChain(ethereumProvider, activeSnapshot.asset.chainId);
@@ -493,6 +522,7 @@ function DrawerContent({
     activeWallet,
     locale,
     proxyAddress,
+    hasAcknowledgedRiskWarning,
     selectedAsset,
     snapshot,
     transferAddress,
@@ -657,7 +687,9 @@ function DrawerContent({
                   depositBridgeComplete={depositBridgeComplete}
                   dlnStatus={dlnStatus.status}
                   error={executionError}
+                  executionRiskWarning={executionRiskWarning}
                   hasSubmittedTx={hasSubmittedTx}
+                  hasUnconfirmedRiskWarning={hasHighWalletMismatchRisk && !hasAcknowledgedRiskWarning}
                   isExecuting={isExecuting}
                   isQuoting={isQuoting}
                   isCancellingOrder={isCancellingOrder}
@@ -690,6 +722,16 @@ function DrawerContent({
       )}
     </AnimatePresence>
   );
+}
+
+function isHighWalletMismatchRisk(snapshot: ExecutionSnapshot): boolean {
+  if (snapshot.kind === "direct-transfer") return false;
+  const sendUsd = snapshot.sendUsd;
+  const receiveUsd = snapshot.receiveUsd;
+  if (!Number.isFinite(sendUsd) || !Number.isFinite(receiveUsd)) return false;
+  if ((sendUsd ?? 0) < 5) return false;
+  const diffRatio = Math.abs((sendUsd ?? 0) - (receiveUsd ?? 0)) / (sendUsd ?? 1);
+  return diffRatio > 0.2;
 }
 
 export function DepositDrawer(props: DepositDrawerProps) {

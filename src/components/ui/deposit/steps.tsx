@@ -181,6 +181,32 @@ export function AssetStep({
           </button>
         );
       })}
+      {!assetsLoading && displayAssets.length > 0 && (
+        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-xs leading-relaxed text-white/55">
+          {locale === "zh"
+            ? "仅展示支持直充的资产。若你要充值的资产不在列表，请先桥接或兑换为支持资产后再充值。"
+            : "Only assets that support direct deposit are listed. If your asset is missing, bridge or swap to a supported asset first."}
+          <div className="mt-2 flex items-center gap-2 text-[11px]">
+            <a
+              className="text-[#7ad4ff] underline-offset-2 hover:underline"
+              href="https://app.debridge.finance/"
+              rel="noreferrer"
+              target="_blank"
+            >
+              deBridge
+            </a>
+            <span className="text-white/30">{"•"}</span>
+            <a
+              className="text-[#7ad4ff] underline-offset-2 hover:underline"
+              href="https://app.across.to/"
+              rel="noreferrer"
+              target="_blank"
+            >
+              Across
+            </a>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -320,7 +346,9 @@ export function ConfirmStep({
   depositBridgeComplete,
   dlnStatus,
   error,
+  executionRiskWarning,
   hasSubmittedTx,
+  hasUnconfirmedRiskWarning,
   isCancellingOrder,
   isExecuting,
   isQuoting,
@@ -336,7 +364,9 @@ export function ConfirmStep({
   depositBridgeComplete: boolean;
   dlnStatus?: string;
   error: string;
+  executionRiskWarning: string;
   hasSubmittedTx: boolean;
+  hasUnconfirmedRiskWarning: boolean;
   isCancellingOrder: boolean;
   isExecuting: boolean;
   isQuoting: boolean;
@@ -359,6 +389,8 @@ export function ConfirmStep({
       ? locale === "zh" ? "等待钱包确认..." : "Waiting for wallet..."
       : depositBridgeComplete
         ? locale === "zh" ? "充值成功" : "Deposit complete"
+        : hasUnconfirmedRiskWarning
+          ? locale === "zh" ? "再次确认并继续" : "Confirm again to continue"
         : hasSubmittedTx
           ? locale === "zh" ? "已提交" : "Submitted"
           : locale === "zh" ? "确认订单" : "Confirm Order";
@@ -389,8 +421,8 @@ export function ConfirmStep({
   const youSendText = snapshot.fixedFeeDisplay ? walletTotalText : `${snapshot.sendDisplay}${sendUsdText}`;
   const walletPromptText = snapshot.kind === "direct-transfer"
     ? (locale === "zh"
-        ? "本次为 USDC.e 直转到 Polymarket 充值地址，钱包弹窗中的发送金额应与 You send 接近。"
-        : "This is a direct USDC.e transfer to your Polymarket deposit address. Wallet send amount should be close to You send.")
+        ? "本次将直接转账到 Polymarket 充值地址，钱包弹窗中的发送金额应与 You send 接近。"
+        : "This is a direct transfer to your Polymarket deposit address. Wallet send amount should be close to You send.")
     : snapshot.asset.isNative
     ? (locale === "zh"
         ? `You send 包含下方的 deBridge fixed fee，钱包弹窗可能显示 ${walletTotalText}。`
@@ -525,6 +557,11 @@ export function ConfirmStep({
       {quoteWarning && (
         <div className="rounded-2xl border border-[#ffd166]/20 bg-[#ffd166]/10 p-3 text-[11px] leading-relaxed text-[#ffe6a6]">
           {quoteWarning}
+        </div>
+      )}
+      {executionRiskWarning && (
+        <div className="rounded-2xl border border-[#ffd166]/20 bg-[#ffd166]/10 p-3 text-[11px] leading-relaxed text-[#ffe6a6]">
+          {executionRiskWarning}
         </div>
       )}
 

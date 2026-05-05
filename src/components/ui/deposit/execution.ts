@@ -1,14 +1,9 @@
 import { ethers } from "ethers";
-import { getDlnQuote, getDlnSameChainSwap } from "@/hooks/useDln";
-import { ADDRESSES, POLYGON_CHAIN_ID } from "@/lib/constants";
-import type { DlnQuoteResponse, DlnSameChainSwapResponse } from "@/types/dln";
-import { estimateBaseUnitForUsd, getNativeFeeSymbol } from "./assets";
+import { estimateBaseUnitForUsd } from "./assets";
 import {
-  POLYGON_USDC_ADDRESS,
   QUOTE_PRICE_CHANGE_THRESHOLD,
   QUOTE_STALE_THRESHOLD_MS,
   SUPPORTED_DLN_EVM_CHAIN_IDS,
-  ZERO_ADDRESS,
   getConnectedMinDepositUsd,
 } from "./constants";
 import { formatCompactBalance } from "./format";
@@ -19,13 +14,11 @@ export async function buildExecutionSnapshot({
   asset,
   depositAddress,
   proxyAddress,
-  walletAddress,
 }: {
   amountUsd: number;
   asset: DepositAsset;
   depositAddress: string;
   proxyAddress: string;
-  walletAddress: string;
 }): Promise<ExecutionSnapshot> {
   const sourceAmountBaseUnit = await estimateBaseUnitForUsd({
     amountUsd,
@@ -38,63 +31,17 @@ export async function buildExecutionSnapshot({
   const quotedAtMs = Date.now();
   const expiresAtMs = quotedAtMs + QUOTE_STALE_THRESHOLD_MS;
 
-  if (isPolygonUsdcEStraightTransfer(asset)) {
-    return snapshotFromPolygonUsdcEDirectTransfer({
-      amountUsd,
-      asset,
-      depositAddress,
-      sourceAmountBaseUnit,
-      quotedAtMs,
-      expiresAtMs,
-    });
-  }
-
-  if (asset.chainId === String(POLYGON_CHAIN_ID)) {
-    const swap = await getDlnSameChainSwap({
-      chainId: asset.chainId,
-      tokenIn: toDlnTokenAddress(asset),
-      tokenInAmount: sourceAmountBaseUnit,
-      tokenOut: getPolygonSameChainTokenOut(asset),
-      tokenOutRecipient: depositAddress,
-      senderAddress: walletAddress,
-      slippage: "auto",
-    });
-    return snapshotFromSameChainSwap({
-      amountUsd,
-      asset,
-      depositAddress,
-      sourceAmountBaseUnit,
-      swap,
-      quotedAtMs,
-      expiresAtMs,
-    });
-  }
-
-  const dlnQuote = await getDlnQuote({
-    srcChainId: asset.chainId,
-    srcChainTokenIn: toDlnTokenAddress(asset),
-    srcChainTokenInAmount: sourceAmountBaseUnit,
-    dstChainId: String(POLYGON_CHAIN_ID),
-    dstChainTokenOut: POLYGON_USDC_ADDRESS,
-    dstChainTokenOutAmount: "auto",
-    dstChainTokenOutRecipient: depositAddress,
-    srcChainOrderAuthorityAddress: walletAddress,
-    dstChainOrderAuthorityAddress: walletAddress,
-    senderAddress: walletAddress,
-    prependOperatingExpenses: true,
-  });
-  return snapshotFromDlnQuote({
+  return snapshotFromDirectTransfer({
     amountUsd,
     asset,
     depositAddress,
     sourceAmountBaseUnit,
-    dlnQuote,
     quotedAtMs,
     expiresAtMs,
   });
 }
 
-function snapshotFromPolygonUsdcEDirectTransfer({
+function snapshotFromDirectTransfer({
   amountUsd,
   asset,
   depositAddress,
@@ -109,17 +56,19 @@ function snapshotFromPolygonUsdcEDirectTransfer({
   quotedAtMs: number;
   expiresAtMs: number;
 }): ExecutionSnapshot {
-  const transferInterface = new ethers.utils.Interface([
-    "function transfer(address to, uint256 amount) returns (bool)",
-  ]);
-  const tx: ExecutionTx = {
-    to: asset.tokenAddress,
-    data: transferInterface.encodeFunctionData("transfer", [
-      depositAddress,
-      sourceAmountBaseUnit,
-    ]),
-    value: "0",
-  };
+  const tx: ExecutionTx = asset.isNative
+    ? {
+      to: depositAddress,
+      data: "0x",
+      value: sourceAmountBaseUnit,
+    }
+    : {
+      to: asset.tokenAddress,
+      data: new ethers.utils.Interface([
+        "function transfer(address to, uint256 amount) returns (bool)",
+      ]).encodeFunctionData("transfer", [depositAddress, sourceAmountBaseUnit]),
+      value: "0",
+    };
   const sendAmountFloat = Number(
     ethers.utils.formatUnits(sourceAmountBaseUnit, asset.decimals)
   );
@@ -135,9 +84,9 @@ function snapshotFromPolygonUsdcEDirectTransfer({
     sendDisplay,
     sendUsd: amountUsd,
     receiveBaseUnit: sourceAmountBaseUnit,
-    receiveDecimals: asset.decimals,
-    receiveDisplay: sendAmountFloat.toFixed(4),
-    receiveSymbol: asset.symbol,
+    receiveDecimals: 6,
+    receiveDisplay: amountUsd.toFixed(4),
+    receiveSymbol: "pUSD",
     receiveUsd: amountUsd,
     networkCostUsd: undefined,
     routeCostUsd: 0,
@@ -155,208 +104,6 @@ function snapshotFromPolygonUsdcEDirectTransfer({
     quotedAtMs,
     expiresAtMs,
   };
-}
-
-function snapshotFromDlnQuote({
-  amountUsd,
-  asset,
-  depositAddress,
-  sourceAmountBaseUnit,
-  dlnQuote,
-  quotedAtMs,
-  expiresAtMs,
-}: {
-  amountUsd: number;
-  asset: DepositAsset;
-  depositAddress: string;
-  sourceAmountBaseUnit: string;
-  dlnQuote: DlnQuoteResponse;
-  quotedAtMs: number;
-  expiresAtMs: number;
-}): ExecutionSnapshot {
-  const tx: ExecutionTx = {
-    to: dlnQuote.tx.to,
-    data: dlnQuote.tx.data,
-    value: dlnQuote.tx.value || "0",
-    allowanceTarget: (dlnQuote.tx as ExecutionTx).allowanceTarget,
-  };
-  const srcIn = dlnQuote.estimation.srcChainTokenIn;
-  const srcAmountFloat = Number(ethers.utils.formatUnits(srcIn.amount, asset.decimals));
-  const txValueFloat = Number(ethers.utils.formatUnits(tx.value, asset.decimals));
-  const sendBaseUnit = asset.isNative ? tx.value : srcIn.amount;
-  const sendAmountFloat = asset.isNative ? txValueFloat : srcAmountFloat;
-  const unitUsd = srcAmountFloat > 0 && srcIn.approximateUsdValue
-    ? srcIn.approximateUsdValue / srcAmountFloat
-    : 0;
-  const sendUsd = unitUsd > 0 ? sendAmountFloat * unitUsd : srcIn.approximateUsdValue;
-  const dst = dlnQuote.estimation.dstChainTokenOut;
-  const receiveDecimals = dst.decimals ?? 6;
-  const receiveFloat = Number(ethers.utils.formatUnits(dst.amount, receiveDecimals));
-  const fixedFee = getFixedFeeBreakdown({
-    asset,
-    fixedFeeBaseUnit: dlnQuote.fixFee,
-    unitUsd,
-  });
-  const sendDisplay = `${formatCompactBalance(String(sendAmountFloat))} ${asset.symbol}`;
-  const routeCostUsd = computeRouteCostUsd(srcIn.approximateUsdValue, dst.approximateUsdValue);
-
-  return {
-    kind: "cross-chain",
-    asset,
-    amountUsd,
-    sourceAmountBaseUnit,
-    sendBaseUnit,
-    sendAmountFloat,
-    sendDisplay,
-    sendUsd,
-    receiveBaseUnit: dst.amount,
-    receiveDecimals,
-    receiveDisplay: receiveFloat.toFixed(4),
-    receiveSymbol: dst.symbol ?? "USDC",
-    receiveUsd: dst.approximateUsdValue,
-    networkCostUsd: dlnQuote.estimatedTransactionFee?.approximateUsdValue,
-    routeCostUsd,
-    priceImpact: typeof dlnQuote.usdPriceImpact === "number" ? Math.abs(dlnQuote.usdPriceImpact) : undefined,
-    slippage: dlnQuote.estimation.recommendedSlippage,
-    estCheckoutTimeMs: dlnQuote.order?.approximateFulfillmentDelay
-      ? dlnQuote.order.approximateFulfillmentDelay * 1000
-      : undefined,
-    recipientAddress: depositAddress,
-    tx,
-    approveSpender: tx.allowanceTarget || tx.to,
-    fixedFeeDisplay: fixedFee.display,
-    fixedFeeUsd: fixedFee.usd,
-    walletTotalDisplay: asset.isNative
-      ? `${formatCompactBalance(String(txValueFloat))} ${asset.symbol}`
-      : fixedFee.display
-        ? `${sendDisplay} + ${fixedFee.display}`
-        : sendDisplay,
-    walletTotalUsd: asset.isNative && unitUsd > 0 ? txValueFloat * unitUsd : undefined,
-    orderId: dlnQuote.orderId,
-    quotedAtMs,
-    expiresAtMs,
-  };
-}
-
-function snapshotFromSameChainSwap({
-  amountUsd,
-  asset,
-  depositAddress,
-  sourceAmountBaseUnit,
-  swap,
-  quotedAtMs,
-  expiresAtMs,
-}: {
-  amountUsd: number;
-  asset: DepositAsset;
-  depositAddress: string;
-  sourceAmountBaseUnit: string;
-  swap: DlnSameChainSwapResponse;
-  quotedAtMs: number;
-  expiresAtMs: number;
-}): ExecutionSnapshot {
-  const tx: ExecutionTx = {
-    to: swap.tx.to,
-    data: swap.tx.data,
-    value: swap.tx.value || "0",
-    allowanceTarget: (swap.tx as ExecutionTx).allowanceTarget,
-  };
-  const srcAmountFloat = Number(ethers.utils.formatUnits(swap.tokenIn.amount, asset.decimals));
-  const txValueFloat = Number(ethers.utils.formatUnits(tx.value, asset.decimals));
-  const sendBaseUnit = asset.isNative ? tx.value : swap.tokenIn.amount;
-  const sendAmountFloat = asset.isNative ? txValueFloat : srcAmountFloat;
-  const unitUsd = srcAmountFloat > 0 && swap.tokenIn.approximateUsdValue
-    ? swap.tokenIn.approximateUsdValue / srcAmountFloat
-    : 0;
-  const sendUsd = unitUsd > 0 ? sendAmountFloat * unitUsd : swap.tokenIn.approximateUsdValue;
-  const receiveDecimals = swap.tokenOut.decimals ?? 6;
-  const receiveFloat = Number(ethers.utils.formatUnits(swap.tokenOut.amount, receiveDecimals));
-  const routeCostUsd = computeRouteCostUsd(swap.tokenIn.approximateUsdValue, swap.tokenOut.approximateUsdValue);
-  const sendDisplay = `${formatCompactBalance(String(sendAmountFloat))} ${asset.symbol}`;
-
-  return {
-    kind: "same-chain",
-    asset,
-    amountUsd,
-    sourceAmountBaseUnit,
-    sendBaseUnit,
-    sendAmountFloat,
-    sendDisplay,
-    sendUsd,
-    receiveBaseUnit: swap.tokenOut.amount,
-    receiveDecimals,
-    receiveDisplay: receiveFloat.toFixed(4),
-    receiveSymbol: swap.tokenOut.symbol ?? "USDC",
-    receiveUsd: swap.tokenOut.approximateUsdValue,
-    networkCostUsd: swap.estimatedTransactionFee?.approximateUsdValue,
-    routeCostUsd,
-    priceImpact: getBestAggregatorPriceDrop(swap),
-    slippage: swap.recommendedSlippage ?? swap.slippage,
-    estCheckoutTimeMs: undefined,
-    recipientAddress: depositAddress,
-    tx,
-    approveSpender: tx.allowanceTarget || tx.to,
-    fixedFeeDisplay: undefined,
-    fixedFeeUsd: undefined,
-    walletTotalDisplay: asset.isNative
-      ? `${formatCompactBalance(String(txValueFloat))} ${asset.symbol}`
-      : sendDisplay,
-    walletTotalUsd: asset.isNative && unitUsd > 0 ? txValueFloat * unitUsd : undefined,
-    orderId: undefined,
-    quotedAtMs,
-    expiresAtMs,
-  };
-}
-
-function toDlnTokenAddress(asset: DepositAsset): string {
-  return asset.isNative ? ZERO_ADDRESS : asset.tokenAddress;
-}
-
-function isPolygonUsdcEStraightTransfer(asset: DepositAsset): boolean {
-  return (
-    !asset.isNative &&
-    asset.chainId === String(POLYGON_CHAIN_ID) &&
-    asset.tokenAddress.toLowerCase() === ADDRESSES.USDCe.toLowerCase()
-  );
-}
-
-function getPolygonSameChainTokenOut(asset: DepositAsset): string {
-  return asset.tokenAddress.toLowerCase() === POLYGON_USDC_ADDRESS.toLowerCase()
-    ? ADDRESSES.USDCe
-    : POLYGON_USDC_ADDRESS;
-}
-
-function getFixedFeeBreakdown({
-  asset,
-  fixedFeeBaseUnit,
-  unitUsd,
-}: {
-  asset: DepositAsset;
-  fixedFeeBaseUnit?: string;
-  unitUsd: number;
-}): { display?: string; usd?: number } {
-  if (!fixedFeeBaseUnit || Number(fixedFeeBaseUnit) <= 0) return {};
-
-  const decimals = asset.isNative ? asset.decimals : 18;
-  const symbol = asset.isNative ? asset.symbol : getNativeFeeSymbol(asset.chainId);
-  const feeFloat = Number(ethers.utils.formatUnits(fixedFeeBaseUnit, decimals));
-  const usd = asset.isNative && unitUsd > 0 ? feeFloat * unitUsd : undefined;
-
-  return {
-    display: `${formatCompactBalance(String(feeFloat))} ${symbol}`,
-    usd,
-  };
-}
-
-function computeRouteCostUsd(inputUsd?: number, outputUsd?: number): number | undefined {
-  if (inputUsd === undefined || outputUsd === undefined) return undefined;
-  const diff = inputUsd - outputUsd;
-  return diff > 0 ? diff : 0;
-}
-
-function getBestAggregatorPriceDrop(swap: DlnSameChainSwapResponse): number | undefined {
-  const best = swap.comparedAggregators?.[0];
-  return best?.priceDrop;
 }
 
 export function isQuotePriceChanged(prev: ExecutionSnapshot, next: ExecutionSnapshot): boolean {
