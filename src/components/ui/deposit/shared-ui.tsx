@@ -47,12 +47,10 @@ export function TokenIcon({
   const imageUrl = iconUrl || fallbackUrl;
   const chainIconUrl = chainId ? CHAIN_ICON_URLS[chainId] : undefined;
   const isPolymarketUsd = symbol.toUpperCase() === "PUSD";
-  const isEth = symbol.toUpperCase() === "ETH";
 
   const outerSize = compact ? "h-5 w-5" : "h-10 w-10";
   const innerPusd = compact ? "h-4 w-4" : "h-8 w-8";
-  const innerEth = compact ? "h-5 w-5" : "h-10 w-10";
-  const innerDefault = compact ? "h-4 w-4" : "h-8 w-8";
+  const innerToken = compact ? "h-5 w-5" : "h-10 w-10";
   const badgeClass = compact
     ? "absolute -bottom-px -right-px h-2.5 w-2.5 rounded-full border border-[#151922] bg-[#151922] bg-cover bg-center"
     : "absolute -bottom-1 -right-1 h-[18px] w-[18px] rounded-full border-2 border-[#151922] bg-[#151922] bg-cover bg-center";
@@ -68,7 +66,7 @@ export function TokenIcon({
           <span
             aria-label={symbol}
             className={`rounded-full bg-center bg-no-repeat ${
-              isPolymarketUsd ? `${innerPusd} bg-contain` : isEth ? `${innerEth} bg-cover` : `${innerDefault} bg-cover`
+              isPolymarketUsd ? `${innerPusd} bg-contain` : `${innerToken} bg-cover`
             }`}
             role="img"
             style={{ backgroundImage: `url(${imageUrl})` }}
