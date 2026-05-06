@@ -84,6 +84,8 @@ function DrawerContent({
   const [assetUsdValues, setAssetUsdValues] = useState<Record<string, number>>({});
   const [walletBalancesLoading, setWalletBalancesLoading] = useState(false);
   const [hasRefreshedBalance, setHasRefreshedBalance] = useState(false);
+  /** 报价自动刷新失败时递增，用于重新挂载确认页定时器（避免 snapshot 未变导致不再调度） */
+  const [quoteAutoRefreshNonce, setQuoteAutoRefreshNonce] = useState(0);
   const quoteRequestRef = useRef(0);
   const isExecutingRef = useRef(false);
   const balanceRefreshRetryTimersRef = useRef<number[]>([]);
@@ -183,6 +185,7 @@ function DrawerContent({
     setCancelTxHash("");
     setTransferError("");
     setCopied(false);
+    setQuoteAutoRefreshNonce(0);
   }, [isOpen]);
 
   useEffect(() => {
@@ -279,9 +282,12 @@ function DrawerContent({
     if (step !== "confirm" || !snapshot || isExecuting || hasSubmittedTx) {
       return;
     }
+    if (isQuoting) {
+      return;
+    }
 
     const remain = snapshot.expiresAtMs - Date.now();
-    const delay = Math.max(1_000, remain);
+    const delay = remain > 0 ? Math.max(1_000, remain) : 1_000;
 
     const timeout = window.setTimeout(async () => {
       if (isExecutingRef.current) return;
@@ -309,6 +315,7 @@ function DrawerContent({
           setQuoteWarning(locale === "zh"
             ? "报价可能已过期，提交时会再次刷新。"
             : "Quote may be stale. It will refresh again before submission.");
+          setQuoteAutoRefreshNonce((n) => n + 1);
         }
       } finally {
         if (quoteRequestRef.current === requestId) {
@@ -320,7 +327,18 @@ function DrawerContent({
     return () => {
       window.clearTimeout(timeout);
     };
-  }, [hasSubmittedTx, isExecuting, locale, proxyAddress, snapshot, step, transferAddress, walletAddress]);
+  }, [
+    hasSubmittedTx,
+    isExecuting,
+    isQuoting,
+    locale,
+    proxyAddress,
+    quoteAutoRefreshNonce,
+    snapshot,
+    step,
+    transferAddress,
+    walletAddress,
+  ]);
 
   const handleCopy = async (value: string) => {
     if (!value) return;
@@ -634,6 +652,7 @@ function DrawerContent({
                 </div>
                 {step === "confirm" && snapshot && !hasSubmittedTx ? (
                   <QuoteCountdownRing
+                    key={`${snapshot.quotedAtMs}-${snapshot.expiresAtMs}-${quoteAutoRefreshNonce}`}
                     expiresAtMs={snapshot.expiresAtMs}
                     locale={locale}
                     quotedAtMs={snapshot.quotedAtMs}
