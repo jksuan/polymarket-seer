@@ -28,7 +28,11 @@ import { formatExecutionError } from "./deposit/errors";
 import { formatAmountUsdInput, parseAmountUsd, sanitizeAmountUsdInput } from "./deposit/format";
 import { getStatusText } from "./deposit/status";
 import { QuoteCountdownRing } from "./deposit/quote-countdown-ring";
-import { AmountStep, AssetStep, ConfirmStep, HomeStep, TransferStep } from "./deposit/steps";
+import { HomeStep } from "./deposit/connected/HomeStep";
+import { AssetStep } from "./deposit/connected/AssetStep";
+import { AmountStep } from "./deposit/connected/AmountStep";
+import { ConfirmStep } from "./deposit/confirm/ConfirmStep";
+import { TransferStep } from "./deposit/transfer/TransferStep";
 
 type PrivyLoginIdentity = {
   email?: { address?: string | null } | null;
