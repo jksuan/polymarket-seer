@@ -11,6 +11,19 @@ import {
 import QRCode from "react-qr-code";
 import { TokenIcon } from "../shared-ui";
 
+const KNOWN_CHAIN_ICON_URLS: Record<string, string> = {
+  "1": "/ethereum-eth.svg",
+  "10": "https://assets.coingecko.com/coins/images/25244/small/Optimism.png",
+  "56": "https://assets.coingecko.com/coins/images/825/small/bnb-icon2_2x.png",
+  "137": "https://assets.coingecko.com/coins/images/32440/small/polygon.png",
+  "8453": "https://assets.coingecko.com/coins/images/33079/small/base.png",
+  "42161": "https://assets.coingecko.com/coins/images/16547/small/arb.jpg",
+  solana: "https://assets.coingecko.com/coins/images/4128/small/solana.png",
+  tron: "https://assets.coingecko.com/coins/images/1094/small/tron-logo.png",
+  bitcoin: "https://assets.coingecko.com/coins/images/1/small/bitcoin.png",
+  bsc: "https://assets.coingecko.com/coins/images/825/small/bnb-icon2_2x.png",
+};
+
 export function TransferStep({
   assets,
   chainOptions,
@@ -121,7 +134,10 @@ export function TransferStep({
             onClick={toggleChainOpen}
             className="flex h-11 w-full items-center justify-between rounded-2xl border border-white/10 bg-white/[0.04] px-3 text-left"
           >
-            <span className="text-sm font-black text-white">{selectedChain?.chainName ?? "--"}</span>
+            <span className="flex min-w-0 items-center gap-2">
+              <ChainIcon chainId={selectedChain?.chainId} chainName={selectedChain?.chainName} />
+              <span className="truncate text-sm font-black text-white">{selectedChain?.chainName ?? "--"}</span>
+            </span>
             <ChevronDown className="text-white/40" size={16} />
           </button>
           {chainOpen && (
@@ -133,7 +149,8 @@ export function TransferStep({
                   onClick={() => handleSelectChain(chain.chainId)}
                   className="flex w-full items-center justify-between gap-3 rounded-xl px-2 py-2 hover:bg-white/5"
                 >
-                  <div className="min-w-0 flex-1 text-left">
+                  <div className="flex min-w-0 flex-1 items-center gap-2 text-left">
+                    <ChainIcon chainId={chain.chainId} chainName={chain.chainName} />
                     <p className="truncate text-[0.82rem] font-normal text-white">{chain.chainName}</p>
                   </div>
                   <p className="shrink-0 text-[0.82rem] font-normal text-white/50">
@@ -267,5 +284,45 @@ function getChainMinUsd(chainName: string | undefined, chainId: string | undefin
   if (!baseMin) return isEthereum || isTron || isBitcoin ? 10 : 3;
   const extra = isEthereum || isTron || isBitcoin ? 3 : 1;
   return Math.ceil(baseMin + extra);
+}
+
+function getChainIconUrl(chainName?: string, chainId?: string): string | undefined {
+  const id = (chainId || "").trim();
+  if (id && KNOWN_CHAIN_ICON_URLS[id]) return KNOWN_CHAIN_ICON_URLS[id];
+
+  const normalized = (chainName || "").toLowerCase();
+  if (normalized.includes("bitcoin")) return KNOWN_CHAIN_ICON_URLS.bitcoin;
+  if (normalized.includes("solana")) return KNOWN_CHAIN_ICON_URLS.solana;
+  if (normalized.includes("tron")) return KNOWN_CHAIN_ICON_URLS.tron;
+  if (normalized.includes("optimism")) return KNOWN_CHAIN_ICON_URLS["10"];
+  if (normalized.includes("arbitrum")) return KNOWN_CHAIN_ICON_URLS["42161"];
+  if (normalized.includes("base")) return KNOWN_CHAIN_ICON_URLS["8453"];
+  if (normalized.includes("polygon")) return KNOWN_CHAIN_ICON_URLS["137"];
+  if (normalized.includes("bnb") || normalized.includes("bsc")) return KNOWN_CHAIN_ICON_URLS.bsc;
+  if (normalized.includes("ethereum")) return KNOWN_CHAIN_ICON_URLS["1"];
+  return undefined;
+}
+
+function ChainIcon({ chainId, chainName }: { chainId?: string; chainName?: string }) {
+  const iconUrl = getChainIconUrl(chainName, chainId);
+  if (iconUrl) {
+    return (
+      <span
+        aria-hidden="true"
+        className="h-4 w-4 shrink-0 rounded-full bg-cover bg-center bg-no-repeat"
+        style={{ backgroundImage: `url(${iconUrl})` }}
+      />
+    );
+  }
+
+  const initial = (chainName || "?").slice(0, 1).toUpperCase();
+  return (
+    <span
+      aria-hidden="true"
+      className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-white/20 text-[9px] font-bold text-white/90"
+    >
+      {initial}
+    </span>
+  );
 }
 
