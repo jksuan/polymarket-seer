@@ -25,6 +25,7 @@ export function TransferStep({
   onChainChange,
   onCopy,
   onCreate,
+  onRetryPolling,
   selectedAssetId,
   selectedChainId,
   statusText,
@@ -41,6 +42,7 @@ export function TransferStep({
   onChainChange: (chainId: string) => void;
   onCopy: (value: string) => void;
   onCreate: () => void;
+  onRetryPolling?: () => void;
   selectedAssetId: string;
   selectedChainId: string;
   statusText: string;
@@ -149,7 +151,18 @@ export function TransferStep({
       {error && (
         <div className="flex gap-3 rounded-2xl border border-[#ff6b6b]/20 bg-[#ff6b6b]/10 p-4">
           <AlertTriangle className="mt-0.5 shrink-0 text-[#ff6b6b]" size={18} />
-          <p className="text-xs leading-relaxed text-[#ffcad4]/80">{error}</p>
+          <div className="flex min-w-0 flex-1 items-start justify-between gap-3">
+            <p className="min-w-0 flex-1 text-xs leading-relaxed text-[#ffcad4]/80">{error}</p>
+            {transferAddress && onRetryPolling && !isCreating ? (
+              <button
+                type="button"
+                onClick={onRetryPolling}
+                className="shrink-0 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-[11px] font-black text-white active:scale-[0.98]"
+              >
+                {locale === "zh" ? "重试检测" : "Retry"}
+              </button>
+            ) : null}
+          </div>
         </div>
       )}
 
@@ -159,6 +172,16 @@ export function TransferStep({
             <div className="mb-5 rounded-2xl bg-white p-3">
               <QRCode value={transferAddress} size={160} viewBox="0 0 160 160" />
             </div>
+
+            <div className="mb-3 flex w-full items-center justify-between">
+              <p className="text-xs font-bold text-white/70">
+                {locale === "zh" ? "收款地址" : "Your deposit address"}
+              </p>
+              <span className="text-[11px] font-semibold text-white/50">
+                {locale === "zh" ? "条款适用" : "Terms apply"}
+              </span>
+            </div>
+
             <button
               onClick={() => onCopy(transferAddress)}
               className="flex w-full items-center justify-between rounded-xl border border-white/10 bg-black/40 p-3 active:scale-[0.98]"
@@ -199,12 +222,38 @@ export function TransferStep({
       )}
 
       {!transferAddress && (
-        <div className="flex min-h-[220px] flex-col items-center justify-center rounded-3xl border border-white/10 bg-white/[0.03] p-6">
-          <Loader2 className="animate-spin text-white/60" size={22} />
-          <p className="mt-3 text-xs font-semibold text-white/50">
-            {locale === "zh" ? "正在生成收款地址..." : "Generating deposit address..."}
-          </p>
-        </div>
+        <>
+          {isCreating ? (
+            <div className="flex min-h-[220px] flex-col items-center justify-center rounded-3xl border border-white/10 bg-white/[0.03] p-6">
+              <Loader2 className="animate-spin text-white/60" size={22} />
+              <p className="mt-3 text-xs font-semibold text-white/50">
+                {locale === "zh" ? "正在生成收款地址..." : "Generating deposit address..."}
+              </p>
+            </div>
+          ) : error ? (
+            <div className="flex min-h-[220px] flex-col items-center justify-center rounded-3xl border border-[#ff6b6b]/20 bg-[#ff6b6b]/10 p-6">
+              <AlertTriangle className="text-[#ff6b6b]" size={22} />
+              <p className="mt-3 text-xs font-semibold text-[#ffcad4]">
+                {locale === "zh" ? "生成失败，请重试" : "Failed to generate. Please retry"}
+              </p>
+              <button
+                type="button"
+                onClick={onCreate}
+                disabled={isCreating}
+                className="mt-4 flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-[#159bff] text-sm font-black text-white active:scale-[0.98] disabled:opacity-50"
+              >
+                {locale === "zh" ? "重试生成" : "Retry"}
+              </button>
+            </div>
+          ) : (
+            <div className="flex min-h-[220px] flex-col items-center justify-center rounded-3xl border border-white/10 bg-white/[0.03] p-6">
+              <Loader2 className="animate-spin text-white/60" size={22} />
+              <p className="mt-3 text-xs font-semibold text-white/50">
+                {locale === "zh" ? "正在生成收款地址..." : "Generating deposit address..."}
+              </p>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

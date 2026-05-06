@@ -138,6 +138,8 @@ function DrawerContent({
 
   const transferStatus = useBridgeStatus(transferAddress, Boolean(transferAddress && isOpen));
   const dlnStatus = useDlnOrderStatus(submittedOrderId, Boolean(submittedOrderId && isOpen));
+  const bridgePollingErrorMessage = transferStatus.error?.message ?? "";
+  const mergedTransferError = transferError || bridgePollingErrorMessage;
   const currentSubmissionTransaction = useMemo(() => {
     const transactions = transferStatus.data?.transactions ?? [];
     const normalizeHash = (hash?: string) => hash?.trim().toLowerCase();
@@ -789,13 +791,14 @@ function DrawerContent({
                   chainOptions={transferChainOptions}
                   copied={copied}
                   depositResponse={depositResponse}
-                  error={transferError}
+                  error={mergedTransferError}
                   isCreating={isCreatingTransferAddress}
                   locale={locale}
                   onAssetChange={setSelectedTransferAssetId}
                   onChainChange={setSelectedTransferChainId}
                   onCopy={handleCopy}
                   onCreate={handleCreateTransferAddress}
+                  onRetryPolling={() => void transferStatus.mutate()}
                   selectedAssetId={selectedTransferAssetId}
                   selectedChainId={selectedTransferChainId}
                   statusText={getStatusText(locale, transferStatus.latestStatus)}

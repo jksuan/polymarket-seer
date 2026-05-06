@@ -366,6 +366,7 @@ export function TransferStep({
   onChainChange,
   onCopy,
   onCreate,
+  onRetryPolling,
   selectedAssetId,
   selectedChainId,
   statusText,
@@ -382,6 +383,7 @@ export function TransferStep({
   onChainChange: (chainId: string) => void;
   onCopy: (value: string) => void;
   onCreate: () => void;
+  onRetryPolling?: () => void;
   selectedAssetId: string;
   selectedChainId: string;
   statusText: string;
@@ -400,6 +402,7 @@ export function TransferStep({
       onChainChange={onChainChange}
       onCopy={onCopy}
       onCreate={onCreate}
+      onRetryPolling={onRetryPolling}
       selectedAssetId={selectedAssetId}
       selectedChainId={selectedChainId}
       statusText={statusText}
