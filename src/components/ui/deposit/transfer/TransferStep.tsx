@@ -28,6 +28,7 @@ export function TransferStep({
   onRetryPolling,
   selectedAssetId,
   selectedChainId,
+  statusCode,
   statusText,
   transferAddress,
 }: {
@@ -45,6 +46,7 @@ export function TransferStep({
   onRetryPolling?: () => void;
   selectedAssetId: string;
   selectedChainId: string;
+  statusCode?: string;
   statusText: string;
   transferAddress: string;
 }) {
@@ -61,6 +63,7 @@ export function TransferStep({
   const supportedAssetSymbols = filteredAssets.length > 0
     ? filteredAssets.map((asset) => asset.symbol).join(" / ")
     : "ETH / USDC / USDC.e / POL";
+  const statusHint = getTransferStatusHint(locale, statusCode);
 
   const toggleTokenOpen = () => {
     setTokenOpen((prev) => !prev);
@@ -214,6 +217,7 @@ export function TransferStep({
               </span>
             </div>
             {note && <p className="mt-2 text-xs text-white/45">{note}</p>}
+            {statusHint && <p className="mt-2 text-xs text-white/55">{statusHint}</p>}
             <p className="mt-2 text-xs text-white/45">
               {locale === "zh" ? `最低入金 ${minDepositText}，支持资产 ${supportedAssetSymbols}` : `Min deposit ${minDepositText}, supported assets ${supportedAssetSymbols}`}
             </p>
@@ -257,5 +261,23 @@ export function TransferStep({
       )}
     </div>
   );
+}
+
+function getTransferStatusHint(locale: string, status?: string): string {
+  const zh = locale === "zh";
+  switch ((status || "").toUpperCase()) {
+    case "DEPOSIT_DETECTED":
+      return zh ? "已检测到转账，正在等待链上确认。" : "Deposit detected, waiting for chain confirmation.";
+    case "PROCESSING":
+    case "ORIGIN_TX_CONFIRMED":
+    case "SUBMITTED":
+      return zh ? "交易正在处理中，通常会在几分钟内完成。" : "Transfer is processing and usually completes in a few minutes.";
+    case "COMPLETED":
+      return zh ? "资金已到账，可返回继续交易。" : "Deposit completed. You can go back and continue trading.";
+    case "FAILED":
+      return zh ? "本次检测失败，请检查网络与金额后重试检测或刷新地址。" : "Status check failed. Verify network and amount, then retry checking or refresh address.";
+    default:
+      return zh ? "请从上方选择的网络转入资产，系统会自动检测到账。" : "Send funds on the selected chain and token. We will detect the deposit automatically.";
+  }
 }
 

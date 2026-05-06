@@ -805,6 +805,7 @@ function DrawerContent({
                   onRetryPolling={() => void transferStatus.mutate()}
                   selectedAssetId={selectedTransferAssetId}
                   selectedChainId={selectedTransferChainId}
+                  statusCode={transferStatus.latestStatus}
                   statusText={getStatusText(locale, transferStatus.latestStatus)}
                   transferAddress={transferAddress}
                 />
