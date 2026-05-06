@@ -49,6 +49,7 @@ export function TransferStep({
   const selectedAsset = assets.find((asset) => asset.id === selectedAssetId) ?? assets[0];
   const selectedChain = chainOptions.find((chain) => chain.chainId === selectedChainId) ?? chainOptions[0];
   const filteredAssets = assets.filter((asset) => asset.chainId === selectedChainId);
+  const selectedChainMinUsd = getChainMinUsd(selectedChain?.chainName, selectedChain?.chainId, assets);
 
   const toggleTokenOpen = () => {
     setTokenOpen((prev) => !prev);
@@ -109,7 +110,12 @@ export function TransferStep({
         </div>
 
         <div className="relative">
-          <p className="mb-2 text-sm font-bold text-white/85">{locale === "zh" ? "网络" : "Chains"}</p>
+          <div className="mb-2 flex items-center justify-between">
+            <p className="text-sm font-bold text-white/85">{locale === "zh" ? "网络" : "Chains"}</p>
+            <p className="text-sm text-white/50">
+              {locale === "zh" ? `最低 $${selectedChainMinUsd}` : `Min $${selectedChainMinUsd}`}
+            </p>
+          </div>
           <button
             type="button"
             onClick={toggleChainOpen}
@@ -125,10 +131,17 @@ export function TransferStep({
                   key={chain.chainId}
                   type="button"
                   onClick={() => handleSelectChain(chain.chainId)}
-                  className="flex w-full items-center justify-between rounded-xl px-2 py-2 hover:bg-white/5"
+                  className="flex w-full items-center justify-between gap-3 rounded-xl px-2 py-2 hover:bg-white/5"
                 >
-                  <span className="text-sm font-semibold text-white">{chain.chainName}</span>
-                  {selectedChainId === chain.chainId ? <Check className="text-white" size={14} /> : null}
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold text-white">{chain.chainName}</p>
+                  </div>
+                  <p className="shrink-0 text-sm text-white/50">
+                    {locale === "zh"
+                      ? `最低 $${getChainMinUsd(chain.chainName, chain.chainId, assets)}`
+                      : `Min $${getChainMinUsd(chain.chainName, chain.chainId, assets)}`}
+                  </p>
+                  {selectedChainId === chain.chainId ? <Check className="shrink-0 text-white" size={14} /> : null}
                 </button>
               ))}
             </div>
@@ -237,5 +250,22 @@ export function TransferStep({
       )}
     </div>
   );
+}
+
+function getChainMinUsd(chainName: string | undefined, chainId: string | undefined, assets: DepositAsset[]): number {
+  const name = (chainName || "").toLowerCase();
+  const id = (chainId || "").trim();
+  const isEthereum = name.includes("ethereum") || id === "1";
+  const isTron = name.includes("tron");
+  const isBitcoin = name.includes("bitcoin") || name.includes("btc");
+  const baseMin = assets
+    .filter((asset) => asset.chainId === id)
+    .map((asset) => Number(asset.minCheckoutUsd))
+    .filter((value) => Number.isFinite(value) && value > 0)
+    .reduce<number | null>((min, value) => (min === null ? value : Math.min(min, value)), null);
+
+  if (!baseMin) return isEthereum || isTron || isBitcoin ? 10 : 3;
+  const extra = isEthereum || isTron || isBitcoin ? 3 : 1;
+  return Math.ceil(baseMin + extra);
 }
 

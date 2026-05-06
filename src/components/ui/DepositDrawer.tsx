@@ -132,10 +132,6 @@ function DrawerContent({
     }
     return [...chainMap.entries()].map(([chainId, chainName]) => ({ chainId, chainName }));
   }, [depositAssets]);
-  const transferAssetsForChain = useMemo(
-    () => depositAssets.filter((asset) => asset.chainId === selectedTransferChainId),
-    [depositAssets, selectedTransferChainId]
-  );
   const amountNumber = parseAmountUsd(amountUsd);
   const selectedUsdValue = selectedAsset ? assetUsdValues[selectedAsset.id] : undefined;
   const hasSubmittedTx = Boolean(executionTxHash || submittedOrderId);
@@ -791,7 +787,7 @@ function DrawerContent({
 
               {step === "transfer" && (
                 <TransferStep
-                  assets={transferAssetsForChain.length > 0 ? transferAssetsForChain : depositAssets}
+                  assets={depositAssets}
                   chainOptions={transferChainOptions}
                   copied={copied}
                   error={mergedTransferError}
