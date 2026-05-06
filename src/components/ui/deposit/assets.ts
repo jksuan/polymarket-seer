@@ -56,7 +56,8 @@ function normalizeSupportedAsset(item: Record<string, unknown>): DepositAsset | 
     : item;
   const chainId = String(item.chainId ?? item.chain_id ?? "");
   const tokenAddress = String(token.address ?? token.tokenAddress ?? token.contractAddress ?? "");
-  const symbol = String(token.symbol ?? "");
+  const rawSymbol = String(token.symbol ?? "");
+  const symbol = normalizeAssetSymbol(rawSymbol, chainId, tokenAddress);
   const decimals = Number(token.decimals ?? 18);
   const iconUrl = getTokenIconUrl(item, token, symbol);
 
@@ -100,17 +101,17 @@ export function sortVisibleAssets(assets: DepositAsset[]): DepositAsset[] {
 }
 
 function dedupeAssetsBySymbol(assets: DepositAsset[]): DepositAsset[] {
-  const bySymbol = new Map<string, DepositAsset>();
+  const byAssetKey = new Map<string, DepositAsset>();
 
   for (const asset of assets) {
-    const key = asset.symbol.toUpperCase();
-    const existing = bySymbol.get(key);
+    const key = getAssetDedupeKey(asset);
+    const existing = byAssetKey.get(key);
     if (!existing || (asset.usdValue ?? 0) > (existing.usdValue ?? 0)) {
-      bySymbol.set(key, asset);
+      byAssetKey.set(key, asset);
     }
   }
 
-  return [...bySymbol.values()];
+  return [...byAssetKey.values()];
 }
 
 export async function readAssetBalance(
@@ -226,6 +227,22 @@ function isNativeSymbol(symbol: string, chainId: string): boolean {
     (chainId === "42161" && normalized === "ETH") ||
     (chainId === "56" && normalized === "BNB")
   );
+}
+
+function normalizeAssetSymbol(symbol: string, chainId: string, tokenAddress: string): string {
+  const normalized = symbol.toUpperCase();
+  const isPolygonNative = chainId === String(POLYGON_CHAIN_ID) && NATIVE_TOKEN_ADDRESSES.has(tokenAddress.toLowerCase());
+  if (isPolygonNative && normalized === "MATIC") {
+    return "POL";
+  }
+  return symbol;
+}
+
+function getAssetDedupeKey(asset: DepositAsset): string {
+  const tokenKey = asset.isNative
+    ? "native"
+    : asset.tokenAddress.toLowerCase();
+  return `${asset.chainId}:${tokenKey}`;
 }
 
 export function getNativeFeeSymbol(chainId: string): string {

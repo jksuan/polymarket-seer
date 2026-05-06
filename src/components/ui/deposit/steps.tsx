@@ -181,32 +181,6 @@ export function AssetStep({
           </button>
         );
       })}
-      {!assetsLoading && displayAssets.length > 0 && (
-        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-xs leading-relaxed text-white/55">
-          {locale === "zh"
-            ? "仅展示支持直充的资产。若你要充值的资产不在列表，请先桥接或兑换为支持资产后再充值。"
-            : "Only assets that support direct deposit are listed. If your asset is missing, bridge or swap to a supported asset first."}
-          <div className="mt-2 flex items-center gap-2 text-[11px]">
-            <a
-              className="text-[#7ad4ff] underline-offset-2 hover:underline"
-              href="https://app.debridge.finance/"
-              rel="noreferrer"
-              target="_blank"
-            >
-              deBridge
-            </a>
-            <span className="text-white/30">{"•"}</span>
-            <a
-              className="text-[#7ad4ff] underline-offset-2 hover:underline"
-              href="https://app.across.to/"
-              rel="noreferrer"
-              target="_blank"
-            >
-              Across
-            </a>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
