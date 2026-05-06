@@ -1,5 +1,4 @@
 import { useState } from "react";
-import type { CreateDepositResponse } from "@/types/bridge";
 import type { DepositAsset } from "../types";
 import {
   AlertTriangle,
@@ -8,7 +7,6 @@ import {
   ChevronDown,
   Copy,
   Loader2,
-  QrCode,
 } from "lucide-react";
 import QRCode from "react-qr-code";
 import { TokenIcon } from "../shared-ui";
@@ -17,7 +15,6 @@ export function TransferStep({
   assets,
   chainOptions,
   copied,
-  depositResponse,
   error,
   isCreating,
   locale,
@@ -28,14 +25,12 @@ export function TransferStep({
   onRetryPolling,
   selectedAssetId,
   selectedChainId,
-  statusCode,
   statusText,
   transferAddress,
 }: {
   assets: DepositAsset[];
   chainOptions: { chainId: string; chainName: string }[];
   copied: boolean;
-  depositResponse: CreateDepositResponse | null;
   error: string;
   isCreating: boolean;
   locale: string;
@@ -46,24 +41,14 @@ export function TransferStep({
   onRetryPolling?: () => void;
   selectedAssetId: string;
   selectedChainId: string;
-  statusCode?: string;
   statusText: string;
   transferAddress: string;
 }) {
-  const note = typeof depositResponse?.note === "string" ? depositResponse.note : "";
   const [tokenOpen, setTokenOpen] = useState(false);
   const [chainOpen, setChainOpen] = useState(false);
   const selectedAsset = assets.find((asset) => asset.id === selectedAssetId) ?? assets[0];
   const selectedChain = chainOptions.find((chain) => chain.chainId === selectedChainId) ?? chainOptions[0];
   const filteredAssets = assets.filter((asset) => asset.chainId === selectedChainId);
-  const minDepositUsd = Number(selectedAsset?.minCheckoutUsd ?? 10);
-  const minDepositText = Number.isFinite(minDepositUsd) && minDepositUsd > 0
-    ? `$${minDepositUsd.toFixed(0)}`
-    : "$10";
-  const supportedAssetSymbols = filteredAssets.length > 0
-    ? filteredAssets.map((asset) => asset.symbol).join(" / ")
-    : "ETH / USDC / USDC.e / POL";
-  const statusHint = getTransferStatusHint(locale, statusCode);
 
   const toggleTokenOpen = () => {
     setTokenOpen((prev) => !prev);
@@ -185,29 +170,25 @@ export function TransferStep({
               </span>
             </div>
 
-            <button
-              onClick={() => onCopy(transferAddress)}
-              className="flex w-full items-center justify-between rounded-xl border border-white/10 bg-black/40 p-3 active:scale-[0.98]"
-            >
-              <span className="mr-3 break-all text-left font-mono text-[11px] text-white">
+            <div className="w-full rounded-t-xl border border-b-0 border-white/10 bg-black/40 px-3 py-3 text-left">
+              <span className="block break-all font-mono text-[11px] text-white">
                 {transferAddress}
               </span>
+            </div>
+            <button
+              onClick={() => onCopy(transferAddress)}
+              className="flex w-full items-center justify-center gap-2 rounded-b-xl border border-white/10 bg-white/[0.04] px-3 py-2.5 text-sm font-black text-white active:scale-[0.98]"
+            >
               {copied ? (
-                <CheckCircle2 className="text-green-400" size={18} />
+                <CheckCircle2 className="text-green-400" size={14} />
               ) : (
-                <Copy className="text-white/60" size={18} />
+                <Copy className="text-white/70" size={14} />
               )}
+              {copied
+                ? (locale === "zh" ? "已复制" : "Copied")
+                : (locale === "zh" ? "复制地址" : "Copy address")}
             </button>
           </div>
-
-          <button
-            onClick={onCreate}
-            disabled={isCreating}
-            className="flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] text-sm font-black text-white active:scale-[0.98] disabled:opacity-50"
-          >
-            {isCreating ? <Loader2 className="animate-spin" size={16} /> : <QrCode size={16} />}
-            {locale === "zh" ? "刷新收款地址" : "Refresh address"}
-          </button>
 
           <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
             <div className="flex items-center justify-between">
@@ -216,11 +197,6 @@ export function TransferStep({
                 {statusText}
               </span>
             </div>
-            {note && <p className="mt-2 text-xs text-white/45">{note}</p>}
-            {statusHint && <p className="mt-2 text-xs text-white/55">{statusHint}</p>}
-            <p className="mt-2 text-xs text-white/45">
-              {locale === "zh" ? `最低入金 ${minDepositText}，支持资产 ${supportedAssetSymbols}` : `Min deposit ${minDepositText}, supported assets ${supportedAssetSymbols}`}
-            </p>
           </div>
         </>
       )}
@@ -261,23 +237,5 @@ export function TransferStep({
       )}
     </div>
   );
-}
-
-function getTransferStatusHint(locale: string, status?: string): string {
-  const zh = locale === "zh";
-  switch ((status || "").toUpperCase()) {
-    case "DEPOSIT_DETECTED":
-      return zh ? "已检测到转账，正在等待链上确认。" : "Deposit detected, waiting for chain confirmation.";
-    case "PROCESSING":
-    case "ORIGIN_TX_CONFIRMED":
-    case "SUBMITTED":
-      return zh ? "交易正在处理中，通常会在几分钟内完成。" : "Transfer is processing and usually completes in a few minutes.";
-    case "COMPLETED":
-      return zh ? "资金已到账，可返回继续交易。" : "Deposit completed. You can go back and continue trading.";
-    case "FAILED":
-      return zh ? "本次检测失败，请检查网络与金额后重试检测或刷新地址。" : "Status check failed. Verify network and amount, then retry checking or refresh address.";
-    default:
-      return zh ? "请从上方选择的网络转入资产，系统会自动检测到账。" : "Send funds on the selected chain and token. We will detect the deposit automatically.";
-  }
 }
 

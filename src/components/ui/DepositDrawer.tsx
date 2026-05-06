@@ -79,7 +79,7 @@ function DrawerContent({
   const [submittedOrderId, setSubmittedOrderId] = useState("");
   const [isCancellingOrder, setIsCancellingOrder] = useState(false);
   const [cancelTxHash, setCancelTxHash] = useState("");
-  const [depositResponse, setDepositResponse] = useState<CreateDepositResponse | null>(null);
+  const [, setDepositResponse] = useState<CreateDepositResponse | null>(null);
   const [transferAddress, setTransferAddress] = useState("");
   const [selectedTransferChainId, setSelectedTransferChainId] = useState("");
   const [selectedTransferAssetId, setSelectedTransferAssetId] = useState("");
@@ -794,7 +794,6 @@ function DrawerContent({
                   assets={transferAssetsForChain.length > 0 ? transferAssetsForChain : depositAssets}
                   chainOptions={transferChainOptions}
                   copied={copied}
-                  depositResponse={depositResponse}
                   error={mergedTransferError}
                   isCreating={isCreatingTransferAddress}
                   locale={locale}
@@ -805,7 +804,6 @@ function DrawerContent({
                   onRetryPolling={() => void transferStatus.mutate()}
                   selectedAssetId={selectedTransferAssetId}
                   selectedChainId={selectedTransferChainId}
-                  statusCode={transferStatus.latestStatus}
                   statusText={getStatusText(locale, transferStatus.latestStatus)}
                   transferAddress={transferAddress}
                 />
