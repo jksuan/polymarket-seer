@@ -1,6 +1,9 @@
 import { ethers } from "ethers";
+import { POLYGON_CHAIN_ID } from "@/lib/constants";
+import { getBridgeQuote } from "@/hooks/useBridge";
 import { estimateBaseUnitForUsd } from "./assets";
 import {
+  PUSD_ADDRESS,
   QUOTE_PRICE_CHANGE_THRESHOLD,
   QUOTE_STALE_THRESHOLD_MS,
   SUPPORTED_DLN_EVM_CHAIN_IDS,
@@ -35,16 +38,18 @@ export async function buildExecutionSnapshot({
     amountUsd,
     asset,
     depositAddress,
+    proxyAddress,
     sourceAmountBaseUnit,
     quotedAtMs,
     expiresAtMs,
   });
 }
 
-function snapshotFromDirectTransfer({
+async function snapshotFromDirectTransfer({
   amountUsd,
   asset,
   depositAddress,
+  proxyAddress,
   sourceAmountBaseUnit,
   quotedAtMs,
   expiresAtMs,
@@ -52,10 +57,11 @@ function snapshotFromDirectTransfer({
   amountUsd: number;
   asset: DepositAsset;
   depositAddress: string;
+  proxyAddress: string;
   sourceAmountBaseUnit: string;
   quotedAtMs: number;
   expiresAtMs: number;
-}): ExecutionSnapshot {
+}): Promise<ExecutionSnapshot> {
   const tx: ExecutionTx = asset.isNative
     ? {
       to: depositAddress,
@@ -74,6 +80,39 @@ function snapshotFromDirectTransfer({
   );
   const sendDisplay = `${formatCompactBalance(String(sendAmountFloat))} ${asset.symbol}`;
 
+  let estFeeBreakdown: ExecutionSnapshot["estFeeBreakdown"];
+  let estCheckoutTimeMs: number | undefined;
+  try {
+    const quote = await getBridgeQuote({
+      fromAmountBaseUnit: sourceAmountBaseUnit,
+      fromChainId: asset.chainId,
+      fromTokenAddress: asset.tokenAddress,
+      recipientAddress: proxyAddress,
+      toChainId: String(POLYGON_CHAIN_ID),
+      toTokenAddress: PUSD_ADDRESS,
+    });
+    estFeeBreakdown = quote.estFeeBreakdown;
+    estCheckoutTimeMs = quote.estCheckoutTimeMs;
+  } catch {
+    estFeeBreakdown = undefined;
+    estCheckoutTimeMs = undefined;
+  }
+
+  const fee = estFeeBreakdown;
+  const networkCostUsd =
+    fee?.gasUsd !== undefined && Number.isFinite(fee.gasUsd) ? fee.gasUsd : undefined;
+  const routeCostUsd = (fee?.appFeeUsd ?? 0) + (fee?.fillCostUsd ?? 0);
+  const priceImpact =
+    fee?.swapImpact !== undefined && Number.isFinite(fee.swapImpact)
+      ? fee.swapImpact
+      : fee?.totalImpact !== undefined && Number.isFinite(fee.totalImpact)
+        ? fee.totalImpact
+        : 0;
+  const slippage =
+    fee?.maxSlippage !== undefined && Number.isFinite(fee.maxSlippage)
+      ? fee.maxSlippage
+      : undefined;
+
   return {
     kind: "direct-transfer",
     asset,
@@ -88,11 +127,11 @@ function snapshotFromDirectTransfer({
     receiveDisplay: amountUsd.toFixed(4),
     receiveSymbol: "pUSD",
     receiveUsd: amountUsd,
-    networkCostUsd: undefined,
-    routeCostUsd: 0,
-    priceImpact: 0,
-    slippage: undefined,
-    estCheckoutTimeMs: undefined,
+    networkCostUsd,
+    routeCostUsd,
+    priceImpact,
+    slippage,
+    estCheckoutTimeMs,
     recipientAddress: depositAddress,
     tx,
     approveSpender: undefined,
@@ -101,6 +140,7 @@ function snapshotFromDirectTransfer({
     walletTotalDisplay: sendDisplay,
     walletTotalUsd: amountUsd,
     orderId: undefined,
+    estFeeBreakdown,
     quotedAtMs,
     expiresAtMs,
   };

@@ -1,4 +1,4 @@
-import type { BridgeAddressType } from "@/types/bridge";
+import type { BridgeAddressType, QuoteFeeBreakdown } from "@/types/bridge";
 import type { DlnTx } from "@/types/dln";
 
 export interface DepositDrawerProps {
@@ -65,6 +65,8 @@ export type ExecutionSnapshot = {
   walletTotalDisplay?: string;
   walletTotalUsd?: number;
   orderId?: string;
+  /** Bridge /quote 的 estFeeBreakdown，直充路径用于费用明细展示 */
+  estFeeBreakdown?: QuoteFeeBreakdown;
   quotedAtMs: number;
   expiresAtMs: number;
 };

@@ -7,8 +7,9 @@ import { InfoBox, type InfoBoxRow } from "../shared-ui";
 
 function breakdownSummaryDirect(snapshot: ExecutionSnapshot, locale: string): string {
   const impact = formatPercent(snapshot.priceImpact ?? 0);
-  if (snapshot.networkCostUsd !== undefined) {
-    return `${formatUsd(snapshot.networkCostUsd)} • ${impact}`;
+  const gas = snapshot.networkCostUsd ?? snapshot.estFeeBreakdown?.gasUsd;
+  if (gas !== undefined && Number.isFinite(gas)) {
+    return `${formatUsd(gas)} • ${impact}`;
   }
   return locale === "zh"
     ? `网络费见钱包 • ${impact}`
@@ -24,19 +25,37 @@ function breakdownSummaryBridge(snapshot: ExecutionSnapshot): string {
 }
 
 function directBreakdownRows(snapshot: ExecutionSnapshot, locale: string): InfoBoxRow[] {
-  const networkLabel = locale === "zh" ? "网络费用" : "Network cost";
+  const fee = snapshot.estFeeBreakdown;
+  const gasUsd = snapshot.networkCostUsd ?? fee?.gasUsd;
+  const gasLabel = locale === "zh" ? "网络费用（Gas 预估）" : "Gas (est.)";
   const networkValue =
-    snapshot.networkCostUsd !== undefined
-      ? formatUsd(snapshot.networkCostUsd)
+    gasUsd !== undefined && Number.isFinite(gasUsd)
+      ? formatUsd(gasUsd)
       : locale === "zh"
         ? "以钱包预估为准"
         : "See wallet estimate";
 
-  return [
-    [networkLabel, networkValue],
-    [locale === "zh" ? "路由成本" : "Route cost", formatUsd(snapshot.routeCostUsd ?? 0)],
-    [locale === "zh" ? "价格影响" : "Price impact", formatPercent(snapshot.priceImpact ?? 0)],
+  const platformLabel = locale === "zh" ? "平台与路由成本" : "App & route cost";
+  const platformValue = formatUsd(snapshot.routeCostUsd ?? 0);
+
+  const impactLabel = locale === "zh" ? "价格影响" : "Price impact";
+  const impactValue = formatPercent(snapshot.priceImpact ?? 0);
+
+  const rows: InfoBoxRow[] = [
+    [gasLabel, networkValue],
+    [platformLabel, platformValue],
+    [impactLabel, impactValue],
   ];
+
+  const swapUsd = fee?.swapImpactUsd;
+  if (swapUsd !== undefined && Number.isFinite(swapUsd) && Math.abs(swapUsd) > 1e-6) {
+    rows.push([
+      locale === "zh" ? "价格影响（USD）" : "Price impact (USD)",
+      formatUsd(swapUsd),
+    ]);
+  }
+
+  return rows;
 }
 
 function bridgeBreakdownRows(snapshot: ExecutionSnapshot, locale: string): InfoBoxRow[] {
