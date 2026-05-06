@@ -77,6 +77,8 @@ function DrawerContent({
   const [cancelTxHash, setCancelTxHash] = useState("");
   const [depositResponse, setDepositResponse] = useState<CreateDepositResponse | null>(null);
   const [transferAddress, setTransferAddress] = useState("");
+  const [selectedTransferChainId, setSelectedTransferChainId] = useState("");
+  const [selectedTransferAssetId, setSelectedTransferAssetId] = useState("");
   const [isCreatingTransferAddress, setIsCreatingTransferAddress] = useState(false);
   const [transferError, setTransferError] = useState("");
   const [copied, setCopied] = useState(false);
@@ -116,6 +118,19 @@ function DrawerContent({
   const totalWalletUsd = useMemo(
     () => assetsWithBalances.reduce((sum, asset) => sum + (asset.usdValue ?? 0), 0),
     [assetsWithBalances]
+  );
+  const transferChainOptions = useMemo(() => {
+    const chainMap = new Map<string, string>();
+    for (const asset of depositAssets) {
+      if (!chainMap.has(asset.chainId)) {
+        chainMap.set(asset.chainId, asset.chainName);
+      }
+    }
+    return [...chainMap.entries()].map(([chainId, chainName]) => ({ chainId, chainName }));
+  }, [depositAssets]);
+  const transferAssetsForChain = useMemo(
+    () => depositAssets.filter((asset) => asset.chainId === selectedTransferChainId),
+    [depositAssets, selectedTransferChainId]
   );
   const amountNumber = parseAmountUsd(amountUsd);
   const selectedUsdValue = selectedAsset ? assetUsdValues[selectedAsset.id] : undefined;
@@ -186,7 +201,34 @@ function DrawerContent({
     setTransferError("");
     setCopied(false);
     setQuoteAutoRefreshNonce(0);
+    setSelectedTransferChainId("");
+    setSelectedTransferAssetId("");
   }, [isOpen]);
+
+  useEffect(() => {
+    if (depositAssets.length === 0) return;
+    if (!selectedTransferChainId) {
+      setSelectedTransferChainId(depositAssets[0].chainId);
+      return;
+    }
+    const chainExists = depositAssets.some((asset) => asset.chainId === selectedTransferChainId);
+    if (!chainExists) {
+      setSelectedTransferChainId(depositAssets[0].chainId);
+    }
+  }, [depositAssets, selectedTransferChainId]);
+
+  useEffect(() => {
+    if (!selectedTransferChainId) return;
+    const chainAssets = depositAssets.filter((asset) => asset.chainId === selectedTransferChainId);
+    if (chainAssets.length === 0) {
+      setSelectedTransferAssetId("");
+      return;
+    }
+    const selectedExists = chainAssets.some((asset) => asset.id === selectedTransferAssetId);
+    if (!selectedExists) {
+      setSelectedTransferAssetId(chainAssets[0].id);
+    }
+  }, [depositAssets, selectedTransferAssetId, selectedTransferChainId]);
 
   useEffect(() => {
     setHasAcknowledgedRiskWarning(false);
@@ -733,13 +775,19 @@ function DrawerContent({
 
               {step === "transfer" && (
                 <TransferStep
+                  assets={transferAssetsForChain.length > 0 ? transferAssetsForChain : depositAssets}
+                  chainOptions={transferChainOptions}
                   copied={copied}
                   depositResponse={depositResponse}
                   error={transferError}
                   isCreating={isCreatingTransferAddress}
                   locale={locale}
+                  onAssetChange={setSelectedTransferAssetId}
+                  onChainChange={setSelectedTransferChainId}
                   onCopy={handleCopy}
                   onCreate={handleCreateTransferAddress}
+                  selectedAssetId={selectedTransferAssetId}
+                  selectedChainId={selectedTransferChainId}
                   statusText={getStatusText(locale, transferStatus.latestStatus)}
                   transferAddress={transferAddress}
                 />

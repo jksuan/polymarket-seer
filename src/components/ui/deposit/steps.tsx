@@ -3,7 +3,9 @@ import type { ChangeEvent } from "react";
 import {
   AlertTriangle,
   ArrowRight,
+  Check,
   CheckCircle2,
+  ChevronDown,
   Copy,
   Loader2,
   QrCode,
@@ -18,6 +20,10 @@ import { sortVisibleAssets } from "./assets";
 import { CONNECTED_LOW_BALANCE_USD, DEPOSIT_SINGLE_TX_CAP_USD, getConnectedMinDepositUsd, MAX_DEPOSIT_BALANCE_RATIO } from "./constants";
 import { formatCompactBalance, formatUsdWithCommas, parseAmountUsd } from "./format";
 import { TokenIcon } from "./shared-ui";
+import { HomeStep as ConnectedHomeStep } from "./connected/HomeStep";
+import { AssetStep as ConnectedAssetStep } from "./connected/AssetStep";
+import { AmountStep as ConnectedAmountStep } from "./connected/AmountStep";
+import { TransferStep as TransferCryptoStep } from "./transfer/TransferStep";
 
 export function HomeStep({
   locale,
@@ -37,6 +43,17 @@ export function HomeStep({
   onWallet: () => void;
   onTransfer: () => void;
 }) {
+  return (
+    <ConnectedHomeStep
+      locale={locale}
+      showConnectedWalletOption={showConnectedWalletOption}
+      walletLabel={walletLabel}
+      walletUsdLoading={walletUsdLoading}
+      walletUsd={walletUsd}
+      onWallet={onWallet}
+      onTransfer={onTransfer}
+    />
+  );
   return (
     <div className="space-y-5">
       <div className="grid grid-cols-2 gap-2 rounded-2xl bg-black/20 p-1">
@@ -125,6 +142,14 @@ export function AssetStep({
   locale: string;
   onSelect: (asset: DepositAsset) => void;
 }) {
+  return (
+    <ConnectedAssetStep
+      assets={assets}
+      assetsLoading={assetsLoading}
+      locale={locale}
+      onSelect={onSelect}
+    />
+  );
   const displayAssets = sortVisibleAssets(assets).slice(0, 8);
 
   return (
@@ -205,6 +230,19 @@ export function AmountStep({
   onContinue: () => void;
   onPercent: (percent: number) => void;
 }) {
+  return (
+    <ConnectedAmountStep
+      amountUsd={amountUsd}
+      asset={asset}
+      error={error}
+      isQuoting={isQuoting}
+      locale={locale}
+      onAmountBlur={onAmountBlur}
+      onAmountChange={onAmountChange}
+      onContinue={onContinue}
+      onPercent={onPercent}
+    />
+  );
   const amountNumber = parseAmountUsd(amountUsd);
   const inputRef = useRef<HTMLInputElement>(null);
   const pendingCaretCountRef = useRef<number | null>(null);
@@ -317,47 +355,155 @@ export function AmountStep({
 export { ConfirmStep } from "./confirm/ConfirmStep";
 
 export function TransferStep({
+  assets,
+  chainOptions,
   copied,
   depositResponse,
   error,
   isCreating,
   locale,
+  onAssetChange,
+  onChainChange,
   onCopy,
   onCreate,
+  selectedAssetId,
+  selectedChainId,
   statusText,
   transferAddress,
 }: {
+  assets: DepositAsset[];
+  chainOptions: { chainId: string; chainName: string }[];
   copied: boolean;
   depositResponse: CreateDepositResponse | null;
   error: string;
   isCreating: boolean;
   locale: string;
+  onAssetChange: (assetId: string) => void;
+  onChainChange: (chainId: string) => void;
   onCopy: (value: string) => void;
   onCreate: () => void;
+  selectedAssetId: string;
+  selectedChainId: string;
   statusText: string;
   transferAddress: string;
 }) {
-  const note = typeof depositResponse?.note === "string" ? depositResponse.note : "";
+  return (
+    <TransferCryptoStep
+      assets={assets}
+      chainOptions={chainOptions}
+      copied={copied}
+      depositResponse={depositResponse}
+      error={error}
+      isCreating={isCreating}
+      locale={locale}
+      onAssetChange={onAssetChange}
+      onChainChange={onChainChange}
+      onCopy={onCopy}
+      onCreate={onCreate}
+      selectedAssetId={selectedAssetId}
+      selectedChainId={selectedChainId}
+      statusText={statusText}
+      transferAddress={transferAddress}
+    />
+  );
+  const note = typeof depositResponse?.note === "string" ? (depositResponse?.note as string) : "";
+  const [tokenOpen, setTokenOpen] = useState(false);
+  const [chainOpen, setChainOpen] = useState(false);
+  const selectedAsset = assets.find((asset) => asset.id === selectedAssetId) ?? assets[0];
+  const selectedChain = chainOptions.find((chain) => chain.chainId === selectedChainId) ?? chainOptions[0];
+  const filteredAssets = assets.filter((asset) => asset.chainId === selectedChainId);
+  const minDepositUsd = Number(selectedAsset?.minCheckoutUsd ?? 10);
+  const minDepositText = Number.isFinite(minDepositUsd) && minDepositUsd > 0
+    ? `$${minDepositUsd.toFixed(0)}`
+    : "$10";
+  const supportedAssetSymbols = filteredAssets.length > 0
+    ? filteredAssets.map((asset) => asset.symbol).join(" / ")
+    : "ETH / USDC / USDC.e / POL";
+
+  const toggleTokenOpen = () => {
+    setTokenOpen((prev) => !prev);
+    setChainOpen(false);
+  };
+
+  const toggleChainOpen = () => {
+    setChainOpen((prev) => !prev);
+    setTokenOpen(false);
+  };
+
+  const handleSelectChain = (chainId: string) => {
+    onChainChange(chainId);
+    setChainOpen(false);
+  };
+
+  const handleSelectAsset = (assetId: string) => {
+    onAssetChange(assetId);
+    setTokenOpen(false);
+  };
 
   return (
     <div className="space-y-4">
-      <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-5">
-        <p className="text-sm font-black text-white">Transfer Crypto</p>
-        <p className="mt-1 text-xs leading-relaxed text-white/45">
-          {locale === "zh"
-            ? "这是 Polymarket 的备用手动转账路径：生成地址后，从外部钱包或交易所转入支持资产。最低金额严格遵循 supported-assets。"
-            : "This is the fallback transfer flow for wallets or exchanges. Minimums strictly follow supported-assets."}
-        </p>
-        <button
-          onClick={onCreate}
-          disabled={isCreating}
-          className="mt-4 flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-[#ADFF2F] text-sm font-black text-[#0D0518] active:scale-[0.98] disabled:opacity-50"
-        >
-          {isCreating ? <Loader2 className="animate-spin" size={16} /> : <QrCode size={16} />}
-          {transferAddress
-            ? locale === "zh" ? "刷新地址" : "Refresh Address"
-            : locale === "zh" ? "生成转账地址" : "Create Transfer Address"}
-        </button>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="relative">
+          <p className="mb-2 text-sm font-bold text-white/85">{locale === "zh" ? "代币" : "Tokens"}</p>
+          <button
+            type="button"
+            onClick={toggleTokenOpen}
+            className="flex h-11 w-full items-center justify-between rounded-2xl border border-white/10 bg-white/[0.04] px-3 text-left"
+          >
+            <span className="flex items-center gap-2">
+              {selectedAsset ? (
+                <TokenIcon compact chainId={selectedAsset.chainId} iconUrl={selectedAsset.iconUrl} symbol={selectedAsset.symbol} />
+              ) : null}
+              <span className="text-sm font-black text-white">{selectedAsset?.symbol ?? "--"}</span>
+            </span>
+            <ChevronDown className="text-white/40" size={16} />
+          </button>
+          {tokenOpen && (
+            <div className="absolute left-0 right-0 top-[72px] z-20 max-h-64 overflow-y-auto rounded-2xl border border-white/10 bg-[#0d1118] p-2 shadow-2xl">
+              {(filteredAssets.length > 0 ? filteredAssets : assets).map((asset) => (
+                <button
+                  key={asset.id}
+                  type="button"
+                  onClick={() => handleSelectAsset(asset.id)}
+                  className="flex w-full items-center justify-between rounded-xl px-2 py-2 hover:bg-white/5"
+                >
+                  <span className="flex items-center gap-2">
+                    <TokenIcon compact chainId={asset.chainId} iconUrl={asset.iconUrl} symbol={asset.symbol} />
+                    <span className="text-sm font-semibold text-white">{asset.symbol}</span>
+                  </span>
+                  {selectedAssetId === asset.id ? <Check className="text-white" size={14} /> : null}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="relative">
+          <p className="mb-2 text-sm font-bold text-white/85">{locale === "zh" ? "网络" : "Chains"}</p>
+          <button
+            type="button"
+            onClick={toggleChainOpen}
+            className="flex h-11 w-full items-center justify-between rounded-2xl border border-white/10 bg-white/[0.04] px-3 text-left"
+          >
+            <span className="text-sm font-black text-white">{selectedChain?.chainName ?? "--"}</span>
+            <ChevronDown className="text-white/40" size={16} />
+          </button>
+          {chainOpen && (
+            <div className="absolute left-0 right-0 top-[72px] z-20 rounded-2xl border border-white/10 bg-[#0d1118] p-2 shadow-2xl">
+              {chainOptions.map((chain) => (
+                <button
+                  key={chain.chainId}
+                  type="button"
+                  onClick={() => handleSelectChain(chain.chainId)}
+                  className="flex w-full items-center justify-between rounded-xl px-2 py-2 hover:bg-white/5"
+                >
+                  <span className="text-sm font-semibold text-white">{chain.chainName}</span>
+                  {selectedChainId === chain.chainId ? <Check className="text-white" size={14} /> : null}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {error && (
@@ -369,7 +515,7 @@ export function TransferStep({
 
       {transferAddress && (
         <>
-          <div className="flex flex-col items-center rounded-3xl border border-white/5 bg-white/5 p-6">
+          <div className="flex flex-col items-center rounded-3xl border border-white/10 bg-white/[0.03] p-6">
             <div className="mb-5 rounded-2xl bg-white p-3">
               <QRCode value={transferAddress} size={160} viewBox="0 0 160 160" />
             </div>
@@ -384,6 +530,15 @@ export function TransferStep({
             </button>
           </div>
 
+          <button
+            onClick={onCreate}
+            disabled={isCreating}
+            className="flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] text-sm font-black text-white active:scale-[0.98] disabled:opacity-50"
+          >
+            {isCreating ? <Loader2 className="animate-spin" size={16} /> : <QrCode size={16} />}
+            {locale === "zh" ? "刷新收款地址" : "Refresh address"}
+          </button>
+
           <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
             <div className="flex items-center justify-between">
               <p className="text-sm font-bold text-white">{locale === "zh" ? "状态" : "Status"}</p>
@@ -392,8 +547,24 @@ export function TransferStep({
               </span>
             </div>
             {note && <p className="mt-2 text-xs text-white/45">{note}</p>}
+            <p className="mt-2 text-xs text-white/45">
+              {locale === "zh"
+                ? `最低入金 ${minDepositText}，支持资产 ${supportedAssetSymbols}`
+                : `Min deposit ${minDepositText}, supported assets ${supportedAssetSymbols}`}
+            </p>
           </div>
         </>
+      )}
+
+      {!transferAddress && (
+        <button
+          onClick={onCreate}
+          disabled={isCreating}
+          className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-[#159bff] text-sm font-black text-white active:scale-[0.98] disabled:opacity-50"
+        >
+          {isCreating ? <Loader2 className="animate-spin" size={16} /> : <QrCode size={16} />}
+          {locale === "zh" ? "生成收款地址" : "Create deposit address"}
+        </button>
       )}
     </div>
   );
