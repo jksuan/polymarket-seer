@@ -698,7 +698,9 @@ function DrawerContent({
                 )}
                 <div className="text-center">
                   <h2 className="text-xl font-black text-white">
-                    {locale === "zh" ? "充值" : "Deposit"}
+                    {step === "transfer"
+                      ? (locale === "zh" ? "转入加密货币" : "Transfer Crypto")
+                      : (locale === "zh" ? "充值" : "Deposit")}
                   </h2>
                   <p className="text-xs text-white/40">
                     Polymarket {locale === "zh" ? "余额" : "Balance"}: ${Number(balanceUsd || 0).toFixed(2)}

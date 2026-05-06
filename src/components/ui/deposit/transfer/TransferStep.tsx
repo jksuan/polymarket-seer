@@ -100,7 +100,7 @@ export function TransferStep({
                 >
                   <span className="flex items-center gap-2">
                     <TokenIcon compact chainId={asset.chainId} iconUrl={asset.iconUrl} symbol={asset.symbol} />
-                    <span className="text-sm font-semibold text-white">{asset.symbol}</span>
+                    <span className="text-[0.82rem] font-normal text-white">{asset.symbol}</span>
                   </span>
                   {selectedAssetId === asset.id ? <Check className="text-white" size={14} /> : null}
                 </button>
@@ -133,10 +133,10 @@ export function TransferStep({
                   onClick={() => handleSelectChain(chain.chainId)}
                   className="flex w-full items-center justify-between gap-3 rounded-xl px-2 py-2 hover:bg-white/5"
                 >
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold text-white">{chain.chainName}</p>
+                  <div className="min-w-0 flex-1 text-left">
+                    <p className="truncate text-[0.82rem] font-normal text-white">{chain.chainName}</p>
                   </div>
-                  <p className="shrink-0 text-sm text-white/50">
+                  <p className="shrink-0 text-[0.82rem] font-normal text-white/50">
                     {locale === "zh"
                       ? `最低 $${getChainMinUsd(chain.chainName, chain.chainId, assets)}`
                       : `Min $${getChainMinUsd(chain.chainName, chain.chainId, assets)}`}
