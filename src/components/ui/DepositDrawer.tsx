@@ -27,6 +27,7 @@ import { buildExecutionSnapshot, isQuotePriceChanged, validateBridgeReceiveMinim
 import { formatExecutionError } from "./deposit/errors";
 import { formatAmountUsdInput, parseAmountUsd, sanitizeAmountUsdInput } from "./deposit/format";
 import { getStatusText } from "./deposit/status";
+import { QuoteCountdownRing } from "./deposit/quote-countdown-ring";
 import { AmountStep, AssetStep, ConfirmStep, HomeStep, TransferStep } from "./deposit/steps";
 
 type PrivyLoginIdentity = {
@@ -631,12 +632,21 @@ function DrawerContent({
                     Polymarket {locale === "zh" ? "余额" : "Balance"}: ${Number(balanceUsd || 0).toFixed(2)}
                   </p>
                 </div>
-                <button
-                  onClick={onClose}
-                  className="absolute right-0 flex h-8 w-8 items-center justify-center rounded-full text-white/50 hover:bg-white/10 hover:text-white"
-                >
-                  <X size={18} />
-                </button>
+                {step === "confirm" && snapshot && !hasSubmittedTx ? (
+                  <QuoteCountdownRing
+                    expiresAtMs={snapshot.expiresAtMs}
+                    locale={locale}
+                    quotedAtMs={snapshot.quotedAtMs}
+                  />
+                ) : (
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="absolute right-0 flex h-8 w-8 items-center justify-center rounded-full text-white/50 hover:bg-white/10 hover:text-white"
+                  >
+                    <X size={18} />
+                  </button>
+                )}
               </div>
 
               <div

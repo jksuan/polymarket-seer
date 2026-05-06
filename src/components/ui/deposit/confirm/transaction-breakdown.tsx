@@ -24,6 +24,7 @@ function breakdownSummaryBridge(snapshot: ExecutionSnapshot): string {
   return `${formatUsd(breakdownFeeUsd)} • ${formatPercent(snapshot.priceImpact)}`;
 }
 
+/** 直充无链上 swap，maxSlippage 与用户体验无关；仅 deBridge 路径展示滑点。 */
 function directBreakdownRows(snapshot: ExecutionSnapshot, locale: string): InfoBoxRow[] {
   const fee = snapshot.estFeeBreakdown;
   const gasUsd = snapshot.networkCostUsd ?? fee?.gasUsd;
@@ -64,10 +65,11 @@ function bridgeBreakdownRows(snapshot: ExecutionSnapshot, locale: string): InfoB
     : "-";
   const slippageText =
     snapshot.slippage === undefined ? "Auto" : `Auto • ${formatPercent(snapshot.slippage)}`;
+  const refreshSec = Math.round(QUOTE_STALE_THRESHOLD_MS / 1000);
   const quoteRefresh =
     locale === "zh"
-      ? `每 ${Math.round(QUOTE_STALE_THRESHOLD_MS / 1000)}s 自动刷新`
-      : `Auto every ${Math.round(QUOTE_STALE_THRESHOLD_MS / 1000)}s`;
+      ? `每 ${refreshSec}s 自动刷新`
+      : `Auto every ${refreshSec}s`;
 
   return [
     ["deBridge fixed fee", fixedFeeText],
