@@ -199,14 +199,12 @@ export function TransferStep({
       )}
 
       {!transferAddress && (
-        <button
-          onClick={onCreate}
-          disabled={isCreating}
-          className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-[#159bff] text-sm font-black text-white active:scale-[0.98] disabled:opacity-50"
-        >
-          {isCreating ? <Loader2 className="animate-spin" size={16} /> : <QrCode size={16} />}
-          {locale === "zh" ? "生成收款地址" : "Create deposit address"}
-        </button>
+        <div className="flex min-h-[220px] flex-col items-center justify-center rounded-3xl border border-white/10 bg-white/[0.03] p-6">
+          <Loader2 className="animate-spin text-white/60" size={22} />
+          <p className="mt-3 text-xs font-semibold text-white/50">
+            {locale === "zh" ? "正在生成收款地址..." : "Generating deposit address..."}
+          </p>
+        </div>
       )}
     </div>
   );

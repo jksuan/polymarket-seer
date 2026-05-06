@@ -640,6 +640,16 @@ function DrawerContent({
     }
   };
 
+  useEffect(() => {
+    if (!isOpen) return;
+    if (step !== "transfer") return;
+    if (transferAddress) return;
+    if (isCreatingTransferAddress) return;
+    if (transferError) return;
+    void handleCreateTransferAddress();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, step]);
+
   const goBack = () => {
     if (step === "home") return;
     if (step === "asset" || step === "transfer") setStep("home");
