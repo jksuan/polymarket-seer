@@ -40,6 +40,52 @@ type PrivyLoginIdentity = {
   twitter?: { username?: string | null; subject?: string | null } | null;
 };
 
+const TRANSFER_ALLOWED_CHAIN_NAMES = new Set([
+  "ethereum",
+  "polygon",
+  "arbitrum",
+  "base",
+  "optimism",
+  "bnb smart chain",
+  "solana",
+  "bitcoin",
+  "tron",
+  "hyperevm",
+  "monad",
+]);
+
+const TRANSFER_ALLOWED_CHAIN_IDS = new Set(["1", "137", "42161", "8453", "10", "56"]);
+const TRANSFER_ALLOWED_TOKEN_SYMBOLS = new Set([
+  "1INCH",
+  "AAVE",
+  "ARB",
+  "BASE",
+  "BNB",
+  "BTC",
+  "BITCOIN",
+  "BUSD",
+  "DAI",
+  "ETH",
+  "EUROC",
+  "HYPE",
+  "LINK",
+  "MATIC",
+  "MON",
+  "OP",
+  "POL",
+  "SOL",
+  "TUSD",
+  "USDC",
+  "USDE",
+  "USDT",
+  "WBNB",
+  "WETH",
+]);
+
+function normalizeChainName(chainName?: string): string {
+  return (chainName || "").trim().toLowerCase();
+}
+
 function isEmailOrSocialLogin(user: unknown): boolean {
   const identity = user as PrivyLoginIdentity | null | undefined;
   return Boolean(
@@ -111,6 +157,15 @@ function DrawerContent({
     () => normalizeSupportedAssets(supportedAssets),
     [supportedAssets]
   );
+  const transferAssets = useMemo(() => (
+    depositAssets.filter((asset) => {
+      const symbol = asset.symbol.trim().toUpperCase();
+      if (!TRANSFER_ALLOWED_TOKEN_SYMBOLS.has(symbol)) return false;
+      const chainId = asset.chainId.trim();
+      const normalizedChainName = normalizeChainName(asset.chainName);
+      return TRANSFER_ALLOWED_CHAIN_IDS.has(chainId) || TRANSFER_ALLOWED_CHAIN_NAMES.has(normalizedChainName);
+    })
+  ), [depositAssets]);
   const assetsWithBalances = useMemo(
     () => depositAssets.map((asset) => ({
       ...asset,
@@ -125,13 +180,13 @@ function DrawerContent({
   );
   const transferChainOptions = useMemo(() => {
     const chainMap = new Map<string, string>();
-    for (const asset of depositAssets) {
+    for (const asset of transferAssets) {
       if (!chainMap.has(asset.chainId)) {
         chainMap.set(asset.chainId, asset.chainName);
       }
     }
     return [...chainMap.entries()].map(([chainId, chainName]) => ({ chainId, chainName }));
-  }, [depositAssets]);
+  }, [transferAssets]);
   const amountNumber = parseAmountUsd(amountUsd);
   const selectedUsdValue = selectedAsset ? assetUsdValues[selectedAsset.id] : undefined;
   const hasSubmittedTx = Boolean(executionTxHash || submittedOrderId);
@@ -208,20 +263,20 @@ function DrawerContent({
   }, [isOpen]);
 
   useEffect(() => {
-    if (depositAssets.length === 0) return;
+    if (transferAssets.length === 0) return;
     if (!selectedTransferChainId) {
-      setSelectedTransferChainId(depositAssets[0].chainId);
+      setSelectedTransferChainId(transferAssets[0].chainId);
       return;
     }
-    const chainExists = depositAssets.some((asset) => asset.chainId === selectedTransferChainId);
+    const chainExists = transferAssets.some((asset) => asset.chainId === selectedTransferChainId);
     if (!chainExists) {
-      setSelectedTransferChainId(depositAssets[0].chainId);
+      setSelectedTransferChainId(transferAssets[0].chainId);
     }
-  }, [depositAssets, selectedTransferChainId]);
+  }, [selectedTransferChainId, transferAssets]);
 
   useEffect(() => {
     if (!selectedTransferChainId) return;
-    const chainAssets = depositAssets.filter((asset) => asset.chainId === selectedTransferChainId);
+    const chainAssets = transferAssets.filter((asset) => asset.chainId === selectedTransferChainId);
     if (chainAssets.length === 0) {
       setSelectedTransferAssetId("");
       return;
@@ -230,7 +285,7 @@ function DrawerContent({
     if (!selectedExists) {
       setSelectedTransferAssetId(chainAssets[0].id);
     }
-  }, [depositAssets, selectedTransferAssetId, selectedTransferChainId]);
+  }, [selectedTransferAssetId, selectedTransferChainId, transferAssets]);
 
   useEffect(() => {
     setHasAcknowledgedRiskWarning(false);
@@ -789,7 +844,7 @@ function DrawerContent({
 
               {step === "transfer" && (
                 <TransferStep
-                  assets={depositAssets}
+                  assets={transferAssets}
                   chainOptions={transferChainOptions}
                   copied={copied}
                   error={mergedTransferError}
