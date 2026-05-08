@@ -55,5 +55,9 @@ export const TOKEN_ICON_URLS: Record<string, string> = {
 
 export const CHAIN_ICON_URLS: Record<string, string> = {
   "1": COINGECKO_ETH_SMALL_URL,
+  "10": "/images/crypto/op.svg",
+  "56": "/images/crypto/bnb.svg",
   "137": TOKEN_ICON_URLS.POL,
+  "8453": "/images/crypto/base.svg",
+  "42161": "/images/crypto/arb.svg",
 };
