@@ -40,7 +40,7 @@ import {
 } from "./deposit/execution";
 import { formatExecutionError } from "./deposit/errors";
 import { formatAmountUsdInput, parseAmountUsd, sanitizeAmountUsdInput } from "./deposit/format";
-import { getTransferChainMinUsd } from "./deposit/minimums";
+import { getConnectedDefaultAmountUsd, getTransferChainMinUsd } from "./deposit/minimums";
 import { getStatusText } from "./deposit/status";
 import { QuoteCountdownRing } from "./deposit/quote-countdown-ring";
 import { HomeStep } from "./deposit/connected/HomeStep";
@@ -613,6 +613,14 @@ function DrawerContent({
 
   const handleSelectAsset = (asset: DepositAsset) => {
     quoteRequestRef.current += 1;
+    const chainMinUsd = getTransferChainMinUsd(asset.chainName, asset.chainId, depositAssets);
+    const defaultAmountUsd = getConnectedDefaultAmountUsd({
+      walletUsdValue: Number(asset.usdValue ?? 0),
+      chainMinUsd,
+      maxDepositBalanceRatio: MAX_DEPOSIT_BALANCE_RATIO,
+      singleTxCapUsd: DEPOSIT_SINGLE_TX_CAP_USD,
+    });
+    setAmountUsd(formatAmountUsdInput(defaultAmountUsd));
     setSelectedAsset(asset);
     setSnapshot(null);
     setQuoteError("");
