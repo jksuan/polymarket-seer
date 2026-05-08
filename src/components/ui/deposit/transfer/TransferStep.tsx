@@ -63,6 +63,7 @@ const LOCAL_CHAIN_ICON_BY_NAME: Record<string, string> = {
   bitcoin: "/images/crypto/bitcoin.svg",
   hyperevm: "/images/crypto/hype.svg",
   monad: "/images/crypto/mon.svg",
+  tron: "/images/crypto/tron.png",
 };
 
 const LOCAL_CHAIN_ICON_BY_ID: Record<string, string> = {

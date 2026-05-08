@@ -6,6 +6,20 @@ import {
   Wallet,
 } from "lucide-react";
 
+const TRANSFER_CHAIN_ICONS = [
+  { src: "/images/crypto/eth.svg", alt: "Ethereum" },
+  { src: "/images/crypto/op.svg", alt: "Optimism" },
+  { src: "/images/crypto/bnb.svg", alt: "BNB Chain" },
+  { src: "/images/crypto/pol.svg", alt: "Polygon" },
+  { src: "/images/crypto/base.svg", alt: "Base" },
+  { src: "/images/crypto/arb.svg", alt: "Arbitrum" },
+  { src: "/images/crypto/sol.png", alt: "Solana" },
+  { src: "/images/crypto/bitcoin.svg", alt: "Bitcoin" },
+  { src: "/images/crypto/tron.png", alt: "Tron" },
+  { src: "/images/crypto/hype.svg", alt: "HyperEVM" },
+  { src: "/images/crypto/mon.svg", alt: "Monad" },
+] as const;
+
 export function HomeStep({
   locale,
   showConnectedWalletOption,
@@ -85,7 +99,20 @@ export function HomeStep({
               </p>
             </div>
           </div>
-          <span className="text-xs text-white/30">{"EVM • SOL • BTC"}</span>
+          <span
+            className="flex items-center justify-end"
+            aria-label={locale === "zh" ? "支持链：EVM、SOL、BTC 等" : "Supported chains: EVM, SOL, BTC, and more"}
+          >
+            {TRANSFER_CHAIN_ICONS.map((icon) => (
+              <span
+                key={icon.src}
+                title={icon.alt}
+                className="-ml-[1px] inline-flex h-3.5 w-3.5 items-center justify-center overflow-hidden rounded-full ring-1 ring-[#0e1422]"
+              >
+                <img src={icon.src} alt={icon.alt} className="h-full w-full object-cover" />
+              </span>
+            ))}
+          </span>
         </button>
         <div className="flex w-full items-center justify-between rounded-2xl border border-white/10 bg-white/[0.02] p-4 opacity-50">
           <div className="flex items-center gap-3">
