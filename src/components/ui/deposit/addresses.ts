@@ -53,3 +53,14 @@ export function extractAnyDepositAddress(response: CreateDepositResponse): strin
   }
   return "";
 }
+
+export function extractDepositAddressMap(response: CreateDepositResponse): DepositAddressMap {
+  const result: DepositAddressMap = {};
+  for (const addressType of ADDRESS_TYPES) {
+    const address = extractDepositAddress(response, addressType);
+    if (address) {
+      result[addressType] = address;
+    }
+  }
+  return result;
+}

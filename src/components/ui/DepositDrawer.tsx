@@ -9,15 +9,21 @@ import { selectPrimaryWallet } from "@/lib/primaryWallet";
 import { isClientDebugEnabled } from "@/lib/debug";
 import { shortenAddress } from "@/lib/utils";
 import { useTranslation } from "@/i18n";
+import type { BridgeAddressType } from "@/types/bridge";
 import type { BridgeTransaction, CreateDepositResponse } from "@/types/bridge";
 import type {
+  DepositAddressMap,
   DepositAsset,
   DepositDrawerProps,
   ExecutionSnapshot,
   FlowStep,
 } from "./deposit/types";
 import { DEPOSIT_SINGLE_TX_CAP_USD, MAX_DEPOSIT_BALANCE_RATIO } from "./deposit/constants";
-import { ensureEvmDepositAddress, extractAnyDepositAddress, extractDepositAddress } from "./deposit/addresses";
+import {
+  ensureEvmDepositAddress,
+  extractDepositAddress,
+  extractDepositAddressMap,
+} from "./deposit/addresses";
 import {
   estimateUsdValue,
   normalizeSupportedAssets,
@@ -88,6 +94,16 @@ const DEBUG_TRANSFER_DEDUPE =
 
 function normalizeChainName(chainName?: string): string {
   return (chainName || "").trim().toLowerCase();
+}
+
+function getTransferAddressType(chainId?: string, chainName?: string): BridgeAddressType {
+  const id = (chainId || "").trim();
+  if (TRANSFER_ALLOWED_CHAIN_IDS.has(id)) return "evm";
+  const name = normalizeChainName(chainName);
+  if (name.includes("solana")) return "svm";
+  if (name.includes("bitcoin") || name.includes("btc")) return "btc";
+  if (name.includes("tron")) return "tvm";
+  return "evm";
 }
 
 const TRANSFER_PLACEHOLDER_NATIVE_ADDRESSES = new Set([
@@ -211,6 +227,7 @@ function DrawerContent({
   const [isCancellingOrder, setIsCancellingOrder] = useState(false);
   const [cancelTxHash, setCancelTxHash] = useState("");
   const [, setDepositResponse] = useState<CreateDepositResponse | null>(null);
+  const [transferAddresses, setTransferAddresses] = useState<DepositAddressMap>({});
   const [transferAddress, setTransferAddress] = useState("");
   const [selectedTransferChainId, setSelectedTransferChainId] = useState("");
   const [selectedTransferAssetId, setSelectedTransferAssetId] = useState("");
@@ -299,6 +316,14 @@ function DrawerContent({
     }
     return [...chainMap.entries()].map(([chainId, chainName]) => ({ chainId, chainName }));
   }, [selectedTransferSymbol, transferAssets]);
+  const selectedTransferChain = useMemo(
+    () => transferChainOptions.find((chain) => chain.chainId === selectedTransferChainId),
+    [selectedTransferChainId, transferChainOptions]
+  );
+  const selectedTransferAddressType = useMemo(
+    () => getTransferAddressType(selectedTransferChain?.chainId, selectedTransferChain?.chainName),
+    [selectedTransferChain?.chainId, selectedTransferChain?.chainName]
+  );
   const amountNumber = parseAmountUsd(amountUsd);
   const selectedUsdValue = selectedAsset ? assetUsdValues[selectedAsset.id] : undefined;
   const hasSubmittedTx = Boolean(executionTxHash || submittedOrderId);
@@ -367,6 +392,7 @@ function DrawerContent({
     setSubmittedOrderId("");
     setIsCancellingOrder(false);
     setCancelTxHash("");
+    setTransferAddresses({});
     setTransferError("");
     setCopied(false);
     setQuoteAutoRefreshNonce(0);
@@ -803,12 +829,21 @@ function DrawerContent({
 
     try {
       const response = await createDepositAddress({ address: proxyAddress });
-      const address = extractDepositAddress(response, "evm") || extractAnyDepositAddress(response);
+      const addressMap = extractDepositAddressMap(response);
+      const address =
+        addressMap[selectedTransferAddressType] ||
+        extractDepositAddress(response, selectedTransferAddressType) ||
+        "";
       setDepositResponse(response);
+      setTransferAddresses(addressMap);
       setTransferAddress(address);
 
       if (!address) {
-        setTransferError(locale === "zh" ? "未找到可用充值地址。" : "No deposit address returned.");
+        setTransferError(
+          locale === "zh"
+            ? `当前网络暂不支持收款地址（${selectedTransferAddressType.toUpperCase()}）。请切换网络后重试。`
+            : `No ${selectedTransferAddressType.toUpperCase()} deposit address available for selected network.`
+        );
       }
     } catch (error) {
       setTransferError(
@@ -822,6 +857,22 @@ function DrawerContent({
       setIsCreatingTransferAddress(false);
     }
   };
+
+  useEffect(() => {
+    if (!selectedTransferChainId) return;
+    if (Object.keys(transferAddresses).length === 0) return;
+    const nextAddress = transferAddresses[selectedTransferAddressType] || "";
+    setTransferAddress(nextAddress);
+    if (!nextAddress) {
+      setTransferError(
+        locale === "zh"
+          ? `当前网络暂不支持收款地址（${selectedTransferAddressType.toUpperCase()}）。请切换网络。`
+          : `Selected network does not have a ${selectedTransferAddressType.toUpperCase()} deposit address.`
+      );
+      return;
+    }
+    setTransferError("");
+  }, [locale, selectedTransferAddressType, selectedTransferChainId, transferAddresses]);
 
   useEffect(() => {
     if (!isOpen) return;
