@@ -1,4 +1,4 @@
-export type BridgeAddressType = "evm" | "svm" | "btc" | "tvm";
+export type BridgeAddressType = "evm" | "svm" | "btc" | "tron";
 
 export type BridgeApiErrorCode =
   | "BAD_REQUEST"
@@ -73,7 +73,7 @@ export interface BridgeAddresses {
   evm?: string;
   svm?: string;
   btc?: string;
-  tvm?: string;
+  tron?: string;
   [key: string]: string | undefined;
 }
 

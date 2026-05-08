@@ -102,7 +102,7 @@ function getTransferAddressType(chainId?: string, chainName?: string): BridgeAdd
   const name = normalizeChainName(chainName);
   if (name.includes("solana")) return "svm";
   if (name.includes("bitcoin") || name.includes("btc")) return "btc";
-  if (name.includes("tron")) return "tvm";
+  if (name.includes("tron")) return "tron";
   return "evm";
 }
 

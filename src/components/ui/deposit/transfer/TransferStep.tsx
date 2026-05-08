@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { DepositAsset } from "../types";
 import {
   AlertTriangle,
@@ -109,6 +109,7 @@ export function TransferStep({
 }) {
   const [tokenOpen, setTokenOpen] = useState(false);
   const [chainOpen, setChainOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement | null>(null);
   const tokenOptions = [...new Map(
     assets.map((asset) => [asset.symbol.trim().toUpperCase(), asset] as const)
   ).values()];
@@ -145,8 +146,23 @@ export function TransferStep({
     setTokenOpen(false);
   };
 
+  useEffect(() => {
+    const handlePointerDownOutside = (event: MouseEvent) => {
+      const root = rootRef.current;
+      if (!root) return;
+      const target = event.target;
+      if (target instanceof Node && root.contains(target)) return;
+      setTokenOpen(false);
+      setChainOpen(false);
+    };
+    document.addEventListener("mousedown", handlePointerDownOutside);
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDownOutside);
+    };
+  }, []);
+
   return (
-    <div className="space-y-4">
+    <div ref={rootRef} className="space-y-4">
       <div className="grid grid-cols-2 gap-3">
         <div className="relative">
           <p className="mb-2 text-sm font-bold text-white/85">{locale === "zh" ? "代币" : "Tokens"}</p>
@@ -166,7 +182,10 @@ export function TransferStep({
                   : (selectedAsset?.symbol ?? "--")}
               </span>
             </span>
-            <ChevronDown className="text-white/40" size={16} />
+            <ChevronDown
+              className={`text-white/40 transition-transform duration-150 ${tokenOpen ? "rotate-180" : ""}`}
+              size={16}
+            />
           </button>
           {tokenOpen && (
             <div className="absolute left-0 right-0 top-[72px] z-20 max-h-64 overflow-y-auto rounded-2xl border border-white/10 bg-[#0d1118] p-2 shadow-2xl">
@@ -209,7 +228,10 @@ export function TransferStep({
               <ChainIcon chainId={effectiveChainId} chainName={effectiveChainName} />
               <span className="truncate text-sm font-black text-white">{effectiveChainName || "--"}</span>
             </span>
-            <ChevronDown className="text-white/40" size={16} />
+            <ChevronDown
+              className={`text-white/40 transition-transform duration-150 ${chainOpen ? "rotate-180" : ""}`}
+              size={16}
+            />
           </button>
           {chainOpen && (
             <div className="absolute left-0 right-0 top-[72px] z-20 rounded-2xl border border-white/10 bg-[#0d1118] p-2 shadow-2xl">
