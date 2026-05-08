@@ -77,6 +77,7 @@ const TRANSFER_ALLOWED_TOKEN_SYMBOLS = new Set([
   "SOL",
   "TUSD",
   "USDC",
+  "USDC.E",
   "USDE",
   "USDT",
   "WBNB",
@@ -265,6 +266,14 @@ function DrawerContent({
     }
     return [...deduped.values()];
   }, [depositAssets]);
+  const selectedTransferSymbol = useMemo(
+    () =>
+      transferAssets
+        .find((asset) => asset.id === selectedTransferAssetId)
+        ?.symbol.trim()
+        .toUpperCase() ?? "",
+    [selectedTransferAssetId, transferAssets]
+  );
   const assetsWithBalances = useMemo(
     () => depositAssets.map((asset) => ({
       ...asset,
@@ -278,14 +287,18 @@ function DrawerContent({
     [assetsWithBalances]
   );
   const transferChainOptions = useMemo(() => {
+    const sourceAssets = selectedTransferSymbol
+      ? transferAssets.filter((a) => a.symbol.trim().toUpperCase() === selectedTransferSymbol)
+      : transferAssets;
+
     const chainMap = new Map<string, string>();
-    for (const asset of transferAssets) {
+    for (const asset of sourceAssets) {
       if (!chainMap.has(asset.chainId)) {
         chainMap.set(asset.chainId, asset.chainName);
       }
     }
     return [...chainMap.entries()].map(([chainId, chainName]) => ({ chainId, chainName }));
-  }, [transferAssets]);
+  }, [selectedTransferSymbol, transferAssets]);
   const amountNumber = parseAmountUsd(amountUsd);
   const selectedUsdValue = selectedAsset ? assetUsdValues[selectedAsset.id] : undefined;
   const hasSubmittedTx = Boolean(executionTxHash || submittedOrderId);
@@ -362,18 +375,6 @@ function DrawerContent({
   }, [isOpen]);
 
   useEffect(() => {
-    if (transferAssets.length === 0) return;
-    if (!selectedTransferChainId) {
-      setSelectedTransferChainId(transferAssets[0].chainId);
-      return;
-    }
-    const chainExists = transferAssets.some((asset) => asset.chainId === selectedTransferChainId);
-    if (!chainExists) {
-      setSelectedTransferChainId(transferAssets[0].chainId);
-    }
-  }, [selectedTransferChainId, transferAssets]);
-
-  useEffect(() => {
     if (transferAssets.length > 0) return;
     if (!selectedTransferChainId && !selectedTransferAssetId) return;
     setSelectedTransferChainId("");
@@ -381,17 +382,36 @@ function DrawerContent({
   }, [selectedTransferAssetId, selectedTransferChainId, transferAssets.length]);
 
   useEffect(() => {
-    if (!selectedTransferChainId) return;
-    const chainAssets = transferAssets.filter((asset) => asset.chainId === selectedTransferChainId);
-    if (chainAssets.length === 0) {
-      setSelectedTransferAssetId("");
+    if (transferAssets.length === 0) return;
+    const selectedExists = transferAssets.some((asset) => asset.id === selectedTransferAssetId);
+    if (!selectedExists) {
+      setSelectedTransferAssetId(transferAssets[0].id);
+    }
+  }, [selectedTransferAssetId, transferAssets]);
+
+  useEffect(() => {
+    if (transferChainOptions.length === 0) {
+      if (selectedTransferChainId) setSelectedTransferChainId("");
       return;
     }
-    const selectedExists = chainAssets.some((asset) => asset.id === selectedTransferAssetId);
-    if (!selectedExists) {
-      setSelectedTransferAssetId(chainAssets[0].id);
+    const chainExists = transferChainOptions.some((chain) => chain.chainId === selectedTransferChainId);
+    if (!chainExists) {
+      setSelectedTransferChainId(transferChainOptions[0].chainId);
     }
-  }, [selectedTransferAssetId, selectedTransferChainId, transferAssets]);
+  }, [selectedTransferChainId, transferChainOptions]);
+
+  useEffect(() => {
+    if (!selectedTransferSymbol || !selectedTransferChainId) return;
+    const matched = transferAssets.find(
+      (asset) =>
+        asset.chainId === selectedTransferChainId &&
+        asset.symbol.trim().toUpperCase() === selectedTransferSymbol
+    );
+    if (!matched) return;
+    if (matched.id !== selectedTransferAssetId) {
+      setSelectedTransferAssetId(matched.id);
+    }
+  }, [selectedTransferAssetId, selectedTransferChainId, selectedTransferSymbol, transferAssets]);
 
   useEffect(() => {
     setHasAcknowledgedRiskWarning(false);

@@ -45,6 +45,7 @@ const LOCAL_TOKEN_ICON_BY_SYMBOL: Record<string, string> = {
   SOL: "/images/crypto/sol.png",
   TUSD: "/images/crypto/tusd.svg",
   USDE: "/images/crypto/usde.svg",
+  "USDC.E": "/images/crypto/usdc.svg",
   USDT: "/images/crypto/usdt.svg",
   WBNB: "/images/crypto/wbnb.svg",
   WETH: "/images/crypto/weth.png",
@@ -108,15 +109,17 @@ export function TransferStep({
 }) {
   const [tokenOpen, setTokenOpen] = useState(false);
   const [chainOpen, setChainOpen] = useState(false);
+  const tokenOptions = [...new Map(
+    assets.map((asset) => [asset.symbol.trim().toUpperCase(), asset] as const)
+  ).values()];
   const hasChains = chainOptions.length > 0;
   const selectedChain = chainOptions.find((chain) => chain.chainId === selectedChainId);
   const effectiveChainId = selectedChain?.chainId ?? (hasChains ? chainOptions[0].chainId : "");
   const effectiveChainName = selectedChain?.chainName ?? (hasChains ? chainOptions[0].chainName : "");
-  const chainAssets = assets.filter((asset) => asset.chainId === effectiveChainId);
-  const hasTokens = chainAssets.length > 0;
-  const selectedAsset = chainAssets.find((asset) => asset.id === selectedAssetId) ?? chainAssets[0];
-  const selectedChainMinUsd = getChainMinUsd(selectedChain?.chainName, selectedChain?.chainId, assets);
-  const tokenDisabled = !hasChains || !hasTokens;
+  const selectedAsset = assets.find((asset) => asset.id === selectedAssetId) ?? tokenOptions[0];
+  const hasTokens = tokenOptions.length > 0;
+  const selectedChainMinUsd = getChainMinUsd(effectiveChainName, effectiveChainId, assets);
+  const tokenDisabled = !hasTokens;
   const chainDisabled = !hasChains;
 
   const toggleTokenOpen = () => {
@@ -138,6 +141,7 @@ export function TransferStep({
 
   const handleSelectAsset = (assetId: string) => {
     onAssetChange(assetId);
+    setChainOpen(false);
     setTokenOpen(false);
   };
 
@@ -166,7 +170,7 @@ export function TransferStep({
           </button>
           {tokenOpen && (
             <div className="absolute left-0 right-0 top-[72px] z-20 max-h-64 overflow-y-auto rounded-2xl border border-white/10 bg-[#0d1118] p-2 shadow-2xl">
-              {chainAssets.map((asset) => (
+              {tokenOptions.map((asset) => (
                 <button
                   key={asset.id}
                   type="button"
@@ -177,7 +181,9 @@ export function TransferStep({
                     <TokenIcon compact iconUrl={getTokenIconUrl(asset)} symbol={asset.symbol} />
                     <span className="text-[0.82rem] font-normal text-white">{asset.symbol}</span>
                   </span>
-                  {selectedAssetId === asset.id ? <Check className="text-white" size={14} /> : null}
+                  {selectedAsset?.symbol.trim().toUpperCase() === asset.symbol.trim().toUpperCase()
+                    ? <Check className="text-white" size={14} />
+                    : null}
                 </button>
               ))}
             </div>
