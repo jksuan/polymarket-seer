@@ -36,3 +36,17 @@
 ---
 
 *修订时请保持本文简短、可执行；细则可拆到 `.cursor/rules/` 多条规则中。*
+
+## Agent skills
+
+### Issue tracker
+
+本仓库使用 GitHub Issues 进行需求、缺陷与任务跟踪。详见 `docs/agents/issue-tracker.md`。
+
+### Triage labels
+
+Issue 分拣使用五种标准状态标签映射（needs-triage/needs-info/ready-for-agent/ready-for-human/wontfix）。详见 `docs/agents/triage-labels.md`。
+
+### Domain docs
+
+当前采用 single-context 布局：仓库根目录 `CONTEXT.md`（若存在）+ `docs/adr/`（若存在）。详见 `docs/agents/domain.md`。
