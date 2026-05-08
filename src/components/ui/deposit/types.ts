@@ -29,6 +29,7 @@ export type DepositAsset = {
 export type DepositAddressMap = Partial<Record<BridgeAddressType, string>>;
 
 export type ExecutionKind = "idle" | "direct-transfer" | "same-chain" | "cross-chain";
+export type ExecutionEngine = "evm" | "svm";
 
 export type ExecutionTx = DlnTx & {
   allowanceTarget?: string;
@@ -39,6 +40,7 @@ export type Eip1193Provider = {
 };
 
 export type ExecutionSnapshot = {
+  executionEngine: ExecutionEngine;
   kind: Exclude<ExecutionKind, "idle">;
   asset: DepositAsset;
   amountUsd: number;

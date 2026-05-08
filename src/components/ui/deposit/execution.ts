@@ -10,17 +10,32 @@ import {
   getConnectedMinDepositUsd,
 } from "./constants";
 import { formatCompactBalance } from "./format";
-import type { DepositAsset, ExecutionSnapshot, ExecutionTx } from "./types";
+import type { DepositAsset, ExecutionEngine, ExecutionSnapshot, ExecutionTx } from "./types";
+
+const SOLANA_CHAIN_IDS = new Set(["101", "103", "solana"]);
+const SOLANA_CHAIN_NAMES = ["solana", "svm"];
+
+export function resolveExecutionEngine(asset: DepositAsset): ExecutionEngine {
+  const chainId = asset.chainId.trim().toLowerCase();
+  if (SOLANA_CHAIN_IDS.has(chainId)) return "svm";
+
+  const chainName = asset.chainName.trim().toLowerCase();
+  if (SOLANA_CHAIN_NAMES.some((name) => chainName.includes(name))) return "svm";
+
+  return "evm";
+}
 
 export async function buildExecutionSnapshot({
   amountUsd,
   asset,
   depositAddress,
+  executionEngine,
   proxyAddress,
 }: {
   amountUsd: number;
   asset: DepositAsset;
   depositAddress: string;
+  executionEngine: ExecutionEngine;
   proxyAddress: string;
 }): Promise<ExecutionSnapshot> {
   const sourceAmountBaseUnit = await estimateBaseUnitForUsd({
@@ -38,6 +53,7 @@ export async function buildExecutionSnapshot({
     amountUsd,
     asset,
     depositAddress,
+    executionEngine,
     proxyAddress,
     sourceAmountBaseUnit,
     quotedAtMs,
@@ -49,6 +65,7 @@ async function snapshotFromDirectTransfer({
   amountUsd,
   asset,
   depositAddress,
+  executionEngine,
   proxyAddress,
   sourceAmountBaseUnit,
   quotedAtMs,
@@ -57,6 +74,7 @@ async function snapshotFromDirectTransfer({
   amountUsd: number;
   asset: DepositAsset;
   depositAddress: string;
+  executionEngine: ExecutionEngine;
   proxyAddress: string;
   sourceAmountBaseUnit: string;
   quotedAtMs: number;
@@ -114,6 +132,7 @@ async function snapshotFromDirectTransfer({
       : undefined;
 
   return {
+    executionEngine,
     kind: "direct-transfer",
     asset,
     amountUsd,

@@ -29,8 +29,15 @@ import {
   normalizeSupportedAssets,
   readAssetBalance,
 } from "./deposit/assets";
-import { approveErc20IfNeeded, getWalletEthereumProvider, sendPreparedEvmTx, switchEvmChain } from "./deposit/evm";
-import { buildExecutionSnapshot, isQuotePriceChanged, validateBridgeReceiveMinimum, validateDepositSelection } from "./deposit/execution";
+import { getWalletEthereumProvider, sendPreparedEvmTx, switchEvmChain } from "./deposit/evm";
+import { executeConnectedOrder } from "./deposit/executor";
+import {
+  buildExecutionSnapshot,
+  isQuotePriceChanged,
+  resolveExecutionEngine,
+  validateBridgeReceiveMinimum,
+  validateDepositSelection,
+} from "./deposit/execution";
 import { formatExecutionError } from "./deposit/errors";
 import { formatAmountUsdInput, parseAmountUsd, sanitizeAmountUsdInput } from "./deposit/format";
 import { getStatusText } from "./deposit/status";
@@ -556,6 +563,7 @@ function DrawerContent({
           amountUsd: snapshot.amountUsd,
           asset: snapshot.asset,
           depositAddress,
+          executionEngine: resolveExecutionEngine(snapshot.asset),
           proxyAddress,
         });
         if (quoteRequestRef.current !== requestId) return;
@@ -657,6 +665,7 @@ function DrawerContent({
         return;
       }
 
+      const executionEngine = resolveExecutionEngine(selectedAsset);
       const depositAddress = await ensureEvmDepositAddress({
         existingAddress: transferAddress,
         onAddress: setTransferAddress,
@@ -667,6 +676,7 @@ function DrawerContent({
         amountUsd: amountNumber,
         asset: selectedAsset,
         depositAddress,
+        executionEngine,
         proxyAddress,
       });
       if (quoteRequestRef.current !== requestId) return;
@@ -720,6 +730,7 @@ function DrawerContent({
       const isStale = Date.now() >= activeSnapshot.expiresAtMs;
       if (isStale) {
         const requestId = ++quoteRequestRef.current;
+        const executionEngine = resolveExecutionEngine(activeSnapshot.asset);
         const depositAddress = await ensureEvmDepositAddress({
           existingAddress: transferAddress,
           onAddress: setTransferAddress,
@@ -730,6 +741,7 @@ function DrawerContent({
           amountUsd: activeSnapshot.amountUsd,
           asset: activeSnapshot.asset,
           depositAddress,
+          executionEngine,
           proxyAddress,
         });
         if (quoteRequestRef.current !== requestId) {
@@ -763,24 +775,16 @@ function DrawerContent({
       }
       setExecutionRiskWarning("");
 
-      const ethereumProvider = await getWalletEthereumProvider(activeWallet);
-      await switchEvmChain(ethereumProvider, activeSnapshot.asset.chainId);
-
-      if (activeSnapshot.approveSpender && !activeSnapshot.asset.isNative) {
-        await approveErc20IfNeeded({
-          amountBaseUnit: activeSnapshot.sourceAmountBaseUnit,
-          asset: activeSnapshot.asset,
-          owner: walletAddress,
-          provider: ethereumProvider,
-          spender: activeSnapshot.approveSpender,
-        });
-      }
-
-      const txHash = await sendPreparedEvmTx(ethereumProvider, activeSnapshot.tx);
+      const { txHash, orderId } = await executeConnectedOrder({
+        locale,
+        snapshot: activeSnapshot,
+        wallet: activeWallet,
+        walletAddress,
+      });
       setExecutionSubmittedAtMs(Date.now());
       setExecutionTxHash(txHash);
-      if (activeSnapshot.orderId) {
-        setSubmittedOrderId(activeSnapshot.orderId);
+      if (orderId) {
+        setSubmittedOrderId(orderId);
       }
     } catch (error) {
       setExecutionError(formatExecutionError(error, locale, "execute"));
@@ -1013,6 +1017,7 @@ function DrawerContent({
                   locale={locale}
                   onCancelOrder={handleCancelDlnOrder}
                   onConfirm={handleConfirmOrder}
+                  onFallbackToTransfer={() => setStep("transfer")}
                   quoteWarning={quoteWarning}
                   snapshot={snapshot}
                   walletLabel={walletLabel}
