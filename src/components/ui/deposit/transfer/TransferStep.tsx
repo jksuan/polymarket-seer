@@ -108,17 +108,25 @@ export function TransferStep({
 }) {
   const [tokenOpen, setTokenOpen] = useState(false);
   const [chainOpen, setChainOpen] = useState(false);
-  const selectedAsset = assets.find((asset) => asset.id === selectedAssetId) ?? assets[0];
-  const selectedChain = chainOptions.find((chain) => chain.chainId === selectedChainId) ?? chainOptions[0];
-  const filteredAssets = assets.filter((asset) => asset.chainId === selectedChainId);
+  const hasChains = chainOptions.length > 0;
+  const selectedChain = chainOptions.find((chain) => chain.chainId === selectedChainId);
+  const effectiveChainId = selectedChain?.chainId ?? (hasChains ? chainOptions[0].chainId : "");
+  const effectiveChainName = selectedChain?.chainName ?? (hasChains ? chainOptions[0].chainName : "");
+  const chainAssets = assets.filter((asset) => asset.chainId === effectiveChainId);
+  const hasTokens = chainAssets.length > 0;
+  const selectedAsset = chainAssets.find((asset) => asset.id === selectedAssetId) ?? chainAssets[0];
   const selectedChainMinUsd = getChainMinUsd(selectedChain?.chainName, selectedChain?.chainId, assets);
+  const tokenDisabled = !hasChains || !hasTokens;
+  const chainDisabled = !hasChains;
 
   const toggleTokenOpen = () => {
+    if (tokenDisabled) return;
     setTokenOpen((prev) => !prev);
     setChainOpen(false);
   };
 
   const toggleChainOpen = () => {
+    if (chainDisabled) return;
     setChainOpen((prev) => !prev);
     setTokenOpen(false);
   };
@@ -141,19 +149,24 @@ export function TransferStep({
           <button
             type="button"
             onClick={toggleTokenOpen}
-            className="flex h-11 w-full items-center justify-between rounded-2xl border border-white/10 bg-white/[0.04] px-3 text-left"
+            disabled={tokenDisabled}
+            className="flex h-11 w-full items-center justify-between rounded-2xl border border-white/10 bg-white/[0.04] px-3 text-left disabled:cursor-not-allowed disabled:opacity-50"
           >
             <span className="flex items-center gap-2">
               {selectedAsset ? (
                 <TokenIcon compact iconUrl={getTokenIconUrl(selectedAsset)} symbol={selectedAsset.symbol} />
               ) : null}
-              <span className="text-sm font-black text-white">{selectedAsset?.symbol ?? "--"}</span>
+              <span className="text-sm font-black text-white">
+                {tokenDisabled
+                  ? (locale === "zh" ? "暂无可用代币" : "No tokens")
+                  : (selectedAsset?.symbol ?? "--")}
+              </span>
             </span>
             <ChevronDown className="text-white/40" size={16} />
           </button>
           {tokenOpen && (
             <div className="absolute left-0 right-0 top-[72px] z-20 max-h-64 overflow-y-auto rounded-2xl border border-white/10 bg-[#0d1118] p-2 shadow-2xl">
-              {(filteredAssets.length > 0 ? filteredAssets : assets).map((asset) => (
+              {chainAssets.map((asset) => (
                 <button
                   key={asset.id}
                   type="button"
@@ -175,17 +188,20 @@ export function TransferStep({
           <div className="mb-2 flex items-center justify-between">
             <p className="text-sm font-bold text-white/85">{locale === "zh" ? "网络" : "Chains"}</p>
             <p className="text-sm text-white/50">
-              {locale === "zh" ? `最低 $${selectedChainMinUsd}` : `Min $${selectedChainMinUsd}`}
+              {chainDisabled
+                ? (locale === "zh" ? "暂无可用网络" : "No networks")
+                : (locale === "zh" ? `最低 $${selectedChainMinUsd}` : `Min $${selectedChainMinUsd}`)}
             </p>
           </div>
           <button
             type="button"
             onClick={toggleChainOpen}
-            className="flex h-11 w-full items-center justify-between rounded-2xl border border-white/10 bg-white/[0.04] px-3 text-left"
+            disabled={chainDisabled}
+            className="flex h-11 w-full items-center justify-between rounded-2xl border border-white/10 bg-white/[0.04] px-3 text-left disabled:cursor-not-allowed disabled:opacity-50"
           >
             <span className="flex min-w-0 items-center gap-2">
-              <ChainIcon chainId={selectedChain?.chainId} chainName={selectedChain?.chainName} />
-              <span className="truncate text-sm font-black text-white">{selectedChain?.chainName ?? "--"}</span>
+              <ChainIcon chainId={effectiveChainId} chainName={effectiveChainName} />
+              <span className="truncate text-sm font-black text-white">{effectiveChainName || "--"}</span>
             </span>
             <ChevronDown className="text-white/40" size={16} />
           </button>

@@ -374,6 +374,13 @@ function DrawerContent({
   }, [selectedTransferChainId, transferAssets]);
 
   useEffect(() => {
+    if (transferAssets.length > 0) return;
+    if (!selectedTransferChainId && !selectedTransferAssetId) return;
+    setSelectedTransferChainId("");
+    setSelectedTransferAssetId("");
+  }, [selectedTransferAssetId, selectedTransferChainId, transferAssets.length]);
+
+  useEffect(() => {
     if (!selectedTransferChainId) return;
     const chainAssets = transferAssets.filter((asset) => asset.chainId === selectedTransferChainId);
     if (chainAssets.length === 0) {
