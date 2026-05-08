@@ -21,7 +21,13 @@ import { bridgeKeys, type BridgeStatusKey } from "@/lib/bridgeKeys";
 
 const SUPPORTED_ASSETS_DEDUPING_INTERVAL_MS = 60_000;
 const STATUS_REFRESH_INTERVAL_MS = 10_000;
+const FAST_STATUS_REFRESH_INTERVAL_MS = 2_000;
 const FINAL_STATUSES = new Set<string>(["COMPLETED", "FAILED"]);
+
+type BridgeStatusPollingOptions = {
+  fastPollingUntilMs?: number;
+  fastRefreshIntervalMs?: number;
+};
 
 export function useSupportedAssets() {
   const { data, error, isLoading, isValidating, mutate } = useSWR<
@@ -45,7 +51,11 @@ export function useSupportedAssets() {
   };
 }
 
-export function useBridgeStatus(address?: string | null, enabled = true) {
+export function useBridgeStatus(
+  address?: string | null,
+  enabled = true,
+  polling?: BridgeStatusPollingOptions
+) {
   const normalizedAddress = address?.trim();
   const swrKey =
     enabled && normalizedAddress ? bridgeKeys.status(normalizedAddress) : null;
@@ -63,8 +73,13 @@ export function useBridgeStatus(address?: string | null, enabled = true) {
     {
       revalidateOnFocus: true,
       dedupingInterval: 2_000,
-      refreshInterval: (latestData) =>
-        isFinalBridgeStatus(latestData) ? 0 : STATUS_REFRESH_INTERVAL_MS,
+      refreshInterval: (latestData) => {
+        if (isFinalBridgeStatus(latestData)) return 0;
+        const fastUntilMs = polling?.fastPollingUntilMs ?? 0;
+        const fastIntervalMs = polling?.fastRefreshIntervalMs ?? FAST_STATUS_REFRESH_INTERVAL_MS;
+        if (fastUntilMs > Date.now()) return fastIntervalMs;
+        return STATUS_REFRESH_INTERVAL_MS;
+      },
     }
   );
 

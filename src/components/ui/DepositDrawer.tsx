@@ -48,7 +48,7 @@ import {
   getConnectedMaxAllowedUsd,
   getTransferChainMinUsd,
 } from "./deposit/minimums";
-import { getStatusText } from "./deposit/status";
+import { getTransferStatusSinceAddressCreated, isBridgeCompletedStatus } from "./deposit/status";
 import { QuoteCountdownRing } from "./deposit/quote-countdown-ring";
 import { HomeStep } from "./deposit/connected/HomeStep";
 import { AssetStep } from "./deposit/connected/AssetStep";
@@ -244,6 +244,7 @@ function DrawerContent({
   const [, setDepositResponse] = useState<CreateDepositResponse | null>(null);
   const [transferAddresses, setTransferAddresses] = useState<DepositAddressMap>({});
   const [transferAddress, setTransferAddress] = useState("");
+  const [transferAddressCreatedAtMs, setTransferAddressCreatedAtMs] = useState(0);
   const [selectedTransferChainId, setSelectedTransferChainId] = useState("");
   const [selectedTransferAssetId, setSelectedTransferAssetId] = useState("");
   const [isCreatingTransferAddress, setIsCreatingTransferAddress] = useState(false);
@@ -342,8 +343,22 @@ function DrawerContent({
   const amountNumber = parseAmountUsd(amountUsd);
   const selectedUsdValue = selectedAsset ? assetUsdValues[selectedAsset.id] : undefined;
   const hasSubmittedTx = Boolean(executionTxHash || submittedOrderId);
+  const transferFastPollingUntilMs = transferAddressCreatedAtMs > 0
+    ? transferAddressCreatedAtMs + 60_000
+    : 0;
 
-  const transferStatus = useBridgeStatus(transferAddress, Boolean(transferAddress && isOpen));
+  const transferStatus = useBridgeStatus(
+    transferAddress,
+    Boolean(transferAddress && isOpen),
+    { fastPollingUntilMs: transferFastPollingUntilMs, fastRefreshIntervalMs: 2_000 }
+  );
+  const transferLatestStatus = useMemo(
+    () => getTransferStatusSinceAddressCreated(
+      transferStatus.data?.transactions,
+      transferAddressCreatedAtMs
+    ),
+    [transferAddressCreatedAtMs, transferStatus.data?.transactions]
+  );
   const dlnStatus = useDlnOrderStatus(submittedOrderId, Boolean(submittedOrderId && isOpen));
   const bridgePollingErrorMessage = transferStatus.error?.message ?? "";
   const mergedTransferError = transferError || bridgePollingErrorMessage;
@@ -381,7 +396,11 @@ function DrawerContent({
   const depositBridgeComplete = Boolean(
     hasSubmittedTx &&
       transferAddress &&
-      currentSubmissionTransaction?.status?.toUpperCase() === "COMPLETED"
+      isBridgeCompletedStatus(currentSubmissionTransaction?.status)
+  );
+  const transferBridgeComplete = Boolean(
+    transferAddress &&
+      isBridgeCompletedStatus(transferLatestStatus)
   );
   const hasHighWalletMismatchRisk = useMemo(
     () => (snapshot ? isHighWalletMismatchRisk(snapshot) : false),
@@ -408,6 +427,7 @@ function DrawerContent({
     setIsCancellingOrder(false);
     setCancelTxHash("");
     setTransferAddresses({});
+    setTransferAddressCreatedAtMs(0);
     setTransferError("");
     setCopied(false);
     setQuoteAutoRefreshNonce(0);
@@ -474,7 +494,7 @@ function DrawerContent({
   }, [executionTxHash, isOpen, transferAddress, transferStatus]);
 
   useEffect(() => {
-    if (depositBridgeComplete && !hasRefreshedBalance) {
+    if ((depositBridgeComplete || transferBridgeComplete) && !hasRefreshedBalance) {
       setHasRefreshedBalance(true);
       onBalanceRefresh?.();
       // Bridge/CLOB 同步可能晚于首个 COMPLETED，短时补几次刷新避免顶部余额停留旧值。
@@ -488,7 +508,7 @@ function DrawerContent({
         }, delayMs)
       );
     }
-  }, [depositBridgeComplete, hasRefreshedBalance, onBalanceRefresh]);
+  }, [depositBridgeComplete, hasRefreshedBalance, onBalanceRefresh, transferBridgeComplete]);
 
   useEffect(() => {
     if (!isOpen || !activeWallet) {
@@ -868,6 +888,7 @@ function DrawerContent({
       setDepositResponse(response);
       setTransferAddresses(addressMap);
       setTransferAddress(address);
+      setTransferAddressCreatedAtMs(Date.now());
 
       if (!address) {
         setTransferError(
@@ -894,6 +915,7 @@ function DrawerContent({
     if (Object.keys(transferAddresses).length === 0) return;
     const nextAddress = transferAddresses[selectedTransferAddressType] || "";
     setTransferAddress(nextAddress);
+    setTransferAddressCreatedAtMs(nextAddress ? Date.now() : 0);
     if (!nextAddress) {
       setTransferError(
         locale === "zh"
@@ -1076,7 +1098,8 @@ function DrawerContent({
                   onRetryPolling={() => void transferStatus.mutate()}
                   selectedAssetId={selectedTransferAssetId}
                   selectedChainId={selectedTransferChainId}
-                  statusText={getStatusText(locale, transferStatus.latestStatus)}
+                  statusCode={transferLatestStatus}
+                  statusText={locale === "zh" ? "等待转账" : "Waiting"}
                   transferAddress={transferAddress}
                 />
               )}

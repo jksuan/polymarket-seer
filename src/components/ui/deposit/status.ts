@@ -1,4 +1,11 @@
 import type { ExecutionKind } from "./types";
+import type { BridgeTransaction } from "@/types/bridge";
+
+const TRANSFER_STATUS_HISTORY_TOLERANCE_MS = 15_000;
+
+export function isBridgeCompletedStatus(status?: string): boolean {
+  return (status || "").trim().toUpperCase() === "COMPLETED";
+}
 
 export function getStatusText(locale: string, status?: string): string {
   const zh = locale === "zh";
@@ -61,6 +68,34 @@ export function getExecutionStatusText({
   if (dlnStatus) return getDlnStatusText(locale, dlnStatus);
   if (txHash) return zh ? "订单已提交" : "Order submitted";
   return zh ? "等待确认" : "Ready";
+}
+
+export function getTransferStatusSinceAddressCreated(
+  transactions: BridgeTransaction[] | undefined,
+  addressCreatedAtMs: number
+): string | undefined {
+  const list = transactions ?? [];
+  if (list.length === 0) return undefined;
+
+  const threshold = addressCreatedAtMs > 0
+    ? addressCreatedAtMs - TRANSFER_STATUS_HISTORY_TOLERANCE_MS
+    : 0;
+  const candidates = list.filter((tx) => {
+    const createdTimeMs = Number(tx.createdTimeMs ?? 0);
+    if (!Number.isFinite(createdTimeMs) || createdTimeMs <= 0) {
+      return addressCreatedAtMs <= 0;
+    }
+    return createdTimeMs >= threshold;
+  });
+
+  const latest = candidates.reduce<BridgeTransaction | undefined>((acc, tx) => {
+    if (!acc) return tx;
+    const prev = Number(acc.createdTimeMs ?? 0);
+    const next = Number(tx.createdTimeMs ?? 0);
+    return next >= prev ? tx : acc;
+  }, undefined);
+
+  return latest?.status;
 }
 
 function getDlnStatusText(locale: string, status?: string): string {

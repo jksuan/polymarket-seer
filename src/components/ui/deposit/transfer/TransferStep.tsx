@@ -91,6 +91,7 @@ export function TransferStep({
   selectedAssetId,
   selectedChainId,
   statusText,
+  statusCode,
   transferAddress,
 }: {
   assets: DepositAsset[];
@@ -107,6 +108,7 @@ export function TransferStep({
   selectedAssetId: string;
   selectedChainId: string;
   statusText: string;
+  statusCode?: string;
   transferAddress: string;
 }) {
   const [tokenOpen, setTokenOpen] = useState(false);
@@ -352,7 +354,7 @@ export function TransferStep({
             <div className="flex items-center justify-between">
               <p className="text-sm font-bold text-white">{locale === "zh" ? "状态" : "Status"}</p>
               <span className="rounded-full border border-white/10 bg-white/10 px-2 py-1 text-[10px] font-black uppercase text-white/60">
-                {statusText}
+                {getTransferBadgeStatusText(locale, statusCode, statusText)}
               </span>
             </div>
           </div>
@@ -447,5 +449,24 @@ function ChainIcon({ chainId, chainName }: { chainId?: string; chainName?: strin
       {initial}
     </span>
   );
+}
+
+function getTransferBadgeStatusText(locale: string, currentStatus?: string, fallback?: string): string {
+  const zh = locale === "zh";
+  switch ((currentStatus || "").toUpperCase()) {
+    case "DEPOSIT_DETECTED":
+    case "PROCESSING":
+      return zh ? "处理中" : "Processing";
+    case "ORIGIN_TX_CONFIRMED":
+      return zh ? "源链已确认" : "Origin confirmed";
+    case "SUBMITTED":
+      return zh ? "已提交到目标链" : "Submitted to destination";
+    case "COMPLETED":
+      return zh ? "已入账" : "Deposited";
+    case "FAILED":
+      return zh ? "失败" : "Failed";
+    default:
+      return fallback || (zh ? "等待转账" : "Waiting");
+  }
 }
 
