@@ -46,7 +46,7 @@ describe("AmountStep", () => {
   });
 
   it("金额超过余额上限时展示余额不足并禁用继续", () => {
-    renderAmountStep({ amountUsd: "96" });
+    renderAmountStep({ amountUsd: "100" });
 
     expect(screen.getByText("钱包余额不足")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "继续" })).toBeDisabled();

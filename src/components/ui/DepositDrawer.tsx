@@ -18,7 +18,10 @@ import type {
   ExecutionSnapshot,
   FlowStep,
 } from "./deposit/types";
-import { DEPOSIT_SINGLE_TX_CAP_USD, MAX_DEPOSIT_BALANCE_RATIO } from "./deposit/constants";
+import {
+  CONNECTED_MAX_BUFFER_USD,
+  DEPOSIT_SINGLE_TX_CAP_USD,
+} from "./deposit/constants";
 import {
   ensureEvmDepositAddress,
   extractDepositAddress,
@@ -40,7 +43,11 @@ import {
 } from "./deposit/execution";
 import { formatExecutionError } from "./deposit/errors";
 import { formatAmountUsdInput, parseAmountUsd, sanitizeAmountUsdInput } from "./deposit/format";
-import { getConnectedDefaultAmountUsd, getTransferChainMinUsd } from "./deposit/minimums";
+import {
+  getConnectedDefaultAmountUsd,
+  getConnectedMaxAllowedUsd,
+  getTransferChainMinUsd,
+} from "./deposit/minimums";
 import { getStatusText } from "./deposit/status";
 import { QuoteCountdownRing } from "./deposit/quote-countdown-ring";
 import { HomeStep } from "./deposit/connected/HomeStep";
@@ -617,8 +624,8 @@ function DrawerContent({
     const defaultAmountUsd = getConnectedDefaultAmountUsd({
       walletUsdValue: Number(asset.usdValue ?? 0),
       chainMinUsd,
-      maxDepositBalanceRatio: MAX_DEPOSIT_BALANCE_RATIO,
       singleTxCapUsd: DEPOSIT_SINGLE_TX_CAP_USD,
+      maxBufferUsd: CONNECTED_MAX_BUFFER_USD,
     });
     setAmountUsd(formatAmountUsdInput(defaultAmountUsd));
     setSelectedAsset(asset);
@@ -637,7 +644,11 @@ function DrawerContent({
     const value = Number(selectedUsdValue || 0);
     if (!Number.isFinite(value) || value <= 0) return;
     const nextAmount = percent === 1
-      ? Math.min(value * MAX_DEPOSIT_BALANCE_RATIO, DEPOSIT_SINGLE_TX_CAP_USD)
+      ? getConnectedMaxAllowedUsd({
+        walletUsdValue: value,
+        singleTxCapUsd: DEPOSIT_SINGLE_TX_CAP_USD,
+        maxBufferUsd: CONNECTED_MAX_BUFFER_USD,
+      })
       : value * percent;
     setAmountUsd(formatAmountUsdInput(nextAmount));
   };
@@ -652,10 +663,11 @@ function DrawerContent({
   };
 
   const handleQuote = useCallback(async () => {
-    const maxDepositUsd = Math.min(
-      Number(selectedUsdValue ?? 0) * MAX_DEPOSIT_BALANCE_RATIO,
-      DEPOSIT_SINGLE_TX_CAP_USD
-    );
+    const maxDepositUsd = getConnectedMaxAllowedUsd({
+      walletUsdValue: Number(selectedUsdValue ?? 0),
+      singleTxCapUsd: DEPOSIT_SINGLE_TX_CAP_USD,
+      maxBufferUsd: CONNECTED_MAX_BUFFER_USD,
+    });
     if (!selectedAsset || !proxyAddress || amountNumber < 1 || amountNumber > maxDepositUsd + 0.01) return;
     const requestId = ++quoteRequestRef.current;
     setIsQuoting(true);
@@ -667,6 +679,8 @@ function DrawerContent({
         amountUsd: amountNumber,
         asset: selectedAsset,
         allAssets: depositAssets,
+        connectedMaxBufferUsd: CONNECTED_MAX_BUFFER_USD,
+        connectedSingleTxCapUsd: DEPOSIT_SINGLE_TX_CAP_USD,
         locale,
       });
       if (validationError) {
@@ -730,6 +744,8 @@ function DrawerContent({
         amountUsd: snapshot.amountUsd,
         asset: snapshot.asset,
         allAssets: depositAssets,
+        connectedMaxBufferUsd: CONNECTED_MAX_BUFFER_USD,
+        connectedSingleTxCapUsd: DEPOSIT_SINGLE_TX_CAP_USD,
         locale,
       });
       if (validationError) {

@@ -21,6 +21,21 @@ export function getTransferChainMinUsd(
   return Math.ceil(baseMin + extra);
 }
 
+export function getConnectedMaxAllowedUsd({
+  walletUsdValue,
+  singleTxCapUsd,
+  maxBufferUsd,
+}: {
+  walletUsdValue: number;
+  singleTxCapUsd: number;
+  maxBufferUsd: number;
+}): number {
+  const balanceUsd = Number.isFinite(walletUsdValue) && walletUsdValue > 0 ? walletUsdValue : 0;
+  const bufferUsd = Number.isFinite(maxBufferUsd) && maxBufferUsd > 0 ? maxBufferUsd : 0;
+  const headroom = Math.max(0, balanceUsd - bufferUsd);
+  return Number(Math.min(headroom, singleTxCapUsd).toFixed(2));
+}
+
 function roundToOneSignificantDigit(value: number): number {
   if (!Number.isFinite(value) || value <= 0) return 0;
   const exponent = Math.floor(Math.log10(value));
@@ -36,16 +51,20 @@ function toTwoDecimals(value: number): number {
 export function getConnectedDefaultAmountUsd({
   walletUsdValue,
   chainMinUsd,
-  maxDepositBalanceRatio,
   singleTxCapUsd,
+  maxBufferUsd,
 }: {
   walletUsdValue: number;
   chainMinUsd: number;
-  maxDepositBalanceRatio: number;
   singleTxCapUsd: number;
+  maxBufferUsd: number;
 }): number {
   const balanceUsd = Number.isFinite(walletUsdValue) && walletUsdValue > 0 ? walletUsdValue : 0;
-  const maxAllowed = Math.min(balanceUsd * maxDepositBalanceRatio, singleTxCapUsd);
+  const maxAllowed = getConnectedMaxAllowedUsd({
+    walletUsdValue: balanceUsd,
+    singleTxCapUsd,
+    maxBufferUsd,
+  });
   const rawDefault = roundToOneSignificantDigit(balanceUsd * 0.5);
 
   if (maxAllowed <= 0) return 0;

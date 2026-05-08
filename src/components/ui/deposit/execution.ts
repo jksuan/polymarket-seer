@@ -3,13 +3,15 @@ import { POLYGON_CHAIN_ID } from "@/lib/constants";
 import { getBridgeQuote } from "@/hooks/useBridge";
 import { estimateBaseUnitForUsd } from "./assets";
 import {
+  DEFAULT_CONNECTED_MAX_BUFFER_USD,
+  DEFAULT_SINGLE_TX_CAP_USD,
   PUSD_ADDRESS,
   QUOTE_PRICE_CHANGE_THRESHOLD,
   QUOTE_STALE_THRESHOLD_MS,
   SUPPORTED_DLN_EVM_CHAIN_IDS,
 } from "./constants";
 import { formatCompactBalance } from "./format";
-import { getTransferChainMinUsd } from "./minimums";
+import { getConnectedMaxAllowedUsd, getTransferChainMinUsd } from "./minimums";
 import type { DepositAsset, ExecutionEngine, ExecutionSnapshot, ExecutionTx } from "./types";
 
 const SOLANA_CHAIN_IDS = new Set(["101", "103", "solana"]);
@@ -178,11 +180,15 @@ export function validateDepositSelection({
   amountUsd,
   asset,
   allAssets,
+  connectedMaxBufferUsd,
+  connectedSingleTxCapUsd,
   locale,
 }: {
   amountUsd: number;
   asset: DepositAsset;
   allAssets?: DepositAsset[];
+  connectedMaxBufferUsd?: number;
+  connectedSingleTxCapUsd?: number;
   locale: string;
 }): string | null {
   const zh = locale === "zh";
@@ -201,8 +207,12 @@ export function validateDepositSelection({
       : `Minimum deposit for this asset is $${minDepositUsd.toFixed(2)}.`;
   }
 
-  const availableUsd = asset.usdValue ?? 0;
-  if (availableUsd > 0 && amountUsd > availableUsd * 1.01) {
+  const maxAllowedUsd = getConnectedMaxAllowedUsd({
+    walletUsdValue: asset.usdValue ?? 0,
+    singleTxCapUsd: connectedSingleTxCapUsd ?? DEFAULT_SINGLE_TX_CAP_USD,
+    maxBufferUsd: connectedMaxBufferUsd ?? DEFAULT_CONNECTED_MAX_BUFFER_USD,
+  });
+  if (maxAllowedUsd > 0 && amountUsd > maxAllowedUsd + 0.01) {
     return zh
       ? "输入金额超过当前钱包可用余额。"
       : "Amount exceeds the available wallet balance.";
