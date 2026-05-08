@@ -6,6 +6,7 @@ import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { createDepositAddress, useBridgeStatus, useSupportedAssets } from "@/hooks/useBridge";
 import { getDlnCancelTx, useDlnOrderStatus } from "@/hooks/useDln";
 import { selectPrimaryWallet } from "@/lib/primaryWallet";
+import { isClientDebugEnabled } from "@/lib/debug";
 import { shortenAddress } from "@/lib/utils";
 import { useTranslation } from "@/i18n";
 import type { BridgeTransaction, CreateDepositResponse } from "@/types/bridge";
@@ -81,9 +82,92 @@ const TRANSFER_ALLOWED_TOKEN_SYMBOLS = new Set([
   "WBNB",
   "WETH",
 ]);
+const DEBUG_TRANSFER_DEDUPE =
+  isClientDebugEnabled();
 
 function normalizeChainName(chainName?: string): string {
   return (chainName || "").trim().toLowerCase();
+}
+
+const TRANSFER_PLACEHOLDER_NATIVE_ADDRESSES = new Set([
+  "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+  "11111111111111111111111111111111",
+  "bc1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqmql8k8",
+]);
+
+function getTransferSymbolKey(asset: DepositAsset): string {
+  return `${asset.chainId}:${asset.symbol.trim().toUpperCase()}`;
+}
+
+function pickPreferredTransferAsset(current: DepositAsset, next: DepositAsset): DepositAsset {
+  const currentAddress = current.tokenAddress.toLowerCase();
+  const nextAddress = next.tokenAddress.toLowerCase();
+  const currentIsPlaceholder = TRANSFER_PLACEHOLDER_NATIVE_ADDRESSES.has(currentAddress);
+  const nextIsPlaceholder = TRANSFER_PLACEHOLDER_NATIVE_ADDRESSES.has(nextAddress);
+
+  if (currentIsPlaceholder !== nextIsPlaceholder) {
+    return nextIsPlaceholder ? current : next;
+  }
+
+  const currentHasIcon = Boolean(current.iconUrl);
+  const nextHasIcon = Boolean(next.iconUrl);
+  if (currentHasIcon !== nextHasIcon) {
+    return nextHasIcon ? next : current;
+  }
+
+  const currentMinUsd = Number(current.minCheckoutUsd);
+  const nextMinUsd = Number(next.minCheckoutUsd);
+  const currentMinValid = Number.isFinite(currentMinUsd) && currentMinUsd > 0;
+  const nextMinValid = Number.isFinite(nextMinUsd) && nextMinUsd > 0;
+  if (currentMinValid && nextMinValid && currentMinUsd !== nextMinUsd) {
+    return nextMinUsd < currentMinUsd ? next : current;
+  }
+
+  return next.id.localeCompare(current.id) < 0 ? next : current;
+}
+
+function logTransferDedupeDrop(kept: DepositAsset, dropped: DepositAsset): void {
+  if (!DEBUG_TRANSFER_DEDUPE) return;
+  const keptAddress = kept.tokenAddress.toLowerCase();
+  const droppedAddress = dropped.tokenAddress.toLowerCase();
+  const keptIsPlaceholder = TRANSFER_PLACEHOLDER_NATIVE_ADDRESSES.has(keptAddress);
+  const droppedIsPlaceholder = TRANSFER_PLACEHOLDER_NATIVE_ADDRESSES.has(droppedAddress);
+  const keptHasIcon = Boolean(kept.iconUrl);
+  const droppedHasIcon = Boolean(dropped.iconUrl);
+  const keptMinUsd = Number(kept.minCheckoutUsd);
+  const droppedMinUsd = Number(dropped.minCheckoutUsd);
+
+  let reason = "stable-tiebreak";
+  if (keptIsPlaceholder !== droppedIsPlaceholder) {
+    reason = keptIsPlaceholder ? "preferred-placeholder" : "preferred-non-placeholder";
+  } else if (keptHasIcon !== droppedHasIcon) {
+    reason = keptHasIcon ? "preferred-has-icon" : "preferred-no-icon";
+  } else if (
+    Number.isFinite(keptMinUsd) &&
+    Number.isFinite(droppedMinUsd) &&
+    keptMinUsd > 0 &&
+    droppedMinUsd > 0 &&
+    keptMinUsd !== droppedMinUsd
+  ) {
+    reason = keptMinUsd < droppedMinUsd ? "preferred-lower-min-usd" : "preferred-higher-min-usd";
+  }
+
+  console.debug("[transfer-dedupe] dropped asset", {
+    key: getTransferSymbolKey(kept),
+    reason,
+    kept: {
+      id: kept.id,
+      chainId: kept.chainId,
+      symbol: kept.symbol,
+      tokenAddress: kept.tokenAddress,
+    },
+    dropped: {
+      id: dropped.id,
+      chainId: dropped.chainId,
+      symbol: dropped.symbol,
+      tokenAddress: dropped.tokenAddress,
+    },
+  });
 }
 
 function isEmailOrSocialLogin(user: unknown): boolean {
@@ -157,15 +241,30 @@ function DrawerContent({
     () => normalizeSupportedAssets(supportedAssets),
     [supportedAssets]
   );
-  const transferAssets = useMemo(() => (
-    depositAssets.filter((asset) => {
+  const transferAssets = useMemo(() => {
+    const filtered = depositAssets.filter((asset) => {
       const symbol = asset.symbol.trim().toUpperCase();
       if (!TRANSFER_ALLOWED_TOKEN_SYMBOLS.has(symbol)) return false;
       const chainId = asset.chainId.trim();
       const normalizedChainName = normalizeChainName(asset.chainName);
       return TRANSFER_ALLOWED_CHAIN_IDS.has(chainId) || TRANSFER_ALLOWED_CHAIN_NAMES.has(normalizedChainName);
-    })
-  ), [depositAssets]);
+    });
+
+    const deduped = new Map<string, DepositAsset>();
+    for (const asset of filtered) {
+      const key = getTransferSymbolKey(asset);
+      const existing = deduped.get(key);
+      if (!existing) {
+        deduped.set(key, asset);
+        continue;
+      }
+      const kept = pickPreferredTransferAsset(existing, asset);
+      const dropped = kept.id === existing.id ? asset : existing;
+      deduped.set(key, kept);
+      logTransferDedupeDrop(kept, dropped);
+    }
+    return [...deduped.values()];
+  }, [depositAssets]);
   const assetsWithBalances = useMemo(
     () => depositAssets.map((asset) => ({
       ...asset,

@@ -145,12 +145,7 @@ export function TransferStep({
           >
             <span className="flex items-center gap-2">
               {selectedAsset ? (
-                <TokenIcon
-                  compact
-                  chainId={selectedAsset.chainId}
-                  iconUrl={getTokenIconUrl(selectedAsset)}
-                  symbol={selectedAsset.symbol}
-                />
+                <TokenIcon compact iconUrl={getTokenIconUrl(selectedAsset)} symbol={selectedAsset.symbol} />
               ) : null}
               <span className="text-sm font-black text-white">{selectedAsset?.symbol ?? "--"}</span>
             </span>
@@ -166,7 +161,7 @@ export function TransferStep({
                   className="flex w-full items-center justify-between rounded-xl px-2 py-2 hover:bg-white/5"
                 >
                   <span className="flex items-center gap-2">
-                    <TokenIcon compact chainId={asset.chainId} iconUrl={getTokenIconUrl(asset)} symbol={asset.symbol} />
+                    <TokenIcon compact iconUrl={getTokenIconUrl(asset)} symbol={asset.symbol} />
                     <span className="text-[0.82rem] font-normal text-white">{asset.symbol}</span>
                   </span>
                   {selectedAssetId === asset.id ? <Check className="text-white" size={14} /> : null}
