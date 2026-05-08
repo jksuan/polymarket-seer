@@ -6,7 +6,6 @@ import { POLYGON_CHAIN_ID } from "@/lib/constants";
 import type { DepositAsset } from "../types";
 import {
   DEPOSIT_SINGLE_TX_CAP_USD,
-  getConnectedMinDepositUsd,
   MAX_DEPOSIT_BALANCE_RATIO,
 } from "../constants";
 import { TokenIcon } from "../shared-ui";
@@ -19,6 +18,7 @@ export function AmountStep({
   error,
   isQuoting,
   locale,
+  minDepositUsd,
   onAmountBlur,
   onAmountChange,
   onContinue,
@@ -29,6 +29,7 @@ export function AmountStep({
   error: string;
   isQuoting: boolean;
   locale: string;
+  minDepositUsd?: number;
   onAmountBlur: () => void;
   onAmountChange: (value: string) => void;
   onContinue: () => void;
@@ -39,14 +40,14 @@ export function AmountStep({
   const pendingCaretCountRef = useRef<number | null>(null);
   const balanceMaxDepositUsd = Number(asset.usdValue ?? 0) * MAX_DEPOSIT_BALANCE_RATIO;
   const maxDepositUsd = Math.min(balanceMaxDepositUsd, DEPOSIT_SINGLE_TX_CAP_USD);
-  const minDepositUsd = getConnectedMinDepositUsd(asset.minCheckoutUsd);
-  const isAmountTooLow = amountNumber < minDepositUsd;
+  const effectiveMinDepositUsd = minDepositUsd ?? Math.max(asset.minCheckoutUsd ?? 1, 1) + 0.05;
+  const isAmountTooLow = amountNumber < effectiveMinDepositUsd;
   const isAmountOverSingleTxCap = amountNumber > DEPOSIT_SINGLE_TX_CAP_USD + 0.01;
   const isAmountOverBalance = amountNumber > maxDepositUsd + 0.01;
   const amountWarning = isAmountTooLow
     ? locale === "zh"
-      ? `最低充值金额${formatUsdWithCommas(minDepositUsd)}`
-      : `${formatUsdWithCommas(minDepositUsd)} minimum deposit`
+      ? `最低充值金额${formatUsdWithCommas(effectiveMinDepositUsd)}`
+      : `${formatUsdWithCommas(effectiveMinDepositUsd)} minimum deposit`
     : isAmountOverSingleTxCap
       ? locale === "zh"
         ? `单笔最高充值${formatUsdWithCommas(DEPOSIT_SINGLE_TX_CAP_USD)}，请分笔充值`

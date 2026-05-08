@@ -40,6 +40,7 @@ import {
 } from "./deposit/execution";
 import { formatExecutionError } from "./deposit/errors";
 import { formatAmountUsdInput, parseAmountUsd, sanitizeAmountUsdInput } from "./deposit/format";
+import { getTransferChainMinUsd } from "./deposit/minimums";
 import { getStatusText } from "./deposit/status";
 import { QuoteCountdownRing } from "./deposit/quote-countdown-ring";
 import { HomeStep } from "./deposit/connected/HomeStep";
@@ -657,6 +658,7 @@ function DrawerContent({
       const validationError = validateDepositSelection({
         amountUsd: amountNumber,
         asset: selectedAsset,
+        allAssets: depositAssets,
         locale,
       });
       if (validationError) {
@@ -719,6 +721,7 @@ function DrawerContent({
       const validationError = validateDepositSelection({
         amountUsd: snapshot.amountUsd,
         asset: snapshot.asset,
+        allAssets: depositAssets,
         locale,
       });
       if (validationError) {
@@ -989,17 +992,27 @@ function DrawerContent({
               )}
 
               {step === "amount" && selectedAsset && (
+                (() => {
+                  const connectedMinDepositUsd = getTransferChainMinUsd(
+                    selectedAsset.chainName,
+                    selectedAsset.chainId,
+                    depositAssets
+                  );
+                  return (
                 <AmountStep
                   amountUsd={amountUsd}
                   asset={selectedAsset}
                   error={quoteError}
                   isQuoting={isQuoting}
                   locale={locale}
+                  minDepositUsd={connectedMinDepositUsd}
                   onAmountBlur={handleAmountBlur}
                   onAmountChange={handleAmountChange}
                   onContinue={handleQuote}
                   onPercent={handlePercent}
                 />
+                  );
+                })()
               )}
 
               {step === "confirm" && selectedAsset && snapshot && (

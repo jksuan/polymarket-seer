@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import QRCode from "react-qr-code";
 import { TokenIcon } from "../shared-ui";
+import { getTransferChainMinUsd } from "../minimums";
 
 const KNOWN_CHAIN_ICON_URLS: Record<string, string> = {
   "1": "/ethereum-eth.svg",
@@ -120,7 +121,7 @@ export function TransferStep({
   const effectiveChainName = selectedChain?.chainName ?? (hasChains ? chainOptions[0].chainName : "");
   const selectedAsset = assets.find((asset) => asset.id === selectedAssetId) ?? tokenOptions[0];
   const hasTokens = tokenOptions.length > 0;
-  const selectedChainMinUsd = getChainMinUsd(effectiveChainName, effectiveChainId, assets);
+  const selectedChainMinUsd = getTransferChainMinUsd(effectiveChainName, effectiveChainId, assets);
   const tokenDisabled = !hasTokens;
   const chainDisabled = !hasChains;
 
@@ -249,8 +250,8 @@ export function TransferStep({
                   </div>
                   <p className="shrink-0 text-[0.82rem] font-normal text-white/50">
                     {locale === "zh"
-                      ? `最低 $${getChainMinUsd(chain.chainName, chain.chainId, assets)}`
-                      : `Min $${getChainMinUsd(chain.chainName, chain.chainId, assets)}`}
+                      ? `最低 $${getTransferChainMinUsd(chain.chainName, chain.chainId, assets)}`
+                      : `Min $${getTransferChainMinUsd(chain.chainName, chain.chainId, assets)}`}
                   </p>
                   {selectedChainId === chain.chainId ? <Check className="shrink-0 text-white" size={14} /> : null}
                 </button>
@@ -394,23 +395,6 @@ export function TransferStep({
       )}
     </div>
   );
-}
-
-function getChainMinUsd(chainName: string | undefined, chainId: string | undefined, assets: DepositAsset[]): number {
-  const name = (chainName || "").toLowerCase();
-  const id = (chainId || "").trim();
-  const isEthereum = name.includes("ethereum") || id === "1";
-  const isTron = name.includes("tron");
-  const isBitcoin = name.includes("bitcoin") || name.includes("btc");
-  const baseMin = assets
-    .filter((asset) => asset.chainId === id)
-    .map((asset) => Number(asset.minCheckoutUsd))
-    .filter((value) => Number.isFinite(value) && value > 0)
-    .reduce<number | null>((min, value) => (min === null ? value : Math.min(min, value)), null);
-
-  if (!baseMin) return isEthereum || isTron || isBitcoin ? 10 : 3;
-  const extra = isEthereum || isTron || isBitcoin ? 3 : 1;
-  return Math.ceil(baseMin + extra);
 }
 
 function getChainIconUrl(chainName?: string, chainId?: string): string | undefined {

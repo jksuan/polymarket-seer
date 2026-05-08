@@ -7,9 +7,9 @@ import {
   QUOTE_PRICE_CHANGE_THRESHOLD,
   QUOTE_STALE_THRESHOLD_MS,
   SUPPORTED_DLN_EVM_CHAIN_IDS,
-  getConnectedMinDepositUsd,
 } from "./constants";
 import { formatCompactBalance } from "./format";
+import { getTransferChainMinUsd } from "./minimums";
 import type { DepositAsset, ExecutionEngine, ExecutionSnapshot, ExecutionTx } from "./types";
 
 const SOLANA_CHAIN_IDS = new Set(["101", "103", "solana"]);
@@ -177,10 +177,12 @@ export function isQuotePriceChanged(prev: ExecutionSnapshot, next: ExecutionSnap
 export function validateDepositSelection({
   amountUsd,
   asset,
+  allAssets,
   locale,
 }: {
   amountUsd: number;
   asset: DepositAsset;
+  allAssets?: DepositAsset[];
   locale: string;
 }): string | null {
   const zh = locale === "zh";
@@ -190,7 +192,9 @@ export function validateDepositSelection({
       : "Connected Wallet currently supports EVM assets only. Use Transfer Crypto for Solana, Tron, or Bitcoin.";
   }
 
-  const minDepositUsd = getConnectedMinDepositUsd(asset.minCheckoutUsd);
+  const minDepositUsd = allAssets && allAssets.length > 0
+    ? getTransferChainMinUsd(asset.chainName, asset.chainId, allAssets)
+    : Math.max(asset.minCheckoutUsd ?? 1, 1) + 0.05;
   if (amountUsd < minDepositUsd) {
     return zh
       ? `当前资产最低充值金额为 $${minDepositUsd.toFixed(2)}。`

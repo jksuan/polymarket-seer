@@ -59,4 +59,11 @@ describe("AmountStep", () => {
 
     expect(onContinue).toHaveBeenCalledTimes(1);
   });
+
+  it("传入链级最低金额时按该金额提示并禁用继续", () => {
+    renderAmountStep({ amountUsd: "12", minDepositUsd: 13 });
+
+    expect(screen.getByText("最低充值金额$13.00")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "继续" })).toBeDisabled();
+  });
 });
