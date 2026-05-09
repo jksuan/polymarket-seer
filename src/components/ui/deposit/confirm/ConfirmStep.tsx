@@ -101,8 +101,8 @@ export function ConfirmStep({
   }, [isBreakdownOpen]);
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
-      <div className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-y-contain pb-2">
+    <div className="flex flex-col">
+      <div className="space-y-5 pb-2">
         <div className="py-4 text-center text-4xl font-black text-white">
           ${snapshot.amountUsd.toFixed(2)}
         </div>

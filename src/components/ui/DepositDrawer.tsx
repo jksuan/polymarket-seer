@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { ArrowLeft, X } from "lucide-react";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { createDepositAddress, useBridgeStatus, useSupportedAssets } from "@/hooks/useBridge";
+import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 import { getDlnCancelTx, useDlnOrderStatus } from "@/hooks/useDln";
 import { selectPrimaryWallet } from "@/lib/primaryWallet";
 import { isClientDebugEnabled } from "@/lib/debug";
@@ -226,6 +227,7 @@ function DrawerContent({
 }: DepositDrawerProps) {
   const BRIDGE_STATUS_FALLBACK_BEFORE_SUBMIT_MS = 45_000;
   const BRIDGE_STATUS_FALLBACK_AFTER_SUBMIT_MS = 10 * 60_000;
+  useLockBodyScroll(isOpen);
   const { locale } = useTranslation();
   const { user } = usePrivy();
   const { wallets } = useWallets();
@@ -1019,7 +1021,7 @@ function DrawerContent({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+            className="fixed inset-0 z-50 touch-none bg-black/60 backdrop-blur-sm"
           />
 
           <motion.div
@@ -1027,7 +1029,7 @@ function DrawerContent({
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="fixed bottom-0 left-0 right-0 z-50 flex max-h-[90vh] min-h-0 w-full max-w-[448px] flex-col rounded-t-3xl border-t border-white/10 mx-auto"
+            className="fixed bottom-0 left-0 right-0 z-50 flex max-h-[90vh] min-h-0 w-full max-w-[448px] touch-pan-y flex-col overflow-y-auto overscroll-y-contain rounded-t-3xl border-t border-white/10 mx-auto"
             style={{
               background: "linear-gradient(180deg, #151922 0%, #0d1118 100%)",
               boxShadow: "0 -20px 40px rgba(0,0,0,0.5)",
@@ -1037,7 +1039,7 @@ function DrawerContent({
               <div className="w-12 h-1.5 rounded-full bg-white/20" />
             </div>
 
-            <div className="flex min-h-0 flex-1 flex-col px-6 pb-7">
+            <div className="flex flex-col px-6 pb-7">
               <div className="relative mb-6 flex shrink-0 items-center justify-center">
                 {step !== "home" && (
                   <button
@@ -1075,13 +1077,6 @@ function DrawerContent({
                 )}
               </div>
 
-              <div
-                className={
-                  step === "confirm"
-                    ? "flex min-h-0 flex-1 flex-col overflow-hidden"
-                    : "min-h-0 flex-1 overflow-y-auto"
-                }
-              >
               {step === "home" && (
                 <HomeStep
                   locale={locale}
@@ -1169,7 +1164,6 @@ function DrawerContent({
                   transferAddress={transferAddress}
                 />
               )}
-              </div>
             </div>
           </motion.div>
         </>
