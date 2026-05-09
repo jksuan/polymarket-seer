@@ -48,7 +48,10 @@ import {
   getConnectedMaxAllowedUsd,
   getTransferChainMinUsd,
 } from "./deposit/minimums";
-import { getTransferStatusSinceAddressCreated, isBridgeCompletedStatus } from "./deposit/status";
+import {
+  getTransferStatusSinceAddressCreated,
+  isBridgeCompletedStatus,
+} from "./deposit/status";
 import { QuoteCountdownRing } from "./deposit/quote-countdown-ring";
 import { HomeStep } from "./deposit/connected/HomeStep";
 import { AssetStep } from "./deposit/connected/AssetStep";
@@ -106,6 +109,8 @@ const TRANSFER_ALLOWED_TOKEN_SYMBOLS = new Set([
 ]);
 const DEBUG_TRANSFER_DEDUPE =
   isClientDebugEnabled();
+const DEBUG_TRANSFER_STATUS =
+  isClientDebugEnabled() || process.env.NEXT_PUBLIC_DEBUG_TRANSFER_STATUS === "1";
 
 function normalizeChainName(chainName?: string): string {
   return (chainName || "").trim().toLowerCase();
@@ -350,7 +355,13 @@ function DrawerContent({
   const transferStatus = useBridgeStatus(
     transferAddress,
     Boolean(transferAddress && isOpen),
-    { fastPollingUntilMs: transferFastPollingUntilMs, fastRefreshIntervalMs: 2_000 }
+    {
+      fastPollingUntilMs: transferFastPollingUntilMs,
+      fastRefreshIntervalMs: 2_000,
+      debugEnabled: DEBUG_TRANSFER_STATUS,
+      debugLabel: "transfer-status",
+      stopOnFinalStatus: false,
+    }
   );
   const transferLatestStatus = useMemo(
     () => getTransferStatusSinceAddressCreated(
@@ -402,6 +413,26 @@ function DrawerContent({
     transferAddress &&
       isBridgeCompletedStatus(transferLatestStatus)
   );
+
+  useEffect(() => {
+    if (!DEBUG_TRANSFER_STATUS) return;
+    if (!transferAddress) return;
+    const statuses = (transferStatus.data?.transactions ?? [])
+      .map((tx) => `${tx.status}@${tx.createdTimeMs ?? "?"}`)
+      .join(" -> ");
+    console.info("[transfer-status] filtered", {
+      transferAddress,
+      transferAddressCreatedAtMs,
+      transferLatestStatus: transferLatestStatus ?? "NONE",
+      transactions: statuses || "NONE",
+    });
+  }, [
+    transferAddress,
+    transferAddressCreatedAtMs,
+    transferLatestStatus,
+    transferStatus.data?.transactions,
+  ]);
+
   const hasHighWalletMismatchRisk = useMemo(
     () => (snapshot ? isHighWalletMismatchRisk(snapshot) : false),
     [snapshot]

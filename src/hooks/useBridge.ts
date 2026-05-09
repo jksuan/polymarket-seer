@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import useSWR from "swr";
 import type {
   BridgeError,
@@ -27,6 +27,9 @@ const FINAL_STATUSES = new Set<string>(["COMPLETED", "FAILED"]);
 type BridgeStatusPollingOptions = {
   fastPollingUntilMs?: number;
   fastRefreshIntervalMs?: number;
+  debugLabel?: string;
+  debugEnabled?: boolean;
+  stopOnFinalStatus?: boolean;
 };
 
 export function useSupportedAssets() {
@@ -74,7 +77,8 @@ export function useBridgeStatus(
       revalidateOnFocus: true,
       dedupingInterval: 2_000,
       refreshInterval: (latestData) => {
-        if (isFinalBridgeStatus(latestData)) return 0;
+        const shouldStopOnFinal = polling?.stopOnFinalStatus ?? true;
+        if (shouldStopOnFinal && isFinalBridgeStatus(latestData)) return 0;
         const fastUntilMs = polling?.fastPollingUntilMs ?? 0;
         const fastIntervalMs = polling?.fastRefreshIntervalMs ?? FAST_STATUS_REFRESH_INTERVAL_MS;
         if (fastUntilMs > Date.now()) return fastIntervalMs;
@@ -89,6 +93,52 @@ export function useBridgeStatus(
   );
   const latestStatus = latestTransaction?.status as BridgeTxStatus | undefined;
   const isFinal = isFinalStatus(latestStatus);
+  const previousStatusRef = useRef<string | undefined>(undefined);
+
+  useEffect(() => {
+    if (!polling?.debugEnabled) return;
+    if (!enabled || !normalizedAddress) return;
+    const transactions = data?.transactions ?? [];
+    if (transactions.length === 0) return;
+
+    const latest = latestTransaction;
+    const phase = (polling.fastPollingUntilMs ?? 0) > Date.now()
+      ? "fast"
+      : "normal";
+    const summary = transactions
+      .slice(-5)
+      .map((tx) => `${tx.status}@${tx.createdTimeMs ?? "?"}`)
+      .join(" -> ");
+    const prev = previousStatusRef.current;
+    const changed = prev && latestStatus && prev !== latestStatus;
+    const label = polling.debugLabel || "bridge-status";
+    console.info(
+      `[${label}] poll`,
+      {
+        address: normalizedAddress,
+        latestStatus: latestStatus ?? "NONE",
+        previousStatus: prev ?? "NONE",
+        changed,
+        latestCreatedTimeMs: latest?.createdTimeMs ?? null,
+        latestTxHash: latest?.txHash ?? null,
+        totalTransactions: transactions.length,
+        lastFive: summary,
+        pollingPhase: phase,
+        isFinal,
+      }
+    );
+    previousStatusRef.current = latestStatus;
+  }, [
+    data?.transactions,
+    enabled,
+    isFinal,
+    latestStatus,
+    latestTransaction,
+    normalizedAddress,
+    polling?.debugEnabled,
+    polling?.debugLabel,
+    polling?.fastPollingUntilMs,
+  ]);
 
   return {
     data,

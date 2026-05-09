@@ -74,19 +74,8 @@ export function getTransferStatusSinceAddressCreated(
   transactions: BridgeTransaction[] | undefined,
   addressCreatedAtMs: number
 ): string | undefined {
-  const list = transactions ?? [];
-  if (list.length === 0) return undefined;
-
-  const threshold = addressCreatedAtMs > 0
-    ? addressCreatedAtMs - TRANSFER_STATUS_HISTORY_TOLERANCE_MS
-    : 0;
-  const candidates = list.filter((tx) => {
-    const createdTimeMs = Number(tx.createdTimeMs ?? 0);
-    if (!Number.isFinite(createdTimeMs) || createdTimeMs <= 0) {
-      return addressCreatedAtMs <= 0;
-    }
-    return createdTimeMs >= threshold;
-  });
+  const candidates = getTransferTransactionsSinceAddressCreated(transactions, addressCreatedAtMs);
+  if (candidates.length === 0) return undefined;
 
   const latest = candidates.reduce<BridgeTransaction | undefined>((acc, tx) => {
     if (!acc) return tx;
@@ -96,6 +85,29 @@ export function getTransferStatusSinceAddressCreated(
   }, undefined);
 
   return latest?.status;
+}
+
+export function getTransferTransactionsSinceAddressCreated(
+  transactions: BridgeTransaction[] | undefined,
+  addressCreatedAtMs: number
+): BridgeTransaction[] {
+  const list = transactions ?? [];
+  if (list.length === 0) return [];
+
+  const threshold = addressCreatedAtMs > 0
+    ? addressCreatedAtMs - TRANSFER_STATUS_HISTORY_TOLERANCE_MS
+    : 0;
+  return list.filter((tx) => {
+    const createdTimeMs = Number(tx.createdTimeMs ?? 0);
+    if (!Number.isFinite(createdTimeMs) || createdTimeMs <= 0) {
+      // 上游在部分阶段（如 DEPOSIT_DETECTED）可能暂未返回 createdTimeMs，
+      // 这里仍保留该状态，以便真实状态能显示为“处理中”。
+      const status = String(tx.status || "").trim().toUpperCase();
+      if (status === "DEPOSIT_DETECTED") return true;
+      return addressCreatedAtMs <= 0;
+    }
+    return createdTimeMs >= threshold;
+  });
 }
 
 function getDlnStatusText(locale: string, status?: string): string {
