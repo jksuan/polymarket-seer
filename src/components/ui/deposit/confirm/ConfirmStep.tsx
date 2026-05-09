@@ -60,7 +60,7 @@ export function ConfirmStep({
         : hasUnconfirmedRiskWarning
           ? locale === "zh" ? "再次确认并继续" : "Confirm again to continue"
           : hasSubmittedTx
-            ? locale === "zh" ? "已提交" : "Submitted"
+            ? locale === "zh" ? "已提交，处理中..." : "Submitted, processing..."
             : locale === "zh" ? "确认订单" : "Confirm Order";
 
   const sendUsdText =
@@ -196,14 +196,14 @@ export function ConfirmStep({
         {error && (
           <div className="flex gap-3 rounded-2xl border border-[#ff6b6b]/20 bg-[#ff6b6b]/10 p-3">
             <AlertTriangle className="mt-0.5 shrink-0 text-[#ff6b6b]" size={16} />
-            <div className="min-w-0 flex-1 space-y-2">
-              <p className="text-[11px] leading-relaxed text-[#ffcad4]/80">{error}</p>
+            <div className="flex min-w-0 flex-1 items-start justify-between gap-3">
+              <p className="min-w-0 flex-1 text-[11px] leading-relaxed text-[#ffcad4]/80">{error}</p>
               <button
                 type="button"
                 onClick={onFallbackToTransfer}
-                className="rounded-xl border border-white/10 bg-white/[0.06] px-3 py-2 text-[11px] font-black text-white active:scale-[0.98]"
+                className="shrink-0 rounded-xl border border-white/10 bg-white/[0.06] px-3 py-2 text-[11px] font-black text-white active:scale-[0.98]"
               >
-                {locale === "zh" ? "改走 Transfer Crypto" : "Use Transfer Crypto instead"}
+                {locale === "zh" ? "切换至转账通道" : "Switch to transfer channel"}
               </button>
             </div>
           </div>
@@ -218,7 +218,9 @@ export function ConfirmStep({
             depositBridgeComplete ? "bg-emerald-600 disabled:opacity-100" : "bg-[#159bff]"
           }`}
         >
-          {isExecuting || isQuoting ? <Loader2 className="animate-spin" size={18} /> : null}
+          {isExecuting || isQuoting || (hasSubmittedTx && !depositBridgeComplete) ? (
+            <Loader2 className="animate-spin" size={18} />
+          ) : null}
           {buttonText}
         </button>
 

@@ -59,7 +59,7 @@ describe("ConfirmStep", () => {
       />
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "改走 Transfer Crypto" }));
+    fireEvent.click(screen.getByRole("button", { name: "切换至转账通道" }));
     expect(onFallbackToTransfer).toHaveBeenCalledTimes(1);
   });
 });
