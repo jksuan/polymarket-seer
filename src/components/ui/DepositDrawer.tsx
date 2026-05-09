@@ -260,7 +260,9 @@ function DrawerContent({
   const [assetBalances, setAssetBalances] = useState<Record<string, string>>({});
   const [assetUsdValues, setAssetUsdValues] = useState<Record<string, number>>({});
   const [walletBalancesLoading, setWalletBalancesLoading] = useState(false);
-  const [hasRefreshedBalance, setHasRefreshedBalance] = useState(false);
+  /** 入账完成边沿检测：避免 transfer 与 connected 共用一次性标记导致后者跳过刷新 */
+  const prevDepositBridgeCompleteRef = useRef(false);
+  const prevTransferBridgeCompleteRef = useRef(false);
   /** 报价自动刷新失败时递增，用于重新挂载确认页定时器（避免 snapshot 未变导致不再调度） */
   const [quoteAutoRefreshNonce, setQuoteAutoRefreshNonce] = useState(0);
   const quoteRequestRef = useRef(0);
@@ -534,22 +536,42 @@ function DrawerContent({
     void transferStatus.mutate();
   }, [executionTxHash, isOpen, transferAddress, transferStatus]);
 
+  const scheduleBalanceRefreshRetries = useCallback(() => {
+    balanceRefreshRetryTimersRef.current.forEach((timerId) =>
+      window.clearTimeout(timerId)
+    );
+    balanceRefreshRetryTimersRef.current = [];
+    const retryDelays = [8_000, 20_000];
+    balanceRefreshRetryTimersRef.current = retryDelays.map((delayMs) =>
+      window.setTimeout(() => {
+        onBalanceRefresh?.();
+      }, delayMs)
+    );
+  }, [onBalanceRefresh]);
+
   useEffect(() => {
-    if ((depositBridgeComplete || transferBridgeComplete) && !hasRefreshedBalance) {
-      setHasRefreshedBalance(true);
-      onBalanceRefresh?.();
-      // Bridge/CLOB 同步可能晚于首个 COMPLETED，短时补几次刷新避免顶部余额停留旧值。
-      const retryDelays = [8_000, 20_000];
-      balanceRefreshRetryTimersRef.current.forEach((timerId) =>
-        window.clearTimeout(timerId)
-      );
-      balanceRefreshRetryTimersRef.current = retryDelays.map((delayMs) =>
-        window.setTimeout(() => {
-          onBalanceRefresh?.();
-        }, delayMs)
-      );
-    }
-  }, [depositBridgeComplete, hasRefreshedBalance, onBalanceRefresh, transferBridgeComplete]);
+    const rose =
+      depositBridgeComplete &&
+      !prevDepositBridgeCompleteRef.current;
+    prevDepositBridgeCompleteRef.current = depositBridgeComplete;
+
+    if (!rose) return;
+
+    onBalanceRefresh?.();
+    scheduleBalanceRefreshRetries();
+  }, [depositBridgeComplete, onBalanceRefresh, scheduleBalanceRefreshRetries]);
+
+  useEffect(() => {
+    const rose =
+      transferBridgeComplete &&
+      !prevTransferBridgeCompleteRef.current;
+    prevTransferBridgeCompleteRef.current = transferBridgeComplete;
+
+    if (!rose) return;
+
+    onBalanceRefresh?.();
+    scheduleBalanceRefreshRetries();
+  }, [onBalanceRefresh, scheduleBalanceRefreshRetries, transferBridgeComplete]);
 
   useEffect(() => {
     if (!isOpen || !activeWallet) {
@@ -798,7 +820,6 @@ function DrawerContent({
     setExecutionSubmittedAtMs(0);
     setSubmittedOrderId("");
     setCancelTxHash("");
-    setHasRefreshedBalance(false);
 
     try {
       const validationError = validateDepositSelection({
@@ -917,7 +938,6 @@ function DrawerContent({
 
     setIsCreatingTransferAddress(true);
     setTransferError("");
-    setHasRefreshedBalance(false);
 
     try {
       const response = await createDepositAddress({ address: proxyAddress });
