@@ -77,14 +77,10 @@ export function getTransferStatusSinceAddressCreated(
   const candidates = getTransferTransactionsSinceAddressCreated(transactions, addressCreatedAtMs);
   if (candidates.length === 0) return undefined;
 
-  const latest = candidates.reduce<BridgeTransaction | undefined>((acc, tx) => {
-    if (!acc) return tx;
-    const prev = Number(acc.createdTimeMs ?? 0);
-    const next = Number(tx.createdTimeMs ?? 0);
-    return next >= prev ? tx : acc;
-  }, undefined);
-
-  return latest?.status;
+  // bridge.polymarket.com/status 返回的 transactions 为新到旧排序；与官网一致，
+  // 当前入账阶段取过滤后会话内列表的第一条，而不是按 createdTimeMs 取最大值——否则
+  // 无时间戳的 DEPOSIT_DETECTED 会与旧行的更大时间戳错序，误判终态或跳过「处理中」。
+  return candidates[0]?.status;
 }
 
 export function getTransferTransactionsSinceAddressCreated(
@@ -97,11 +93,14 @@ export function getTransferTransactionsSinceAddressCreated(
   const threshold = addressCreatedAtMs > 0
     ? addressCreatedAtMs - TRANSFER_STATUS_HISTORY_TOLERANCE_MS
     : 0;
+
   return list.filter((tx) => {
     const createdTimeMs = Number(tx.createdTimeMs ?? 0);
     if (!Number.isFinite(createdTimeMs) || createdTimeMs <= 0) {
       // 上游在部分阶段（如 DEPOSIT_DETECTED）可能暂未返回 createdTimeMs，
       // 这里仍保留该状态，以便真实状态能显示为“处理中”。
+      // 再次进入转账页时，旧 COMPLETED 已由 DepositDrawer 侧会话基准时间过滤，
+      // 此处不再按“仅有旧流水”丢弃无时间戳记录，以免误判新一轮检测。
       const status = String(tx.status || "").trim().toUpperCase();
       if (status === "DEPOSIT_DETECTED") return true;
       return addressCreatedAtMs <= 0;

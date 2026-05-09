@@ -362,7 +362,7 @@ export function TransferStep({
                     <span className="absolute inset-0 flex items-center justify-center rounded-full bg-[#22c55e]">
                       <ArrowDown className="text-white" size={10} strokeWidth={3} />
                     </span>
-                    <span className="pointer-events-none absolute -inset-1 rounded-full border border-dashed border-[#22c55e]/70 animate-spin" />
+                    <span className="pointer-events-none absolute -inset-[5px] rounded-full border-[3px] border-dashed border-[#22c55e]/90 animate-spin" />
                   </span>
                 ) : null}
                 {statusVisual.phase === "completed" ? (

@@ -250,6 +250,8 @@ function DrawerContent({
   const [transferAddresses, setTransferAddresses] = useState<DepositAddressMap>({});
   const [transferAddress, setTransferAddress] = useState("");
   const [transferAddressCreatedAtMs, setTransferAddressCreatedAtMs] = useState(0);
+  /** 每次从首页等入口进入转账步骤时刷新，用于忽略复用缓存收款地址时的历史状态 */
+  const [transferUiSessionStartedAtMs, setTransferUiSessionStartedAtMs] = useState(0);
   const [selectedTransferChainId, setSelectedTransferChainId] = useState("");
   const [selectedTransferAssetId, setSelectedTransferAssetId] = useState("");
   const [isCreatingTransferAddress, setIsCreatingTransferAddress] = useState(false);
@@ -348,8 +350,12 @@ function DrawerContent({
   const amountNumber = parseAmountUsd(amountUsd);
   const selectedUsdValue = selectedAsset ? assetUsdValues[selectedAsset.id] : undefined;
   const hasSubmittedTx = Boolean(executionTxHash || submittedOrderId);
-  const transferFastPollingUntilMs = transferAddressCreatedAtMs > 0
-    ? transferAddressCreatedAtMs + 60_000
+  const transferStatusFilterBaselineMs = Math.max(
+    transferAddressCreatedAtMs,
+    transferUiSessionStartedAtMs
+  );
+  const transferFastPollingUntilMs = transferStatusFilterBaselineMs > 0
+    ? transferStatusFilterBaselineMs + 60_000
     : 0;
 
   const transferStatus = useBridgeStatus(
@@ -366,9 +372,9 @@ function DrawerContent({
   const transferLatestStatus = useMemo(
     () => getTransferStatusSinceAddressCreated(
       transferStatus.data?.transactions,
-      transferAddressCreatedAtMs
+      transferStatusFilterBaselineMs
     ),
-    [transferAddressCreatedAtMs, transferStatus.data?.transactions]
+    [transferStatus.data?.transactions, transferStatusFilterBaselineMs]
   );
   const dlnStatus = useDlnOrderStatus(submittedOrderId, Boolean(submittedOrderId && isOpen));
   const bridgePollingErrorMessage = transferStatus.error?.message ?? "";
@@ -423,6 +429,8 @@ function DrawerContent({
     console.info("[transfer-status] filtered", {
       transferAddress,
       transferAddressCreatedAtMs,
+      transferUiSessionStartedAtMs,
+      transferStatusFilterBaselineMs,
       transferLatestStatus: transferLatestStatus ?? "NONE",
       transactions: statuses || "NONE",
     });
@@ -431,6 +439,8 @@ function DrawerContent({
     transferAddressCreatedAtMs,
     transferLatestStatus,
     transferStatus.data?.transactions,
+    transferStatusFilterBaselineMs,
+    transferUiSessionStartedAtMs,
   ]);
 
   const hasHighWalletMismatchRisk = useMemo(
@@ -968,6 +978,11 @@ function DrawerContent({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, step]);
 
+  const openTransferStep = useCallback(() => {
+    setTransferUiSessionStartedAtMs(Date.now());
+    setStep("transfer");
+  }, []);
+
   const goBack = () => {
     if (step === "home") return;
     if (step === "asset" || step === "transfer") setStep("home");
@@ -1055,7 +1070,7 @@ function DrawerContent({
                   walletUsdLoading={walletBalancesLoading}
                   walletUsd={totalWalletUsd}
                   onWallet={() => setStep("asset")}
-                  onTransfer={() => setStep("transfer")}
+                  onTransfer={openTransferStep}
                 />
               )}
 
@@ -1107,7 +1122,7 @@ function DrawerContent({
                   locale={locale}
                   onCancelOrder={handleCancelDlnOrder}
                   onConfirm={handleConfirmOrder}
-                  onFallbackToTransfer={() => setStep("transfer")}
+                  onFallbackToTransfer={openTransferStep}
                   quoteWarning={quoteWarning}
                   snapshot={snapshot}
                   walletLabel={walletLabel}
