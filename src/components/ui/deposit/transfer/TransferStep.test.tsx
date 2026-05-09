@@ -19,7 +19,7 @@ const assets: DepositAsset[] = [
 const chainOptions = [{ chainId: "1", chainName: "Ethereum" }];
 
 describe("TransferStep", () => {
-  it("状态仅显示在右侧标签并按流程替换", () => {
+  it("状态栏显示文字与圆圈动画样式", () => {
     const view = render(
       <TransferStep
         assets={assets}
@@ -40,13 +40,8 @@ describe("TransferStep", () => {
       />
     );
 
-    const statusTitle = within(view.container).getByText("状态");
-    const statusCard = statusTitle.closest("div.rounded-2xl");
-    expect(statusCard).toBeTruthy();
-    if (!(statusCard instanceof HTMLElement)) return;
-    expect(within(statusCard).getByText("处理中")).toBeInTheDocument();
-    expect(within(statusCard).queryByText("正在进行路由和兑换")).not.toBeInTheDocument();
-    expect(within(statusCard).queryByText("已提交到目标链")).not.toBeInTheDocument();
+    expect(within(view.container).getByText("状态")).toBeInTheDocument();
+    expect(within(view.container).getByText("处理中...")).toBeInTheDocument();
   });
 
   it("点击复制地址会回调当前地址", () => {

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { DepositAsset } from "../types";
 import {
+  ArrowDown,
   AlertTriangle,
   Check,
   CheckCircle2,
@@ -8,6 +9,7 @@ import {
   Copy,
   Loader2,
 } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
 import QRCode from "react-qr-code";
 import { TokenIcon } from "../shared-ui";
 import { getTransferChainMinUsd } from "../minimums";
@@ -126,6 +128,7 @@ export function TransferStep({
   const selectedChainMinUsd = getTransferChainMinUsd(effectiveChainName, effectiveChainId, assets);
   const tokenDisabled = !hasTokens;
   const chainDisabled = !hasChains;
+  const statusVisual = getTransferStatusVisual(locale, statusCode, statusText);
 
   const toggleTokenOpen = () => {
     if (tokenDisabled) return;
@@ -351,11 +354,46 @@ export function TransferStep({
           </div>
 
           <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-            <div className="flex items-center justify-between">
+            <div className="flex items-start justify-between gap-4">
               <p className="text-sm font-bold text-white">{locale === "zh" ? "状态" : "Status"}</p>
-              <span className="rounded-full border border-white/10 bg-white/10 px-2 py-1 text-[10px] font-black uppercase text-white/60">
-                {getTransferBadgeStatusText(locale, statusCode, statusText)}
-              </span>
+              <div className="flex items-center gap-2">
+                {statusVisual.phase === "processing" ? (
+                  <span className="relative h-4 w-4 shrink-0">
+                    <span className="absolute inset-0 flex items-center justify-center rounded-full bg-[#22c55e]">
+                      <ArrowDown className="text-white" size={10} strokeWidth={3} />
+                    </span>
+                    <span className="pointer-events-none absolute -inset-1 rounded-full border border-dashed border-[#22c55e]/70 animate-spin" />
+                  </span>
+                ) : null}
+                {statusVisual.phase === "completed" ? (
+                  <motion.span
+                    className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[#22c55e]"
+                    animate={{
+                      scale: [1, 1.08, 1],
+                      boxShadow: [
+                        "0 0 0 rgba(34,197,94,0)",
+                        "0 0 10px rgba(34,197,94,0.26)",
+                        "0 0 6px rgba(34,197,94,0.16)",
+                      ],
+                    }}
+                    transition={{ duration: 0.55, ease: "easeOut" }}
+                  >
+                    <Check className="text-white" size={10} strokeWidth={3} />
+                  </motion.span>
+                ) : null}
+                <AnimatePresence mode="wait" initial={false}>
+                  <motion.span
+                    key={`status-text-${statusVisual.text}`}
+                    initial={{ opacity: 0, y: 3 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -3 }}
+                    transition={{ duration: 0.22, ease: "easeOut" }}
+                    className="text-sm font-semibold text-white/80"
+                  >
+                    {statusVisual.text}
+                  </motion.span>
+                </AnimatePresence>
+              </div>
             </div>
           </div>
         </>
@@ -451,22 +489,26 @@ function ChainIcon({ chainId, chainName }: { chainId?: string; chainName?: strin
   );
 }
 
-function getTransferBadgeStatusText(locale: string, currentStatus?: string, fallback?: string): string {
+function getTransferStatusVisual(
+  locale: string,
+  currentStatus?: string,
+  fallback?: string
+): { phase: "idle" | "processing" | "completed" | "other"; text: string } {
   const zh = locale === "zh";
   switch ((currentStatus || "").toUpperCase()) {
     case "DEPOSIT_DETECTED":
     case "PROCESSING":
-      return zh ? "处理中" : "Processing";
+      return { phase: "processing", text: zh ? "处理中..." : "Processing..." };
     case "ORIGIN_TX_CONFIRMED":
-      return zh ? "源链已确认" : "Origin confirmed";
+      return { phase: "processing", text: zh ? "处理中..." : "Processing..." };
     case "SUBMITTED":
-      return zh ? "已提交到目标链" : "Submitted to destination";
+      return { phase: "processing", text: zh ? "处理中..." : "Processing..." };
     case "COMPLETED":
-      return zh ? "已入账" : "Deposited";
+      return { phase: "completed", text: zh ? "已入账" : "Deposited" };
     case "FAILED":
-      return zh ? "失败" : "Failed";
+      return { phase: "other", text: zh ? "失败" : "Failed" };
     default:
-      return fallback || (zh ? "等待转账" : "Waiting");
+      return { phase: "idle", text: fallback || (zh ? "等待转账" : "Waiting") };
   }
 }
 
