@@ -14,6 +14,7 @@ import QRCode from "react-qr-code";
 import { TokenIcon } from "../shared-ui";
 import { getTransferChainMinUsd } from "../minimums";
 import { resolveChainIconUrl, resolveTokenIconUrl } from "../icons";
+import { sortUniqueTransferTokensBySymbol } from "./tokenSort";
 
 export function TransferStep({
   assets,
@@ -53,9 +54,7 @@ export function TransferStep({
   const [tokenOpen, setTokenOpen] = useState(false);
   const [chainOpen, setChainOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
-  const tokenOptions = [...new Map(
-    assets.map((asset) => [asset.symbol.trim().toUpperCase(), asset] as const)
-  ).values()];
+  const tokenOptions = sortUniqueTransferTokensBySymbol(assets);
   const hasChains = chainOptions.length > 0;
   const selectedChain = chainOptions.find((chain) => chain.chainId === selectedChainId);
   const effectiveChainId = selectedChain?.chainId ?? (hasChains ? chainOptions[0].chainId : "");
