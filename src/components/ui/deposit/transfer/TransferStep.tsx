@@ -266,6 +266,12 @@ export function TransferStep({
         </div>
       </div>
 
+      <p className="text-xs leading-relaxed text-white/55">
+        {locale === "zh"
+          ? "请按上方所选代币与网络，向下方地址转账；错链可能无法到账。"
+          : "Use the token and network selected above, and send to the address below; wrong-chain deposits may not be credited."}
+      </p>
+
       {error && (
         <div className="flex gap-3 rounded-2xl border border-[#ff6b6b]/20 bg-[#ff6b6b]/10 p-4">
           <AlertTriangle className="mt-0.5 shrink-0 text-[#ff6b6b]" size={18} />
