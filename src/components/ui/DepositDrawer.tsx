@@ -1057,7 +1057,7 @@ function DrawerContent({
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="fixed bottom-0 left-0 right-0 z-50 flex max-h-[90vh] min-h-0 w-full max-w-[448px] touch-pan-y flex-col overflow-y-auto overscroll-y-contain rounded-t-3xl border-t border-white/10 mx-auto"
+            className="fixed bottom-0 left-0 right-0 z-50 flex max-h-[85vh] min-h-0 w-full max-w-[448px] touch-pan-y flex-col overflow-y-auto overscroll-y-contain rounded-t-3xl border-t border-white/10 mx-auto"
             style={{
               background: "linear-gradient(180deg, #151922 0%, #0d1118 100%)",
               boxShadow: "0 -20px 40px rgba(0,0,0,0.5)",
