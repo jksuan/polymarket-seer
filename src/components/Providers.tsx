@@ -40,7 +40,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
         appearance: {
           theme: "dark",
           accentColor: "#3b82f6",
-          logo: "/polymarket-icon.png",
+          logo: "/images/crypto/polymarket-icon.png",
         },
         defaultChain: polygon,
         supportedChains: [polygon],

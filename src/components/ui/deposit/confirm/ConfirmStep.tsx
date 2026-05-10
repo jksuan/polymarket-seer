@@ -125,7 +125,7 @@ export function ConfirmStep({
                 <span
                   aria-hidden
                   className="block h-5 w-5 shrink-0 rounded-full bg-cover bg-center"
-                  style={{ backgroundImage: "url(/polymarket-icon.png)" }}
+                  style={{ backgroundImage: "url(/images/crypto/polymarket-icon.png)" }}
                 />
               ),
             },

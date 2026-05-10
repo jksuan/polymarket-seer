@@ -45,15 +45,15 @@ const COINGECKO_ETH_SMALL_URL =
   "https://assets.coingecko.com/coins/images/279/small/ethereum.png";
 
 export const TOKEN_ICON_URLS: Record<string, string> = {
-  /** 主列表 ETH，对应 public/ethereum-eth.svg */
-  ETH: "/ethereum-eth.svg",
+  /** 主列表 ETH，对应 public/images/crypto/ethereum-eth.svg */
+  ETH: "/images/crypto/ethereum-eth.svg",
   BNB: "/images/crypto/bnb.svg",
   POL: "https://assets.coingecko.com/coins/images/32440/small/polygon.png",
   MATIC: "https://assets.coingecko.com/coins/images/4713/small/polygon.png",
   USDC: "https://assets.coingecko.com/coins/images/6319/small/usdc.png",
   "USDC.E": "https://assets.coingecko.com/coins/images/6319/small/usdc.png",
-  /** pUSD 主图标，对应仓库 public/polymarket-icon.png */
-  PUSD: "/polymarket-icon.png",
+  /** pUSD 主图标，对应仓库 public/images/crypto/polymarket-icon.png */
+  PUSD: "/images/crypto/polymarket-icon.png",
 };
 
 export const CHAIN_ICON_URLS: Record<string, string> = {

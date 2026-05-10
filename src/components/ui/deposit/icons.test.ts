@@ -4,7 +4,7 @@ import { resolveTokenIconUrl } from "./icons";
 describe("resolveTokenIconUrl", () => {
   it("本地映射优先于后端图标", () => {
     const resolved = resolveTokenIconUrl("ETH", "https://example.com/eth.png");
-    expect(resolved).toBe("/ethereum-eth.svg");
+    expect(resolved).toBe("/images/crypto/ethereum-eth.svg");
   });
 
   it("本地缺失时回退到后端图标", () => {
@@ -15,6 +15,6 @@ describe("resolveTokenIconUrl", () => {
 
   it("本地与后端都缺失时启发式兜底", () => {
     expect(resolveTokenIconUrl("USDC.e")).toBe("/images/crypto/usdc.svg");
-    expect(resolveTokenIconUrl("Wrapped ETH")).toBe("/ethereum-eth.svg");
+    expect(resolveTokenIconUrl("Wrapped ETH")).toBe("/images/crypto/ethereum-eth.svg");
   });
 });
