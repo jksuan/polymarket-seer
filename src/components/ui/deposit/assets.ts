@@ -57,8 +57,7 @@ function normalizeSupportedAsset(item: Record<string, unknown>): DepositAsset | 
     : item;
   const chainId = String(item.chainId ?? item.chain_id ?? "");
   const tokenAddress = String(token.address ?? token.tokenAddress ?? token.contractAddress ?? "");
-  const rawSymbol = String(token.symbol ?? "");
-  const symbol = normalizeAssetSymbol(rawSymbol, chainId, tokenAddress);
+  const symbol = String(token.symbol ?? "").trim();
   const decimals = Number(token.decimals ?? 18);
   const iconUrl = getTokenIconUrl(item, token, symbol);
 
@@ -79,7 +78,7 @@ function normalizeSupportedAsset(item: Record<string, unknown>): DepositAsset | 
 }
 
 function sortPreferredAssets(assets: DepositAsset[]): DepositAsset[] {
-  const priority = ["ETH", "POL", "USDC.E", "USDC", "PUSD"];
+  const priority = ["ETH", "POL", "MATIC", "USDC.E", "USDC", "PUSD"];
   return [...assets].sort((a, b) => {
     const ap = priority.indexOf(a.symbol.toUpperCase());
     const bp = priority.indexOf(b.symbol.toUpperCase());
@@ -228,15 +227,6 @@ function isNativeSymbol(symbol: string, chainId: string): boolean {
     (chainId === "42161" && normalized === "ETH") ||
     (chainId === "56" && normalized === "BNB")
   );
-}
-
-function normalizeAssetSymbol(symbol: string, chainId: string, tokenAddress: string): string {
-  const normalized = symbol.toUpperCase();
-  const isPolygonNative = chainId === String(POLYGON_CHAIN_ID) && NATIVE_TOKEN_ADDRESSES.has(tokenAddress.toLowerCase());
-  if (isPolygonNative && normalized === "MATIC") {
-    return "POL";
-  }
-  return symbol;
 }
 
 function getAssetDedupeKey(asset: DepositAsset): string {
