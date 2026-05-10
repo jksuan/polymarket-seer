@@ -59,6 +59,11 @@ import { QuoteCountdownRing } from "./deposit/quote-countdown-ring";
 import { HomeStep } from "./deposit/connected/HomeStep";
 import { AssetStep } from "./deposit/connected/AssetStep";
 import { AmountStep } from "./deposit/connected/AmountStep";
+import {
+  abandonConfirmAttempt,
+  shouldApplyConfirmResult,
+  startConfirmAttempt,
+} from "./deposit/connected/confirmAttemptGeneration";
 import { ConfirmStep } from "./deposit/confirm/ConfirmStep";
 import { TransferStep } from "./deposit/transfer/TransferStep";
 
@@ -270,6 +275,8 @@ function DrawerContent({
   /** 报价自动刷新失败时递增，用于重新挂载确认页定时器（避免 snapshot 未变导致不再调度） */
   const [quoteAutoRefreshNonce, setQuoteAutoRefreshNonce] = useState(0);
   const quoteRequestRef = useRef(0);
+  /** Connected 确认订单：返回上一页或改选资产时递增，丢弃仍在等待钱包的旧提交 */
+  const confirmAttemptGenerationRef = useRef(0);
   const isExecutingRef = useRef(false);
   const balanceRefreshRetryTimersRef = useRef<number[]>([]);
 
@@ -457,6 +464,7 @@ function DrawerContent({
   useEffect(() => {
     if (!isOpen) return;
     quoteRequestRef.current += 1;
+    confirmAttemptGenerationRef.current = 0;
     setStep("home");
     setSelectedAsset(null);
     setAmountUsd("10.00");
@@ -708,6 +716,9 @@ function DrawerContent({
 
   const handleSelectAsset = (asset: DepositAsset) => {
     quoteRequestRef.current += 1;
+    abandonConfirmAttempt(confirmAttemptGenerationRef);
+    setIsExecuting(false);
+    isExecutingRef.current = false;
     const chainMinUsd = getTransferChainMinUsd(asset.chainName, asset.chainId, depositAssets);
     const defaultAmountUsd = getConnectedDefaultAmountUsd({
       walletUsdValue: Number(asset.usdValue ?? 0),
@@ -815,6 +826,8 @@ function DrawerContent({
       return;
     }
 
+    const confirmAttemptId = startConfirmAttempt(confirmAttemptGenerationRef);
+
     isExecutingRef.current = true;
     quoteRequestRef.current += 1;
     setIsExecuting(true);
@@ -895,6 +908,9 @@ function DrawerContent({
         wallet: activeWallet,
         walletAddress,
       });
+      if (!shouldApplyConfirmResult(confirmAttemptId, confirmAttemptGenerationRef)) {
+        return;
+      }
       setExecutionSubmittedAtMs(Date.now());
       setExecutionTxHash(txHash);
       if (orderId) {
@@ -1035,9 +1051,16 @@ function DrawerContent({
 
   const goBack = () => {
     if (step === "home") return;
+    if (step === "confirm") {
+      abandonConfirmAttempt(confirmAttemptGenerationRef);
+      quoteRequestRef.current += 1;
+      setIsExecuting(false);
+      isExecutingRef.current = false;
+      setStep("amount");
+      return;
+    }
     if (step === "asset" || step === "transfer") setStep("home");
     if (step === "amount") setStep("asset");
-    if (step === "confirm") setStep("amount");
   };
 
   return (
