@@ -401,8 +401,7 @@ function DrawerContent({
     [transferStatus.data?.transactions, transferStatusFilterBaselineMs]
   );
   const dlnStatus = useDlnOrderStatus(submittedOrderId, Boolean(submittedOrderId && isOpen));
-  const bridgePollingErrorMessage = transferStatus.error?.message ?? "";
-  const mergedTransferError = transferError || bridgePollingErrorMessage;
+
   const currentSubmissionTransaction = useMemo(() => {
     const transactions = transferStatus.data?.transactions ?? [];
     const normalizeHash = (hash?: string) => hash?.trim().toLowerCase();
@@ -1212,11 +1211,12 @@ function DrawerContent({
               )}
 
               {step === "transfer" && (
+                // 红条仅展示收款地址生成等业务错误；桥 status 轮询失败由 SWR 间隔自动重试，不并入 error
                 <TransferStep
                   assets={transferAssets}
                   chainOptions={transferChainOptions}
                   copied={copied}
-                  error={mergedTransferError}
+                  error={transferError}
                   isCreating={isCreatingTransferAddress}
                   locale={locale}
                   onAssetChange={setSelectedTransferAssetId}
