@@ -20,7 +20,7 @@ import { bridgeRequest, BridgeRequestError } from "@/lib/bridgeClient";
 import { bridgeKeys, type BridgeStatusKey } from "@/lib/bridgeKeys";
 
 const SUPPORTED_ASSETS_DEDUPING_INTERVAL_MS = 60_000;
-const STATUS_REFRESH_INTERVAL_MS = 10_000;
+const STATUS_REFRESH_INTERVAL_MS = 5_000;
 const FAST_STATUS_REFRESH_INTERVAL_MS = 2_000;
 const FINAL_STATUSES = new Set<string>(["COMPLETED", "FAILED"]);
 

@@ -363,13 +363,24 @@ function DrawerContent({
   const amountNumber = parseAmountUsd(amountUsd);
   const selectedUsdValue = selectedAsset ? assetUsdValues[selectedAsset.id] : undefined;
   const hasSubmittedTx = Boolean(executionTxHash || submittedOrderId);
+  /** Transfer Crypto：进入转账步骤后 baseline+60s 内 2s 快刷；纯 Connected 无 baseline 时也需在提交后快刷桥状态 */
+  const CONNECTED_SUBMIT_FAST_POLL_MS = 120_000;
   const transferStatusFilterBaselineMs = Math.max(
     transferAddressCreatedAtMs,
     transferUiSessionStartedAtMs
   );
-  const transferFastPollingUntilMs = transferStatusFilterBaselineMs > 0
-    ? transferStatusFilterBaselineMs + 60_000
-    : 0;
+  const transferSessionFastUntilMs =
+    transferStatusFilterBaselineMs > 0
+      ? transferStatusFilterBaselineMs + 60_000
+      : 0;
+  const connectedSubmitFastUntilMs =
+    executionSubmittedAtMs > 0
+      ? executionSubmittedAtMs + CONNECTED_SUBMIT_FAST_POLL_MS
+      : 0;
+  const transferFastPollingUntilMs = Math.max(
+    transferSessionFastUntilMs,
+    connectedSubmitFastUntilMs
+  );
 
   const transferStatus = useBridgeStatus(
     transferAddress,
