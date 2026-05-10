@@ -194,18 +194,16 @@ export function ConfirmStep({
         )}
 
         {error && (
-          <div className="flex gap-3 rounded-2xl border border-[#ff6b6b]/20 bg-[#ff6b6b]/10 p-3">
-            <AlertTriangle className="mt-0.5 shrink-0 text-[#ff6b6b]" size={16} />
-            <div className="flex min-w-0 flex-1 items-start justify-between gap-3">
-              <p className="min-w-0 flex-1 text-[11px] leading-relaxed text-[#ffcad4]/80">{error}</p>
-              <button
-                type="button"
-                onClick={onFallbackToTransfer}
-                className="shrink-0 rounded-xl border border-white/10 bg-white/[0.06] px-3 py-2 text-[11px] font-black text-white active:scale-[0.98]"
-              >
-                {locale === "zh" ? "切换至转账通道" : "Switch to transfer channel"}
-              </button>
-            </div>
+          <div className="flex items-center gap-3 rounded-2xl border border-[#ff6b6b]/20 bg-[#ff6b6b]/10 p-3">
+            <AlertTriangle className="shrink-0 text-[#ff6b6b]" size={16} />
+            <p className="min-w-0 flex-1 text-[11px] leading-relaxed text-[#ffcad4]/80">{error}</p>
+            <button
+              type="button"
+              onClick={onFallbackToTransfer}
+              className="shrink-0 rounded-xl border border-white/10 bg-white/[0.06] px-3 py-2 text-[11px] font-black text-white active:scale-[0.98]"
+            >
+              {locale === "zh" ? "切换至转账通道" : "Switch to transfer channel"}
+            </button>
           </div>
         )}
       </div>
