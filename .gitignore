@@ -47,5 +47,12 @@ next-env.d.ts
 !/.cursor/rules/
 !/.cursor/rules/**
 
+# Agent / IDE 技能镜像（CLI 同步生成的 symlink，不入库；保留 .agents/ 等真实安装路径）
+.agent/
+.claude/
+.kiro/
+.trae/
+.windsurf/
+
 # others
 .notes
