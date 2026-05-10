@@ -268,7 +268,7 @@ export function TransferStep({
 
       <p className="text-xs leading-relaxed text-white/55">
         {locale === "zh"
-          ? "按所选代币与网络转帐至下方地址；错链可能造成资金损失。转出后请耐心等待入账。"
+          ? "按所选代币与网络转账至下方地址；错链可能造成资金损失。转出后请耐心等待入账。"
           : "Use the selected token and network to send to the address below; wrong-chain transfers may cause loss of funds. After sending from your wallet, wait for the deposit to credit."}
       </p>
 
