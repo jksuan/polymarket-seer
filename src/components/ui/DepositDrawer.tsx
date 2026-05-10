@@ -772,6 +772,8 @@ function DrawerContent({
     setIsQuoting(true);
     setQuoteError("");
     setQuoteWarning("");
+    setExecutionError("");
+    setExecutionRiskWarning("");
 
     try {
       const validationError = validateDepositSelection({
@@ -1056,6 +1058,9 @@ function DrawerContent({
       quoteRequestRef.current += 1;
       setIsExecuting(false);
       isExecutingRef.current = false;
+      setExecutionError("");
+      setExecutionRiskWarning("");
+      setHasAcknowledgedRiskWarning(false);
       setStep("amount");
       return;
     }
