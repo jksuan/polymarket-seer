@@ -20,10 +20,12 @@ import type {
   FlowStep,
 } from "./deposit/types";
 import {
+  ADDRESS_TYPES,
   CONNECTED_MAX_BUFFER_USD,
   DEPOSIT_SINGLE_TX_CAP_USD,
 } from "./deposit/constants";
 import {
+  depositAddressMatchesType,
   ensureEvmDepositAddress,
   extractDepositAddress,
   extractDepositAddressMap,
@@ -472,6 +474,7 @@ function DrawerContent({
     setIsCancellingOrder(false);
     setCancelTxHash("");
     setTransferAddresses({});
+    setTransferAddress("");
     setTransferAddressCreatedAtMs(0);
     setTransferError("");
     setCopied(false);
@@ -943,17 +946,27 @@ function DrawerContent({
 
     try {
       const response = await createDepositAddress({ address: proxyAddress });
-      const addressMap = extractDepositAddressMap(response);
+      const addressMapRaw = extractDepositAddressMap(response);
+      const addressMap: DepositAddressMap = {};
+      for (const t of ADDRESS_TYPES) {
+        const candidate = addressMapRaw[t];
+        if (candidate && depositAddressMatchesType(candidate, t)) {
+          addressMap[t] = candidate;
+        }
+      }
       const address =
         addressMap[selectedTransferAddressType] ||
         extractDepositAddress(response, selectedTransferAddressType) ||
         "";
+      const safeAddress = depositAddressMatchesType(address, selectedTransferAddressType)
+        ? address
+        : "";
       setDepositResponse(response);
       setTransferAddresses(addressMap);
-      setTransferAddress(address);
+      setTransferAddress(safeAddress);
       setTransferAddressCreatedAtMs(Date.now());
 
-      if (!address) {
+      if (!safeAddress) {
         setTransferError(
           locale === "zh"
             ? `当前网络暂不支持收款地址（${selectedTransferAddressType.toUpperCase()}）。请切换网络后重试。`
@@ -961,6 +974,9 @@ function DrawerContent({
         );
       }
     } catch (error) {
+      setTransferAddresses({});
+      setTransferAddress("");
+      setTransferAddressCreatedAtMs(0);
       setTransferError(
         error instanceof Error
           ? error.message
@@ -975,8 +991,15 @@ function DrawerContent({
 
   useEffect(() => {
     if (!selectedTransferChainId) return;
-    if (Object.keys(transferAddresses).length === 0) return;
-    const nextAddress = transferAddresses[selectedTransferAddressType] || "";
+    if (Object.keys(transferAddresses).length === 0) {
+      setTransferAddress("");
+      setTransferAddressCreatedAtMs(0);
+      return;
+    }
+    const raw = transferAddresses[selectedTransferAddressType] || "";
+    const nextAddress = depositAddressMatchesType(raw, selectedTransferAddressType)
+      ? raw
+      : "";
     setTransferAddress(nextAddress);
     setTransferAddressCreatedAtMs(nextAddress ? Date.now() : 0);
     if (!nextAddress) {
@@ -1002,6 +1025,11 @@ function DrawerContent({
 
   const openTransferStep = useCallback(() => {
     setTransferUiSessionStartedAtMs(Date.now());
+    setTransferAddresses({});
+    setTransferAddress("");
+    setTransferAddressCreatedAtMs(0);
+    setTransferError("");
+    setDepositResponse(null);
     setStep("transfer");
   }, []);
 

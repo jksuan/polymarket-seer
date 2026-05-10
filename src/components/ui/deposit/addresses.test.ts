@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import * as bridgeModule from "@/hooks/useBridge";
 import type { CreateDepositResponse } from "@/types/bridge";
 import {
+  depositAddressMatchesType,
   ensureEvmDepositAddress,
   extractAnyDepositAddress,
   extractDepositAddress,
@@ -9,6 +10,15 @@ import {
 } from "./addresses";
 
 describe("deposit addresses helpers", () => {
+  it("depositAddressMatchesType 拒绝链类型与地址格式不一致", () => {
+    const svm = "6VxkherHLzE3kAnU1nTt8MLRvE2Lc5DGw3pSGCUYJb5Q";
+    const evm = "0x1111111111111111111111111111111111111111";
+    expect(depositAddressMatchesType(svm, "svm")).toBe(true);
+    expect(depositAddressMatchesType(svm, "evm")).toBe(false);
+    expect(depositAddressMatchesType(evm, "evm")).toBe(true);
+    expect(depositAddressMatchesType(evm, "svm")).toBe(false);
+  });
+
   it("extractDepositAddressMap 能提取多链地址", () => {
     const response: CreateDepositResponse = {
       depositAddresses: {

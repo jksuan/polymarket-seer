@@ -64,3 +64,30 @@ export function extractDepositAddressMap(response: CreateDepositResponse): Depos
   }
   return result;
 }
+
+/** 防止 UI 链选择与收款地址格式错位（例如 EVM 链仍展示 Solana 地址）。 */
+export function depositAddressMatchesType(
+  address: string,
+  addressType: BridgeAddressType
+): boolean {
+  const value = address.trim();
+  if (!value) return false;
+  if (addressType === "evm") {
+    try {
+      return ethers.utils.isAddress(value);
+    } catch {
+      return false;
+    }
+  }
+  if (addressType === "svm") {
+    if (value.startsWith("0x")) return false;
+    return /^[1-9A-HJ-NP-Za-km-z]{32,48}$/.test(value);
+  }
+  if (addressType === "btc") {
+    return /^(bc1|[13])[a-zA-HJ-NP-Z0-9]{25,87}$/.test(value);
+  }
+  if (addressType === "tron") {
+    return /^T[1-9A-HJ-NP-Za-km-z]{33}$/.test(value);
+  }
+  return false;
+}
