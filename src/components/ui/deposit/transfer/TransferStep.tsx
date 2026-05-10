@@ -268,8 +268,8 @@ export function TransferStep({
 
       <p className="text-xs leading-relaxed text-white/55">
         {locale === "zh"
-          ? "请按上方所选代币与网络，向下方地址转账；错链可能无法到账。"
-          : "Use the token and network selected above, and send to the address below; wrong-chain deposits may not be credited."}
+          ? "按所选代币与网络转帐至下方地址；错链可能造成资金损失。转出后请耐心等待入账。"
+          : "Use the selected token and network to send to the address below; wrong-chain transfers may cause loss of funds. After sending from your wallet, wait for the deposit to credit."}
       </p>
 
       {error && (
