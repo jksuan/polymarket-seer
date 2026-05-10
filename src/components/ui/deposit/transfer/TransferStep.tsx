@@ -292,33 +292,33 @@ export function TransferStep({
 
       {transferAddress && (
         <>
-          <div className="flex flex-col items-center rounded-3xl border border-white/10 bg-white/[0.03] p-6">
-            <div className="mb-5 rounded-[24px] border border-white/10 bg-gradient-to-b from-[#1a2334] to-[#121826] p-3 shadow-[0_8px_24px_rgba(0,0,0,0.28)]">
-              <div className="relative rounded-[18px] bg-white p-3">
+          <div className="flex flex-col items-center rounded-3xl border border-white/10 bg-white/[0.03] p-4">
+            <div className="mb-3 rounded-[24px] border border-white/10 bg-gradient-to-b from-[#1a2334] to-[#121826] p-2 shadow-[0_8px_24px_rgba(0,0,0,0.28)]">
+              <div className="relative rounded-[18px] bg-white p-2">
                 <QRCode
                   bgColor="#FFFFFF"
                   fgColor="#0F172A"
                   level="H"
-                  size={160}
+                  size={140}
                   value={transferAddress}
-                  viewBox="0 0 160 160"
+                  viewBox="0 0 140 140"
                 />
                 {selectedChain ? (
                   (() => {
                     const centerChainIcon = getChainIconUrl(selectedChain.chainName, selectedChain.chainId);
                     const centerChainInitial = (selectedChain.chainName || "?").slice(0, 1).toUpperCase();
                     return (
-                  <span className="pointer-events-none absolute left-1/2 top-1/2 flex h-7 w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 shadow-[0_2px_8px_rgba(0,0,0,0.22)]">
+                  <span className="pointer-events-none absolute left-1/2 top-1/2 flex h-6 w-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 shadow-[0_2px_8px_rgba(0,0,0,0.22)]">
                     {centerChainIcon ? (
                       <span
                         aria-hidden="true"
-                        className="h-6 w-6 rounded-full bg-cover bg-center bg-no-repeat"
+                        className="h-5 w-5 rounded-full bg-cover bg-center bg-no-repeat"
                         style={{ backgroundImage: `url(${centerChainIcon})` }}
                       />
                     ) : (
                       <span
                         aria-hidden="true"
-                        className="flex h-6 w-6 items-center justify-center rounded-full bg-[#EEF2FF] text-[11px] font-bold text-[#334155]"
+                        className="flex h-5 w-5 items-center justify-center rounded-full bg-[#EEF2FF] text-[10px] font-bold text-[#334155]"
                       >
                         {centerChainInitial}
                       </span>
