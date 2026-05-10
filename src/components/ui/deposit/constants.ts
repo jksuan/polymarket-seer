@@ -47,6 +47,7 @@ const COINGECKO_ETH_SMALL_URL =
 export const TOKEN_ICON_URLS: Record<string, string> = {
   /** 主列表 ETH，对应 public/ethereum-eth.svg */
   ETH: "/ethereum-eth.svg",
+  BNB: "/images/crypto/bnb.svg",
   POL: "https://assets.coingecko.com/coins/images/32440/small/polygon.png",
   MATIC: "https://assets.coingecko.com/coins/images/4713/small/polygon.png",
   USDC: "https://assets.coingecko.com/coins/images/6319/small/usdc.png",

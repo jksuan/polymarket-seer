@@ -1,13 +1,14 @@
 import { ethers } from "ethers";
 import { getBridgeQuote } from "@/hooks/useBridge";
 import { ADDRESSES, ERC20_ABI, POLYGON_CHAIN_ID } from "@/lib/constants";
+import { isClientDebugEnabled } from "@/lib/debug";
 import {
   NATIVE_TOKEN_ADDRESSES,
   PUBLIC_RPC_URLS,
   PUSD_ADDRESS,
-  TOKEN_ICON_URLS,
   ZERO_ADDRESS,
 } from "./constants";
+import { resolveTokenIconUrl } from "./icons";
 import { formatTokenAmount, toNumber } from "./format";
 import type { DepositAsset } from "./types";
 
@@ -33,7 +34,7 @@ export function normalizeSupportedAssets(data: unknown): DepositAsset[] {
       symbol: "POL",
       name: "Polygon",
       tokenAddress: ZERO_ADDRESS,
-      iconUrl: TOKEN_ICON_URLS.POL,
+      iconUrl: resolveTokenIconUrl("POL"),
       decimals: 18,
       isNative: true,
     },
@@ -44,7 +45,7 @@ export function normalizeSupportedAssets(data: unknown): DepositAsset[] {
       symbol: "USDC.e",
       name: "Bridged USDC",
       tokenAddress: ADDRESSES.USDCe,
-      iconUrl: TOKEN_ICON_URLS["USDC.E"],
+      iconUrl: resolveTokenIconUrl("USDC.E"),
       decimals: 6,
     },
   ]);
@@ -256,6 +257,7 @@ function getTokenIconUrl(
   token: Record<string, unknown>,
   symbol: string
 ): string | undefined {
+  const debugIconMissing = isClientDebugEnabled();
   const candidates = [
     token.logoURI,
     token.logoUri,
@@ -272,5 +274,23 @@ function getTokenIconUrl(
   const fromApi = candidates.find(
     (value): value is string => typeof value === "string" && value.startsWith("http")
   );
-  return fromApi || TOKEN_ICON_URLS[symbol.toUpperCase()];
+  if (fromApi) return fromApi;
+
+  const fallback = resolveTokenIconUrl(symbol);
+  if (!fallback && debugIconMissing) {
+    console.debug("[deposit-icons] missing icon from API and fallback", {
+      symbol,
+      tokenLogoURI: token.logoURI,
+      tokenLogoUri: token.logoUri,
+      tokenLogoUrl: token.logoUrl,
+      tokenIcon: token.icon,
+      tokenImage: token.image,
+      itemLogoURI: item.logoURI,
+      itemLogoUri: item.logoUri,
+      itemLogoUrl: item.logoUrl,
+      itemIcon: item.icon,
+      itemImage: item.image,
+    });
+  }
+  return fallback;
 }

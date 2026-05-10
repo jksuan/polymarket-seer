@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { CHAIN_ICON_URLS, TOKEN_ICON_URLS } from "./constants";
+import { resolveChainIconUrl, resolveTokenIconUrl } from "./icons";
 
 export type InfoBoxRow =
   | [string, string]
@@ -43,9 +43,8 @@ export function TokenIcon({
   symbol: string;
 }) {
   const label = symbol.slice(0, 1).toUpperCase();
-  const fallbackUrl = TOKEN_ICON_URLS[symbol.toUpperCase()];
-  const imageUrl = iconUrl || fallbackUrl;
-  const chainIconUrl = chainId ? CHAIN_ICON_URLS[chainId] : undefined;
+  const imageUrl = resolveTokenIconUrl(symbol, iconUrl);
+  const chainIconUrl = resolveChainIconUrl(chainId);
   const isPolymarketUsd = symbol.toUpperCase() === "PUSD";
 
   const outerSize = compact ? "h-5 w-5" : "h-10 w-10";

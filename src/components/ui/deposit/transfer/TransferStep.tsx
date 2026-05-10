@@ -13,70 +13,7 @@ import { AnimatePresence, motion } from "motion/react";
 import QRCode from "react-qr-code";
 import { TokenIcon } from "../shared-ui";
 import { getTransferChainMinUsd } from "../minimums";
-
-const KNOWN_CHAIN_ICON_URLS: Record<string, string> = {
-  "1": "/ethereum-eth.svg",
-  "10": "https://assets.coingecko.com/coins/images/25244/small/Optimism.png",
-  "56": "https://assets.coingecko.com/coins/images/825/small/bnb-icon2_2x.png",
-  "137": "https://assets.coingecko.com/coins/images/32440/small/polygon.png",
-  "8453": "https://assets.coingecko.com/coins/images/33079/small/base.png",
-  "42161": "https://assets.coingecko.com/coins/images/16547/small/arb.jpg",
-  solana: "https://assets.coingecko.com/coins/images/4128/small/solana.png",
-  tron: "https://assets.coingecko.com/coins/images/1094/small/tron-logo.png",
-  bitcoin: "https://assets.coingecko.com/coins/images/1/small/bitcoin.png",
-  bsc: "https://assets.coingecko.com/coins/images/825/small/bnb-icon2_2x.png",
-};
-
-const LOCAL_TOKEN_ICON_BY_SYMBOL: Record<string, string> = {
-  "1INCH": "/images/crypto/1inch.svg",
-  AAVE: "/images/crypto/aave.svg",
-  ARB: "/images/crypto/arb.svg",
-  BASE: "/images/crypto/base.svg",
-  BNB: "/images/crypto/bnb.svg",
-  BUSD: "/images/crypto/busd.svg",
-  BTC: "/images/crypto/bitcoin.svg",
-  BITCOIN: "/images/crypto/bitcoin.svg",
-  DAI: "/images/crypto/dai.svg",
-  ETH: "/images/crypto/eth.svg",
-  EUROC: "/images/crypto/euroc.png",
-  HYPE: "/images/crypto/hype.svg",
-  LINK: "/images/crypto/link.png",
-  MATIC: "/images/crypto/matic.svg",
-  MON: "/images/crypto/mon.svg",
-  OP: "/images/crypto/op.svg",
-  POL: "/images/crypto/pol.svg",
-  SOL: "/images/crypto/sol.png",
-  TUSD: "/images/crypto/tusd.svg",
-  USDE: "/images/crypto/usde.svg",
-  "USDC.E": "/images/crypto/usdc.svg",
-  USDT: "/images/crypto/usdt.svg",
-  WBNB: "/images/crypto/wbnb.svg",
-  WETH: "/images/crypto/weth.png",
-};
-
-const LOCAL_CHAIN_ICON_BY_NAME: Record<string, string> = {
-  ethereum: "/images/crypto/eth.svg",
-  polygon: "/images/crypto/pol.svg",
-  arbitrum: "/images/crypto/arb.svg",
-  base: "/images/crypto/base.svg",
-  optimism: "/images/crypto/op.svg",
-  "bnb smart chain": "/images/crypto/bnb.svg",
-  bsc: "/images/crypto/bnb.svg",
-  solana: "/images/crypto/sol.png",
-  bitcoin: "/images/crypto/bitcoin.svg",
-  hyperevm: "/images/crypto/hype.svg",
-  monad: "/images/crypto/mon.svg",
-  tron: "/images/crypto/tron.png",
-};
-
-const LOCAL_CHAIN_ICON_BY_ID: Record<string, string> = {
-  "1": "/images/crypto/eth.svg",
-  "10": "/images/crypto/op.svg",
-  "56": "/images/crypto/bnb.svg",
-  "137": "/images/crypto/pol.svg",
-  "8453": "/images/crypto/base.svg",
-  "42161": "/images/crypto/arb.svg",
-};
+import { resolveChainIconUrl, resolveTokenIconUrl } from "../icons";
 
 export function TransferStep({
   assets,
@@ -181,7 +118,7 @@ export function TransferStep({
           >
             <span className="flex items-center gap-2">
               {selectedAsset ? (
-                <TokenIcon compact iconUrl={getTokenIconUrl(selectedAsset)} symbol={selectedAsset.symbol} />
+                <TokenIcon compact iconUrl={resolveTokenIconUrl(selectedAsset.symbol, selectedAsset.iconUrl)} symbol={selectedAsset.symbol} />
               ) : null}
               <span className="text-sm font-black text-white">
                 {tokenDisabled
@@ -204,7 +141,7 @@ export function TransferStep({
                   className="flex w-full items-center justify-between rounded-xl px-2 py-2 hover:bg-white/5"
                 >
                   <span className="flex items-center gap-2">
-                    <TokenIcon compact iconUrl={getTokenIconUrl(asset)} symbol={asset.symbol} />
+                    <TokenIcon compact iconUrl={resolveTokenIconUrl(asset.symbol, asset.iconUrl)} symbol={asset.symbol} />
                     <span className="text-[0.82rem] font-normal text-white">{asset.symbol}</span>
                   </span>
                   {selectedAsset?.symbol.trim().toUpperCase() === asset.symbol.trim().toUpperCase()
@@ -305,7 +242,7 @@ export function TransferStep({
                 />
                 {selectedChain ? (
                   (() => {
-                    const centerChainIcon = getChainIconUrl(selectedChain.chainName, selectedChain.chainId);
+                    const centerChainIcon = resolveChainIconUrl(selectedChain.chainId, selectedChain.chainName);
                     const centerChainInitial = (selectedChain.chainName || "?").slice(0, 1).toUpperCase();
                     return (
                   <span className="pointer-events-none absolute left-1/2 top-1/2 flex h-6 w-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 shadow-[0_2px_8px_rgba(0,0,0,0.22)]">
@@ -443,37 +380,8 @@ export function TransferStep({
   );
 }
 
-function getChainIconUrl(chainName?: string, chainId?: string): string | undefined {
-  const id = (chainId || "").trim();
-  if (id && LOCAL_CHAIN_ICON_BY_ID[id]) return LOCAL_CHAIN_ICON_BY_ID[id];
-
-  const normalized = (chainName || "").trim().toLowerCase();
-  if (LOCAL_CHAIN_ICON_BY_NAME[normalized]) return LOCAL_CHAIN_ICON_BY_NAME[normalized];
-  if (id && KNOWN_CHAIN_ICON_URLS[id]) return KNOWN_CHAIN_ICON_URLS[id];
-  if (normalized.includes("bitcoin")) return KNOWN_CHAIN_ICON_URLS.bitcoin;
-  if (normalized.includes("solana")) return KNOWN_CHAIN_ICON_URLS.solana;
-  if (normalized.includes("tron")) return KNOWN_CHAIN_ICON_URLS.tron;
-  if (normalized.includes("optimism")) return KNOWN_CHAIN_ICON_URLS["10"];
-  if (normalized.includes("arbitrum")) return KNOWN_CHAIN_ICON_URLS["42161"];
-  if (normalized.includes("base")) return KNOWN_CHAIN_ICON_URLS["8453"];
-  if (normalized.includes("polygon")) return KNOWN_CHAIN_ICON_URLS["137"];
-  if (normalized.includes("bnb") || normalized.includes("bsc")) return KNOWN_CHAIN_ICON_URLS.bsc;
-  if (normalized.includes("ethereum")) return KNOWN_CHAIN_ICON_URLS["1"];
-  if (normalized.includes("hyperevm")) return LOCAL_CHAIN_ICON_BY_NAME.hyperevm;
-  if (normalized.includes("monad")) return LOCAL_CHAIN_ICON_BY_NAME.monad;
-  return undefined;
-}
-
-function getTokenIconUrl(asset: DepositAsset): string | undefined {
-  const symbol = asset.symbol.trim().toUpperCase();
-  const fromMap = LOCAL_TOKEN_ICON_BY_SYMBOL[symbol];
-  if (fromMap) return fromMap;
-  if (asset.iconUrl) return asset.iconUrl;
-  return undefined;
-}
-
 function ChainIcon({ chainId, chainName }: { chainId?: string; chainName?: string }) {
-  const iconUrl = getChainIconUrl(chainName, chainId);
+  const iconUrl = resolveChainIconUrl(chainId, chainName);
   if (iconUrl) {
     return (
       <span
