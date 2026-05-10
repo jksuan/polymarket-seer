@@ -52,8 +52,28 @@ const CHAIN_ICON_BY_NAME: Record<string, string> = {
 };
 
 export function resolveTokenIconUrl(symbol: string, preferredIconUrl?: string): string | undefined {
+  const normalized = symbol.trim().toUpperCase();
+  const local = TOKEN_ICON_BY_SYMBOL[normalized];
+  if (local) return local;
   if (preferredIconUrl) return preferredIconUrl;
-  return TOKEN_ICON_BY_SYMBOL[symbol.trim().toUpperCase()];
+
+  // Heuristic fallback for wrapped/punctuated aliases.
+  const compact = normalized.replace(/[^A-Z0-9]/g, "");
+  const aliasMap: Record<string, string> = {
+    USDCE: "USDC",
+    WBTC: "BTC",
+    XBT: "BTC",
+    WETH: "ETH",
+    WRAPPEDETH: "ETH",
+    WBNB: "BNB",
+    WSOL: "SOL",
+  };
+  const alias = aliasMap[compact];
+  if (alias) return TOKEN_ICON_BY_SYMBOL[alias];
+
+  if (compact.endsWith("USDC")) return TOKEN_ICON_BY_SYMBOL.USDC;
+  if (compact.endsWith("USDT")) return TOKEN_ICON_BY_SYMBOL.USDT;
+  return undefined;
 }
 
 export function resolveChainIconUrl(chainId?: string, chainName?: string): string | undefined {
