@@ -3,14 +3,11 @@ import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "motion/react";
 import { ArrowLeft, X } from "lucide-react";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
-import { createDepositAddress, useBridgeStatus, useSupportedAssets } from "@/hooks/useBridge";
+import { useSupportedAssets } from "@/hooks/useBridge";
 import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 import { getDlnCancelTx, useDlnOrderStatus } from "@/hooks/useDln";
 import { selectPrimaryWallet } from "@/lib/primaryWallet";
-import { isClientDebugEnabled } from "@/lib/debug";
-import { shortenAddress } from "@/lib/utils";
 import { useTranslation } from "@/i18n";
-import type { BridgeAddressType } from "@/types/bridge";
 import type { BridgeTransaction, CreateDepositResponse } from "@/types/bridge";
 import type {
   DepositAddressMap,
@@ -19,17 +16,8 @@ import type {
   ExecutionSnapshot,
   FlowStep,
 } from "./deposit/types";
-import {
-  ADDRESS_TYPES,
-  CONNECTED_MAX_BUFFER_USD,
-  DEPOSIT_SINGLE_TX_CAP_USD,
-} from "./deposit/constants";
-import {
-  depositAddressMatchesType,
-  ensureEvmDepositAddress,
-  extractDepositAddress,
-  extractDepositAddressMap,
-} from "./deposit/addresses";
+import { CONNECTED_MAX_BUFFER_USD, DEPOSIT_SINGLE_TX_CAP_USD } from "./deposit/constants";
+import { ensureEvmDepositAddress } from "./deposit/addresses";
 import {
   estimateUsdValue,
   normalizeSupportedAssets,
@@ -52,13 +40,15 @@ import {
   getTransferChainMinUsd,
 } from "./deposit/minimums";
 import {
-  getTransferStatusSinceAddressCreated,
   isBridgeCompletedStatus,
 } from "./deposit/status";
 import { QuoteCountdownRing } from "./deposit/quote-countdown-ring";
 import { HomeStep } from "./deposit/connected/HomeStep";
 import { AssetStep } from "./deposit/connected/AssetStep";
 import { AmountStep } from "./deposit/connected/AmountStep";
+import { useConnectedAmountInput } from "./deposit/connected/useConnectedAmountInput";
+import { useConnectedConfirmFlow } from "./deposit/connected/useConnectedConfirmFlow";
+import { useConnectedQuoteFlow } from "./deposit/connected/useConnectedQuoteFlow";
 import {
   abandonConfirmAttempt,
   shouldApplyConfirmResult,
@@ -66,164 +56,8 @@ import {
 } from "./deposit/connected/confirmAttemptGeneration";
 import { ConfirmStep } from "./deposit/confirm/ConfirmStep";
 import { TransferStep } from "./deposit/transfer/TransferStep";
-
-type PrivyLoginIdentity = {
-  email?: { address?: string | null } | null;
-  google?: { email?: string | null } | null;
-  twitter?: { username?: string | null; subject?: string | null } | null;
-};
-
-const TRANSFER_ALLOWED_CHAIN_NAMES = new Set([
-  "ethereum",
-  "polygon",
-  "arbitrum",
-  "base",
-  "optimism",
-  "bnb smart chain",
-  "solana",
-  "bitcoin",
-  "tron",
-  "hyperevm",
-  "monad",
-]);
-
-const TRANSFER_ALLOWED_CHAIN_IDS = new Set(["1", "137", "42161", "8453", "10", "56"]);
-const TRANSFER_ALLOWED_TOKEN_SYMBOLS = new Set([
-  "1INCH",
-  "AAVE",
-  "ARB",
-  "BASE",
-  "BNB",
-  "BTC",
-  "BITCOIN",
-  "BUSD",
-  "DAI",
-  "ETH",
-  "EUROC",
-  "HYPE",
-  "LINK",
-  "MATIC",
-  "MON",
-  "OP",
-  "POL",
-  "SOL",
-  "TUSD",
-  "USDC",
-  "USDC.E",
-  "USDE",
-  "USDT",
-  "WBNB",
-  "WETH",
-]);
-const DEBUG_TRANSFER_DEDUPE =
-  isClientDebugEnabled();
-const DEBUG_TRANSFER_STATUS =
-  isClientDebugEnabled() || process.env.NEXT_PUBLIC_DEBUG_TRANSFER_STATUS === "1";
-
-function normalizeChainName(chainName?: string): string {
-  return (chainName || "").trim().toLowerCase();
-}
-
-function getTransferAddressType(chainId?: string, chainName?: string): BridgeAddressType {
-  const id = (chainId || "").trim();
-  if (TRANSFER_ALLOWED_CHAIN_IDS.has(id)) return "evm";
-  const name = normalizeChainName(chainName);
-  if (name.includes("solana")) return "svm";
-  if (name.includes("bitcoin") || name.includes("btc")) return "btc";
-  if (name.includes("tron")) return "tron";
-  return "evm";
-}
-
-const TRANSFER_PLACEHOLDER_NATIVE_ADDRESSES = new Set([
-  "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
-  "11111111111111111111111111111111",
-  "bc1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqmql8k8",
-]);
-
-function getTransferSymbolKey(asset: DepositAsset): string {
-  return `${asset.chainId}:${asset.symbol.trim().toUpperCase()}`;
-}
-
-function pickPreferredTransferAsset(current: DepositAsset, next: DepositAsset): DepositAsset {
-  const currentAddress = current.tokenAddress.toLowerCase();
-  const nextAddress = next.tokenAddress.toLowerCase();
-  const currentIsPlaceholder = TRANSFER_PLACEHOLDER_NATIVE_ADDRESSES.has(currentAddress);
-  const nextIsPlaceholder = TRANSFER_PLACEHOLDER_NATIVE_ADDRESSES.has(nextAddress);
-
-  if (currentIsPlaceholder !== nextIsPlaceholder) {
-    return nextIsPlaceholder ? current : next;
-  }
-
-  const currentHasIcon = Boolean(current.iconUrl);
-  const nextHasIcon = Boolean(next.iconUrl);
-  if (currentHasIcon !== nextHasIcon) {
-    return nextHasIcon ? next : current;
-  }
-
-  const currentMinUsd = Number(current.minCheckoutUsd);
-  const nextMinUsd = Number(next.minCheckoutUsd);
-  const currentMinValid = Number.isFinite(currentMinUsd) && currentMinUsd > 0;
-  const nextMinValid = Number.isFinite(nextMinUsd) && nextMinUsd > 0;
-  if (currentMinValid && nextMinValid && currentMinUsd !== nextMinUsd) {
-    return nextMinUsd < currentMinUsd ? next : current;
-  }
-
-  return next.id.localeCompare(current.id) < 0 ? next : current;
-}
-
-function logTransferDedupeDrop(kept: DepositAsset, dropped: DepositAsset): void {
-  if (!DEBUG_TRANSFER_DEDUPE) return;
-  const keptAddress = kept.tokenAddress.toLowerCase();
-  const droppedAddress = dropped.tokenAddress.toLowerCase();
-  const keptIsPlaceholder = TRANSFER_PLACEHOLDER_NATIVE_ADDRESSES.has(keptAddress);
-  const droppedIsPlaceholder = TRANSFER_PLACEHOLDER_NATIVE_ADDRESSES.has(droppedAddress);
-  const keptHasIcon = Boolean(kept.iconUrl);
-  const droppedHasIcon = Boolean(dropped.iconUrl);
-  const keptMinUsd = Number(kept.minCheckoutUsd);
-  const droppedMinUsd = Number(dropped.minCheckoutUsd);
-
-  let reason = "stable-tiebreak";
-  if (keptIsPlaceholder !== droppedIsPlaceholder) {
-    reason = keptIsPlaceholder ? "preferred-placeholder" : "preferred-non-placeholder";
-  } else if (keptHasIcon !== droppedHasIcon) {
-    reason = keptHasIcon ? "preferred-has-icon" : "preferred-no-icon";
-  } else if (
-    Number.isFinite(keptMinUsd) &&
-    Number.isFinite(droppedMinUsd) &&
-    keptMinUsd > 0 &&
-    droppedMinUsd > 0 &&
-    keptMinUsd !== droppedMinUsd
-  ) {
-    reason = keptMinUsd < droppedMinUsd ? "preferred-lower-min-usd" : "preferred-higher-min-usd";
-  }
-
-  console.debug("[transfer-dedupe] dropped asset", {
-    key: getTransferSymbolKey(kept),
-    reason,
-    kept: {
-      id: kept.id,
-      chainId: kept.chainId,
-      symbol: kept.symbol,
-      tokenAddress: kept.tokenAddress,
-    },
-    dropped: {
-      id: dropped.id,
-      chainId: dropped.chainId,
-      symbol: dropped.symbol,
-      tokenAddress: dropped.tokenAddress,
-    },
-  });
-}
-
-function isEmailOrSocialLogin(user: unknown): boolean {
-  const identity = user as PrivyLoginIdentity | null | undefined;
-  return Boolean(
-    identity?.email?.address ||
-    identity?.google?.email ||
-    identity?.twitter?.username ||
-    identity?.twitter?.subject
-  );
-}
+import { useTransferDepositFlow } from "./deposit/transfer/useTransferDepositFlow";
+import { useConnectedEntryFlow } from "./deposit/connected/useConnectedEntryFlow";
 
 function DrawerContent({
   balanceUsd = "0.00",
@@ -256,16 +90,6 @@ function DrawerContent({
   const [isCancellingOrder, setIsCancellingOrder] = useState(false);
   const [cancelTxHash, setCancelTxHash] = useState("");
   const [, setDepositResponse] = useState<CreateDepositResponse | null>(null);
-  const [transferAddresses, setTransferAddresses] = useState<DepositAddressMap>({});
-  const [transferAddress, setTransferAddress] = useState("");
-  const [transferAddressCreatedAtMs, setTransferAddressCreatedAtMs] = useState(0);
-  /** 每次从首页等入口进入转账步骤时刷新，用于忽略复用缓存收款地址时的历史状态 */
-  const [transferUiSessionStartedAtMs, setTransferUiSessionStartedAtMs] = useState(0);
-  const [selectedTransferChainId, setSelectedTransferChainId] = useState("");
-  const [selectedTransferAssetId, setSelectedTransferAssetId] = useState("");
-  const [isCreatingTransferAddress, setIsCreatingTransferAddress] = useState(false);
-  const [transferError, setTransferError] = useState("");
-  const [copied, setCopied] = useState(false);
   const [assetBalances, setAssetBalances] = useState<Record<string, string>>({});
   const [assetUsdValues, setAssetUsdValues] = useState<Record<string, number>>({});
   const [walletBalancesLoading, setWalletBalancesLoading] = useState(false);
@@ -284,48 +108,9 @@ function DrawerContent({
     () => selectPrimaryWallet(wallets, user?.wallet?.address),
     [wallets, user?.wallet?.address]
   );
-  /** 邮箱、Google、X 登录视为独立的 Polymarket 账户，不展示外部钱包 Connected 入口 */
-  const showConnectedWalletOption = useMemo(
-    () => Boolean(activeWallet) && !isEmailOrSocialLogin(user),
-    [activeWallet, user]
-  );
-  const walletAddress = activeWallet?.address ?? "";
-  const walletLabel = walletAddress ? `Wallet (${shortenAddress(walletAddress, 4, 4)})` : "Wallet";
   const depositAssets = useMemo(
     () => normalizeSupportedAssets(supportedAssets),
     [supportedAssets]
-  );
-  const transferAssets = useMemo(() => {
-    const filtered = depositAssets.filter((asset) => {
-      const symbol = asset.symbol.trim().toUpperCase();
-      if (!TRANSFER_ALLOWED_TOKEN_SYMBOLS.has(symbol)) return false;
-      const chainId = asset.chainId.trim();
-      const normalizedChainName = normalizeChainName(asset.chainName);
-      return TRANSFER_ALLOWED_CHAIN_IDS.has(chainId) || TRANSFER_ALLOWED_CHAIN_NAMES.has(normalizedChainName);
-    });
-
-    const deduped = new Map<string, DepositAsset>();
-    for (const asset of filtered) {
-      const key = getTransferSymbolKey(asset);
-      const existing = deduped.get(key);
-      if (!existing) {
-        deduped.set(key, asset);
-        continue;
-      }
-      const kept = pickPreferredTransferAsset(existing, asset);
-      const dropped = kept.id === existing.id ? asset : existing;
-      deduped.set(key, kept);
-      logTransferDedupeDrop(kept, dropped);
-    }
-    return [...deduped.values()];
-  }, [depositAssets]);
-  const selectedTransferSymbol = useMemo(
-    () =>
-      transferAssets
-        .find((asset) => asset.id === selectedTransferAssetId)
-        ?.symbol.trim()
-        .toUpperCase() ?? "",
-    [selectedTransferAssetId, transferAssets]
   );
   const assetsWithBalances = useMemo(
     () => depositAssets.map((asset) => ({
@@ -339,67 +124,68 @@ function DrawerContent({
     () => assetsWithBalances.reduce((sum, asset) => sum + (asset.usdValue ?? 0), 0),
     [assetsWithBalances]
   );
-  const transferChainOptions = useMemo(() => {
-    const sourceAssets = selectedTransferSymbol
-      ? transferAssets.filter((a) => a.symbol.trim().toUpperCase() === selectedTransferSymbol)
-      : transferAssets;
-
-    const chainMap = new Map<string, string>();
-    for (const asset of sourceAssets) {
-      if (!chainMap.has(asset.chainId)) {
-        chainMap.set(asset.chainId, asset.chainName);
-      }
-    }
-    return [...chainMap.entries()].map(([chainId, chainName]) => ({ chainId, chainName }));
-  }, [selectedTransferSymbol, transferAssets]);
-  const selectedTransferChain = useMemo(
-    () => transferChainOptions.find((chain) => chain.chainId === selectedTransferChainId),
-    [selectedTransferChainId, transferChainOptions]
-  );
-  const selectedTransferAddressType = useMemo(
-    () => getTransferAddressType(selectedTransferChain?.chainId, selectedTransferChain?.chainName),
-    [selectedTransferChain?.chainId, selectedTransferChain?.chainName]
-  );
   const amountNumber = parseAmountUsd(amountUsd);
   const selectedUsdValue = selectedAsset ? assetUsdValues[selectedAsset.id] : undefined;
   const hasSubmittedTx = Boolean(executionTxHash || submittedOrderId);
-  /** Transfer Crypto：进入转账步骤后 baseline+60s 内 2s 快刷；纯 Connected 无 baseline 时也需在提交后快刷桥状态 */
   const CONNECTED_SUBMIT_FAST_POLL_MS = 120_000;
-  const transferStatusFilterBaselineMs = Math.max(
-    transferAddressCreatedAtMs,
-    transferUiSessionStartedAtMs
-  );
-  const transferSessionFastUntilMs =
-    transferStatusFilterBaselineMs > 0
-      ? transferStatusFilterBaselineMs + 60_000
-      : 0;
   const connectedSubmitFastUntilMs =
     executionSubmittedAtMs > 0
       ? executionSubmittedAtMs + CONNECTED_SUBMIT_FAST_POLL_MS
       : 0;
-  const transferFastPollingUntilMs = Math.max(
-    transferSessionFastUntilMs,
-    connectedSubmitFastUntilMs
-  );
-
-  const transferStatus = useBridgeStatus(
+  const {
+    handleSelectAsset,
+    openConnectedAssetStep,
+    showConnectedWalletOption,
+    walletAddress,
+    walletLabel,
+  } = useConnectedEntryFlow({
+    activeWalletAddress: activeWallet?.address ?? "",
+    confirmAttemptGenerationRef,
+    depositAssets,
+    isExecutingRef,
+    quoteRequestRef,
+    setAmountUsd,
+    setCancelTxHash,
+    setExecutionError,
+    setExecutionTxHash,
+    setIsExecuting,
+    setQuoteError,
+    setQuoteWarning,
+    setSelectedAsset,
+    setSnapshot,
+    setStep,
+    setSubmittedOrderId,
+    user,
+  });
+  const {
+    copied,
+    handleCopy,
+    handleCreateTransferAddress,
+    isCreatingTransferAddress,
+    openTransferStep,
+    resetTransferState,
+    selectedTransferAssetId,
+    selectedTransferChainId,
+    setSelectedTransferAssetId,
+    setSelectedTransferChainId,
+    setTransferAddress,
     transferAddress,
-    Boolean(transferAddress && isOpen),
-    {
-      fastPollingUntilMs: transferFastPollingUntilMs,
-      fastRefreshIntervalMs: 2_000,
-      debugEnabled: DEBUG_TRANSFER_STATUS,
-      debugLabel: "transfer-status",
-      stopOnFinalStatus: false,
-    }
-  );
-  const transferLatestStatus = useMemo(
-    () => getTransferStatusSinceAddressCreated(
-      transferStatus.data?.transactions,
-      transferStatusFilterBaselineMs
-    ),
-    [transferStatus.data?.transactions, transferStatusFilterBaselineMs]
-  );
+    transferAssets,
+    transferBridgeComplete,
+    transferChainOptions,
+    transferError,
+    transferLatestStatus,
+    transferStatus,
+  } = useTransferDepositFlow({
+    connectedSubmitFastUntilMs,
+    depositAssets,
+    isOpen,
+    locale,
+    onDepositResponse: setDepositResponse,
+    proxyAddress,
+    setStep,
+    step,
+  });
   const dlnStatus = useDlnOrderStatus(submittedOrderId, Boolean(submittedOrderId && isOpen));
 
   const currentSubmissionTransaction = useMemo(() => {
@@ -438,33 +224,6 @@ function DrawerContent({
       transferAddress &&
       isBridgeCompletedStatus(currentSubmissionTransaction?.status)
   );
-  const transferBridgeComplete = Boolean(
-    transferAddress &&
-      isBridgeCompletedStatus(transferLatestStatus)
-  );
-
-  useEffect(() => {
-    if (!DEBUG_TRANSFER_STATUS) return;
-    if (!transferAddress) return;
-    const statuses = (transferStatus.data?.transactions ?? [])
-      .map((tx) => `${tx.status}@${tx.createdTimeMs ?? "?"}`)
-      .join(" -> ");
-    console.info("[transfer-status] filtered", {
-      transferAddress,
-      transferAddressCreatedAtMs,
-      transferUiSessionStartedAtMs,
-      transferStatusFilterBaselineMs,
-      transferLatestStatus: transferLatestStatus ?? "NONE",
-      transactions: statuses || "NONE",
-    });
-  }, [
-    transferAddress,
-    transferAddressCreatedAtMs,
-    transferLatestStatus,
-    transferStatus.data?.transactions,
-    transferStatusFilterBaselineMs,
-    transferUiSessionStartedAtMs,
-  ]);
 
   const hasHighWalletMismatchRisk = useMemo(
     () => (snapshot ? isHighWalletMismatchRisk(snapshot) : false),
@@ -491,54 +250,9 @@ function DrawerContent({
     setSubmittedOrderId("");
     setIsCancellingOrder(false);
     setCancelTxHash("");
-    setTransferAddresses({});
-    setTransferAddress("");
-    setTransferAddressCreatedAtMs(0);
-    setTransferError("");
-    setCopied(false);
+    resetTransferState();
     setQuoteAutoRefreshNonce(0);
-    setSelectedTransferChainId("");
-    setSelectedTransferAssetId("");
-  }, [isOpen]);
-
-  useEffect(() => {
-    if (transferAssets.length > 0) return;
-    if (!selectedTransferChainId && !selectedTransferAssetId) return;
-    setSelectedTransferChainId("");
-    setSelectedTransferAssetId("");
-  }, [selectedTransferAssetId, selectedTransferChainId, transferAssets.length]);
-
-  useEffect(() => {
-    if (transferAssets.length === 0) return;
-    const selectedExists = transferAssets.some((asset) => asset.id === selectedTransferAssetId);
-    if (!selectedExists) {
-      setSelectedTransferAssetId(transferAssets[0].id);
-    }
-  }, [selectedTransferAssetId, transferAssets]);
-
-  useEffect(() => {
-    if (transferChainOptions.length === 0) {
-      if (selectedTransferChainId) setSelectedTransferChainId("");
-      return;
-    }
-    const chainExists = transferChainOptions.some((chain) => chain.chainId === selectedTransferChainId);
-    if (!chainExists) {
-      setSelectedTransferChainId(transferChainOptions[0].chainId);
-    }
-  }, [selectedTransferChainId, transferChainOptions]);
-
-  useEffect(() => {
-    if (!selectedTransferSymbol || !selectedTransferChainId) return;
-    const matched = transferAssets.find(
-      (asset) =>
-        asset.chainId === selectedTransferChainId &&
-        asset.symbol.trim().toUpperCase() === selectedTransferSymbol
-    );
-    if (!matched) return;
-    if (matched.id !== selectedTransferAssetId) {
-      setSelectedTransferAssetId(matched.id);
-    }
-  }, [selectedTransferAssetId, selectedTransferChainId, selectedTransferSymbol, transferAssets]);
+  }, [isOpen, resetTransferState]);
 
   useEffect(() => {
     setHasAcknowledgedRiskWarning(false);
@@ -713,237 +427,65 @@ function DrawerContent({
     walletAddress,
   ]);
 
-  const handleCopy = async (value: string) => {
-    if (!value) return;
-    try {
-      await navigator.clipboard.writeText(value);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      console.error("Failed to copy", err);
-    }
-  };
+  const {
+    handleAmountBlur,
+    handleAmountChange,
+    handlePercent,
+  } = useConnectedAmountInput({
+    amountNumber,
+    amountUsd,
+    selectedAsset,
+    selectedUsdValue,
+    setAmountUsd,
+  });
 
-  const handleSelectAsset = (asset: DepositAsset) => {
-    quoteRequestRef.current += 1;
-    abandonConfirmAttempt(confirmAttemptGenerationRef);
-    setIsExecuting(false);
-    isExecutingRef.current = false;
-    const chainMinUsd = getTransferChainMinUsd(asset.chainName, asset.chainId, depositAssets);
-    const defaultAmountUsd = getConnectedDefaultAmountUsd({
-      walletUsdValue: Number(asset.usdValue ?? 0),
-      chainMinUsd,
-      singleTxCapUsd: DEPOSIT_SINGLE_TX_CAP_USD,
-      maxBufferUsd: CONNECTED_MAX_BUFFER_USD,
-    });
-    setAmountUsd(formatAmountUsdInput(defaultAmountUsd));
-    setSelectedAsset(asset);
-    setSnapshot(null);
-    setQuoteError("");
-    setQuoteWarning("");
-    setExecutionError("");
-    setExecutionTxHash("");
-    setSubmittedOrderId("");
-    setCancelTxHash("");
-    setStep("amount");
-  };
-
-  const handlePercent = (percent: number) => {
-    if (!selectedAsset) return;
-    const value = Number(selectedUsdValue || 0);
-    if (!Number.isFinite(value) || value <= 0) return;
-    const nextAmount = percent === 1
-      ? getConnectedMaxAllowedUsd({
-        walletUsdValue: value,
-        singleTxCapUsd: DEPOSIT_SINGLE_TX_CAP_USD,
-        maxBufferUsd: CONNECTED_MAX_BUFFER_USD,
-      })
-      : value * percent;
-    setAmountUsd(formatAmountUsdInput(nextAmount));
-  };
-
-  const handleAmountChange = (value: string) => {
-    setAmountUsd(sanitizeAmountUsdInput(value));
-  };
-
-  const handleAmountBlur = () => {
-    if (!amountUsd) return;
-    setAmountUsd(formatAmountUsdInput(amountNumber));
-  };
-
-  const handleQuote = useCallback(async () => {
-    const maxDepositUsd = getConnectedMaxAllowedUsd({
-      walletUsdValue: Number(selectedUsdValue ?? 0),
-      singleTxCapUsd: DEPOSIT_SINGLE_TX_CAP_USD,
-      maxBufferUsd: CONNECTED_MAX_BUFFER_USD,
-    });
-    if (!selectedAsset || !proxyAddress || amountNumber < 1 || amountNumber > maxDepositUsd + 0.01) return;
-    const requestId = ++quoteRequestRef.current;
-    setIsQuoting(true);
-    setQuoteError("");
-    setQuoteWarning("");
-    setExecutionError("");
-    setExecutionRiskWarning("");
-
-    try {
-      const validationError = validateDepositSelection({
-        amountUsd: amountNumber,
-        asset: selectedAsset,
-        allAssets: depositAssets,
-        connectedMaxBufferUsd: CONNECTED_MAX_BUFFER_USD,
-        connectedSingleTxCapUsd: DEPOSIT_SINGLE_TX_CAP_USD,
-        locale,
-      });
-      if (validationError) {
-        if (quoteRequestRef.current !== requestId) return;
-        setQuoteError(validationError);
-        return;
-      }
-
-      const executionEngine = resolveExecutionEngine(selectedAsset);
-      const depositAddress = await ensureEvmDepositAddress({
-        existingAddress: transferAddress,
-        onAddress: setTransferAddress,
-        onResponse: setDepositResponse,
-        proxyAddress,
-      });
-      const next = await buildExecutionSnapshot({
-        amountUsd: amountNumber,
-        asset: selectedAsset,
-        depositAddress,
-        executionEngine,
-        proxyAddress,
-      });
-      if (quoteRequestRef.current !== requestId) return;
-      const receiveMinimumError = validateBridgeReceiveMinimum(next, locale);
-      if (receiveMinimumError) {
-        setQuoteError(receiveMinimumError);
-        return;
-      }
-      setSnapshot(next);
-      setStep("confirm");
-    } catch (error) {
-      if (quoteRequestRef.current !== requestId) return;
-      setQuoteError(formatExecutionError(error, locale, "quote"));
-    } finally {
-      if (quoteRequestRef.current === requestId) {
-        setIsQuoting(false);
-      }
-    }
-  }, [amountNumber, locale, proxyAddress, selectedAsset, selectedUsdValue, transferAddress, walletAddress]);
-
-  const handleConfirmOrder = useCallback(async () => {
-    if (!selectedAsset || !activeWallet || !walletAddress || !snapshot) {
-      setExecutionError(locale === "zh" ? "钱包或报价尚未就绪，请返回重试。" : "Wallet or quote is not ready. Please go back and retry.");
-      return;
-    }
-
-    const confirmAttemptId = startConfirmAttempt(confirmAttemptGenerationRef);
-
-    isExecutingRef.current = true;
-    quoteRequestRef.current += 1;
-    setIsExecuting(true);
-    setExecutionError("");
-    setExecutionRiskWarning("");
-    setQuoteWarning("");
-    setExecutionTxHash("");
-    setExecutionSubmittedAtMs(0);
-    setSubmittedOrderId("");
-    setCancelTxHash("");
-
-    try {
-      const validationError = validateDepositSelection({
-        amountUsd: snapshot.amountUsd,
-        asset: snapshot.asset,
-        allAssets: depositAssets,
-        connectedMaxBufferUsd: CONNECTED_MAX_BUFFER_USD,
-        connectedSingleTxCapUsd: DEPOSIT_SINGLE_TX_CAP_USD,
-        locale,
-      });
-      if (validationError) {
-        setExecutionError(validationError);
-        return;
-      }
-
-      let activeSnapshot = snapshot;
-      const isStale = Date.now() >= activeSnapshot.expiresAtMs;
-      if (isStale) {
-        const requestId = ++quoteRequestRef.current;
-        const executionEngine = resolveExecutionEngine(activeSnapshot.asset);
-        const depositAddress = await ensureEvmDepositAddress({
-          existingAddress: transferAddress,
-          onAddress: setTransferAddress,
-          onResponse: setDepositResponse,
-          proxyAddress,
-        });
-        const refreshed = await buildExecutionSnapshot({
-          amountUsd: activeSnapshot.amountUsd,
-          asset: activeSnapshot.asset,
-          depositAddress,
-          executionEngine,
-          proxyAddress,
-        });
-        if (quoteRequestRef.current !== requestId) {
-          setExecutionError(locale === "zh"
-            ? "报价正在刷新，请稍后再试。"
-            : "Quote is still refreshing. Please retry shortly.");
-          return;
-        }
-        const priceChanged = isQuotePriceChanged(activeSnapshot, refreshed);
-        setSnapshot(refreshed);
-        activeSnapshot = refreshed;
-        if (priceChanged) {
-          setQuoteWarning(locale === "zh"
-            ? "报价已更新且价格变化超过 1%，请确认新价格后再次提交。"
-            : "Quote updated by more than 1%. Please review the new quote and confirm again.");
-          return;
-        }
-      }
-
-      const receiveMinimumError = validateBridgeReceiveMinimum(activeSnapshot, locale);
-      if (receiveMinimumError) {
-        setExecutionError(receiveMinimumError);
-        return;
-      }
-      if (isHighWalletMismatchRisk(activeSnapshot) && !hasAcknowledgedRiskWarning) {
-        setHasAcknowledgedRiskWarning(true);
-        setExecutionRiskWarning(locale === "zh"
-          ? "钱包签名页的接收金额可能与本页预计到账差异较大。请确认最终收款地址为 Polymarket 充值地址后，再次点击确认继续。"
-          : "Wallet receive preview may differ significantly from this quote. Verify the Polymarket deposit address, then tap confirm again to continue.");
-        return;
-      }
-      setExecutionRiskWarning("");
-
-      const { txHash, orderId } = await executeConnectedOrder({
-        locale,
-        snapshot: activeSnapshot,
-        wallet: activeWallet,
-        walletAddress,
-      });
-      if (!shouldApplyConfirmResult(confirmAttemptId, confirmAttemptGenerationRef)) {
-        return;
-      }
-      setExecutionSubmittedAtMs(Date.now());
-      setExecutionTxHash(txHash);
-      if (orderId) {
-        setSubmittedOrderId(orderId);
-      }
-    } catch (error) {
-      setExecutionError(formatExecutionError(error, locale, "execute"));
-    } finally {
-      isExecutingRef.current = false;
-      setIsExecuting(false);
-    }
-  }, [
-    activeWallet,
+  const { handleQuote } = useConnectedQuoteFlow({
+    amountNumber,
+    depositAssets,
     locale,
     proxyAddress,
-    hasAcknowledgedRiskWarning,
+    quoteRequestRef,
     selectedAsset,
+    selectedUsdValue,
+    setDepositResponse,
+    setExecutionError,
+    setExecutionRiskWarning,
+    setIsQuoting,
+    setQuoteError,
+    setQuoteWarning,
+    setSnapshot,
+    setStep,
+    setTransferAddress,
+    transferAddress,
+  });
+
+  const { handleConfirmOrder } = useConnectedConfirmFlow({
+    activeWallet,
+    confirmAttemptGenerationRef,
+    depositAssets,
+    hasAcknowledgedRiskWarning,
+    isExecutingRef,
+    isHighWalletMismatchRisk,
+    locale,
+    proxyAddress,
+    quoteRequestRef,
+    selectedAsset,
+    setCancelTxHash,
+    setDepositResponse,
+    setExecutionError,
+    setExecutionRiskWarning,
+    setExecutionSubmittedAtMs,
+    setExecutionTxHash,
+    setHasAcknowledgedRiskWarning,
+    setIsExecuting,
+    setQuoteWarning,
+    setSnapshot,
+    setSubmittedOrderId,
+    setTransferAddress,
     snapshot,
     transferAddress,
     walletAddress,
-  ]);
+  });
 
   const handleCancelDlnOrder = useCallback(async () => {
     if (!submittedOrderId || !activeWallet) return;
@@ -962,104 +504,6 @@ function DrawerContent({
       setIsCancellingOrder(false);
     }
   }, [activeWallet, locale, submittedOrderId]);
-
-  const handleCreateTransferAddress = async () => {
-    if (!proxyAddress) {
-      setTransferError(locale === "zh" ? "Polymarket 钱包尚未就绪。" : "Polymarket wallet is not ready.");
-      return;
-    }
-
-    setIsCreatingTransferAddress(true);
-    setTransferError("");
-
-    try {
-      const response = await createDepositAddress({ address: proxyAddress });
-      const addressMapRaw = extractDepositAddressMap(response);
-      const addressMap: DepositAddressMap = {};
-      for (const t of ADDRESS_TYPES) {
-        const candidate = addressMapRaw[t];
-        if (candidate && depositAddressMatchesType(candidate, t)) {
-          addressMap[t] = candidate;
-        }
-      }
-      const address =
-        addressMap[selectedTransferAddressType] ||
-        extractDepositAddress(response, selectedTransferAddressType) ||
-        "";
-      const safeAddress = depositAddressMatchesType(address, selectedTransferAddressType)
-        ? address
-        : "";
-      setDepositResponse(response);
-      setTransferAddresses(addressMap);
-      setTransferAddress(safeAddress);
-      setTransferAddressCreatedAtMs(Date.now());
-
-      if (!safeAddress) {
-        setTransferError(
-          locale === "zh"
-            ? `当前网络暂不支持收款地址（${selectedTransferAddressType.toUpperCase()}）。请切换网络后重试。`
-            : `No ${selectedTransferAddressType.toUpperCase()} deposit address available for selected network.`
-        );
-      }
-    } catch (error) {
-      setTransferAddresses({});
-      setTransferAddress("");
-      setTransferAddressCreatedAtMs(0);
-      setTransferError(
-        error instanceof Error
-          ? error.message
-          : locale === "zh"
-            ? "创建转账地址失败。"
-            : "Failed to create transfer address."
-      );
-    } finally {
-      setIsCreatingTransferAddress(false);
-    }
-  };
-
-  useEffect(() => {
-    if (!selectedTransferChainId) return;
-    if (Object.keys(transferAddresses).length === 0) {
-      setTransferAddress("");
-      setTransferAddressCreatedAtMs(0);
-      return;
-    }
-    const raw = transferAddresses[selectedTransferAddressType] || "";
-    const nextAddress = depositAddressMatchesType(raw, selectedTransferAddressType)
-      ? raw
-      : "";
-    setTransferAddress(nextAddress);
-    setTransferAddressCreatedAtMs(nextAddress ? Date.now() : 0);
-    if (!nextAddress) {
-      setTransferError(
-        locale === "zh"
-          ? `当前网络暂不支持收款地址（${selectedTransferAddressType.toUpperCase()}）。请切换网络。`
-          : `Selected network does not have a ${selectedTransferAddressType.toUpperCase()} deposit address.`
-      );
-      return;
-    }
-    setTransferError("");
-  }, [locale, selectedTransferAddressType, selectedTransferChainId, transferAddresses]);
-
-  useEffect(() => {
-    if (!isOpen) return;
-    if (step !== "transfer") return;
-    if (transferAddress) return;
-    if (isCreatingTransferAddress) return;
-    if (transferError) return;
-    void handleCreateTransferAddress();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, step]);
-
-  const openTransferStep = useCallback(() => {
-    setTransferUiSessionStartedAtMs(Date.now());
-    setTransferAddresses({});
-    setTransferAddress("");
-    setTransferAddressCreatedAtMs(0);
-    setTransferError("");
-    setDepositResponse(null);
-    setStep("transfer");
-  }, []);
 
   const goBack = () => {
     if (step === "home") return;
@@ -1150,7 +594,7 @@ function DrawerContent({
                   walletLabel={walletLabel}
                   walletUsdLoading={walletBalancesLoading}
                   walletUsd={totalWalletUsd}
-                  onWallet={() => setStep("asset")}
+                  onWallet={openConnectedAssetStep}
                   onTransfer={openTransferStep}
                 />
               )}

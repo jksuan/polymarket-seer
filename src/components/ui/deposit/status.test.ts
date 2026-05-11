@@ -46,6 +46,18 @@ describe("getTransferStatusSinceAddressCreated", () => {
     );
     expect(status).toBe("DEPOSIT_DETECTED");
   });
+
+  it("过滤后首条优先，不按 createdTimeMs 最大值反推最新状态", () => {
+    const createdAtMs = 2_000_000;
+    const status = getTransferStatusSinceAddressCreated(
+      [
+        makeTx({ status: "PROCESSING", createdTimeMs: 2_100_000 }),
+        makeTx({ status: "COMPLETED", createdTimeMs: 2_900_000 }),
+      ],
+      createdAtMs
+    );
+    expect(status).toBe("PROCESSING");
+  });
 });
 
 describe("getTransferTransactionsSinceAddressCreated", () => {
