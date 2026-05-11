@@ -26,3 +26,9 @@
 - Connected Wallet 在 `quote/build` 前必须完成执行引擎分流，不在 execute 阶段临时分支。
 - Transfer 流程默认“自动创建地址”，减少用户显式操作步骤。
 - 与业务规则强耦合的展示约束需通过 ADR 留痕，并在代码中可追溯。
+
+## 联调验证记录（Transfer Crypto）
+
+- **Solana 主网路径**（2026-05-11）：代币 SOL、网络 Solana、svm 收款地址经链上转账后，**入账与 Polymarket 余额刷新**已在实际环境中跑通，可作为「Transfer Crypto · Solana」上线前冒烟基线。
+- **Solana Explorer**：收款公钥在**首笔成功入账前**常显示 “Account does not exist”，表示该地址在对应集群上尚未建账；入账后即显示正常。排查时请确认 Explorer 所选集群（如 Mainnet）与收款网络一致。
+- **界面「最低 $×」**：来自支持资产与链级规则的聚合展示；**是否入账以 Bridge 检测与上游规则为准**。若出现展示金额与实际入账规则不一致，应单独开 issue 对齐文案或后端规则，不在本段展开。
