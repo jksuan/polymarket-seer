@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createDepositAddress, useBridgeStatus } from "@/hooks/useBridge";
-import type { BridgeAddressType } from "@/types/bridge";
-import type { CreateDepositResponse } from "@/types/bridge";
-import type { BridgeStatusCode } from "@/types/bridgeStatus";
+import type { BridgeAddressType, CreateDepositResponse } from "@/types/bridge";
 import type { DepositAddressMap, DepositAsset, FlowStep } from "../types";
 import { ADDRESS_TYPES } from "../constants";
 import {
@@ -405,7 +403,7 @@ export function useTransferDepositFlow({
     transferBridgeComplete,
     transferChainOptions,
     transferError,
-    transferLatestStatus: transferLatestStatus as BridgeStatusCode | undefined,
+    transferLatestStatus,
     transferStatus,
   };
 }

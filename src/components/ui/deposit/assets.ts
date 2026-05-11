@@ -57,6 +57,7 @@ function normalizeSupportedAsset(item: Record<string, unknown>): DepositAsset | 
     : item;
   const chainId = String(item.chainId ?? item.chain_id ?? "");
   const tokenAddress = String(token.address ?? token.tokenAddress ?? token.contractAddress ?? "");
+  const tokenAddrLower = tokenAddress.toLowerCase();
   let symbol = String(token.symbol ?? "").trim();
   // bridge.polymarket.com 在 Polygon 上将主网 USDT 合约标为 USDT0；白名单与文档使用 USDT。
   if (
@@ -64,6 +65,14 @@ function normalizeSupportedAsset(item: Record<string, unknown>): DepositAsset | 
     symbol.toUpperCase() === "USDT0"
   ) {
     symbol = "USDT";
+  }
+  // Bridge 在 137 上对原生币保留 MATIC@1010 与 POL@0xeee 两路；展示与去重统一为 POL。
+  if (
+    chainId === String(POLYGON_CHAIN_ID) &&
+    symbol.toUpperCase() === "MATIC" &&
+    tokenAddrLower === "0x0000000000000000000000000000000000001010"
+  ) {
+    symbol = "POL";
   }
   const decimals = Number(token.decimals ?? 18);
   const iconUrl = getTokenIconUrl(item, token, symbol);
@@ -113,12 +122,47 @@ function dedupeAssetsBySymbol(assets: DepositAsset[]): DepositAsset[] {
   for (const asset of assets) {
     const key = getAssetDedupeKey(asset);
     const existing = byAssetKey.get(key);
-    if (!existing || (asset.usdValue ?? 0) > (existing.usdValue ?? 0)) {
+    if (!existing) {
       byAssetKey.set(key, asset);
+      continue;
     }
+    byAssetKey.set(key, pickPreferredDedupeDepositAsset(existing, asset));
   }
 
   return [...byAssetKey.values()];
+}
+
+/** Polygon 上多路 native 占位合并时优先保留与报价常用的占位地址。 */
+function polygonNativeAddressSortRank(address: string): number {
+  const a = address.toLowerCase();
+  if (a === "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee") return 0;
+  if (a === ZERO_ADDRESS.toLowerCase()) return 1;
+  if (a === "0x0000000000000000000000000000000000001010") return 2;
+  return 99;
+}
+
+function pickPreferredDedupeDepositAsset(a: DepositAsset, b: DepositAsset): DepositAsset {
+  const aUsd = a.usdValue ?? 0;
+  const bUsd = b.usdValue ?? 0;
+  if (bUsd > aUsd) return b;
+  if (aUsd > bUsd) return a;
+  if (
+    a.chainId === String(POLYGON_CHAIN_ID) &&
+    b.chainId === String(POLYGON_CHAIN_ID) &&
+    a.isNative &&
+    b.isNative
+  ) {
+    const ra = polygonNativeAddressSortRank(a.tokenAddress);
+    const rb = polygonNativeAddressSortRank(b.tokenAddress);
+    if (ra !== rb) return ra < rb ? a : b;
+  }
+  const aSym = a.symbol.toUpperCase();
+  const bSym = b.symbol.toUpperCase();
+  if (a.chainId === String(POLYGON_CHAIN_ID) && b.chainId === String(POLYGON_CHAIN_ID)) {
+    if (aSym === "POL" && bSym === "MATIC") return a;
+    if (bSym === "POL" && aSym === "MATIC") return b;
+  }
+  return a;
 }
 
 export async function readAssetBalance(
