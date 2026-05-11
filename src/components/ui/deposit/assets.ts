@@ -57,7 +57,14 @@ function normalizeSupportedAsset(item: Record<string, unknown>): DepositAsset | 
     : item;
   const chainId = String(item.chainId ?? item.chain_id ?? "");
   const tokenAddress = String(token.address ?? token.tokenAddress ?? token.contractAddress ?? "");
-  const symbol = String(token.symbol ?? "").trim();
+  let symbol = String(token.symbol ?? "").trim();
+  // bridge.polymarket.com 在 Polygon 上将主网 USDT 合约标为 USDT0；白名单与文档使用 USDT。
+  if (
+    chainId === String(POLYGON_CHAIN_ID) &&
+    symbol.toUpperCase() === "USDT0"
+  ) {
+    symbol = "USDT";
+  }
   const decimals = Number(token.decimals ?? 18);
   const iconUrl = getTokenIconUrl(item, token, symbol);
 
