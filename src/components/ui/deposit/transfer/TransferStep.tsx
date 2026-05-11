@@ -204,8 +204,8 @@ export function TransferStep({
 
       <p className="text-xs leading-relaxed text-white/55">
         {locale === "zh"
-          ? "按所选代币与网络转账至下方地址；错链可能造成资金损失。转出后请耐心等待入账。"
-          : "Use the selected token and network to send to the address below; wrong-chain transfers may cause loss of funds. After sending from your wallet, wait for the deposit to credit."}
+          ? "请在您的钱包中向下方收款地址发起转账。为避免资金损失，务必核对所选代币、网络及最低转账金额。转账后请等待入账。"
+          : "Transfer to the address below via your wallet. Double-check the token, network, and minimum amount to prevent loss of funds. Status will update once credited."}
       </p>
 
       {error && (
