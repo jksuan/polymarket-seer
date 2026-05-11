@@ -51,8 +51,6 @@ import { useConnectedConfirmFlow } from "./deposit/connected/useConnectedConfirm
 import { useConnectedQuoteFlow } from "./deposit/connected/useConnectedQuoteFlow";
 import {
   abandonConfirmAttempt,
-  shouldApplyConfirmResult,
-  startConfirmAttempt,
 } from "./deposit/connected/confirmAttemptGeneration";
 import { ConfirmStep } from "./deposit/confirm/ConfirmStep";
 import { TransferStep } from "./deposit/transfer/TransferStep";
@@ -132,6 +130,7 @@ function DrawerContent({
     executionSubmittedAtMs > 0
       ? executionSubmittedAtMs + CONNECTED_SUBMIT_FAST_POLL_MS
       : 0;
+  // Connected: home/asset/amount 的入口编排。
   const {
     handleSelectAsset,
     openConnectedAssetStep,
@@ -186,6 +185,7 @@ function DrawerContent({
     setStep,
     step,
   });
+  // Transfer: 资产筛选、地址创建、轮询与状态展示。
   const dlnStatus = useDlnOrderStatus(submittedOrderId, Boolean(submittedOrderId && isOpen));
 
   const currentSubmissionTransaction = useMemo(() => {
@@ -487,6 +487,16 @@ function DrawerContent({
     walletAddress,
   });
 
+  const resetConfirmProgress = useCallback(() => {
+    abandonConfirmAttempt(confirmAttemptGenerationRef);
+    quoteRequestRef.current += 1;
+    setIsExecuting(false);
+    isExecutingRef.current = false;
+    setExecutionError("");
+    setExecutionRiskWarning("");
+    setHasAcknowledgedRiskWarning(false);
+  }, []);
+
   const handleCancelDlnOrder = useCallback(async () => {
     if (!submittedOrderId || !activeWallet) return;
     setIsCancellingOrder(true);
@@ -505,22 +515,16 @@ function DrawerContent({
     }
   }, [activeWallet, locale, submittedOrderId]);
 
-  const goBack = () => {
+  const goBack = useCallback(() => {
     if (step === "home") return;
     if (step === "confirm") {
-      abandonConfirmAttempt(confirmAttemptGenerationRef);
-      quoteRequestRef.current += 1;
-      setIsExecuting(false);
-      isExecutingRef.current = false;
-      setExecutionError("");
-      setExecutionRiskWarning("");
-      setHasAcknowledgedRiskWarning(false);
+      resetConfirmProgress();
       setStep("amount");
       return;
     }
     if (step === "asset" || step === "transfer") setStep("home");
     if (step === "amount") setStep("asset");
-  };
+  }, [resetConfirmProgress, step]);
 
   return (
     <AnimatePresence>
