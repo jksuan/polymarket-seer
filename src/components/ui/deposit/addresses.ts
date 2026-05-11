@@ -1,7 +1,7 @@
 import { ethers } from "ethers";
 import { createDepositAddress } from "@/hooks/useBridge";
 import type { BridgeAddressType, CreateDepositResponse } from "@/types/bridge";
-import { ADDRESS_TYPES } from "./constants";
+import { ADDRESS_TYPES, DEPOSIT_CREATE_REQUESTED_ADDRESS_TYPES } from "./constants";
 import type { DepositAddressMap } from "./types";
 
 export async function ensureEvmDepositAddress({
@@ -18,7 +18,10 @@ export async function ensureEvmDepositAddress({
   if (ethers.utils.isAddress(existingAddress)) return existingAddress;
   if (!proxyAddress) throw new Error("Polymarket wallet is not ready.");
 
-  const response = await createDepositAddress({ address: proxyAddress });
+  const response = await createDepositAddress({
+    address: proxyAddress,
+    requestedAddressTypes: DEPOSIT_CREATE_REQUESTED_ADDRESS_TYPES,
+  });
   const address = extractDepositAddress(response, "evm");
   onResponse(response);
   onAddress(address);

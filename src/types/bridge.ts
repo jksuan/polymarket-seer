@@ -67,6 +67,8 @@ export interface SupportedAssetsResponse {
 
 export interface CreateDepositRequest {
   address: string;
+  /** 可选：向桥服务请求返回的入账地址类型；未传则沿用上游默认行为 */
+  requestedAddressTypes?: BridgeAddressType[];
 }
 
 export interface BridgeAddresses {

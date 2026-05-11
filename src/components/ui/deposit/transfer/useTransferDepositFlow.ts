@@ -2,13 +2,33 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { createDepositAddress, useBridgeStatus } from "@/hooks/useBridge";
 import type { BridgeAddressType, CreateDepositResponse } from "@/types/bridge";
 import type { DepositAddressMap, DepositAsset, FlowStep } from "../types";
-import { ADDRESS_TYPES } from "../constants";
+import { ADDRESS_TYPES, DEPOSIT_CREATE_REQUESTED_ADDRESS_TYPES } from "../constants";
 import {
   depositAddressMatchesType,
   extractDepositAddress,
   extractDepositAddressMap,
 } from "../addresses";
 import { getTransferStatusSinceAddressCreated } from "../status";
+
+function missingTransferDepositAddressMessage(
+  locale: string,
+  addressType: BridgeAddressType,
+  variant: "afterCreate" | "afterSwitch"
+): string {
+  if (addressType === "svm") {
+    return locale === "zh"
+      ? "当前 Solana 入金地址暂不可用，请稍后重试或切换 EVM 网络。"
+      : "Solana deposit address is temporarily unavailable. Retry later or switch to an EVM network.";
+  }
+  if (variant === "afterCreate") {
+    return locale === "zh"
+      ? `当前网络暂不支持收款地址（${addressType.toUpperCase()}）。请切换网络后重试。`
+      : `No ${addressType.toUpperCase()} deposit address available for selected network.`;
+  }
+  return locale === "zh"
+    ? `当前网络暂不支持收款地址（${addressType.toUpperCase()}）。请切换网络。`
+    : `Selected network does not have a ${addressType.toUpperCase()} deposit address.`;
+}
 
 const TRANSFER_ALLOWED_CHAIN_NAMES = new Set([
   "ethereum",
@@ -250,7 +270,10 @@ export function useTransferDepositFlow({
     setTransferError("");
 
     try {
-      const response = await createDepositAddress({ address: proxyAddress });
+      const response = await createDepositAddress({
+        address: proxyAddress,
+        requestedAddressTypes: DEPOSIT_CREATE_REQUESTED_ADDRESS_TYPES,
+      });
       const addressMapRaw = extractDepositAddressMap(response);
       const addressMap: DepositAddressMap = {};
       for (const t of ADDRESS_TYPES) {
@@ -273,9 +296,7 @@ export function useTransferDepositFlow({
 
       if (!safeAddress) {
         setTransferError(
-          locale === "zh"
-            ? `当前网络暂不支持收款地址（${selectedTransferAddressType.toUpperCase()}）。请切换网络后重试。`
-            : `No ${selectedTransferAddressType.toUpperCase()} deposit address available for selected network.`
+          missingTransferDepositAddressMessage(locale, selectedTransferAddressType, "afterCreate")
         );
       }
     } catch (error) {
@@ -348,9 +369,7 @@ export function useTransferDepositFlow({
     setTransferAddressCreatedAtMs(nextAddress ? Date.now() : 0);
     if (!nextAddress) {
       setTransferError(
-        locale === "zh"
-          ? `当前网络暂不支持收款地址（${selectedTransferAddressType.toUpperCase()}）。请切换网络。`
-          : `Selected network does not have a ${selectedTransferAddressType.toUpperCase()} deposit address.`
+        missingTransferDepositAddressMessage(locale, selectedTransferAddressType, "afterSwitch")
       );
       return;
     }

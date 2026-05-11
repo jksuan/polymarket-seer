@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import type {
+  BridgeAddressType,
   BridgeApiErrorCode,
   BridgeApiErrorResponse,
   BridgeApiSuccessResponse,
+  CreateDepositResponse,
 } from "@/types/bridge";
 
 export const BRIDGE_API_BASE_URL = "https://bridge.polymarket.com";
@@ -12,6 +14,53 @@ const EVM_ADDRESS_REGEX = /^0x[a-fA-F0-9]{40}$/;
 const INTEGER_STRING_REGEX = /^[0-9]+$/;
 
 type JsonRecord = Record<string, unknown>;
+
+const BRIDGE_REQUESTED_ADDRESS_TYPES = new Set<string>(["evm", "svm", "btc", "tron"]);
+
+/**
+ * 解析可选的 requestedAddressTypes；缺省为 undefined。非法则返回错误信息。
+ */
+export function parseOptionalRequestedAddressTypes(body: JsonRecord):
+  | { ok: true; value: BridgeAddressType[] | undefined }
+  | { ok: false; error: string } {
+  const raw = body.requestedAddressTypes;
+  if (raw === undefined) return { ok: true, value: undefined };
+  if (!Array.isArray(raw)) {
+    return { ok: false, error: "requestedAddressTypes must be an array" };
+  }
+  if (raw.length === 0) {
+    return { ok: false, error: "requestedAddressTypes must not be empty when provided" };
+  }
+  const seen = new Set<string>();
+  const out: BridgeAddressType[] = [];
+  for (const item of raw) {
+    if (typeof item !== "string" || !BRIDGE_REQUESTED_ADDRESS_TYPES.has(item)) {
+      return {
+        ok: false,
+        error: "requestedAddressTypes must only contain evm, svm, btc, or tron",
+      };
+    }
+    if (!seen.has(item)) {
+      seen.add(item);
+      out.push(item as BridgeAddressType);
+    }
+  }
+  return { ok: true, value: out };
+}
+
+/** 联调日志用：仅返回响应里出现的地址类型键，不包含具体地址。 */
+export function extractDepositResponseAddressTypeKeys(
+  data: CreateDepositResponse
+): string[] {
+  const record = data as Record<string, unknown>;
+  const nested = record.address ?? record.depositAddresses;
+  if (!nested || typeof nested !== "object" || Array.isArray(nested)) return [];
+  const keys: string[] = [];
+  for (const k of Object.keys(nested)) {
+    if (BRIDGE_REQUESTED_ADDRESS_TYPES.has(k)) keys.push(k);
+  }
+  return keys.sort();
+}
 
 export function createRequestId(): string {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {

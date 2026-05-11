@@ -83,6 +83,12 @@ describe("deposit addresses helpers", () => {
     expect(address).toBe("0x3333333333333333333333333333333333333333");
     expect(onAddress).toHaveBeenCalledWith("0x3333333333333333333333333333333333333333");
     expect(onResponse).toHaveBeenCalled();
+    expect(createSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        address: "0x2222222222222222222222222222222222222222",
+        requestedAddressTypes: ["evm", "svm"],
+      })
+    );
 
     createSpy.mockRestore();
   });

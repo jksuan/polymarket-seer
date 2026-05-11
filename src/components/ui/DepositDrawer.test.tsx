@@ -106,6 +106,13 @@ describe("DepositDrawer transfer flow", () => {
       expect(createDepositAddressMock).toHaveBeenCalledTimes(1);
     });
 
+    expect(createDepositAddressMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        address: "0x2222222222222222222222222222222222222222",
+        requestedAddressTypes: ["evm", "svm"],
+      })
+    );
+
     expect(
       await screen.findByText("0x1111111111111111111111111111111111111111")
     ).toBeInTheDocument();
@@ -183,7 +190,7 @@ describe("DepositDrawer transfer flow", () => {
     fireEvent.click((await screen.findAllByRole("button", { name: /Solana/ }))[0]);
 
     expect(
-      await screen.findByText("当前网络暂不支持收款地址（SVM）。请切换网络。")
+      await screen.findByText("当前 Solana 入金地址暂不可用，请稍后重试或切换 EVM 网络。")
     ).toBeInTheDocument();
   });
 

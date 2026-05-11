@@ -3,6 +3,8 @@ import {
   bridgeFetch,
   createRequestId,
   errorResponse,
+  extractDepositResponseAddressTypeKeys,
+  parseOptionalRequestedAddressTypes,
   readJsonBody,
   successResponse,
   validateEvmAddressField,
@@ -34,8 +36,20 @@ export async function POST(request: Request) {
   }
 
   const address = body.address as string;
+
+  const requestedParse = parseOptionalRequestedAddressTypes(body);
+  if (!requestedParse.ok) {
+    return errorResponse(
+      "VALIDATION_ERROR",
+      requestedParse.error,
+      requestId,
+      422
+    );
+  }
+
   const payload: CreateDepositRequest = {
     address,
+    ...(requestedParse.value ? { requestedAddressTypes: requestedParse.value } : {}),
   };
 
   const result = await bridgeFetch<CreateDepositResponse>(
@@ -56,6 +70,11 @@ export async function POST(request: Request) {
       result.details
     );
   }
+
+  console.info(`[bridge:${requestId}] deposit address types`, {
+    requested: requestedParse.value ?? null,
+    returned: extractDepositResponseAddressTypeKeys(result.data),
+  });
 
   return successResponse(result.data, requestId);
 }
