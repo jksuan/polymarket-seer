@@ -602,7 +602,6 @@ function DrawerContent({
               {step === "home" && (
                 <HomeStep
                   fundsTermsLinkLabel={t.fundsMovementTerms.linkLabel}
-                  locale={locale}
                   onOpenFundsTerms={() => setFundsTermsOpen(true)}
                   showConnectedWalletOption={showConnectedWalletOption}
                   walletLabel={walletLabel}
@@ -635,7 +634,6 @@ function DrawerContent({
                   asset={selectedAsset}
                   error={quoteError}
                   isQuoting={isQuoting}
-                  locale={locale}
                   minDepositUsd={connectedMinDepositUsd}
                   onAmountBlur={handleAmountBlur}
                   onAmountChange={handleAmountChange}
@@ -658,7 +656,6 @@ function DrawerContent({
                   isCancellingOrder={isCancellingOrder}
                   isExecuting={isExecuting}
                   isQuoting={isQuoting}
-                  locale={locale}
                   onCancelOrder={handleCancelDlnOrder}
                   onConfirm={handleConfirmOrder}
                   onFallbackToTransfer={openTransferStep}

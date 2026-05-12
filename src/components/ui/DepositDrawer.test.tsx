@@ -69,9 +69,12 @@ vi.mock("@privy-io/react-auth", () => ({
   useWallets: () => ({ wallets: mockWallets }),
 }));
 
-vi.mock("@/i18n", () => ({
-  useTranslation: () => ({ locale: "zh" }),
-}));
+vi.mock("@/i18n", async () => {
+  const zh = (await import("@/i18n/locales/zh")).default;
+  return {
+    useTranslation: () => ({ locale: "zh" as const, setLocale: vi.fn(), t: zh }),
+  };
+});
 
 describe("DepositDrawer transfer flow", () => {
   beforeEach(() => {
@@ -100,7 +103,7 @@ describe("DepositDrawer transfer flow", () => {
       />
     );
 
-    fireEvent.click(screen.getByRole("button", { name: /Transfer Crypto/ }));
+    fireEvent.click(screen.getByRole("button", { name: /链上转入/ }));
 
     await waitFor(() => {
       expect(createDepositAddressMock).toHaveBeenCalledTimes(1);
@@ -130,7 +133,7 @@ describe("DepositDrawer transfer flow", () => {
       />
     );
 
-    fireEvent.click(screen.getByRole("button", { name: /Transfer Crypto/ }));
+    fireEvent.click(screen.getByRole("button", { name: /链上转入/ }));
 
     await waitFor(() => {
       expect(createDepositAddressMock).toHaveBeenCalledTimes(1);
@@ -156,7 +159,7 @@ describe("DepositDrawer transfer flow", () => {
       />
     );
 
-    fireEvent.click(screen.getByRole("button", { name: /Transfer Crypto/ }));
+    fireEvent.click(screen.getByRole("button", { name: /链上转入/ }));
     await screen.findByText(/0x1111111111111111111111111111111111111111/);
 
     fireEvent.click(screen.getAllByRole("button", { name: /Ethereum/ })[0]);
@@ -183,7 +186,7 @@ describe("DepositDrawer transfer flow", () => {
       />
     );
 
-    fireEvent.click(screen.getByRole("button", { name: /Transfer Crypto/ }));
+    fireEvent.click(screen.getByRole("button", { name: /链上转入/ }));
     await screen.findByText(/0x1111111111111111111111111111111111111111/);
 
     fireEvent.click(screen.getAllByRole("button", { name: /Ethereum/ })[0]);
@@ -211,7 +214,7 @@ describe("DepositDrawer transfer flow", () => {
       />
     );
 
-    const walletButton = await screen.findByRole("button", { name: /Wallet/ });
+    const walletButton = await screen.findByRole("button", { name: /钱包/ });
     await waitFor(() => {
       expect(walletButton).not.toBeDisabled();
     });

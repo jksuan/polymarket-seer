@@ -4,6 +4,8 @@ import { useState } from "react";
 import { ConfirmStep } from "@/components/ui/deposit/confirm/ConfirmStep";
 import { TransferStep } from "@/components/ui/deposit/transfer/TransferStep";
 import type { DepositAsset, ExecutionSnapshot } from "@/components/ui/deposit/types";
+import { I18nContext } from "@/i18n";
+import zh from "@/i18n/locales/zh";
 
 const mockAssets: DepositAsset[] = [
   {
@@ -49,25 +51,28 @@ export default function ConnectedFallbackTestPage() {
     <main className="space-y-4 p-6 text-white">
       <h1 className="text-xl font-bold">Connected Fallback Fixture</h1>
       {step === "confirm" ? (
-        <ConfirmStep
-          cancelTxHash=""
-          depositBridgeComplete={false}
-          dlnStatus={undefined}
-          error="mock execute error"
-          executionRiskWarning=""
-          hasSubmittedTx={false}
-          hasUnconfirmedRiskWarning={false}
-          isCancellingOrder={false}
-          isExecuting={false}
-          isQuoting={false}
-          locale="zh"
-          onCancelOrder={() => {}}
-          onConfirm={() => {}}
-          onFallbackToTransfer={() => setStep("transfer")}
-          quoteWarning=""
-          snapshot={makeSnapshot()}
-          walletLabel="Wallet"
-        />
+        <I18nContext.Provider
+          value={{ locale: "zh", setLocale: () => {}, t: zh }}
+        >
+          <ConfirmStep
+            cancelTxHash=""
+            depositBridgeComplete={false}
+            dlnStatus={undefined}
+            error="mock execute error"
+            executionRiskWarning=""
+            hasSubmittedTx={false}
+            hasUnconfirmedRiskWarning={false}
+            isCancellingOrder={false}
+            isExecuting={false}
+            isQuoting={false}
+            onCancelOrder={() => {}}
+            onConfirm={() => {}}
+            onFallbackToTransfer={() => setStep("transfer")}
+            quoteWarning=""
+            snapshot={makeSnapshot()}
+            walletLabel="Wallet"
+          />
+        </I18nContext.Provider>
       ) : (
         <TransferStep
           assets={mockAssets}

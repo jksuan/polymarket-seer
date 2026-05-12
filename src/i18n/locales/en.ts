@@ -393,6 +393,35 @@ const en: TranslationKeys = {
     title: 'Deposit USDC',
   },
 
+  /** Deposit flow copy (Connected / amount / confirm) */
+  depositFlow: {
+    useCrypto: 'Use Crypto',
+    useCash: 'Use Cash',
+    connectedHeading: 'Connected',
+    otherOptionsHeading: 'Other options',
+    transferCrypto: 'Transfer Crypto',
+    connectExchange: 'Connect Exchange',
+    walletWithAddress: (short: string) => `Wallet (${short})`,
+    walletStandalone: 'Wallet',
+    updatingBalance: 'Updating balance ...',
+    instant: 'Instant',
+    transferSub: 'No limit • Instant',
+    chainsAriaLabel: 'Supported chains: EVM, SOL, BTC, and more',
+    notSupportedYet: 'Not supported yet',
+    youSend: 'You send',
+    youReceive: 'You receive',
+    source: 'Source',
+    destination: 'Destination',
+    polymarketWallet: 'Polymarket Wallet',
+    execution: 'Execution',
+    estimatedTime: 'Estimated time',
+    max: 'Max',
+    walletPromptFeeNote: (walletTotalText: string) =>
+      `You send includes the deBridge fixed fee below. Your wallet may prompt ${walletTotalText}.`,
+    walletPromptApproval:
+      'Your wallet may ask for approval first, then submit the deBridge transaction. Confirm the final amount in your wallet prompt.',
+  },
+
   /** Short notice for transfer / connected deposit / withdraw / fiat paths; footer shows security + copyright */
   fundsMovementTerms: {
     panelTitle: 'Terms apply',

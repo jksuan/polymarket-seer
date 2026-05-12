@@ -1,6 +1,8 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { ComponentProps } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { I18nContext } from "@/i18n";
+import zh from "@/i18n/locales/zh";
 import type { DepositAsset } from "../types";
 import { AmountStep } from "./AmountStep";
 
@@ -22,14 +24,17 @@ function renderAmountStep(overrides?: Partial<ComponentProps<typeof AmountStep>>
     asset: baseAsset,
     error: "",
     isQuoting: false,
-    locale: "zh",
     onAmountBlur: vi.fn(),
     onAmountChange: vi.fn(),
     onContinue: vi.fn(),
     onPercent: vi.fn(),
     ...overrides,
   };
-  render(<AmountStep {...props} />);
+  render(
+    <I18nContext.Provider value={{ locale: "zh", setLocale: vi.fn(), t: zh }}>
+      <AmountStep {...props} />
+    </I18nContext.Provider>
+  );
   return props;
 }
 

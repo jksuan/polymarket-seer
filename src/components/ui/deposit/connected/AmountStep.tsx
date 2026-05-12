@@ -3,6 +3,7 @@ import type { ChangeEvent } from "react";
 import { ArrowRight, Loader2 } from "lucide-react";
 
 import { POLYGON_CHAIN_ID } from "@/lib/constants";
+import { useTranslation } from "@/i18n";
 import type { DepositAsset } from "../types";
 import {
   CONNECTED_MAX_BUFFER_USD,
@@ -18,7 +19,6 @@ export function AmountStep({
   asset,
   error,
   isQuoting,
-  locale,
   minDepositUsd,
   onAmountBlur,
   onAmountChange,
@@ -29,13 +29,14 @@ export function AmountStep({
   asset: DepositAsset;
   error: string;
   isQuoting: boolean;
-  locale: string;
   minDepositUsd?: number;
   onAmountBlur: () => void;
   onAmountChange: (value: string) => void;
   onContinue: () => void;
   onPercent: (percent: number) => void;
 }) {
+  const { t, locale } = useTranslation();
+  const df = t.depositFlow;
   const amountNumber = parseAmountUsd(amountUsd);
   const inputRef = useRef<HTMLInputElement>(null);
   const pendingCaretCountRef = useRef<number | null>(null);
@@ -110,7 +111,7 @@ export function AmountStep({
               onClick={() => onPercent(percent)}
               className="rounded-xl bg-white/10 px-5 py-3 text-sm font-black text-white active:scale-95"
             >
-              {percent === 1 ? "Max" : `${Math.round(percent * 100)}%`}
+              {percent === 1 ? df.max : `${Math.round(percent * 100)}%`}
             </button>
           ))}
         </div>
@@ -128,13 +129,13 @@ export function AmountStep({
         <div className="mx-auto mb-7 flex w-fit items-center gap-4 rounded-full bg-white/10 px-4 py-3">
           <TokenIcon chainId={asset.chainId} iconUrl={asset.iconUrl} symbol={asset.symbol} />
           <div>
-            <p className="text-[10px] text-white/35">You send</p>
+            <p className="text-[10px] text-white/35">{df.youSend}</p>
             <p className="text-xs font-black text-white">{asset.symbol}</p>
           </div>
           <ArrowRight className="text-white/35" size={18} />
           <TokenIcon chainId={String(POLYGON_CHAIN_ID)} symbol="pUSD" />
           <div>
-            <p className="text-[10px] text-white/35">You receive</p>
+            <p className="text-[10px] text-white/35">{df.youReceive}</p>
             <p className="text-xs font-black text-white">pUSD</p>
           </div>
         </div>

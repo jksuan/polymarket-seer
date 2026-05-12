@@ -1,6 +1,7 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import { AlertTriangle, Loader2, Wallet } from "lucide-react";
 import { POLYGON_CHAIN_ID } from "@/lib/constants";
+import { useTranslation } from "@/i18n";
 import type { ExecutionSnapshot } from "../types";
 import { formatMs, formatUsd } from "../format";
 import { getExecutionKindText } from "../status";
@@ -19,7 +20,6 @@ export function ConfirmStep({
   isCancellingOrder,
   isExecuting,
   isQuoting,
-  locale,
   onCancelOrder,
   onConfirm,
   onFallbackToTransfer,
@@ -37,7 +37,6 @@ export function ConfirmStep({
   isCancellingOrder: boolean;
   isExecuting: boolean;
   isQuoting: boolean;
-  locale: string;
   onCancelOrder: () => void;
   onConfirm: () => void;
   onFallbackToTransfer: () => void;
@@ -45,6 +44,8 @@ export function ConfirmStep({
   snapshot: ExecutionSnapshot;
   walletLabel: string;
 }) {
+  const { t, locale } = useTranslation();
+  const df = t.depositFlow;
   const [isBreakdownOpen, setIsBreakdownOpen] = useState(false);
   const breakdownDetailsRef = useRef<HTMLDivElement>(null);
   const canCancel = Boolean(
@@ -110,7 +111,7 @@ export function ConfirmStep({
         <InfoBox
           rows={[
             {
-              label: "Source",
+              label: df.source,
               value: walletLabel,
               icon: (
                 <div className="flex h-5 w-5 shrink-0 items-center justify-center">
@@ -119,8 +120,8 @@ export function ConfirmStep({
               ),
             },
             {
-              label: "Destination",
-              value: "Polymarket Wallet",
+              label: df.destination,
+              value: df.polymarketWallet,
               icon: (
                 <span
                   aria-hidden
@@ -130,7 +131,7 @@ export function ConfirmStep({
               ),
             },
             {
-              label: "Execution",
+              label: df.execution,
               value: getExecutionKindText(locale, snapshot.kind, snapshot.asset.symbol),
               icon:
                 snapshot.kind === "direct-transfer" ? (
@@ -146,14 +147,14 @@ export function ConfirmStep({
                   />
                 ),
             },
-            ["Estimated time", formatMs(snapshot.estCheckoutTimeMs)],
+            [df.estimatedTime, formatMs(snapshot.estCheckoutTimeMs, locale)],
           ]}
         />
 
         <InfoBox
           rows={[
             {
-              label: "You send",
+              label: df.youSend,
               value: youSendText,
               icon: (
                 <TokenIcon
@@ -165,14 +166,14 @@ export function ConfirmStep({
               ),
             },
             {
-              label: "You receive",
+              label: df.youReceive,
               value: `${snapshot.receiveDisplay} ${receiveSymbol}${receiveUsdText}`,
               icon: <TokenIcon compact chainId={String(POLYGON_CHAIN_ID)} symbol={receiveSymbol} />,
             },
           ]}
         />
 
-        <WalletPromptBridge locale={locale} snapshot={snapshot} walletTotalText={walletTotalText} />
+        <WalletPromptBridge snapshot={snapshot} walletTotalText={walletTotalText} />
 
         <ConfirmTransactionBreakdown
           breakdownDetailsRef={breakdownDetailsRef}

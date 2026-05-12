@@ -1,5 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
+import { I18nContext } from "@/i18n";
+import zh from "@/i18n/locales/zh";
 import { ConfirmStep } from "./ConfirmStep";
 import type { ExecutionSnapshot } from "../types";
 
@@ -38,25 +40,26 @@ describe("ConfirmStep", () => {
   it("错误态展示回退到 Transfer 按钮并触发回调", () => {
     const onFallbackToTransfer = vi.fn();
     render(
-      <ConfirmStep
-        cancelTxHash=""
-        depositBridgeComplete={false}
-        dlnStatus={undefined}
-        error="some execute error"
-        executionRiskWarning=""
-        hasSubmittedTx={false}
-        hasUnconfirmedRiskWarning={false}
-        isCancellingOrder={false}
-        isExecuting={false}
-        isQuoting={false}
-        locale="zh"
-        onCancelOrder={vi.fn()}
-        onConfirm={vi.fn()}
-        onFallbackToTransfer={onFallbackToTransfer}
-        quoteWarning=""
-        snapshot={makeSnapshot()}
-        walletLabel="Wallet"
-      />
+      <I18nContext.Provider value={{ locale: "zh", setLocale: vi.fn(), t: zh }}>
+        <ConfirmStep
+          cancelTxHash=""
+          depositBridgeComplete={false}
+          dlnStatus={undefined}
+          error="some execute error"
+          executionRiskWarning=""
+          hasSubmittedTx={false}
+          hasUnconfirmedRiskWarning={false}
+          isCancellingOrder={false}
+          isExecuting={false}
+          isQuoting={false}
+          onCancelOrder={vi.fn()}
+          onConfirm={vi.fn()}
+          onFallbackToTransfer={onFallbackToTransfer}
+          quoteWarning=""
+          snapshot={makeSnapshot()}
+          walletLabel="Wallet"
+        />
+      </I18nContext.Provider>
     );
 
     fireEvent.click(screen.getByRole("button", { name: "切换至转账通道" }));

@@ -27,10 +27,12 @@ export function formatPercent(value?: number): string {
   return value === undefined ? "-" : `${value.toFixed(2)}%`;
 }
 
-export function formatMs(value?: number): string {
-  if (!value) return "< 1 min";
+export function formatMs(value?: number, locale?: string): string {
+  const zh = locale === "zh";
+  if (!value) return zh ? "小于 1 分钟" : "< 1 min";
   const minutes = Math.max(1, Math.ceil(value / 60_000));
-  return minutes <= 1 ? "< 1 min" : `${minutes} min`;
+  if (minutes <= 1) return zh ? "小于 1 分钟" : "< 1 min";
+  return zh ? `${minutes} 分钟` : `${minutes} min`;
 }
 
 export function toNumber(value: unknown): number | undefined {

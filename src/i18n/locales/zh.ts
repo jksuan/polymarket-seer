@@ -391,6 +391,34 @@ const zh = {
     title: '充值 USDC',
   },
 
+  /** 充值流程界面文案（Connected / 金额 / 确认） */
+  depositFlow: {
+    useCrypto: '加密货币',
+    useCash: '法币',
+    connectedHeading: '已连接钱包',
+    otherOptionsHeading: '其他方式',
+    transferCrypto: '链上转入',
+    connectExchange: '交易所',
+    walletWithAddress: (short: string) => `钱包 (${short})`,
+    walletStandalone: '钱包',
+    updatingBalance: '更新余额 ...',
+    instant: '即时',
+    transferSub: '不限 • 即时',
+    chainsAriaLabel: '支持链：EVM、SOL、BTC 等',
+    notSupportedYet: '暂不支持',
+    youSend: '支付',
+    youReceive: '收到',
+    source: '来源',
+    destination: '到账至',
+    polymarketWallet: 'Polymarket 钱包',
+    execution: '处理方式',
+    estimatedTime: '预计用时',
+    max: '最大',
+    walletPromptFeeNote: (walletTotalText: string) =>
+      `支付包含下方的 deBridge fixed fee，钱包弹窗可能显示 ${walletTotalText}。`,
+    walletPromptApproval: '钱包可能先要求授权，然后提交 deBridge 交易；最终签名金额以钱包弹窗为准。',
+  },
+
   /** 转入 / 连接钱包充值 / 提现等资金路径共用摘要（页脚为安全与版权说明） */
   fundsMovementTerms: {
     panelTitle: '适用条款',

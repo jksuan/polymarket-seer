@@ -4,6 +4,8 @@ import { useMemo, useState } from "react";
 import { AmountStep } from "@/components/ui/deposit/connected/AmountStep";
 import { getTransferChainMinUsd } from "@/components/ui/deposit/minimums";
 import type { DepositAsset } from "@/components/ui/deposit/types";
+import { I18nContext } from "@/i18n";
+import zh from "@/i18n/locales/zh";
 
 const assets: DepositAsset[] = [
   {
@@ -60,18 +62,21 @@ export default function ConnectedMinimumFixturePage() {
           选择 POL
         </button>
       </div>
-      <AmountStep
-        amountUsd="2"
-        asset={selectedAsset}
-        error=""
-        isQuoting={false}
-        locale="zh"
-        minDepositUsd={minDepositUsd}
-        onAmountBlur={() => {}}
-        onAmountChange={() => {}}
-        onContinue={() => {}}
-        onPercent={() => {}}
-      />
+      <I18nContext.Provider
+        value={{ locale: "zh", setLocale: () => {}, t: zh }}
+      >
+        <AmountStep
+          amountUsd="2"
+          asset={selectedAsset}
+          error=""
+          isQuoting={false}
+          minDepositUsd={minDepositUsd}
+          onAmountBlur={() => {}}
+          onAmountChange={() => {}}
+          onContinue={() => {}}
+          onPercent={() => {}}
+        />
+      </I18nContext.Provider>
     </main>
   );
 }
