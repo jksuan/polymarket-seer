@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Zap, Wallet, Globe, Plus } from 'lucide-react';
+import { Zap, Wallet, Globe, Plus, Loader2 } from 'lucide-react';
 import { usePrivy } from '@privy-io/react-auth';
 import { usePolymarketAuth } from '@/contexts/PolymarketAuthContext';
 import { SettingsDrawer } from '@/components/ui/SettingsDrawer';
@@ -32,7 +32,7 @@ function LangToggle({ locale, onOpen }: LangToggleProps) {
 
 export function TopHeader({ isSticky = false }: TopHeaderProps = {}) {
   const { login, authenticated, logout } = usePrivy();
-  const { proxyAddress, displayIdentifier, usdcBalance, fetchBalance } = usePolymarketAuth();
+  const { proxyAddress, displayIdentifier, usdcBalance, fetchBalance, isInitialBalanceLoading } = usePolymarketAuth();
   const { t, locale } = useTranslation();
 
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -79,13 +79,19 @@ export function TopHeader({ isSticky = false }: TopHeaderProps = {}) {
           <div className="flex items-center gap-1.5">
             <div className="flex items-center gap-2">
               <button
+                type="button"
                 onClick={() => setDepositOpen(true)}
+                aria-busy={isInitialBalanceLoading}
                 className="flex items-center h-8 bg-[#ADFF2F]/10 hover:bg-[#ADFF2F]/20 border border-[#ADFF2F]/30 rounded-full transition-all active:scale-95 overflow-hidden shadow-[0_0_12px_rgba(173,255,47,0.1)]"
               >
-                <div className="px-3 flex items-center justify-center h-full">
-                  <span className="text-[13px] font-black text-[#ADFF2F] tracking-wide" style={{ textShadow: "0 0 10px rgba(173,255,47,0.4)" }}>
-                    ${Number(usdcBalance || 0).toFixed(2)}
-                  </span>
+                <div className="flex min-w-[4.25rem] items-center justify-center px-3 h-full">
+                  {isInitialBalanceLoading ? (
+                    <Loader2 className="h-[15px] w-[15px] animate-spin text-[#ADFF2F]" aria-hidden />
+                  ) : (
+                    <span className="text-[13px] font-black text-[#ADFF2F] tracking-wide" style={{ textShadow: "0 0 10px rgba(173,255,47,0.4)" }}>
+                      ${Number(usdcBalance || 0).toFixed(2)}
+                    </span>
+                  )}
                 </div>
                 <div className="w-8 h-8 bg-[#ADFF2F] flex items-center justify-center text-[#0D0518] shrink-0 shadow-[-2px_0_8px_rgba(173,255,47,0.2)]">
                   <Plus size={15} strokeWidth={3} />

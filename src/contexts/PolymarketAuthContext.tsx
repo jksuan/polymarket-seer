@@ -18,6 +18,17 @@ import {
 import { getCachedCreds, setCachedCreds, clearCredsCache, shortenAddress } from "@/lib/utils";
 import { selectPrimaryWallet } from "@/lib/primaryWallet";
 
+/** 首次进入后拉余额的最大尝试次数（含第一次） */
+const BALANCE_INITIAL_MAX_ATTEMPTS = 4;
+/** 静默刷新间隔：网络恢复后可自动对齐余额 */
+const BALANCE_SILENT_REFRESH_INTERVAL_MS = 90_000;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
 // --- Context Value Type ---
 interface PolymarketAuthContextValue {
   ready: boolean;
@@ -33,7 +44,10 @@ interface PolymarketAuthContextValue {
   usdcBalance: string;
   setUsdcBalance: (bal: string) => void;
   isRefreshingBalance: boolean;
-  fetchBalance: (showLoading?: boolean) => Promise<void>;
+  /** 首屏/钱包就绪后的首次余额拉取进行中（顶栏转圈） */
+  isInitialBalanceLoading: boolean;
+  /** 拉取余额；返回是否从 CLOB 或链上成功读到（用于重试） */
+  fetchBalance: (showLoading?: boolean) => Promise<boolean>;
   displayIdentifier: string;
   displayAvatar: string;
   hasCreds: boolean;
@@ -67,11 +81,13 @@ export function PolymarketAuthProvider({ children }: { children: ReactNode }) {
   const [proxyAddress, setProxyAddress] = useState<string | null>(null);
   const [usdcBalance, setUsdcBalance] = useState("0.00");
   const [isRefreshingBalance, setIsRefreshingBalance] = useState(false);
+  const [isInitialBalanceLoading, setIsInitialBalanceLoading] = useState(false);
   const [hasCreds, setHasCreds] = useState(false);
 
   // --- 防护机制（Provider 级别） ---
   const isFetchingBalanceRef = useRef(false);
   const fetchBalanceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const silentRefreshIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const hasTriedCreateWalletRef = useRef(false);
   const hasTriedDeriveCredsRef = useRef(false); // 只尝试衍生一次
 
@@ -84,6 +100,11 @@ export function PolymarketAuthProvider({ children }: { children: ReactNode }) {
     setProxyAddress(null);
     setUsdcBalance("0.00");
     setHasCreds(false);
+    setIsInitialBalanceLoading(false);
+    if (silentRefreshIntervalRef.current != null) {
+      clearInterval(silentRefreshIntervalRef.current);
+      silentRefreshIntervalRef.current = null;
+    }
     // 3. 重置所有 ref，让下次登录时能重新触发
     hasTriedCreateWalletRef.current = false;
     hasTriedDeriveCredsRef.current = false;
@@ -111,144 +132,192 @@ export function PolymarketAuthProvider({ children }: { children: ReactNode }) {
   }, [ready, authenticated, user, wallets, createWallet]);
 
   // --- 核心拉取和状态验证方法 ---
-  const fetchBalance = useCallback(async (showLoading = false) => {
-    if (isFetchingBalanceRef.current || !authenticated || !wallets || wallets.length === 0) return;
-    
+  const fetchBalance = useCallback(async (showLoading = false): Promise<boolean> => {
+    if (isFetchingBalanceRef.current || !authenticated || !wallets || wallets.length === 0) return false;
+
     isFetchingBalanceRef.current = true;
     if (showLoading) setIsRefreshingBalance(true);
+
+    let readOk = false;
 
     try {
       const wallet = selectPrimaryWallet(wallets, user?.wallet?.address);
       if (!wallet) throw new Error("No connected wallet found");
 
       setWalletAddress(wallet.address);
-      
+
       const ethereumProvider = await wallet.getEthereumProvider();
       const provider = new ethers.providers.Web3Provider(ethereumProvider as any);
       const signer = provider.getSigner();
       const clobClient = new ClobClient(CLOB_API_URL, POLYGON_CHAIN_ID, signer as any);
-      
+
       const derivedProxy = deriveSafe(wallet.address, SAFE_FACTORY_POLYGON);
       setProxyAddress(derivedProxy);
 
       let creds = getCachedCreds(wallet.address);
 
       if (!creds) {
-         await new Promise(r => setTimeout(r, 200));
-         creds = getCachedCreds(wallet.address);
+        await new Promise((r) => setTimeout(r, 200));
+        creds = getCachedCreds(wallet.address);
       }
 
       // --- CLOB API Key 获取（仅一次）：先 derive 再 create ---
-      // deriveApiKey 优先：老账号已有 Key，此处能直接拿到，不会报错。新账号会失败（抛出 400 Could not derive）。
-      // createApiKey 备用：当 derive 失败且确定无 Key 时，发起注册。
       if (!creds && !hasTriedDeriveCredsRef.current) {
-         hasTriedDeriveCredsRef.current = true;
-         console.log("[CLOB] 缓存中无 API Key，尝试获取...");
-         try {
-            await wallet.switchChain(POLYGON_CHAIN_ID);
-            // 第一步：尝试 deriveApiKey（针对老账号）
-            try {
-               creds = await clobClient.deriveApiKey();
-               console.log("[CLOB] deriveApiKey 成功 ✅");
-            } catch (deriveErr: any) {
-               if (isUserRejection(deriveErr)) {
+        hasTriedDeriveCredsRef.current = true;
+        console.log("[CLOB] 缓存中无 API Key，尝试获取...");
+        try {
+          await wallet.switchChain(POLYGON_CHAIN_ID);
+          try {
+            creds = await clobClient.deriveApiKey();
+            console.log("[CLOB] deriveApiKey 成功 ✅");
+          } catch (deriveErr: any) {
+            if (isUserRejection(deriveErr)) {
+              console.log("[CLOB] 用户拒绝签名");
+            } else {
+              if (isPermanentClobFailure(deriveErr)) {
+                console.log("[CLOB] 链上无可用 API Key（新账号），准备注册...");
+              } else {
+                console.log("[CLOB] deriveApiKey 发生未知错误，尝试备用注册...");
+              }
+
+              try {
+                creds = await clobClient.createApiKey();
+                console.log("[CLOB] createApiKey 成功 ✅");
+              } catch (createErr: any) {
+                if (isUserRejection(createErr)) {
                   console.log("[CLOB] 用户拒绝签名");
-               } else {
-                  // 第二步：derive 失败时（通常是新账号没有 Key），尝试 createApiKey 注册
-                  if (isPermanentClobFailure(deriveErr)) {
-                     console.log("[CLOB] 链上无可用 API Key（新账号），准备注册...");
-                  } else {
-                     console.log("[CLOB] deriveApiKey 发生未知错误，尝试备用注册...");
-                  }
-                  
-                  try {
-                     creds = await clobClient.createApiKey();
-                     console.log("[CLOB] createApiKey 成功 ✅");
-                  } catch (createErr: any) {
-                     if (isUserRejection(createErr)) {
-                        console.log("[CLOB] 用户拒绝签名");
-                     } else if (isPermanentClobFailure(createErr)) {
-                        console.log("[CLOB] 注册被拒绝。可能原因：账号在 Polygon 上无资金记录或未发生交互");
-                     } else {
-                        console.log("[CLOB] 无法注册 API Key。原因：" + (createErr?.message || "未知报错"));
-                     }
-                  }
-               }
+                } else if (isPermanentClobFailure(createErr)) {
+                  console.log("[CLOB] 注册被拒绝。可能原因：账号在 Polygon 上无资金记录或未发生交互");
+                } else {
+                  console.log("[CLOB] 无法注册 API Key。原因：" + (createErr?.message || "未知报错"));
+                }
+              }
             }
-            if (creds && creds.key) {
-              setCachedCreds(wallet.address, creds);
-              setHasCreds(true);
-              console.log("[CLOB] API Key 已生成并缓存");
-            }
-         } catch (keyErr: any) {
-            console.warn("[CLOB] API Key 获取流程异常:", keyErr);
-         }
+          }
+          if (creds && creds.key) {
+            setCachedCreds(wallet.address, creds);
+            setHasCreds(true);
+            console.log("[CLOB] API Key 已生成并缓存");
+          }
+        } catch (keyErr: any) {
+          console.warn("[CLOB] API Key 获取流程异常:", keyErr);
+        }
       } else if (creds) {
-         setHasCreds(true);
+        setHasCreds(true);
       }
 
-      // --- 余额查询 ---
+      // --- 余额：优先 CLOB，失败或无有效数据则链上 USDC.e ---
       if (creds) {
-         const clobWithCreds = new ClobClient(
-            CLOB_API_URL,
-            POLYGON_CHAIN_ID,
-            signer as any,
-            creds,
-            SIGNATURE_TYPE_GNOSIS_SAFE,
-            derivedProxy
-         );
-         try {
-            const balanceData = await clobWithCreds.getBalanceAllowance({ asset_type: "COLLATERAL" as any });
-            if (balanceData && balanceData.balance) {
-               const formatted = ethers.utils.formatUnits(balanceData.balance, USDC_DECIMALS);
-               setUsdcBalance(Number(formatted).toFixed(2));
-            }
-         } catch (balErr) {
-            console.warn("[余额查询] CLOB 余额查询失败，回退到链上查询:", balErr);
-         }
-      } else {
-         try {
-            await wallet.switchChain(POLYGON_CHAIN_ID);
-            const contract = new ethers.Contract(ADDRESSES.USDCe, ERC20_ABI, provider);
-            const bal = await contract.balanceOf(wallet.address);
-            if (bal) {
-               setUsdcBalance(Number(ethers.utils.formatUnits(bal, USDC_DECIMALS)).toFixed(2));
-            }
-         } catch (fallbackErr) {
-            console.log("[余额查询] 链上余额查询失败（全新账户正常现象），默认显示 $0.00");
-            setUsdcBalance("0.00");
-         }
+        const clobWithCreds = new ClobClient(
+          CLOB_API_URL,
+          POLYGON_CHAIN_ID,
+          signer as any,
+          creds,
+          SIGNATURE_TYPE_GNOSIS_SAFE,
+          derivedProxy
+        );
+        try {
+          const balanceData = await clobWithCreds.getBalanceAllowance({ asset_type: "COLLATERAL" as any });
+          if (balanceData != null && balanceData.balance != null && balanceData.balance !== undefined) {
+            const formatted = ethers.utils.formatUnits(balanceData.balance, USDC_DECIMALS);
+            setUsdcBalance(Number(formatted).toFixed(2));
+            readOk = true;
+          }
+        } catch (balErr) {
+          console.warn("[余额查询] CLOB 余额查询失败，尝试链上查询:", balErr);
+        }
+      }
+
+      if (!readOk) {
+        try {
+          await wallet.switchChain(POLYGON_CHAIN_ID);
+          const contract = new ethers.Contract(ADDRESSES.USDCe, ERC20_ABI, provider);
+          const bal = await contract.balanceOf(wallet.address);
+          setUsdcBalance(Number(ethers.utils.formatUnits(bal, USDC_DECIMALS)).toFixed(2));
+          readOk = true;
+        } catch (fallbackErr) {
+          console.log("[余额查询] 链上余额查询失败:", fallbackErr);
+          setUsdcBalance("0.00");
+        }
       }
     } catch (err) {
       console.error("Balance fetch failed", err);
+      readOk = false;
     } finally {
       isFetchingBalanceRef.current = false;
       if (showLoading) setIsRefreshingBalance(false);
     }
+
+    return readOk;
   }, [authenticated, wallets, user]);
 
-  // === 门控层 + 防抖（外部钱包给更长延迟） ===
+  // === 门控层 + 防抖 + 首拉指数退避重试 ===
   useEffect(() => {
-    if (!ready || !authenticated || !wallets || wallets.length === 0) return;
+    if (!ready || !authenticated || !wallets || wallets.length === 0) {
+      setIsInitialBalanceLoading(false);
+      return;
+    }
+
+    setIsInitialBalanceLoading(true);
 
     if (fetchBalanceTimerRef.current) {
       clearTimeout(fetchBalanceTimerRef.current);
     }
 
-    // 外部钱包（非 privy embedded）需要更长的延迟等待就绪
-    const hasExternalWallet = wallets.some(w => w.walletClientType !== "privy");
+    const hasExternalWallet = wallets.some((w) => w.walletClientType !== "privy");
     const delay = hasExternalWallet ? 1500 : 300;
 
+    let cancelled = false;
+
     fetchBalanceTimerRef.current = setTimeout(() => {
-      fetchBalance();
+      void (async () => {
+        if (cancelled) return;
+        let ok = false;
+        for (let attempt = 0; attempt < BALANCE_INITIAL_MAX_ATTEMPTS && !ok && !cancelled; attempt += 1) {
+          ok = await fetchBalance(false);
+          if (ok || cancelled) break;
+          const backoffMs = Math.min(1000 * 2 ** attempt, 8000);
+          await sleep(backoffMs);
+        }
+        if (!cancelled) setIsInitialBalanceLoading(false);
+      })();
     }, delay);
 
     return () => {
+      cancelled = true;
       if (fetchBalanceTimerRef.current) {
         clearTimeout(fetchBalanceTimerRef.current);
+        fetchBalanceTimerRef.current = null;
       }
+      setIsInitialBalanceLoading(false);
     };
   }, [ready, wallets, authenticated, user, fetchBalance]);
+
+  // === 低频静默刷新（不打断顶栏首拉状态） ===
+  useEffect(() => {
+    if (!ready || !authenticated || !wallets || wallets.length === 0) {
+      if (silentRefreshIntervalRef.current != null) {
+        clearInterval(silentRefreshIntervalRef.current);
+        silentRefreshIntervalRef.current = null;
+      }
+      return;
+    }
+
+    if (silentRefreshIntervalRef.current != null) {
+      clearInterval(silentRefreshIntervalRef.current);
+    }
+
+    silentRefreshIntervalRef.current = setInterval(() => {
+      void fetchBalance(false);
+    }, BALANCE_SILENT_REFRESH_INTERVAL_MS);
+
+    return () => {
+      if (silentRefreshIntervalRef.current != null) {
+        clearInterval(silentRefreshIntervalRef.current);
+        silentRefreshIntervalRef.current = null;
+      }
+    };
+  }, [ready, authenticated, wallets, fetchBalance]);
 
   // Derived Values — Google 登录时 email 存在 user.google.email 而非 user.email.address
   const displayIdentifier = user?.twitter?.username 
@@ -278,6 +347,7 @@ export function PolymarketAuthProvider({ children }: { children: ReactNode }) {
     usdcBalance,
     setUsdcBalance,
     isRefreshingBalance,
+    isInitialBalanceLoading,
     fetchBalance,
     displayIdentifier,
     displayAvatar,
