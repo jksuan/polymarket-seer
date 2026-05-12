@@ -56,6 +56,7 @@ import { ConfirmStep } from "./deposit/confirm/ConfirmStep";
 import { TransferStep } from "./deposit/transfer/TransferStep";
 import { useTransferDepositFlow } from "./deposit/transfer/useTransferDepositFlow";
 import { useConnectedEntryFlow } from "./deposit/connected/useConnectedEntryFlow";
+import { FundsMovementTermsPanel } from "./FundsMovementTermsPanel";
 
 function DrawerContent({
   balanceUsd = "0.00",
@@ -67,11 +68,12 @@ function DrawerContent({
   const BRIDGE_STATUS_FALLBACK_BEFORE_SUBMIT_MS = 45_000;
   const BRIDGE_STATUS_FALLBACK_AFTER_SUBMIT_MS = 10 * 60_000;
   useLockBodyScroll(isOpen);
-  const { locale } = useTranslation();
+  const { locale, t } = useTranslation();
   const { user } = usePrivy();
   const { wallets } = useWallets();
   const { data: supportedAssets, isLoading: assetsLoading } = useSupportedAssets();
   const [step, setStep] = useState<FlowStep>("home");
+  const [fundsTermsOpen, setFundsTermsOpen] = useState(false);
   const [selectedAsset, setSelectedAsset] = useState<DepositAsset | null>(null);
   const [amountUsd, setAmountUsd] = useState("10.00");
   const [snapshot, setSnapshot] = useState<ExecutionSnapshot | null>(null);
@@ -365,6 +367,10 @@ function DrawerContent({
   }, [activeWallet, assetsLoading, depositAssets, isOpen, proxyAddress, showConnectedWalletOption, walletAddress]);
 
   useEffect(() => {
+    if (!isOpen) setFundsTermsOpen(false);
+  }, [isOpen]);
+
+  useEffect(() => {
     if (step !== "confirm" || !snapshot || isExecuting || hasSubmittedTx) {
       return;
     }
@@ -527,8 +533,9 @@ function DrawerContent({
   }, [resetConfirmProgress, step]);
 
   return (
-    <AnimatePresence>
-      {isOpen && (
+    <>
+      <AnimatePresence>
+        {isOpen && (
         <>
           <motion.div
             initial={{ opacity: 0 }}
@@ -593,7 +600,9 @@ function DrawerContent({
 
               {step === "home" && (
                 <HomeStep
+                  fundsTermsLinkLabel={t.fundsMovementTerms.linkLabel}
                   locale={locale}
+                  onOpenFundsTerms={() => setFundsTermsOpen(true)}
                   showConnectedWalletOption={showConnectedWalletOption}
                   walletLabel={walletLabel}
                   walletUsdLoading={walletBalancesLoading}
@@ -645,9 +654,9 @@ function DrawerContent({
                   executionRiskWarning={executionRiskWarning}
                   hasSubmittedTx={hasSubmittedTx}
                   hasUnconfirmedRiskWarning={hasHighWalletMismatchRisk && !hasAcknowledgedRiskWarning}
+                  isCancellingOrder={isCancellingOrder}
                   isExecuting={isExecuting}
                   isQuoting={isQuoting}
-                  isCancellingOrder={isCancellingOrder}
                   locale={locale}
                   onCancelOrder={handleCancelDlnOrder}
                   onConfirm={handleConfirmOrder}
@@ -682,8 +691,10 @@ function DrawerContent({
             </div>
           </motion.div>
         </>
-      )}
-    </AnimatePresence>
+        )}
+      </AnimatePresence>
+      <FundsMovementTermsPanel isOpen={fundsTermsOpen} onClose={() => setFundsTermsOpen(false)} />
+    </>
   );
 }
 

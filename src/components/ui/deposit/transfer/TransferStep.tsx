@@ -266,13 +266,10 @@ export function TransferStep({
               </div>
             </div>
 
-            <div className="mb-3 flex w-full items-center justify-between">
+            <div className="mb-3 w-full">
               <p className="text-xs font-bold text-white/70">
                 {locale === "zh" ? "收款地址" : "Your deposit address"}
               </p>
-              <span className="text-[11px] font-semibold text-white/50">
-                {locale === "zh" ? "条款适用" : "Terms apply"}
-              </span>
             </div>
 
             <div className="w-full rounded-t-xl border border-b-0 border-white/10 bg-black/40 px-3 py-3 text-left">

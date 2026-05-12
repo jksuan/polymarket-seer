@@ -26,6 +26,8 @@ export function HomeStep({
   walletLabel,
   walletUsdLoading,
   walletUsd,
+  fundsTermsLinkLabel,
+  onOpenFundsTerms,
   onWallet,
   onTransfer,
 }: {
@@ -35,6 +37,8 @@ export function HomeStep({
   walletLabel: string;
   walletUsdLoading: boolean;
   walletUsd: number;
+  fundsTermsLinkLabel?: string;
+  onOpenFundsTerms?: () => void;
   onWallet: () => void;
   onTransfer: () => void;
 }) {
@@ -124,6 +128,18 @@ export function HomeStep({
           </div>
         </div>
       </section>
+
+      {fundsTermsLinkLabel && onOpenFundsTerms ? (
+        <div className="flex justify-center pt-1">
+          <button
+            type="button"
+            onClick={onOpenFundsTerms}
+            className="text-[11px] font-semibold text-[#5eb8ff] underline decoration-white/20 underline-offset-2 hover:text-white/90"
+          >
+            {fundsTermsLinkLabel}
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 }

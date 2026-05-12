@@ -393,7 +393,33 @@ const en: TranslationKeys = {
     title: 'Deposit USDC',
   },
 
-
+  /** Short notice for transfer / connected deposit / withdraw / fiat paths; footer shows security + copyright */
+  fundsMovementTerms: {
+    panelTitle: 'Terms apply',
+    linkLabel: 'Terms apply',
+    intro:
+      'By using in-app funds features (including crypto transfers, deposits and withdrawals, and fiat deposits, among others), you acknowledge that you have read and understand the following:',
+    section1Title: 'Nature of the service',
+    section1Body:
+      'This app mainly provides a user interface and routing. Deposits, swaps, crediting, or withdrawals may be processed by Polymarket, Fun Checkout, or other third-party infrastructure according to what you select in the UI for each flow. Supported assets, networks, limits, fees, and settlement are governed by what the UI shows and what executes on-chain. Except where the law requires otherwise, this app does not custody your private keys or on-chain assets, and does not guarantee third-party availability, quotes, or settlement times.',
+    section2Title: 'Networks, assets, amounts, and paths',
+    section2Body:
+      'For any path shown in the UI, you must follow the supported networks and assets, minimum and maximum amounts, and send/receive instructions shown there. If you pick the wrong network or asset, send too little or too much where limits apply, or use a path not offered in the UI, funds may be delayed, stuck, not automatically returned, or unrecoverable. This app and counterparties do not guarantee recovery or refunds.',
+    section3Title: 'Addresses, approvals, and fraud',
+    section3Body:
+      'You are responsible for verifying deposit addresses, withdrawal destinations, contract approvals where applicable, and on-screen prompts, and for guarding against phishing, clipboard attacks, and fake apps. Losses from failure to verify, mistaken approvals, or fraud are yours to bear.',
+    section4Title: 'Timing and pricing',
+    section4Body:
+      'Times, exchange rates, estimated settlement, and fees shown in the UI are estimates and may change due to chain congestion, liquidity, gas, routing, or third-party processing. Actual crediting may be delayed. A delay does not entitle you to a refund or compensation.',
+    section5Title: 'Compliance and risk controls',
+    section5Body:
+      'To comply with sanctions, anti-money-laundering, and other applicable laws, counterparties may screen flows and may refuse, pause, reverse, delay, or restrict processing. If restrictions apply, the relevant third-party terms and UI notices govern.',
+    section6Title: 'Limitation of liability',
+    section6Body:
+      'To the fullest extent permitted by law, this app is not liable for losses arising from your breach of the above, failures of blockchains or third-party protocols, force majeure, or similar causes. Your full rights and obligations are set out in the in-app Terms of Service and Privacy Policy; this text is a summary for funds flows only and is not legal advice.',
+    footerSecurity: 'Secured by the Polymarket protocol',
+    footerCopyright: '© 2026 SEER.SPORTS. All rights reserved.',
+  },
 
   // ─── Date Formatting ───
   date: {
