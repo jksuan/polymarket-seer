@@ -393,8 +393,8 @@ const zh = {
 
   /** 转入 / 连接钱包充值 / 提现等资金路径共用摘要（页脚为安全与版权说明） */
   fundsMovementTerms: {
-    panelTitle: '条款适用',
-    linkLabel: '条款适用',
+    panelTitle: '适用条款',
+    linkLabel: '适用条款',
     intro:
       '使用本应用内与资金相关的功能（包括加密货币转账、充值与提现，以及法币充值等），即表示您已阅读并理解以下要点：',
     section1Title: '服务性质',
