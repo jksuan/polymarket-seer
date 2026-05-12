@@ -28,6 +28,11 @@ const zh = {
   header: {
     balance: '可用余额',
     deposit: '充值',
+    evmSignerUnavailableTitle: 'EVM 钱包暂不可用',
+    evmSignerUnavailableHint:
+      '请在钱包扩展中切回支持以太坊的账户，或退出后重新连接。',
+    evmSignerTradingBlock:
+      '当前无法签名：请先在钱包中切回可用的 EVM 账户或重新连接后再试。',
   },
 
   // ─── 发现页卡片 ───

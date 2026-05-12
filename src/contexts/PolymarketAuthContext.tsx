@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useRef, useEffect, useCallback, type ReactNode } from "react";
+import { createContext, useContext, useState, useRef, useEffect, useCallback, useMemo, type ReactNode } from "react";
 import { usePrivy, useWallets, useCreateWallet } from "@privy-io/react-auth";
 import { ethers } from "ethers";
 import { ClobClient } from "@polymarket/clob-client";
@@ -39,6 +39,8 @@ interface PolymarketAuthContextValue {
   wallets: any[];
   /** 本会话锁定的外链 walletClientType（小写），用于主钱包选择不跨扩展 */
   stickyExternalWalletClientType: string | null;
+  /** 与 fetchBalance 选主逻辑一致：当前是否解析得到用于 EVM 签名的主钱包 */
+  isEvmSignerReady: boolean;
   walletAddress: string;
   setWalletAddress: (addr: string) => void;
   proxyAddress: string | null;
@@ -86,6 +88,16 @@ export function PolymarketAuthProvider({ children }: { children: ReactNode }) {
   const [isInitialBalanceLoading, setIsInitialBalanceLoading] = useState(false);
   const [hasCreds, setHasCreds] = useState(false);
   const [stickyExternalWalletClientType, setStickyExternalWalletClientType] = useState<string | null>(null);
+
+  const isEvmSignerReady = useMemo(
+    () =>
+      Boolean(
+        selectPrimaryWallet(wallets, user?.wallet?.address, {
+          stickyClientType: stickyExternalWalletClientType,
+        })
+      ),
+    [wallets, user?.wallet?.address, stickyExternalWalletClientType]
+  );
 
   // --- 防护机制（Provider 级别） ---
   const isFetchingBalanceRef = useRef(false);
@@ -148,7 +160,11 @@ export function PolymarketAuthProvider({ children }: { children: ReactNode }) {
       const wallet = selectPrimaryWallet(wallets, user?.wallet?.address, {
         stickyClientType: stickyExternalWalletClientType,
       });
-      if (!wallet) throw new Error("No connected wallet found");
+      if (!wallet) {
+        setHasCreds(false);
+        setUsdcBalance("0.00");
+        return false;
+      }
 
       if (wallet.walletClientType && wallet.walletClientType !== "privy") {
         setStickyExternalWalletClientType(wallet.walletClientType.toLowerCase());
@@ -353,6 +369,7 @@ export function PolymarketAuthProvider({ children }: { children: ReactNode }) {
     handleLogout,
     wallets,
     stickyExternalWalletClientType,
+    isEvmSignerReady,
     walletAddress,
     setWalletAddress,
     proxyAddress,

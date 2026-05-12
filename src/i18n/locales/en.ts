@@ -30,6 +30,11 @@ const en: TranslationKeys = {
   header: {
     balance: 'Balance',
     deposit: 'Deposit',
+    evmSignerUnavailableTitle: 'EVM wallet unavailable',
+    evmSignerUnavailableHint:
+      'Switch back to an Ethereum-capable account in your wallet extension, or disconnect and reconnect.',
+    evmSignerTradingBlock:
+      'Cannot sign right now. Switch back to an active EVM account in your wallet or reconnect, then try again.',
   },
 
   // ─── Discover Cards ───

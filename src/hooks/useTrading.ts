@@ -38,7 +38,7 @@ export function useTrading(
 ) {
   const { authenticated, login, user } = usePrivy();
   const { wallets } = useWallets();
-  const { stickyExternalWalletClientType } = usePolymarketAuth();
+  const { stickyExternalWalletClientType, isEvmSignerReady } = usePolymarketAuth();
   const { t } = useTranslation();
 
   // --- Transaction Progress Overlay States ---
@@ -46,6 +46,15 @@ export function useTrading(
   const [txMessage, setTxMessage] = useState("");
   const [txOrderId, setTxOrderId] = useState<string | null>(null);
   const [txError, setTxError] = useState<string | null>(null);
+
+  const guardEvmSignerOrShowError = useCallback((): boolean => {
+    if (isEvmSignerReady) return false;
+    setTxStep("error");
+    setTxMessage(t.header.evmSignerTradingBlock);
+    setTxError(null);
+    setTxOrderId(null);
+    return true;
+  }, [isEvmSignerReady, t.header.evmSignerTradingBlock]);
 
   const walletsRef = useRef(wallets);
   useEffect(() => {
@@ -236,6 +245,7 @@ export function useTrading(
   // 自动检测 NegRisk（多结果互斥）市场并路由到正确的合约
   const handleRedeem = async (pos: any, mode: "redeem" | "archive" = "redeem") => {
     if (!pos || !proxyAddress) return;
+    if (guardEvmSignerOrShowError()) return;
 
     setTxStep("preparing");
     setTxMessage(mode === "archive" ? t.tx.preparingArchive : t.tx.preparingRedeem);
@@ -356,6 +366,7 @@ export function useTrading(
 
   const handlePlaceRealBet = async (amount: string, customTokenId?: string, executionPrice?: number) => {
     if (!authenticated || !wallets || wallets.length === 0) { login(); return; }
+    if (guardEvmSignerOrShowError()) return;
 
     setTxStep("preparing");
     setTxMessage(t.tx.switchingNetwork);
@@ -550,6 +561,7 @@ export function useTrading(
 
   const handleCancelOrder = async (orderId: string) => {
     if (!authenticated || !wallets || wallets.length === 0 || !proxyAddress) return;
+    if (guardEvmSignerOrShowError()) return;
 
     setTxStep("preparing");
     setTxMessage("正在向撮合引擎发送取消请求...");
@@ -602,6 +614,7 @@ export function useTrading(
 
   const handleSellPosition = async (tokenId: string, sharesToSell: string, executionPrice?: number) => {
     if (!authenticated || !wallets || wallets.length === 0 || !proxyAddress) return;
+    if (guardEvmSignerOrShowError()) return;
 
     setTxStep("preparing");
     setTxMessage(t.tx.preparingSell);
@@ -681,6 +694,7 @@ export function useTrading(
 
   const handleLimitSellPosition = async (tokenId: string, sharesToSell: string, limitPrice: number) => {
     if (!authenticated || !wallets || wallets.length === 0 || !proxyAddress) return;
+    if (guardEvmSignerOrShowError()) return;
 
     setTxStep("preparing");
     setTxMessage(t.tx.preparingLimitOrder);

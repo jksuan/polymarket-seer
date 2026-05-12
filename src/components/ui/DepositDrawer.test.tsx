@@ -79,6 +79,7 @@ vi.mock("@/i18n", async () => {
 vi.mock("@/contexts/PolymarketAuthContext", () => ({
   usePolymarketAuth: () => ({
     stickyExternalWalletClientType: null as string | null,
+    isEvmSignerReady: true,
   }),
 }));
 

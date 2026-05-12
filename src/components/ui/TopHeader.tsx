@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Zap, Wallet, Globe, Plus, Loader2 } from 'lucide-react';
+import { Zap, Wallet, Globe, Plus, Loader2, AlertTriangle } from 'lucide-react';
 import { usePolymarketAuth } from '@/contexts/PolymarketAuthContext';
 import { SettingsDrawer } from '@/components/ui/SettingsDrawer';
 import { DepositDrawer } from '@/components/ui/DepositDrawer';
@@ -30,7 +30,17 @@ function LangToggle({ locale, onOpen }: LangToggleProps) {
 }
 
 export function TopHeader({ isSticky = false }: TopHeaderProps = {}) {
-  const { login, authenticated, handleLogout, proxyAddress, displayIdentifier, usdcBalance, fetchBalance, isInitialBalanceLoading } = usePolymarketAuth();
+  const {
+    login,
+    authenticated,
+    handleLogout,
+    proxyAddress,
+    displayIdentifier,
+    usdcBalance,
+    fetchBalance,
+    isInitialBalanceLoading,
+    isEvmSignerReady,
+  } = usePolymarketAuth();
   const { t, locale } = useTranslation();
 
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -78,9 +88,16 @@ export function TopHeader({ isSticky = false }: TopHeaderProps = {}) {
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={() => setDepositOpen(true)}
+                disabled={!isEvmSignerReady}
+                aria-disabled={!isEvmSignerReady}
+                onClick={() => {
+                  if (!isEvmSignerReady) return;
+                  setDepositOpen(true);
+                }}
                 aria-busy={isInitialBalanceLoading}
-                className="flex items-center h-8 bg-[#ADFF2F]/10 hover:bg-[#ADFF2F]/20 border border-[#ADFF2F]/30 rounded-full transition-all active:scale-95 overflow-hidden shadow-[0_0_12px_rgba(173,255,47,0.1)]"
+                className={`flex items-center h-8 bg-[#ADFF2F]/10 border border-[#ADFF2F]/30 rounded-full transition-all overflow-hidden shadow-[0_0_12px_rgba(173,255,47,0.1)] ${
+                  isEvmSignerReady ? "hover:bg-[#ADFF2F]/20 active:scale-95" : "opacity-45 cursor-not-allowed"
+                }`}
               >
                 <div className="flex min-w-[4.25rem] items-center justify-center px-3 h-full">
                   {isInitialBalanceLoading ? (
@@ -110,6 +127,23 @@ export function TopHeader({ isSticky = false }: TopHeaderProps = {}) {
           </div>
         )}
       </div>
+
+      {authenticated && !isEvmSignerReady ? (
+        <div
+          role="status"
+          className="mx-4 mb-2 rounded-xl border border-amber-500/35 bg-amber-500/10 px-3 py-2 text-amber-50"
+        >
+          <div className="flex gap-2">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-300" aria-hidden />
+            <div className="min-w-0">
+              <p className="text-xs font-bold leading-snug">{t.header.evmSignerUnavailableTitle}</p>
+              <p className="mt-0.5 text-[11px] leading-relaxed text-white/70">
+                {t.header.evmSignerUnavailableHint}
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       <SettingsDrawer 
         isOpen={settingsOpen} 
