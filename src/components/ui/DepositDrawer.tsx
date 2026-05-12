@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "motion/react";
 import { ArrowLeft, X } from "lucide-react";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
+import { usePolymarketAuth } from "@/contexts/PolymarketAuthContext";
 import { useSupportedAssets } from "@/hooks/useBridge";
 import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 import { getDlnCancelTx, useDlnOrderStatus } from "@/hooks/useDln";
@@ -71,6 +72,7 @@ function DrawerContent({
   const { locale, t } = useTranslation();
   const { user } = usePrivy();
   const { wallets } = useWallets();
+  const { stickyExternalWalletClientType } = usePolymarketAuth();
   const { data: supportedAssets, isLoading: assetsLoading } = useSupportedAssets();
   const [step, setStep] = useState<FlowStep>("home");
   const [fundsTermsOpen, setFundsTermsOpen] = useState(false);
@@ -105,8 +107,11 @@ function DrawerContent({
   const balanceRefreshRetryTimersRef = useRef<number[]>([]);
 
   const activeWallet = useMemo(
-    () => selectPrimaryWallet(wallets, user?.wallet?.address),
-    [wallets, user?.wallet?.address]
+    () =>
+      selectPrimaryWallet(wallets, user?.wallet?.address, {
+        stickyClientType: stickyExternalWalletClientType,
+      }),
+    [wallets, user?.wallet?.address, stickyExternalWalletClientType]
   );
   const depositAssets = useMemo(
     () => normalizeSupportedAssets(supportedAssets),

@@ -37,6 +37,8 @@ interface PolymarketAuthContextValue {
   login: () => void;
   handleLogout: () => Promise<void>;
   wallets: any[];
+  /** 本会话锁定的外链 walletClientType（小写），用于主钱包选择不跨扩展 */
+  stickyExternalWalletClientType: string | null;
   walletAddress: string;
   setWalletAddress: (addr: string) => void;
   proxyAddress: string | null;
@@ -83,6 +85,7 @@ export function PolymarketAuthProvider({ children }: { children: ReactNode }) {
   const [isRefreshingBalance, setIsRefreshingBalance] = useState(false);
   const [isInitialBalanceLoading, setIsInitialBalanceLoading] = useState(false);
   const [hasCreds, setHasCreds] = useState(false);
+  const [stickyExternalWalletClientType, setStickyExternalWalletClientType] = useState<string | null>(null);
 
   // --- 防护机制（Provider 级别） ---
   const isFetchingBalanceRef = useRef(false);
@@ -109,6 +112,7 @@ export function PolymarketAuthProvider({ children }: { children: ReactNode }) {
     hasTriedCreateWalletRef.current = false;
     hasTriedDeriveCredsRef.current = false;
     isFetchingBalanceRef.current = false;
+    setStickyExternalWalletClientType(null);
     if (fetchBalanceTimerRef.current) {
       clearTimeout(fetchBalanceTimerRef.current);
       fetchBalanceTimerRef.current = null;
@@ -141,8 +145,16 @@ export function PolymarketAuthProvider({ children }: { children: ReactNode }) {
     let readOk = false;
 
     try {
-      const wallet = selectPrimaryWallet(wallets, user?.wallet?.address);
+      const wallet = selectPrimaryWallet(wallets, user?.wallet?.address, {
+        stickyClientType: stickyExternalWalletClientType,
+      });
       if (!wallet) throw new Error("No connected wallet found");
+
+      if (wallet.walletClientType && wallet.walletClientType !== "privy") {
+        setStickyExternalWalletClientType(wallet.walletClientType.toLowerCase());
+      } else {
+        setStickyExternalWalletClientType(null);
+      }
 
       setWalletAddress(wallet.address);
 
@@ -249,7 +261,7 @@ export function PolymarketAuthProvider({ children }: { children: ReactNode }) {
     }
 
     return readOk;
-  }, [authenticated, wallets, user]);
+  }, [authenticated, wallets, user, stickyExternalWalletClientType]);
 
   // === 门控层 + 防抖 + 首拉指数退避重试 ===
   useEffect(() => {
@@ -340,6 +352,7 @@ export function PolymarketAuthProvider({ children }: { children: ReactNode }) {
     login,
     handleLogout,
     wallets,
+    stickyExternalWalletClientType,
     walletAddress,
     setWalletAddress,
     proxyAddress,

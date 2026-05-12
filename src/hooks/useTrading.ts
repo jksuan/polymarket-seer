@@ -24,6 +24,7 @@ import {
   SIGNATURE_TYPE_GNOSIS_SAFE,
   ZERO_PARENT_COLLECTION_ID,
 } from "@/lib/constants";
+import { usePolymarketAuth } from "@/contexts/PolymarketAuthContext";
 import { getCachedCreds, setCachedCreds } from "@/lib/utils";
 import { selectPrimaryWallet } from "@/lib/primaryWallet";
 
@@ -37,6 +38,7 @@ export function useTrading(
 ) {
   const { authenticated, login, user } = usePrivy();
   const { wallets } = useWallets();
+  const { stickyExternalWalletClientType } = usePolymarketAuth();
   const { t } = useTranslation();
 
   // --- Transaction Progress Overlay States ---
@@ -60,7 +62,9 @@ export function useTrading(
 
     // Find the right wallet to sign with clob
     const currentWallets = walletsRef.current;
-    const walletInfo = selectPrimaryWallet(currentWallets, walletAddr || user?.wallet?.address);
+    const walletInfo = selectPrimaryWallet(currentWallets, walletAddr || user?.wallet?.address, {
+      stickyClientType: stickyExternalWalletClientType,
+    });
     if (!walletInfo) return { positions: [], openOrders: [], trades: [] };
 
     const ethereumProvider = await walletInfo.getEthereumProvider();
@@ -175,7 +179,7 @@ export function useTrading(
       }
 
       return { positions: posArr, trades: actData, openOrders: [] };
-  }, [user?.wallet?.address]);
+  }, [user?.wallet?.address, stickyExternalWalletClientType]);
 
   // --- SWR 集成 ---
   const swrKey = (authenticated && proxyAddress && walletAddress && hasCreds)
@@ -238,7 +242,9 @@ export function useTrading(
     setTxError(null);
 
     try {
-      const wallet = selectPrimaryWallet(wallets, walletAddress || user?.wallet?.address);
+      const wallet = selectPrimaryWallet(wallets, walletAddress || user?.wallet?.address, {
+        stickyClientType: stickyExternalWalletClientType,
+      });
       if (!wallet) throw new Error("未找到已连接钱包");
       const ethereumProvider = await wallet.getEthereumProvider();
       const provider = new ethers.providers.Web3Provider(ethereumProvider as any);
@@ -358,7 +364,9 @@ export function useTrading(
 
     try {
       // --- Step 0: Wallet preparation ---
-      const wallet = selectPrimaryWallet(wallets, walletAddress || user?.wallet?.address);
+      const wallet = selectPrimaryWallet(wallets, walletAddress || user?.wallet?.address, {
+        stickyClientType: stickyExternalWalletClientType,
+      });
       if (!wallet) throw new Error("未找到已连接钱包");
 
       try { await wallet.switchChain(POLYGON_CHAIN_ID); } catch (e) { console.warn("Switch chain skipped", e); }
@@ -548,7 +556,9 @@ export function useTrading(
     setTxError(null);
 
     try {
-      const wallet = selectPrimaryWallet(wallets, walletAddress || user?.wallet?.address);
+      const wallet = selectPrimaryWallet(wallets, walletAddress || user?.wallet?.address, {
+        stickyClientType: stickyExternalWalletClientType,
+      });
       if (!wallet) throw new Error("未找到已连接钱包");
         
       const ethereumProvider = await wallet.getEthereumProvider();
@@ -598,7 +608,9 @@ export function useTrading(
     setTxError(null);
 
     try {
-      const wallet = selectPrimaryWallet(wallets, walletAddress || user?.wallet?.address);
+      const wallet = selectPrimaryWallet(wallets, walletAddress || user?.wallet?.address, {
+        stickyClientType: stickyExternalWalletClientType,
+      });
       if (!wallet) throw new Error("未找到已连接钱包");
 
       const ethereumProvider = await wallet.getEthereumProvider();
@@ -675,7 +687,9 @@ export function useTrading(
     setTxError(null);
 
     try {
-      const wallet = selectPrimaryWallet(wallets, walletAddress || user?.wallet?.address);
+      const wallet = selectPrimaryWallet(wallets, walletAddress || user?.wallet?.address, {
+        stickyClientType: stickyExternalWalletClientType,
+      });
       if (!wallet) throw new Error("未找到已连接钱包");
 
       const ethereumProvider = await wallet.getEthereumProvider();

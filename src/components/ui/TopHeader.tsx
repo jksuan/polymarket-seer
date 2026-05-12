@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { Zap, Wallet, Globe, Plus, Loader2 } from 'lucide-react';
-import { usePrivy } from '@privy-io/react-auth';
 import { usePolymarketAuth } from '@/contexts/PolymarketAuthContext';
 import { SettingsDrawer } from '@/components/ui/SettingsDrawer';
 import { DepositDrawer } from '@/components/ui/DepositDrawer';
@@ -31,8 +30,7 @@ function LangToggle({ locale, onOpen }: LangToggleProps) {
 }
 
 export function TopHeader({ isSticky = false }: TopHeaderProps = {}) {
-  const { login, authenticated, logout } = usePrivy();
-  const { proxyAddress, displayIdentifier, usdcBalance, fetchBalance, isInitialBalanceLoading } = usePolymarketAuth();
+  const { login, authenticated, handleLogout, proxyAddress, displayIdentifier, usdcBalance, fetchBalance, isInitialBalanceLoading } = usePolymarketAuth();
   const { t, locale } = useTranslation();
 
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -117,7 +115,7 @@ export function TopHeader({ isSticky = false }: TopHeaderProps = {}) {
         isOpen={settingsOpen} 
         onClose={() => setSettingsOpen(false)} 
         authenticated={authenticated}
-        onLogout={logout}
+        onLogout={handleLogout}
       />
       <DepositDrawer
         isOpen={depositOpen}
