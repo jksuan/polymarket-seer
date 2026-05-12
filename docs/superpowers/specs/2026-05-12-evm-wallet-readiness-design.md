@@ -76,3 +76,10 @@
 
 - 代码：`PolymarketAuthContext` 派生 `isEvmSignerReady`；`fetchBalance` 无主钱包时不抛错并清零余额与 creds 标志；`TopHeader` 提示条与禁用充值；`useTrading` 对下单、赎回、撤单、市价卖、限价卖入口使用 `guardEvmSignerOrShowError`。
 - 测试：`TopHeader.test.tsx` 覆盖不可用提示；`DepositDrawer.test` mock 补充 `isEvmSignerReady: true`。
+
+## 8. B 项落地（Privy active wallet 对齐）
+
+- SDK：`@privy-io/react-auth` 3.16 提供 **`useActiveWallet`**（`wallet` + **`setActiveWallet`**）。
+- 实现：`PolymarketAuthProvider` 内 `useEffect` 将 **`selectPrimaryWallet`（含 sticky）** 得到的 `desired` 与 **`privyActiveWallet?.address`** 比较；若 **`shouldSyncPrivyActiveWallet`** 为真则 **`setActiveWallet(desired)`**（`desired` 必须来自当前 `wallets` 数组引用）。
+- 纯函数与单测：`src/lib/privyActiveWalletSync.ts` + `privyActiveWalletSync.test.ts`。
+- 门控与拉余额仍以 **`isEvmSignerReady` / `fetchBalance` 内同一套 `selectPrimaryWallet`** 为真值来源；B 为 **侧向同步**，减少与连接器内部 active 漂移，而非替换 A 的判定式。

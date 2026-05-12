@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useRef, useEffect, useCallback, useMemo, type ReactNode } from "react";
-import { usePrivy, useWallets, useCreateWallet } from "@privy-io/react-auth";
+import { usePrivy, useWallets, useCreateWallet, useActiveWallet } from "@privy-io/react-auth";
 import { ethers } from "ethers";
 import { ClobClient } from "@polymarket/clob-client";
 import { deriveSafe } from "@polymarket/builder-relayer-client/dist/builder/derive";
@@ -17,6 +17,7 @@ import {
 } from "@/lib/constants";
 import { getCachedCreds, setCachedCreds, clearCredsCache, shortenAddress } from "@/lib/utils";
 import { selectPrimaryWallet } from "@/lib/primaryWallet";
+import { shouldSyncPrivyActiveWallet } from "@/lib/privyActiveWalletSync";
 
 /** 首次进入后拉余额的最大尝试次数（含第一次） */
 const BALANCE_INITIAL_MAX_ATTEMPTS = 4;
@@ -79,6 +80,7 @@ function isPermanentClobFailure(err: any): boolean {
 export function PolymarketAuthProvider({ children }: { children: ReactNode }) {
   const { ready, authenticated, user, login, logout } = usePrivy();
   const { wallets } = useWallets();
+  const { wallet: privyActiveWallet, setActiveWallet } = useActiveWallet();
   const { createWallet } = useCreateWallet();
 
   const [walletAddress, setWalletAddress] = useState("");
@@ -98,6 +100,27 @@ export function PolymarketAuthProvider({ children }: { children: ReactNode }) {
       ),
     [wallets, user?.wallet?.address, stickyExternalWalletClientType]
   );
+
+  // --- 与 Privy active wallet 对齐：选主结果与 SDK 当前 active 地址不一致时显式 setActiveWallet ---
+  useEffect(() => {
+    if (!ready || !authenticated || !Array.isArray(wallets) || wallets.length === 0) return;
+
+    const desired = selectPrimaryWallet(wallets, user?.wallet?.address, {
+      stickyClientType: stickyExternalWalletClientType,
+    });
+
+    if (!shouldSyncPrivyActiveWallet(privyActiveWallet?.address, desired)) return;
+
+    setActiveWallet(desired);
+  }, [
+    ready,
+    authenticated,
+    wallets,
+    user?.wallet?.address,
+    stickyExternalWalletClientType,
+    privyActiveWallet?.address,
+    setActiveWallet,
+  ]);
 
   // --- 防护机制（Provider 级别） ---
   const isFetchingBalanceRef = useRef(false);
