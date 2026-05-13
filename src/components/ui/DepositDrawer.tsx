@@ -76,6 +76,11 @@ function DrawerContent({
   const { data: supportedAssets, isLoading: assetsLoading } = useSupportedAssets();
   const [step, setStep] = useState<FlowStep>("home");
   const [fundsTermsOpen, setFundsTermsOpen] = useState(false);
+  useEffect(() => {
+    if (!isOpen) {
+      setFundsTermsOpen(false);
+    }
+  }, [isOpen]);
   const [selectedAsset, setSelectedAsset] = useState<DepositAsset | null>(null);
   const [amountUsd, setAmountUsd] = useState("10.00");
   const [snapshot, setSnapshot] = useState<ExecutionSnapshot | null>(null);

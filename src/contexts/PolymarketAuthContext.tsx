@@ -54,8 +54,6 @@ interface PolymarketAuthContextValue {
   isInitialBalanceLoading: boolean;
   /** 拉取余额；返回是否从 CLOB 或链上成功读到（用于重试） */
   fetchBalance: (showLoading?: boolean) => Promise<boolean>;
-  /** 外链账户切换阻断中（账户与当前会话地址不一致） */
-  isAccountSwitchBlocked: boolean;
   displayIdentifier: string;
   displayAvatar: string;
   hasCreds: boolean;
@@ -93,9 +91,6 @@ export function PolymarketAuthProvider({ children }: { children: ReactNode }) {
   const [isInitialBalanceLoading, setIsInitialBalanceLoading] = useState(false);
   const [hasCreds, setHasCreds] = useState(false);
   const [stickyExternalWalletClientType, setStickyExternalWalletClientType] = useState<string | null>(null);
-  const [accountSwitchBlockOpen, setAccountSwitchBlockOpen] = useState(false);
-  const [accountSwitchAwaitingRevert, setAccountSwitchAwaitingRevert] = useState(false);
-  const [observedExternalAddress, setObservedExternalAddress] = useState<string | null>(null);
   const [isReloginPending, setIsReloginPending] = useState(false);
   const [reloginRequested, setReloginRequested] = useState(false);
   /** 重登流程中暂停漂移检测，避免登出窗口期内再次弹出阻断层 */
@@ -141,6 +136,7 @@ export function PolymarketAuthProvider({ children }: { children: ReactNode }) {
   const hasTriedDeriveCredsRef = useRef(false); // 只尝试衍生一次
   const accountChangeDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prevAuthenticatedRef = useRef<boolean | null>(null);
+  const reloginAfterExternalDriftRef = useRef<() => Promise<void>>(async () => {});
 
   const clearAccountChangeDebounce = useCallback(() => {
     if (accountChangeDebounceRef.current) {
@@ -169,9 +165,6 @@ export function PolymarketAuthProvider({ children }: { children: ReactNode }) {
     isFetchingBalanceRef.current = false;
     setStickyExternalWalletClientType(null);
     clearAccountChangeDebounce();
-    setAccountSwitchBlockOpen(false);
-    setAccountSwitchAwaitingRevert(false);
-    setObservedExternalAddress(null);
     setIsReloginPending(false);
     if (fetchBalanceTimerRef.current) {
       clearTimeout(fetchBalanceTimerRef.current);
@@ -186,9 +179,6 @@ export function PolymarketAuthProvider({ children }: { children: ReactNode }) {
     if (isReloginPending) return;
     setSuppressAccountDrift(true);
     clearAccountChangeDebounce();
-    setAccountSwitchBlockOpen(false);
-    setAccountSwitchAwaitingRevert(false);
-    setObservedExternalAddress(null);
     setIsReloginPending(true);
     try {
       await handleLogout();
@@ -200,9 +190,9 @@ export function PolymarketAuthProvider({ children }: { children: ReactNode }) {
     }
   }, [handleLogout, isReloginPending, clearAccountChangeDebounce]);
 
-  const handleCancelSwitchToNewAccount = useCallback(() => {
-    setAccountSwitchAwaitingRevert(true);
-  }, []);
+  useEffect(() => {
+    reloginAfterExternalDriftRef.current = handleReloginWithNewAccount;
+  }, [handleReloginWithNewAccount]);
 
   // --- 自动为社交登录用户创建 Embedded Wallet ---
   useEffect(() => {
@@ -438,20 +428,14 @@ export function PolymarketAuthProvider({ children }: { children: ReactNode }) {
     }
   }, [authenticated, user]);
 
-  // === 外链扩展账户切换检测（accountsChanged）===
+  // === 外链扩展账户切换检测（accountsChanged）：漂移后与 Polymarket 一致，自动登出并拉起登录 ===
   useEffect(() => {
     if (suppressAccountDrift) {
       clearAccountChangeDebounce();
-      setAccountSwitchBlockOpen(false);
-      setAccountSwitchAwaitingRevert(false);
-      setObservedExternalAddress(null);
       return;
     }
 
     if (!ready || !authenticated || !sessionAddress || !Array.isArray(wallets) || wallets.length === 0) {
-      setAccountSwitchBlockOpen(false);
-      setAccountSwitchAwaitingRevert(false);
-      setObservedExternalAddress(null);
       clearAccountChangeDebounce();
       return;
     }
@@ -460,9 +444,6 @@ export function PolymarketAuthProvider({ children }: { children: ReactNode }) {
       stickyClientType: stickyExternalWalletClientType,
     });
     if (!primaryWallet || !primaryWallet.walletClientType || primaryWallet.walletClientType === "privy") {
-      setAccountSwitchBlockOpen(false);
-      setAccountSwitchAwaitingRevert(false);
-      setObservedExternalAddress(null);
       return;
     }
 
@@ -481,13 +462,8 @@ export function PolymarketAuthProvider({ children }: { children: ReactNode }) {
       accountChangeDebounceRef.current = setTimeout(() => {
         if (cancelled) return;
         if (isAccountDrift(sessionAddress, candidate)) {
-          setObservedExternalAddress(candidate);
-          setAccountSwitchBlockOpen(true);
-          return;
+          void reloginAfterExternalDriftRef.current();
         }
-        setObservedExternalAddress(null);
-        setAccountSwitchBlockOpen(false);
-        setAccountSwitchAwaitingRevert(false);
       }, 300);
     };
 
@@ -558,7 +534,6 @@ export function PolymarketAuthProvider({ children }: { children: ReactNode }) {
     isRefreshingBalance,
     isInitialBalanceLoading,
     fetchBalance,
-    isAccountSwitchBlocked: accountSwitchBlockOpen,
     displayIdentifier,
     displayAvatar,
     hasCreds,
@@ -567,45 +542,6 @@ export function PolymarketAuthProvider({ children }: { children: ReactNode }) {
   return (
     <PolymarketAuthContext.Provider value={value}>
       {children}
-      {accountSwitchBlockOpen && (
-        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/75 backdrop-blur-sm px-4">
-          <div className="w-full max-w-md rounded-2xl border border-white/15 bg-zinc-950/95 p-6 shadow-2xl">
-            <h2 className="text-white text-lg font-bold">检测到账户已变更</h2>
-            {!accountSwitchAwaitingRevert ? (
-              <p className="mt-2 text-sm text-zinc-300 leading-6">
-                当前钱包地址与登录会话不一致。请选择登录新账户，或取消切换并在钱包中切回原账户。
-              </p>
-            ) : (
-              <p className="mt-2 text-sm text-zinc-300 leading-6">
-                请在钱包中切回原账户后继续。切回成功后将自动恢复页面操作。
-              </p>
-            )}
-            <div className="mt-4 space-y-1 text-xs text-zinc-400">
-              <p>会话账户：{sessionAddress ? shortenAddress(sessionAddress) : "-"}</p>
-              <p>当前钱包：{observedExternalAddress ? shortenAddress(observedExternalAddress) : "-"}</p>
-            </div>
-            <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <button
-                type="button"
-                onClick={() => {
-                  void handleReloginWithNewAccount();
-                }}
-                disabled={isReloginPending}
-                className="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {isReloginPending ? "处理中..." : "登录新账户"}
-              </button>
-              <button
-                type="button"
-                onClick={handleCancelSwitchToNewAccount}
-                className="rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-zinc-200 transition hover:bg-zinc-800"
-              >
-                取消切换，继续原账户
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </PolymarketAuthContext.Provider>
   );
 }

@@ -1,6 +1,6 @@
-import { render, screen, fireEvent, act, waitFor, cleanup } from "@testing-library/react";
+import { render, act, waitFor, cleanup } from "@testing-library/react";
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import { PolymarketAuthProvider, usePolymarketAuth } from "./PolymarketAuthContext";
+import { PolymarketAuthProvider } from "./PolymarketAuthContext";
 
 const mockLogin = vi.fn();
 let isAuthenticated = true;
@@ -71,11 +71,6 @@ vi.mock("@privy-io/react-auth", () => ({
   useActiveWallet: () => ({ wallet: undefined, setActiveWallet: mockSetActiveWallet }),
 }));
 
-function GuardStateProbe() {
-  const { isAccountSwitchBlocked } = usePolymarketAuth();
-  return <div data-testid="guard-state">{isAccountSwitchBlocked ? "blocked" : "clear"}</div>;
-}
-
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -94,45 +89,8 @@ describe("PolymarketAuthProvider account switch guard", () => {
     cleanup();
   });
 
-  it("账户漂移后阻断；取消后等待切回；切回后自动解除阻断", async () => {
-    render(
-      <PolymarketAuthProvider>
-        <GuardStateProbe />
-      </PolymarketAuthProvider>
-    );
-
-    expect(screen.getByTestId("guard-state")).toHaveTextContent("clear");
-    await waitFor(() => {
-      expect(mockWallet.getEthereumProvider).toHaveBeenCalled();
-    });
-
-    await act(async () => {
-      mockProvider.emitAccountsChanged(["0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"]);
-      await sleep(350);
-    });
-
-    expect(await screen.findByText("检测到账户已变更")).toBeInTheDocument();
-    expect(screen.getByTestId("guard-state")).toHaveTextContent("blocked");
-
-    fireEvent.click(screen.getByRole("button", { name: "取消切换，继续原账户" }));
-    expect(screen.getByText("请在钱包中切回原账户后继续。切回成功后将自动恢复页面操作。")).toBeInTheDocument();
-    expect(mockLogout).not.toHaveBeenCalled();
-
-    await act(async () => {
-      mockProvider.emitAccountsChanged(["0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"]);
-      await sleep(350);
-    });
-
-    expect(screen.queryByText("检测到账户已变更")).not.toBeInTheDocument();
-    expect(screen.getByTestId("guard-state")).toHaveTextContent("clear");
-  });
-
-  it("点击登录新账户后可自动触发 login，无需手动二次点击", async () => {
-    render(
-      <PolymarketAuthProvider>
-        <GuardStateProbe />
-      </PolymarketAuthProvider>
-    );
+  it("外链账户漂移防抖后自动登出并在未登录态触发 login，与手动点重登一致", async () => {
+    render(<PolymarketAuthProvider>{null}</PolymarketAuthProvider>);
 
     await waitFor(() => {
       expect(mockWallet.getEthereumProvider).toHaveBeenCalled();
@@ -142,8 +100,6 @@ describe("PolymarketAuthProvider account switch guard", () => {
       mockProvider.emitAccountsChanged(["0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"]);
       await sleep(350);
     });
-
-    fireEvent.click(screen.getByRole("button", { name: "登录新账户" }));
 
     await waitFor(() => {
       expect(mockLogout).toHaveBeenCalledTimes(1);

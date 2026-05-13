@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Zap, Wallet, Globe, Plus, Loader2, AlertTriangle } from 'lucide-react';
 import { usePolymarketAuth } from '@/contexts/PolymarketAuthContext';
 import { SettingsDrawer } from '@/components/ui/SettingsDrawer';
@@ -46,6 +46,15 @@ export function TopHeader({ isSticky = false }: TopHeaderProps = {}) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [depositOpen, setDepositOpen] = useState(false);
   const [langOpen, setLangOpen] = useState(false);
+
+  /** 登出或会话失效时关闭顶栏相关抽屉，避免仍显示旧打开态或 provider 新地址 */
+  useEffect(() => {
+    if (!authenticated) {
+      setDepositOpen(false);
+      setSettingsOpen(false);
+      setLangOpen(false);
+    }
+  }, [authenticated]);
 
   return (
     <>
@@ -146,13 +155,13 @@ export function TopHeader({ isSticky = false }: TopHeaderProps = {}) {
       ) : null}
 
       <SettingsDrawer 
-        isOpen={settingsOpen} 
+        isOpen={settingsOpen && authenticated} 
         onClose={() => setSettingsOpen(false)} 
         authenticated={authenticated}
         onLogout={handleLogout}
       />
       <DepositDrawer
-        isOpen={depositOpen}
+        isOpen={depositOpen && authenticated}
         onClose={() => setDepositOpen(false)}
         proxyAddress={proxyAddress || ""}
         balanceUsd={usdcBalance}
