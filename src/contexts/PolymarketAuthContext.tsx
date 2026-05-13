@@ -18,6 +18,7 @@ import {
 import { getCachedCreds, setCachedCreds, clearCredsCache, shortenAddress } from "@/lib/utils";
 import { selectPrimaryWallet } from "@/lib/primaryWallet";
 import { shouldSyncPrivyActiveWallet } from "@/lib/privyActiveWalletSync";
+import { isAccountDrift, normalizeAddress } from "@/lib/accountSwitchGuard";
 
 /** 首次进入后拉余额的最大尝试次数（含第一次） */
 const BALANCE_INITIAL_MAX_ATTEMPTS = 4;
@@ -53,6 +54,8 @@ interface PolymarketAuthContextValue {
   isInitialBalanceLoading: boolean;
   /** 拉取余额；返回是否从 CLOB 或链上成功读到（用于重试） */
   fetchBalance: (showLoading?: boolean) => Promise<boolean>;
+  /** 外链账户切换阻断中（账户与当前会话地址不一致） */
+  isAccountSwitchBlocked: boolean;
   displayIdentifier: string;
   displayAvatar: string;
   hasCreds: boolean;
@@ -90,6 +93,13 @@ export function PolymarketAuthProvider({ children }: { children: ReactNode }) {
   const [isInitialBalanceLoading, setIsInitialBalanceLoading] = useState(false);
   const [hasCreds, setHasCreds] = useState(false);
   const [stickyExternalWalletClientType, setStickyExternalWalletClientType] = useState<string | null>(null);
+  const [accountSwitchBlockOpen, setAccountSwitchBlockOpen] = useState(false);
+  const [accountSwitchAwaitingRevert, setAccountSwitchAwaitingRevert] = useState(false);
+  const [observedExternalAddress, setObservedExternalAddress] = useState<string | null>(null);
+  const [isReloginPending, setIsReloginPending] = useState(false);
+  const [reloginRequested, setReloginRequested] = useState(false);
+  /** 重登流程中暂停漂移检测，避免登出窗口期内再次弹出阻断层 */
+  const [suppressAccountDrift, setSuppressAccountDrift] = useState(false);
 
   const isEvmSignerReady = useMemo(
     () =>
@@ -100,6 +110,7 @@ export function PolymarketAuthProvider({ children }: { children: ReactNode }) {
       ),
     [wallets, user?.wallet?.address, stickyExternalWalletClientType]
   );
+  const sessionAddress = useMemo(() => normalizeAddress(user?.wallet?.address), [user?.wallet?.address]);
 
   // --- 与 Privy active wallet 对齐：选主结果与 SDK 当前 active 地址不一致时显式 setActiveWallet ---
   useEffect(() => {
@@ -128,6 +139,15 @@ export function PolymarketAuthProvider({ children }: { children: ReactNode }) {
   const silentRefreshIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const hasTriedCreateWalletRef = useRef(false);
   const hasTriedDeriveCredsRef = useRef(false); // 只尝试衍生一次
+  const accountChangeDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const prevAuthenticatedRef = useRef<boolean | null>(null);
+
+  const clearAccountChangeDebounce = useCallback(() => {
+    if (accountChangeDebounceRef.current) {
+      clearTimeout(accountChangeDebounceRef.current);
+      accountChangeDebounceRef.current = null;
+    }
+  }, []);
 
   // --- 完整退出登录：清除所有缓存 + 重置所有 ref ---
   const handleLogout = useCallback(async () => {
@@ -148,6 +168,11 @@ export function PolymarketAuthProvider({ children }: { children: ReactNode }) {
     hasTriedDeriveCredsRef.current = false;
     isFetchingBalanceRef.current = false;
     setStickyExternalWalletClientType(null);
+    clearAccountChangeDebounce();
+    setAccountSwitchBlockOpen(false);
+    setAccountSwitchAwaitingRevert(false);
+    setObservedExternalAddress(null);
+    setIsReloginPending(false);
     if (fetchBalanceTimerRef.current) {
       clearTimeout(fetchBalanceTimerRef.current);
       fetchBalanceTimerRef.current = null;
@@ -155,7 +180,29 @@ export function PolymarketAuthProvider({ children }: { children: ReactNode }) {
     // 4. 调用 Privy logout（清除 session/cookie/JWT）
     await logout();
     console.log("[退出登录] 已清除所有状态 ✅");
-  }, [logout]);
+  }, [logout, clearAccountChangeDebounce]);
+
+  const handleReloginWithNewAccount = useCallback(async () => {
+    if (isReloginPending) return;
+    setSuppressAccountDrift(true);
+    clearAccountChangeDebounce();
+    setAccountSwitchBlockOpen(false);
+    setAccountSwitchAwaitingRevert(false);
+    setObservedExternalAddress(null);
+    setIsReloginPending(true);
+    try {
+      await handleLogout();
+      setReloginRequested(true);
+    } catch (error) {
+      console.warn("[账户切换检测] 重新登录流程失败:", error);
+      setIsReloginPending(false);
+      setSuppressAccountDrift(false);
+    }
+  }, [handleLogout, isReloginPending, clearAccountChangeDebounce]);
+
+  const handleCancelSwitchToNewAccount = useCallback(() => {
+    setAccountSwitchAwaitingRevert(true);
+  }, []);
 
   // --- 自动为社交登录用户创建 Embedded Wallet ---
   useEffect(() => {
@@ -370,6 +417,115 @@ export function PolymarketAuthProvider({ children }: { children: ReactNode }) {
     };
   }, [ready, authenticated, wallets, fetchBalance]);
 
+  // === 状态驱动自动重登：登出完成（authenticated=false）后自动触发 login ===
+  useEffect(() => {
+    if (!reloginRequested || !ready || authenticated) return;
+    login();
+    setReloginRequested(false);
+    setIsReloginPending(false);
+  }, [reloginRequested, ready, authenticated, login]);
+
+  // === 重登完成后恢复漂移检测（仅在一次「未登录 -> 已登录」跃迁时解除抑制）===
+  useEffect(() => {
+    if (prevAuthenticatedRef.current === null) {
+      prevAuthenticatedRef.current = authenticated;
+      return;
+    }
+    const prev = prevAuthenticatedRef.current;
+    prevAuthenticatedRef.current = authenticated;
+    if (prev === false && authenticated && user) {
+      setSuppressAccountDrift(false);
+    }
+  }, [authenticated, user]);
+
+  // === 外链扩展账户切换检测（accountsChanged）===
+  useEffect(() => {
+    if (suppressAccountDrift) {
+      clearAccountChangeDebounce();
+      setAccountSwitchBlockOpen(false);
+      setAccountSwitchAwaitingRevert(false);
+      setObservedExternalAddress(null);
+      return;
+    }
+
+    if (!ready || !authenticated || !sessionAddress || !Array.isArray(wallets) || wallets.length === 0) {
+      setAccountSwitchBlockOpen(false);
+      setAccountSwitchAwaitingRevert(false);
+      setObservedExternalAddress(null);
+      clearAccountChangeDebounce();
+      return;
+    }
+
+    const primaryWallet = selectPrimaryWallet(wallets, user?.wallet?.address, {
+      stickyClientType: stickyExternalWalletClientType,
+    });
+    if (!primaryWallet || !primaryWallet.walletClientType || primaryWallet.walletClientType === "privy") {
+      setAccountSwitchBlockOpen(false);
+      setAccountSwitchAwaitingRevert(false);
+      setObservedExternalAddress(null);
+      return;
+    }
+
+    let cancelled = false;
+    type EthereumProviderLike = {
+      on?: (event: string, handler: (...args: any[]) => void) => void;
+      removeListener?: (event: string, handler: (...args: any[]) => void) => void;
+      request?: (args: { method: string }) => Promise<unknown>;
+    };
+
+    const processAccountCandidate = (candidate: string | null) => {
+      if (cancelled || !sessionAddress || !candidate) return;
+      if (accountChangeDebounceRef.current) {
+        clearTimeout(accountChangeDebounceRef.current);
+      }
+      accountChangeDebounceRef.current = setTimeout(() => {
+        if (cancelled) return;
+        if (isAccountDrift(sessionAddress, candidate)) {
+          setObservedExternalAddress(candidate);
+          setAccountSwitchBlockOpen(true);
+          return;
+        }
+        setObservedExternalAddress(null);
+        setAccountSwitchBlockOpen(false);
+        setAccountSwitchAwaitingRevert(false);
+      }, 300);
+    };
+
+    let provider: EthereumProviderLike | null = null;
+    const accountsChangedHandler = (accounts: string[]) => {
+      const latest = normalizeAddress(accounts?.[0]);
+      processAccountCandidate(latest);
+    };
+
+    void (async () => {
+      try {
+        provider = (await primaryWallet.getEthereumProvider()) as EthereumProviderLike;
+        if (cancelled || !provider) return;
+        provider.on?.("accountsChanged", accountsChangedHandler);
+        const initialAccounts = await provider.request?.({ method: "eth_accounts" });
+        const initial = Array.isArray(initialAccounts) ? normalizeAddress(initialAccounts[0]) : null;
+        processAccountCandidate(initial);
+      } catch (error) {
+        console.warn("[账户切换检测] 监听 provider 失败:", error);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      clearAccountChangeDebounce();
+      provider?.removeListener?.("accountsChanged", accountsChangedHandler);
+    };
+  }, [
+    ready,
+    authenticated,
+    wallets,
+    sessionAddress,
+    user?.wallet?.address,
+    stickyExternalWalletClientType,
+    suppressAccountDrift,
+    clearAccountChangeDebounce,
+  ]);
+
   // Derived Values — Google 登录时 email 存在 user.google.email 而非 user.email.address
   const displayIdentifier = user?.twitter?.username 
     ? `@${user.twitter.username}`
@@ -402,6 +558,7 @@ export function PolymarketAuthProvider({ children }: { children: ReactNode }) {
     isRefreshingBalance,
     isInitialBalanceLoading,
     fetchBalance,
+    isAccountSwitchBlocked: accountSwitchBlockOpen,
     displayIdentifier,
     displayAvatar,
     hasCreds,
@@ -410,6 +567,45 @@ export function PolymarketAuthProvider({ children }: { children: ReactNode }) {
   return (
     <PolymarketAuthContext.Provider value={value}>
       {children}
+      {accountSwitchBlockOpen && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/75 backdrop-blur-sm px-4">
+          <div className="w-full max-w-md rounded-2xl border border-white/15 bg-zinc-950/95 p-6 shadow-2xl">
+            <h2 className="text-white text-lg font-bold">检测到账户已变更</h2>
+            {!accountSwitchAwaitingRevert ? (
+              <p className="mt-2 text-sm text-zinc-300 leading-6">
+                当前钱包地址与登录会话不一致。请选择登录新账户，或取消切换并在钱包中切回原账户。
+              </p>
+            ) : (
+              <p className="mt-2 text-sm text-zinc-300 leading-6">
+                请在钱包中切回原账户后继续。切回成功后将自动恢复页面操作。
+              </p>
+            )}
+            <div className="mt-4 space-y-1 text-xs text-zinc-400">
+              <p>会话账户：{sessionAddress ? shortenAddress(sessionAddress) : "-"}</p>
+              <p>当前钱包：{observedExternalAddress ? shortenAddress(observedExternalAddress) : "-"}</p>
+            </div>
+            <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <button
+                type="button"
+                onClick={() => {
+                  void handleReloginWithNewAccount();
+                }}
+                disabled={isReloginPending}
+                className="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isReloginPending ? "处理中..." : "登录新账户"}
+              </button>
+              <button
+                type="button"
+                onClick={handleCancelSwitchToNewAccount}
+                className="rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-zinc-200 transition hover:bg-zinc-800"
+              >
+                取消切换，继续原账户
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </PolymarketAuthContext.Provider>
   );
 }
