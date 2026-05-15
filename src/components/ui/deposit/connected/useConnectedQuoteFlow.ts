@@ -1,10 +1,10 @@
 import { useCallback, type MutableRefObject } from "react";
 import type { CreateDepositResponse } from "@/types/bridge";
 import { ensureEvmDepositAddress } from "../addresses";
-import { CONNECTED_MAX_BUFFER_USD, DEPOSIT_SINGLE_TX_CAP_USD } from "../constants";
+import { DEPOSIT_SINGLE_TX_CAP_USD } from "../constants";
 import { buildExecutionSnapshot, resolveExecutionEngine, validateBridgeReceiveMinimum, validateDepositSelection } from "../execution";
 import { formatExecutionError } from "../errors";
-import { getConnectedMaxAllowedUsd } from "../minimums";
+import { getConnectedMaxAllowedUsdForAsset } from "../minimums";
 import type { DepositAsset, ExecutionSnapshot, FlowStep } from "../types";
 
 type UseConnectedQuoteFlowArgs = {
@@ -47,11 +47,9 @@ export function useConnectedQuoteFlow({
   transferAddress,
 }: UseConnectedQuoteFlowArgs) {
   const handleQuote = useCallback(async () => {
-    const maxDepositUsd = getConnectedMaxAllowedUsd({
-      walletUsdValue: Number(selectedUsdValue ?? 0),
-      singleTxCapUsd: DEPOSIT_SINGLE_TX_CAP_USD,
-      maxBufferUsd: CONNECTED_MAX_BUFFER_USD,
-    });
+    const maxDepositUsd = selectedAsset
+      ? getConnectedMaxAllowedUsdForAsset(selectedAsset, DEPOSIT_SINGLE_TX_CAP_USD)
+      : 0;
     if (!selectedAsset || !proxyAddress || amountNumber < 1 || amountNumber > maxDepositUsd + 0.01) return;
     const requestId = ++quoteRequestRef.current;
     setIsQuoting(true);
@@ -65,7 +63,6 @@ export function useConnectedQuoteFlow({
         amountUsd: amountNumber,
         asset: selectedAsset,
         allAssets: depositAssets,
-        connectedMaxBufferUsd: CONNECTED_MAX_BUFFER_USD,
         connectedSingleTxCapUsd: DEPOSIT_SINGLE_TX_CAP_USD,
         locale,
       });

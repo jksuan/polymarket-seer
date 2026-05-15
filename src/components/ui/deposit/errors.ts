@@ -25,6 +25,25 @@ export function formatExecutionError(
   if (upper.includes("INSUFFICIENT") || upper.includes("NOT ENOUGH")) {
     return zh ? "钱包余额不足，无法覆盖金额或 gas。" : "Insufficient wallet balance for the amount or gas.";
   }
+  if (
+    upper.includes("GAS LIMIT TOO HIGH") ||
+    upper.includes("INTRINSIC GAS") ||
+    (upper.includes("GAS") && upper.includes("CAP"))
+  ) {
+    return zh
+      ? "网络费估算异常，通常因原生币余额未预留 gas。请降低充值金额或补充少量原生币后重试。"
+      : "Gas estimation failed, often because the full native balance was sent without reserving gas. Lower the amount or add native tokens for fees.";
+  }
+  if (upper.includes("NOT CONFIRMED ON CHAIN") || upper.includes("WITHIN 90S")) {
+    return zh
+      ? "交易未在链上确认（可能已被丢弃）。请在钱包活动记录中查看，或改用 Transfer Crypto。"
+      : "Transaction was not confirmed on chain (it may have been dropped). Check wallet activity or use Transfer Crypto.";
+  }
+  if (upper.includes("FAILED ON CHAIN")) {
+    return zh
+      ? "交易已在链上失败。请降低金额、保留 POL 作 gas，或改用 Transfer Crypto。"
+      : "Transaction failed on chain. Lower the amount, keep POL for gas, or use Transfer Crypto.";
+  }
   if (upper.includes("UNKNOWN_ORDER")) {
     return zh ? "未找到该 deBridge 订单，可能尚未被索引。" : "deBridge order was not found yet. It may still be indexing.";
   }

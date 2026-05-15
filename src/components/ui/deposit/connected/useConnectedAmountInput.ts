@@ -1,7 +1,7 @@
 import { useCallback } from "react";
-import { CONNECTED_MAX_BUFFER_USD, DEPOSIT_SINGLE_TX_CAP_USD } from "../constants";
+import { DEPOSIT_SINGLE_TX_CAP_USD } from "../constants";
 import { formatAmountUsdInput, sanitizeAmountUsdInput } from "../format";
-import { getConnectedMaxAllowedUsd } from "../minimums";
+import { getConnectedMaxAllowedUsdForAsset } from "../minimums";
 import type { DepositAsset } from "../types";
 
 type UseConnectedAmountInputArgs = {
@@ -24,11 +24,7 @@ export function useConnectedAmountInput({
     const value = Number(selectedUsdValue || 0);
     if (!Number.isFinite(value) || value <= 0) return;
     const nextAmount = percent === 1
-      ? getConnectedMaxAllowedUsd({
-        walletUsdValue: value,
-        singleTxCapUsd: DEPOSIT_SINGLE_TX_CAP_USD,
-        maxBufferUsd: CONNECTED_MAX_BUFFER_USD,
-      })
+      ? getConnectedMaxAllowedUsdForAsset(selectedAsset, DEPOSIT_SINGLE_TX_CAP_USD)
       : value * percent;
     setAmountUsd(formatAmountUsdInput(nextAmount));
   }, [selectedAsset, selectedUsdValue, setAmountUsd]);

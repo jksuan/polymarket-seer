@@ -1,10 +1,18 @@
+/**
+ * Connected 确认页执行流。已知问题：Polygon 原生 POL 充值老/新账户仍失败，非 gas 不足，见 issue。
+ */
 import { useCallback, type MutableRefObject } from "react";
 import type { CreateDepositResponse } from "@/types/bridge";
 import { ensureEvmDepositAddress } from "../addresses";
-import { CONNECTED_MAX_BUFFER_USD, DEPOSIT_SINGLE_TX_CAP_USD } from "../constants";
+import { DEPOSIT_SINGLE_TX_CAP_USD } from "../constants";
+import { formatNativeGasReserveError } from "../nativeGas";
 import { buildExecutionSnapshot, isQuotePriceChanged, resolveExecutionEngine, validateBridgeReceiveMinimum, validateDepositSelection } from "../execution";
 import { formatExecutionError } from "../errors";
 import { executeConnectedOrder } from "../executor";
+import {
+  formatNativeAmountClampedWarning,
+  prepareNativeTransferTx,
+} from "../prepareNativeTransfer";
 import { shouldApplyConfirmResult, startConfirmAttempt } from "./confirmAttemptGeneration";
 import type { DepositAsset, ExecutionSnapshot } from "../types";
 
@@ -87,7 +95,6 @@ export function useConnectedConfirmFlow({
         amountUsd: snapshot.amountUsd,
         asset: snapshot.asset,
         allAssets: depositAssets,
-        connectedMaxBufferUsd: CONNECTED_MAX_BUFFER_USD,
         connectedSingleTxCapUsd: DEPOSIT_SINGLE_TX_CAP_USD,
         locale,
       });
@@ -144,6 +151,22 @@ export function useConnectedConfirmFlow({
         return;
       }
       setExecutionRiskWarning("");
+
+      if (activeSnapshot.asset.isNative) {
+        try {
+          const prepared = await prepareNativeTransferTx(activeSnapshot, walletAddress, locale);
+          if (prepared.wasClamped) {
+            setQuoteWarning(formatNativeAmountClampedWarning(locale));
+          }
+        } catch (nativeErr) {
+          setExecutionError(
+            nativeErr instanceof Error
+              ? nativeErr.message
+              : formatNativeGasReserveError(locale, activeSnapshot.asset.chainId)
+          );
+          return;
+        }
+      }
 
       const { txHash, orderId } = await executeConnectedOrder({
         locale,

@@ -5,13 +5,10 @@ import { ArrowRight, Loader2 } from "lucide-react";
 import { POLYGON_CHAIN_ID } from "@/lib/constants";
 import { useTranslation } from "@/i18n";
 import type { DepositAsset } from "../types";
-import {
-  CONNECTED_MAX_BUFFER_USD,
-  DEPOSIT_SINGLE_TX_CAP_USD,
-} from "../constants";
+import { DEPOSIT_SINGLE_TX_CAP_USD } from "../constants";
 import { TokenIcon } from "../shared-ui";
 import { formatUsdWithCommas, parseAmountUsd } from "../format";
-import { getConnectedMaxAllowedUsd } from "../minimums";
+import { getConnectedMaxAllowedUsdForAsset } from "../minimums";
 
 // NOTE: AmountStep is a UI-only component. Sanitization happens in DepositDrawer.
 export function AmountStep({
@@ -40,11 +37,7 @@ export function AmountStep({
   const amountNumber = parseAmountUsd(amountUsd);
   const inputRef = useRef<HTMLInputElement>(null);
   const pendingCaretCountRef = useRef<number | null>(null);
-  const maxDepositUsd = getConnectedMaxAllowedUsd({
-    walletUsdValue: Number(asset.usdValue ?? 0),
-    singleTxCapUsd: DEPOSIT_SINGLE_TX_CAP_USD,
-    maxBufferUsd: CONNECTED_MAX_BUFFER_USD,
-  });
+  const maxDepositUsd = getConnectedMaxAllowedUsdForAsset(asset, DEPOSIT_SINGLE_TX_CAP_USD);
   const effectiveMinDepositUsd = minDepositUsd ?? Math.max(asset.minCheckoutUsd ?? 1, 1) + 0.05;
   const isAmountTooLow = amountNumber < effectiveMinDepositUsd;
   const isAmountOverSingleTxCap = amountNumber > DEPOSIT_SINGLE_TX_CAP_USD + 0.01;

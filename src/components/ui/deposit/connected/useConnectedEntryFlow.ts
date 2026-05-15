@@ -1,7 +1,7 @@
 import { useCallback, useMemo, type MutableRefObject } from "react";
 import { useTranslation } from "@/i18n";
 import { shortenAddress } from "@/lib/utils";
-import { CONNECTED_MAX_BUFFER_USD, DEPOSIT_SINGLE_TX_CAP_USD } from "../constants";
+import { DEPOSIT_SINGLE_TX_CAP_USD } from "../constants";
 import { abandonConfirmAttempt } from "./confirmAttemptGeneration";
 import { formatAmountUsdInput } from "../format";
 import { getConnectedDefaultAmountUsd, getTransferChainMinUsd } from "../minimums";
@@ -70,10 +70,9 @@ export function useConnectedEntryFlow({
     isExecutingRef.current = false;
     const chainMinUsd = getTransferChainMinUsd(asset.chainName, asset.chainId, depositAssets);
     const defaultAmountUsd = getConnectedDefaultAmountUsd({
-      walletUsdValue: Number(asset.usdValue ?? 0),
+      asset,
       chainMinUsd,
       singleTxCapUsd: DEPOSIT_SINGLE_TX_CAP_USD,
-      maxBufferUsd: CONNECTED_MAX_BUFFER_USD,
     });
     setAmountUsd(formatAmountUsdInput(defaultAmountUsd));
     setSelectedAsset(asset);
