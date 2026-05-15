@@ -3,12 +3,12 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import type { SportMarket } from "@/types/sports";
 import { ConfirmModal } from "./ConfirmModal";
 
-let isAuthenticated = true;
+let sessionEpoch = 1;
 
 vi.mock("@privy-io/react-auth", () => ({
   usePrivy: () => ({
     ready: true,
-    authenticated: isAuthenticated,
+    authenticated: true,
     login: vi.fn(),
     user: { wallet: { address: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" } },
   }),
@@ -18,6 +18,7 @@ vi.mock("@/contexts/PolymarketAuthContext", () => ({
   usePolymarketAuth: () => ({
     usdcBalance: "100.00",
     isRefreshingBalance: false,
+    sessionEpoch,
   }),
 }));
 
@@ -72,10 +73,10 @@ const minimalMarket: SportMarket = {
 
 describe("ConfirmModal", () => {
   beforeEach(() => {
-    isAuthenticated = true;
+    sessionEpoch = 1;
   });
 
-  it("会话登出时若交易终端仍打开则调用 onCancel 以关闭抽屉", async () => {
+  it("sessionEpoch 递增时若交易终端仍打开则调用 onCancel 以关闭抽屉", async () => {
     const onCancel = vi.fn();
     const { rerender } = render(
       <ConfirmModal
@@ -92,7 +93,7 @@ describe("ConfirmModal", () => {
       expect(document.body.textContent).toContain("交易终端");
     });
 
-    isAuthenticated = false;
+    sessionEpoch = 2;
     rerender(
       <ConfirmModal
         isOpen

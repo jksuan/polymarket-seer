@@ -21,8 +21,10 @@
    - 仅对外链钱包监听 `accountsChanged`，300ms 防抖。
    - 会话锚点：`user.wallet.address`（小写比较）。
    - 漂移后：自动 logout，在未登录态自动 login（与 Polymarket 官网对齐）；重登期间 `suppressAccountDrift` 抑制重复触发。
-4. **登出**
-   - 清除 creds 缓存、sticky、余额相关状态；顶栏资金类抽屉在 `authenticated === false` 时关闭。
+4. **登出与会话遮罩**
+   - 清除 creds 缓存、sticky、余额相关状态。
+   - `sessionEpoch` 在 `performSessionLogout` 时递增；顶栏抽屉用 `useCloseOnSessionEpoch` 重置本地打开态，可见性由 `resolveOverlayOpen` 与登录态共同决定。
+   - 交易终端用 `useDismissOverlayOnSessionEnd`：打开时绑定 epoch，epoch 变化则 `onCancel`。
 
 ## 非目标
 

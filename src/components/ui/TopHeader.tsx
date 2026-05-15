@@ -1,6 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useCallback } from 'react';
+import { resolveOverlayOpen } from '@/auth/sessionOverlays';
+import { useCloseOnSessionEpoch } from '@/auth/useSessionOverlays';
 import { Zap, Wallet, Globe, Plus, Loader2, AlertTriangle } from 'lucide-react';
 import { usePolymarketAuth } from '@/contexts/PolymarketAuthContext';
 import { SettingsDrawer } from '@/components/ui/SettingsDrawer';
@@ -40,6 +42,7 @@ export function TopHeader({ isSticky = false }: TopHeaderProps = {}) {
     fetchBalance,
     isInitialBalanceLoading,
     isEvmSignerReady,
+    sessionEpoch,
   } = usePolymarketAuth();
   const { t, locale } = useTranslation();
 
@@ -47,14 +50,13 @@ export function TopHeader({ isSticky = false }: TopHeaderProps = {}) {
   const [depositOpen, setDepositOpen] = useState(false);
   const [langOpen, setLangOpen] = useState(false);
 
-  /** 登出或会话失效时关闭顶栏相关抽屉，避免仍显示旧打开态或 provider 新地址 */
-  useEffect(() => {
-    if (!authenticated) {
-      setDepositOpen(false);
-      setSettingsOpen(false);
-      setLangOpen(false);
-    }
-  }, [authenticated]);
+  const closeHeaderOverlays = useCallback(() => {
+    setDepositOpen(false);
+    setSettingsOpen(false);
+    setLangOpen(false);
+  }, []);
+
+  useCloseOnSessionEpoch(sessionEpoch, closeHeaderOverlays);
 
   return (
     <>
@@ -155,13 +157,13 @@ export function TopHeader({ isSticky = false }: TopHeaderProps = {}) {
       ) : null}
 
       <SettingsDrawer 
-        isOpen={settingsOpen && authenticated} 
+        isOpen={resolveOverlayOpen(settingsOpen, authenticated)} 
         onClose={() => setSettingsOpen(false)} 
         authenticated={authenticated}
         onLogout={handleLogout}
       />
       <DepositDrawer
-        isOpen={depositOpen && authenticated}
+        isOpen={resolveOverlayOpen(depositOpen, authenticated)}
         onClose={() => setDepositOpen(false)}
         proxyAddress={proxyAddress || ""}
         balanceUsd={usdcBalance}

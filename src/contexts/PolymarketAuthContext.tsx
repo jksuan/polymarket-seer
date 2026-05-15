@@ -9,6 +9,7 @@ import { shouldSyncPrivyActiveWallet } from "@/lib/privyActiveWalletSync";
 import { normalizeAddress } from "@/lib/accountSwitchGuard";
 import { useBalanceSync } from "@/auth/useBalanceSync";
 import { useExternalAccountDrift } from "@/auth/useExternalAccountDrift";
+import { useSessionOverlays } from "@/auth/useSessionOverlays";
 
 // --- Context Value Type ---
 interface PolymarketAuthContextValue {
@@ -36,6 +37,8 @@ interface PolymarketAuthContextValue {
   displayIdentifier: string;
   displayAvatar: string;
   hasCreds: boolean;
+  /** 会话世代：登出时递增，用于统一关闭抽屉与交易终端 */
+  sessionEpoch: number;
 }
 
 const PolymarketAuthContext = createContext<PolymarketAuthContextValue | null>(null);
@@ -63,6 +66,7 @@ export function PolymarketAuthProvider({ children }: { children: ReactNode }) {
   );
   const sessionAddress = useMemo(() => normalizeAddress(user?.wallet?.address), [user?.wallet?.address]);
   const hasTriedCreateWalletRef = useRef(false);
+  const { sessionEpoch, bumpSessionEpoch } = useSessionOverlays(authenticated);
 
   const {
     usdcBalance,
@@ -84,6 +88,7 @@ export function PolymarketAuthProvider({ children }: { children: ReactNode }) {
   });
 
   const performSessionLogout = useCallback(async () => {
+    bumpSessionEpoch();
     clearCredsCache();
     setWalletAddress("");
     setProxyAddress(null);
@@ -93,7 +98,7 @@ export function PolymarketAuthProvider({ children }: { children: ReactNode }) {
     setStickyExternalWalletClientType(null);
     await logout();
     console.log("[退出登录] 已清除所有状态 ✅");
-  }, [logout, resetBalanceState]);
+  }, [logout, resetBalanceState, bumpSessionEpoch]);
 
   const { clearAccountChangeDebounce, resetReloginState } = useExternalAccountDrift({
     ready,
@@ -181,6 +186,7 @@ export function PolymarketAuthProvider({ children }: { children: ReactNode }) {
     displayIdentifier,
     displayAvatar,
     hasCreds,
+    sessionEpoch,
   };
 
   return (

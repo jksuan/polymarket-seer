@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
+import { useDismissOverlayOnSessionEnd } from '@/auth/useSessionOverlays';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Zap, ShieldCheck, AlertTriangle } from 'lucide-react';
@@ -70,8 +71,7 @@ export function ConfirmModal({
 
   const { t, locale } = useTranslation();
   const { authenticated, login } = usePrivy();
-  const { usdcBalance, isRefreshingBalance } = usePolymarketAuth();
-  const prevAuthenticatedWhileOpenRef = useRef<boolean | null>(null);
+  const { usdcBalance, isRefreshingBalance, sessionEpoch } = usePolymarketAuth();
 
   // ── Ensure tokenId is a primitive string ──
   const actualTokenId = Array.isArray(tokenId) ? tokenId[0] : tokenId;
@@ -95,18 +95,7 @@ export function ConfirmModal({
     setMounted(true);
   }, []);
 
-  /** 登出或账户漂移触发会话结束时，关闭交易终端（与父级 isOpen 状态对齐） */
-  useEffect(() => {
-    if (!isOpen) {
-      prevAuthenticatedWhileOpenRef.current = null;
-      return;
-    }
-    const prev = prevAuthenticatedWhileOpenRef.current;
-    prevAuthenticatedWhileOpenRef.current = authenticated;
-    if (prev === true && authenticated === false) {
-      onCancel();
-    }
-  }, [authenticated, isOpen, onCancel]);
+  useDismissOverlayOnSessionEnd(isOpen, sessionEpoch, onCancel);
 
   if (!market) return null;
 
