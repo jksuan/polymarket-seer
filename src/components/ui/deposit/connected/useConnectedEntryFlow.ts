@@ -7,21 +7,7 @@ import { formatAmountUsdInput } from "../format";
 import { getConnectedDefaultAmountUsd, getTransferChainMinUsd } from "../minimums";
 import type { DepositAsset, ExecutionSnapshot, FlowStep } from "../types";
 
-type PrivyLoginIdentity = {
-  email?: { address?: string | null } | null;
-  google?: { email?: string | null } | null;
-  twitter?: { username?: string | null; subject?: string | null } | null;
-};
-
-function isEmailOrSocialLogin(user: unknown): boolean {
-  const identity = user as PrivyLoginIdentity | null | undefined;
-  return Boolean(
-    identity?.email?.address ||
-      identity?.google?.email ||
-      identity?.twitter?.username ||
-      identity?.twitter?.subject
-  );
-}
+import { isEmailOrSocialLogin } from "./loginIdentity";
 
 type UseConnectedEntryFlowArgs = {
   activeWalletAddress: string;

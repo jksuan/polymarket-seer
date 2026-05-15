@@ -1,48 +1,19 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "motion/react";
 import { ArrowLeft, X } from "lucide-react";
-import { usePrivy, useWallets } from "@privy-io/react-auth";
-import { usePolymarketAuth } from "@/contexts/PolymarketAuthContext";
-import { useSupportedAssets } from "@/hooks/useBridge";
+import { useDlnOrderStatus } from "@/hooks/useDln";
 import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
-import { getDlnCancelTx, useDlnOrderStatus } from "@/hooks/useDln";
-import { selectPrimaryWallet } from "@/lib/primaryWallet";
+import { usePolymarketAuth } from "@/contexts/PolymarketAuthContext";
 import { useTranslation } from "@/i18n";
-import type { BridgeTransaction, CreateDepositResponse } from "@/types/bridge";
-import type {
-  DepositAddressMap,
-  DepositAsset,
-  DepositDrawerProps,
-  ExecutionSnapshot,
-  FlowStep,
-} from "./deposit/types";
-import { CONNECTED_MAX_BUFFER_USD, DEPOSIT_SINGLE_TX_CAP_USD } from "./deposit/constants";
+import type { DepositDrawerProps } from "./deposit/types";
 import { ensureEvmDepositAddress } from "./deposit/addresses";
 import {
-  estimateUsdValue,
-  normalizeSupportedAssets,
-  readAssetBalance,
-} from "./deposit/assets";
-import { getWalletEthereumProvider, sendPreparedEvmTx, switchEvmChain } from "./deposit/evm";
-import { executeConnectedOrder } from "./deposit/executor";
-import {
   buildExecutionSnapshot,
-  isQuotePriceChanged,
   resolveExecutionEngine,
-  validateBridgeReceiveMinimum,
-  validateDepositSelection,
 } from "./deposit/execution";
-import { formatExecutionError } from "./deposit/errors";
-import { formatAmountUsdInput, parseAmountUsd, sanitizeAmountUsdInput } from "./deposit/format";
-import {
-  getConnectedDefaultAmountUsd,
-  getConnectedMaxAllowedUsd,
-  getTransferChainMinUsd,
-} from "./deposit/minimums";
-import {
-  isBridgeCompletedStatus,
-} from "./deposit/status";
+import { isHighWalletMismatchRisk } from "./deposit/risk";
+import { computeDepositBridgeComplete } from "./deposit/computeDepositBridgeComplete";
 import { QuoteCountdownRing } from "./deposit/quote-countdown-ring";
 import { HomeStep } from "./deposit/connected/HomeStep";
 import { AssetStep } from "./deposit/connected/AssetStep";
@@ -50,13 +21,13 @@ import { AmountStep } from "./deposit/connected/AmountStep";
 import { useConnectedAmountInput } from "./deposit/connected/useConnectedAmountInput";
 import { useConnectedConfirmFlow } from "./deposit/connected/useConnectedConfirmFlow";
 import { useConnectedQuoteFlow } from "./deposit/connected/useConnectedQuoteFlow";
-import {
-  abandonConfirmAttempt,
-} from "./deposit/connected/confirmAttemptGeneration";
+import { useConnectedEntryFlow } from "./deposit/connected/useConnectedEntryFlow";
 import { ConfirmStep } from "./deposit/confirm/ConfirmStep";
 import { TransferStep } from "./deposit/transfer/TransferStep";
 import { useTransferDepositFlow } from "./deposit/transfer/useTransferDepositFlow";
-import { useConnectedEntryFlow } from "./deposit/connected/useConnectedEntryFlow";
+import { useDepositDrawerController } from "./deposit/useDepositDrawerController";
+import { useDepositBalanceRefresh } from "./deposit/useDepositBalanceRefresh";
+import { getTransferChainMinUsd } from "./deposit/minimums";
 import { FundsMovementTermsPanel } from "./FundsMovementTermsPanel";
 
 function DrawerContent({
@@ -66,341 +37,112 @@ function DrawerContent({
   proxyAddress,
   onBalanceRefresh,
 }: DepositDrawerProps) {
-  const BRIDGE_STATUS_FALLBACK_BEFORE_SUBMIT_MS = 45_000;
-  const BRIDGE_STATUS_FALLBACK_AFTER_SUBMIT_MS = 10 * 60_000;
   useLockBodyScroll(isOpen);
   const { locale, t } = useTranslation();
-  const { user } = usePrivy();
-  const { wallets } = useWallets();
-  const { stickyExternalWalletClientType } = usePolymarketAuth();
-  const { data: supportedAssets, isLoading: assetsLoading } = useSupportedAssets();
-  const [step, setStep] = useState<FlowStep>("home");
-  const [fundsTermsOpen, setFundsTermsOpen] = useState(false);
-  useEffect(() => {
-    if (!isOpen) {
-      setFundsTermsOpen(false);
-    }
-  }, [isOpen]);
-  const [selectedAsset, setSelectedAsset] = useState<DepositAsset | null>(null);
-  const [amountUsd, setAmountUsd] = useState("10.00");
-  const [snapshot, setSnapshot] = useState<ExecutionSnapshot | null>(null);
-  const [quoteError, setQuoteError] = useState("");
-  const [quoteWarning, setQuoteWarning] = useState("");
-  const [isQuoting, setIsQuoting] = useState(false);
-  const [isExecuting, setIsExecuting] = useState(false);
-  const [executionError, setExecutionError] = useState("");
-  const [executionRiskWarning, setExecutionRiskWarning] = useState("");
-  const [hasAcknowledgedRiskWarning, setHasAcknowledgedRiskWarning] = useState(false);
-  const [executionTxHash, setExecutionTxHash] = useState("");
-  const [executionSubmittedAtMs, setExecutionSubmittedAtMs] = useState(0);
-  const [submittedOrderId, setSubmittedOrderId] = useState("");
-  const [isCancellingOrder, setIsCancellingOrder] = useState(false);
-  const [cancelTxHash, setCancelTxHash] = useState("");
-  const [, setDepositResponse] = useState<CreateDepositResponse | null>(null);
-  const [assetBalances, setAssetBalances] = useState<Record<string, string>>({});
-  const [assetUsdValues, setAssetUsdValues] = useState<Record<string, number>>({});
-  const [walletBalancesLoading, setWalletBalancesLoading] = useState(false);
-  /** 入账完成边沿检测：避免 transfer 与 connected 共用一次性标记导致后者跳过刷新 */
-  const prevDepositBridgeCompleteRef = useRef(false);
-  const prevTransferBridgeCompleteRef = useRef(false);
-  /** 报价自动刷新失败时递增，用于重新挂载确认页定时器（避免 snapshot 未变导致不再调度） */
-  const [quoteAutoRefreshNonce, setQuoteAutoRefreshNonce] = useState(0);
-  const quoteRequestRef = useRef(0);
-  /** Connected 确认订单：返回上一页或改选资产时递增，丢弃仍在等待钱包的旧提交 */
-  const confirmAttemptGenerationRef = useRef(0);
-  const isExecutingRef = useRef(false);
-  const balanceRefreshRetryTimersRef = useRef<number[]>([]);
+  const { sessionEpoch } = usePolymarketAuth();
+  const resetTransferStateRef = useRef<() => void>(() => {});
+  const resetTransferStateStable = useCallback(() => {
+    resetTransferStateRef.current();
+  }, []);
 
-  const activeWallet = useMemo(
+  const c = useDepositDrawerController({
+    isOpen,
+    sessionEpoch,
+    proxyAddress,
+    locale,
+    resetTransferState: resetTransferStateStable,
+  });
+
+  const tf = useTransferDepositFlow({
+    connectedSubmitFastUntilMs: c.connectedSubmitFastUntilMs,
+    depositAssets: c.depositAssets,
+    isOpen,
+    locale,
+    onDepositResponse: c.setDepositResponse,
+    proxyAddress,
+    setStep: c.setStep,
+    step: c.step,
+  });
+
+  resetTransferStateRef.current = tf.resetTransferState;
+
+  const depositBridgeComplete = useMemo(
     () =>
-      selectPrimaryWallet(wallets, user?.wallet?.address, {
-        stickyClientType: stickyExternalWalletClientType,
+      computeDepositBridgeComplete({
+        hasSubmittedTx: c.hasSubmittedTx,
+        transferAddress: tf.transferAddress,
+        executionTxHash: c.executionTxHash,
+        executionSubmittedAtMs: c.executionSubmittedAtMs,
+        transactions: tf.transferStatus.data?.transactions,
       }),
-    [wallets, user?.wallet?.address, stickyExternalWalletClientType]
+    [
+      c.executionSubmittedAtMs,
+      c.executionTxHash,
+      c.hasSubmittedTx,
+      tf.transferAddress,
+      tf.transferStatus.data?.transactions,
+    ]
   );
-  const depositAssets = useMemo(
-    () => normalizeSupportedAssets(supportedAssets),
-    [supportedAssets]
-  );
-  const assetsWithBalances = useMemo(
-    () => depositAssets.map((asset) => ({
-      ...asset,
-      balance: assetBalances[asset.id],
-      usdValue: assetUsdValues[asset.id] ?? 0,
-    })),
-    [assetBalances, assetUsdValues, depositAssets]
-  );
-  const totalWalletUsd = useMemo(
-    () => assetsWithBalances.reduce((sum, asset) => sum + (asset.usdValue ?? 0), 0),
-    [assetsWithBalances]
-  );
-  const amountNumber = parseAmountUsd(amountUsd);
-  const selectedUsdValue = selectedAsset ? assetUsdValues[selectedAsset.id] : undefined;
-  const hasSubmittedTx = Boolean(executionTxHash || submittedOrderId);
-  const CONNECTED_SUBMIT_FAST_POLL_MS = 120_000;
-  const connectedSubmitFastUntilMs =
-    executionSubmittedAtMs > 0
-      ? executionSubmittedAtMs + CONNECTED_SUBMIT_FAST_POLL_MS
-      : 0;
-  // Connected: home/asset/amount 的入口编排。
+
+  useDepositBalanceRefresh({
+    depositBridgeComplete,
+    transferBridgeComplete: tf.transferBridgeComplete,
+    onBalanceRefresh,
+  });
+
+  const dlnStatus = useDlnOrderStatus(c.submittedOrderId, Boolean(c.submittedOrderId && isOpen));
+
   const {
     handleSelectAsset,
     openConnectedAssetStep,
-    showConnectedWalletOption,
-    walletAddress,
     walletLabel,
   } = useConnectedEntryFlow({
-    activeWalletAddress: activeWallet?.address ?? "",
-    confirmAttemptGenerationRef,
-    depositAssets,
-    isExecutingRef,
-    quoteRequestRef,
-    setAmountUsd,
-    setCancelTxHash,
-    setExecutionError,
-    setExecutionTxHash,
-    setIsExecuting,
-    setQuoteError,
-    setQuoteWarning,
-    setSelectedAsset,
-    setSnapshot,
-    setStep,
-    setSubmittedOrderId,
-    user,
+    activeWalletAddress: c.walletAddress,
+    confirmAttemptGenerationRef: c.confirmAttemptGenerationRef,
+    depositAssets: c.depositAssets,
+    isExecutingRef: c.isExecutingRef,
+    quoteRequestRef: c.quoteRequestRef,
+    setAmountUsd: c.setAmountUsd,
+    setCancelTxHash: c.setCancelTxHash,
+    setExecutionError: c.setExecutionError,
+    setExecutionTxHash: c.setExecutionTxHash,
+    setIsExecuting: c.setIsExecuting,
+    setQuoteError: c.setQuoteError,
+    setQuoteWarning: c.setQuoteWarning,
+    setSelectedAsset: c.setSelectedAsset,
+    setSnapshot: c.setSnapshot,
+    setStep: c.setStep,
+    setSubmittedOrderId: c.setSubmittedOrderId,
+    user: c.user,
   });
-  const {
-    copied,
-    handleCopy,
-    handleCreateTransferAddress,
-    isCreatingTransferAddress,
-    openTransferStep,
-    resetTransferState,
-    selectedTransferAssetId,
-    selectedTransferChainId,
-    setSelectedTransferAssetId,
-    setSelectedTransferChainId,
-    setTransferAddress,
-    transferAddress,
-    transferAssets,
-    transferBridgeComplete,
-    transferChainOptions,
-    transferError,
-    transferLatestStatus,
-    transferStatus,
-  } = useTransferDepositFlow({
-    connectedSubmitFastUntilMs,
-    depositAssets,
-    isOpen,
-    locale,
-    onDepositResponse: setDepositResponse,
-    proxyAddress,
-    setStep,
-    step,
-  });
-  // Transfer: 资产筛选、地址创建、轮询与状态展示。
-  const dlnStatus = useDlnOrderStatus(submittedOrderId, Boolean(submittedOrderId && isOpen));
 
-  const currentSubmissionTransaction = useMemo(() => {
-    const transactions = transferStatus.data?.transactions ?? [];
-    const normalizeHash = (hash?: string) => hash?.trim().toLowerCase();
-    const submittedTxHash = normalizeHash(executionTxHash);
-    if (submittedTxHash) {
-      const matchedByTxHash = transactions.find((tx: BridgeTransaction) =>
-        normalizeHash(tx.txHash) === submittedTxHash
-      );
-      if (matchedByTxHash) return matchedByTxHash;
+  useEffect(() => {
+    if (!isOpen || !tf.transferAddress || !c.executionTxHash) return;
+    void tf.transferStatus.mutate();
+  }, [c.executionTxHash, isOpen, tf.transferAddress, tf.transferStatus]);
+
+  useEffect(() => {
+    if (c.step !== "confirm" || !c.snapshot || c.isExecuting || c.hasSubmittedTx) {
+      return;
     }
-
-    const lowerBound = executionSubmittedAtMs > 0
-      ? executionSubmittedAtMs - BRIDGE_STATUS_FALLBACK_BEFORE_SUBMIT_MS
-      : 0;
-    const upperBound = executionSubmittedAtMs > 0
-      ? executionSubmittedAtMs + BRIDGE_STATUS_FALLBACK_AFTER_SUBMIT_MS
-      : Number.POSITIVE_INFINITY;
-    const fallbackCandidates = transactions.filter((tx: BridgeTransaction) => {
-      if (executionSubmittedAtMs <= 0) return true;
-      const createdTimeMs = Number(tx.createdTimeMs ?? 0);
-      if (!Number.isFinite(createdTimeMs) || createdTimeMs <= 0) return false;
-      return createdTimeMs >= lowerBound && createdTimeMs <= upperBound;
-    });
-
-    return fallbackCandidates.reduce<BridgeTransaction | undefined>((latest, tx) => {
-      if (!latest) return tx;
-      const latestTime = Number(latest.createdTimeMs ?? 0);
-      const txTime = Number(tx.createdTimeMs ?? 0);
-      return txTime >= latestTime ? tx : latest;
-    }, undefined);
-  }, [executionSubmittedAtMs, executionTxHash, transferStatus.data?.transactions]);
-  const depositBridgeComplete = Boolean(
-    hasSubmittedTx &&
-      transferAddress &&
-      isBridgeCompletedStatus(currentSubmissionTransaction?.status)
-  );
-
-  const hasHighWalletMismatchRisk = useMemo(
-    () => (snapshot ? isHighWalletMismatchRisk(snapshot) : false),
-    [snapshot]
-  );
-
-  useEffect(() => {
-    if (!isOpen) return;
-    quoteRequestRef.current += 1;
-    confirmAttemptGenerationRef.current = 0;
-    setStep("home");
-    setSelectedAsset(null);
-    setAmountUsd("10.00");
-    setSnapshot(null);
-    setQuoteError("");
-    setQuoteWarning("");
-    setIsExecuting(false);
-    isExecutingRef.current = false;
-    setExecutionError("");
-    setExecutionRiskWarning("");
-    setHasAcknowledgedRiskWarning(false);
-    setExecutionTxHash("");
-    setExecutionSubmittedAtMs(0);
-    setSubmittedOrderId("");
-    setIsCancellingOrder(false);
-    setCancelTxHash("");
-    resetTransferState();
-    setQuoteAutoRefreshNonce(0);
-  }, [isOpen, resetTransferState]);
-
-  useEffect(() => {
-    setHasAcknowledgedRiskWarning(false);
-    setExecutionRiskWarning("");
-  }, [snapshot?.quotedAtMs]);
-
-  useEffect(() => {
-    return () => {
-      balanceRefreshRetryTimersRef.current.forEach((timerId) =>
-        window.clearTimeout(timerId)
-      );
-      balanceRefreshRetryTimersRef.current = [];
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!isOpen || !transferAddress || !executionTxHash) return;
-    void transferStatus.mutate();
-  }, [executionTxHash, isOpen, transferAddress, transferStatus]);
-
-  const scheduleBalanceRefreshRetries = useCallback(() => {
-    balanceRefreshRetryTimersRef.current.forEach((timerId) =>
-      window.clearTimeout(timerId)
-    );
-    balanceRefreshRetryTimersRef.current = [];
-    const retryDelays = [8_000, 20_000];
-    balanceRefreshRetryTimersRef.current = retryDelays.map((delayMs) =>
-      window.setTimeout(() => {
-        onBalanceRefresh?.();
-      }, delayMs)
-    );
-  }, [onBalanceRefresh]);
-
-  useEffect(() => {
-    const rose =
-      depositBridgeComplete &&
-      !prevDepositBridgeCompleteRef.current;
-    prevDepositBridgeCompleteRef.current = depositBridgeComplete;
-
-    if (!rose) return;
-
-    onBalanceRefresh?.();
-    scheduleBalanceRefreshRetries();
-  }, [depositBridgeComplete, onBalanceRefresh, scheduleBalanceRefreshRetries]);
-
-  useEffect(() => {
-    const rose =
-      transferBridgeComplete &&
-      !prevTransferBridgeCompleteRef.current;
-    prevTransferBridgeCompleteRef.current = transferBridgeComplete;
-
-    if (!rose) return;
-
-    onBalanceRefresh?.();
-    scheduleBalanceRefreshRetries();
-  }, [onBalanceRefresh, scheduleBalanceRefreshRetries, transferBridgeComplete]);
-
-  useEffect(() => {
-    if (!isOpen || !activeWallet) {
-      setWalletBalancesLoading(false);
+    if (c.isQuoting) {
       return;
     }
 
-    if (!showConnectedWalletOption) {
-      setWalletBalancesLoading(false);
-      return;
-    }
-
-    if (depositAssets.length === 0) {
-      setWalletBalancesLoading(assetsLoading);
-      return;
-    }
-
-    let cancelled = false;
-    setWalletBalancesLoading(true);
-
-    async function loadBalances() {
-      try {
-        const balances = await Promise.all(
-          depositAssets.map((asset) => readAssetBalance(asset, walletAddress))
-        );
-        const balanceMap = Object.fromEntries(balances);
-        const usdValues = await Promise.all(
-          depositAssets.map(async (asset) => {
-            const balance = balanceMap[asset.id] ?? "0";
-            return [asset.id, await estimateUsdValue(asset, balance, proxyAddress)] as const;
-          })
-        );
-
-        if (!cancelled) {
-          setAssetBalances(balanceMap);
-          setAssetUsdValues(Object.fromEntries(usdValues));
-        }
-      } catch {
-        if (!cancelled) {
-          setAssetBalances({});
-          setAssetUsdValues({});
-        }
-      } finally {
-        if (!cancelled) {
-          setWalletBalancesLoading(false);
-        }
-      }
-    }
-
-    loadBalances();
-    return () => {
-      cancelled = true;
-    };
-  }, [activeWallet, assetsLoading, depositAssets, isOpen, proxyAddress, showConnectedWalletOption, walletAddress]);
-
-  useEffect(() => {
-    if (!isOpen) setFundsTermsOpen(false);
-  }, [isOpen]);
-
-  useEffect(() => {
-    if (step !== "confirm" || !snapshot || isExecuting || hasSubmittedTx) {
-      return;
-    }
-    if (isQuoting) {
-      return;
-    }
-
-    const remain = snapshot.expiresAtMs - Date.now();
+    const remain = c.snapshot.expiresAtMs - Date.now();
     const delay = remain > 0 ? Math.max(1_000, remain) : 1_000;
+    const snapshot = c.snapshot;
 
     const timeout = window.setTimeout(async () => {
-      if (isExecutingRef.current) return;
-      const requestId = ++quoteRequestRef.current;
-      setIsQuoting(true);
-      setQuoteWarning("");
+      if (c.isExecutingRef.current) return;
+      const requestId = ++c.quoteRequestRef.current;
+      c.setIsQuoting(true);
+      c.setQuoteWarning("");
       try {
         const depositAddress = await ensureEvmDepositAddress({
-          existingAddress: transferAddress,
-          onAddress: setTransferAddress,
-          onResponse: setDepositResponse,
+          existingAddress: tf.transferAddress,
+          onAddress: tf.setTransferAddress,
+          onResponse: c.setDepositResponse,
           proxyAddress,
         });
         const next = await buildExecutionSnapshot({
@@ -410,19 +152,21 @@ function DrawerContent({
           executionEngine: resolveExecutionEngine(snapshot.asset),
           proxyAddress,
         });
-        if (quoteRequestRef.current !== requestId) return;
-        if (isExecutingRef.current) return;
-        setSnapshot(next);
+        if (c.quoteRequestRef.current !== requestId) return;
+        if (c.isExecutingRef.current) return;
+        c.setSnapshot(next);
       } catch {
-        if (quoteRequestRef.current === requestId) {
-          setQuoteWarning(locale === "zh"
-            ? "报价可能已过期，提交时会再次刷新。"
-            : "Quote may be stale. It will refresh again before submission.");
-          setQuoteAutoRefreshNonce((n) => n + 1);
+        if (c.quoteRequestRef.current === requestId) {
+          c.setQuoteWarning(
+            locale === "zh"
+              ? "报价可能已过期，提交时会再次刷新。"
+              : "Quote may be stale. It will refresh again before submission."
+          );
+          c.setQuoteAutoRefreshNonce((n) => n + 1);
         }
       } finally {
-        if (quoteRequestRef.current === requestId) {
-          setIsQuoting(false);
+        if (c.quoteRequestRef.current === requestId) {
+          c.setIsQuoting(false);
         }
       }
     }, delay);
@@ -431,116 +175,77 @@ function DrawerContent({
       window.clearTimeout(timeout);
     };
   }, [
-    hasSubmittedTx,
-    isExecuting,
-    isQuoting,
+    c.hasSubmittedTx,
+    c.isExecuting,
+    c.isQuoting,
+    c.snapshot,
+    c.step,
     locale,
     proxyAddress,
-    quoteAutoRefreshNonce,
-    snapshot,
-    step,
-    transferAddress,
-    walletAddress,
+    tf.setTransferAddress,
+    tf.transferAddress,
+    c.quoteAutoRefreshNonce,
+    c.setDepositResponse,
+    c.setIsQuoting,
+    c.setQuoteWarning,
+    c.setSnapshot,
   ]);
 
-  const {
-    handleAmountBlur,
-    handleAmountChange,
-    handlePercent,
-  } = useConnectedAmountInput({
-    amountNumber,
-    amountUsd,
-    selectedAsset,
-    selectedUsdValue,
-    setAmountUsd,
+  const { handleAmountBlur, handleAmountChange, handlePercent } = useConnectedAmountInput({
+    amountNumber: c.amountNumber,
+    amountUsd: c.amountUsd,
+    selectedAsset: c.selectedAsset,
+    selectedUsdValue: c.selectedUsdValue,
+    setAmountUsd: c.setAmountUsd,
   });
 
   const { handleQuote } = useConnectedQuoteFlow({
-    amountNumber,
-    depositAssets,
+    amountNumber: c.amountNumber,
+    depositAssets: c.depositAssets,
     locale,
     proxyAddress,
-    quoteRequestRef,
-    selectedAsset,
-    selectedUsdValue,
-    setDepositResponse,
-    setExecutionError,
-    setExecutionRiskWarning,
-    setIsQuoting,
-    setQuoteError,
-    setQuoteWarning,
-    setSnapshot,
-    setStep,
-    setTransferAddress,
-    transferAddress,
+    quoteRequestRef: c.quoteRequestRef,
+    selectedAsset: c.selectedAsset,
+    selectedUsdValue: c.selectedUsdValue,
+    setDepositResponse: c.setDepositResponse,
+    setExecutionError: c.setExecutionError,
+    setExecutionRiskWarning: c.setExecutionRiskWarning,
+    setIsQuoting: c.setIsQuoting,
+    setQuoteError: c.setQuoteError,
+    setQuoteWarning: c.setQuoteWarning,
+    setSnapshot: c.setSnapshot,
+    setStep: c.setStep,
+    setTransferAddress: tf.setTransferAddress,
+    transferAddress: tf.transferAddress,
   });
 
   const { handleConfirmOrder } = useConnectedConfirmFlow({
-    activeWallet,
-    confirmAttemptGenerationRef,
-    depositAssets,
-    hasAcknowledgedRiskWarning,
-    isExecutingRef,
+    activeWallet: c.activeWallet,
+    confirmAttemptGenerationRef: c.confirmAttemptGenerationRef,
+    depositAssets: c.depositAssets,
+    hasAcknowledgedRiskWarning: c.hasAcknowledgedRiskWarning,
+    isExecutingRef: c.isExecutingRef,
     isHighWalletMismatchRisk,
     locale,
     proxyAddress,
-    quoteRequestRef,
-    selectedAsset,
-    setCancelTxHash,
-    setDepositResponse,
-    setExecutionError,
-    setExecutionRiskWarning,
-    setExecutionSubmittedAtMs,
-    setExecutionTxHash,
-    setHasAcknowledgedRiskWarning,
-    setIsExecuting,
-    setQuoteWarning,
-    setSnapshot,
-    setSubmittedOrderId,
-    setTransferAddress,
-    snapshot,
-    transferAddress,
-    walletAddress,
+    quoteRequestRef: c.quoteRequestRef,
+    selectedAsset: c.selectedAsset,
+    setCancelTxHash: c.setCancelTxHash,
+    setDepositResponse: c.setDepositResponse,
+    setExecutionError: c.setExecutionError,
+    setExecutionRiskWarning: c.setExecutionRiskWarning,
+    setExecutionSubmittedAtMs: c.setExecutionSubmittedAtMs,
+    setExecutionTxHash: c.setExecutionTxHash,
+    setHasAcknowledgedRiskWarning: c.setHasAcknowledgedRiskWarning,
+    setIsExecuting: c.setIsExecuting,
+    setQuoteWarning: c.setQuoteWarning,
+    setSnapshot: c.setSnapshot,
+    setSubmittedOrderId: c.setSubmittedOrderId,
+    setTransferAddress: tf.setTransferAddress,
+    snapshot: c.snapshot,
+    transferAddress: tf.transferAddress,
+    walletAddress: c.walletAddress,
   });
-
-  const resetConfirmProgress = useCallback(() => {
-    abandonConfirmAttempt(confirmAttemptGenerationRef);
-    quoteRequestRef.current += 1;
-    setIsExecuting(false);
-    isExecutingRef.current = false;
-    setExecutionError("");
-    setExecutionRiskWarning("");
-    setHasAcknowledgedRiskWarning(false);
-  }, []);
-
-  const handleCancelDlnOrder = useCallback(async () => {
-    if (!submittedOrderId || !activeWallet) return;
-    setIsCancellingOrder(true);
-    setExecutionError("");
-
-    try {
-      const cancelTx = await getDlnCancelTx(submittedOrderId);
-      const ethereumProvider = await getWalletEthereumProvider(activeWallet);
-      await switchEvmChain(ethereumProvider, String(cancelTx.chainId));
-      const txHash = await sendPreparedEvmTx(ethereumProvider, cancelTx);
-      setCancelTxHash(txHash);
-    } catch (error) {
-      setExecutionError(formatExecutionError(error, locale, "cancel"));
-    } finally {
-      setIsCancellingOrder(false);
-    }
-  }, [activeWallet, locale, submittedOrderId]);
-
-  const goBack = useCallback(() => {
-    if (step === "home") return;
-    if (step === "confirm") {
-      resetConfirmProgress();
-      setStep("amount");
-      return;
-    }
-    if (step === "asset" || step === "transfer") setStep("home");
-    if (step === "amount") setStep("asset");
-  }, [resetConfirmProgress, step]);
 
   return (
     <>
@@ -562,7 +267,6 @@ function DrawerContent({
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
             className="fixed bottom-0 left-0 right-0 z-50 flex max-h-[85vh] min-h-0 w-full max-w-[448px] touch-pan-y flex-col overflow-y-auto overscroll-y-contain rounded-t-3xl border-t border-white/10 mx-auto"
             style={{
-              // 与 SettingsDrawer 主面板一致（仅抽屉壳背景/阴影）
               background: "linear-gradient(180deg, #1A0D2E 0%, #0D0518 100%)",
               boxShadow: "0 -24px 80px rgba(0,0,0,0.8)",
             }}
@@ -573,9 +277,10 @@ function DrawerContent({
 
             <div className="flex flex-col px-6 pb-7">
               <div className="relative mb-6 flex shrink-0 items-center justify-center">
-                {step !== "home" && (
+                {c.step !== "home" && (
                   <button
-                    onClick={goBack}
+                    type="button"
+                    onClick={c.goBack}
                     className="absolute left-0 flex h-8 w-8 items-center justify-center rounded-full text-white/50 hover:bg-white/10 hover:text-white"
                   >
                     <ArrowLeft size={18} />
@@ -583,7 +288,7 @@ function DrawerContent({
                 )}
                 <div className="text-center">
                   <h2 className="text-xl font-black text-white">
-                    {step === "transfer"
+                    {c.step === "transfer"
                       ? (locale === "zh" ? "转入加密货币" : "Transfer Crypto")
                       : (locale === "zh" ? "充值" : "Deposit")}
                   </h2>
@@ -591,12 +296,12 @@ function DrawerContent({
                     Polymarket {locale === "zh" ? "余额" : "Balance"}: ${Number(balanceUsd || 0).toFixed(2)}
                   </p>
                 </div>
-                {step === "confirm" && snapshot && !hasSubmittedTx ? (
+                {c.step === "confirm" && c.snapshot && !c.hasSubmittedTx ? (
                   <QuoteCountdownRing
-                    key={`${snapshot.quotedAtMs}-${snapshot.expiresAtMs}-${quoteAutoRefreshNonce}`}
-                    expiresAtMs={snapshot.expiresAtMs}
+                    key={`${c.snapshot.quotedAtMs}-${c.snapshot.expiresAtMs}-${c.quoteAutoRefreshNonce}`}
+                    expiresAtMs={c.snapshot.expiresAtMs}
                     locale={locale}
-                    quotedAtMs={snapshot.quotedAtMs}
+                    quotedAtMs={c.snapshot.quotedAtMs}
                   />
                 ) : (
                   <button
@@ -609,41 +314,41 @@ function DrawerContent({
                 )}
               </div>
 
-              {step === "home" && (
+              {c.step === "home" && (
                 <HomeStep
                   fundsTermsLinkLabel={t.fundsMovementTerms.linkLabel}
-                  onOpenFundsTerms={() => setFundsTermsOpen(true)}
-                  showConnectedWalletOption={showConnectedWalletOption}
+                  onOpenFundsTerms={() => c.setFundsTermsOpen(true)}
+                  showConnectedWalletOption={c.showConnectedWalletOption}
                   walletLabel={walletLabel}
-                  walletUsdLoading={walletBalancesLoading}
-                  walletUsd={totalWalletUsd}
+                  walletUsdLoading={c.walletBalancesLoading}
+                  walletUsd={c.totalWalletUsd}
                   onWallet={openConnectedAssetStep}
-                  onTransfer={openTransferStep}
+                  onTransfer={tf.openTransferStep}
                 />
               )}
 
-              {step === "asset" && (
+              {c.step === "asset" && (
                 <AssetStep
-                  assets={assetsWithBalances}
-                  assetsLoading={assetsLoading}
+                  assets={c.assetsWithBalances}
+                  assetsLoading={c.assetsLoading}
                   locale={locale}
                   onSelect={handleSelectAsset}
                 />
               )}
 
-              {step === "amount" && selectedAsset && (
+              {c.step === "amount" && c.selectedAsset && (
                 (() => {
                   const connectedMinDepositUsd = getTransferChainMinUsd(
-                    selectedAsset.chainName,
-                    selectedAsset.chainId,
-                    depositAssets
+                    c.selectedAsset.chainName,
+                    c.selectedAsset.chainId,
+                    c.depositAssets
                   );
                   return (
                 <AmountStep
-                  amountUsd={amountUsd}
-                  asset={selectedAsset}
-                  error={quoteError}
-                  isQuoting={isQuoting}
+                  amountUsd={c.amountUsd}
+                  asset={c.selectedAsset}
+                  error={c.quoteError}
+                  isQuoting={c.isQuoting}
                   minDepositUsd={connectedMinDepositUsd}
                   onAmountBlur={handleAmountBlur}
                   onAmountChange={handleAmountChange}
@@ -654,46 +359,45 @@ function DrawerContent({
                 })()
               )}
 
-              {step === "confirm" && selectedAsset && snapshot && (
+              {c.step === "confirm" && c.selectedAsset && c.snapshot && (
                 <ConfirmStep
-                  cancelTxHash={cancelTxHash}
+                  cancelTxHash={c.cancelTxHash}
                   depositBridgeComplete={depositBridgeComplete}
                   dlnStatus={dlnStatus.status}
-                  error={executionError}
-                  executionRiskWarning={executionRiskWarning}
-                  hasSubmittedTx={hasSubmittedTx}
-                  hasUnconfirmedRiskWarning={hasHighWalletMismatchRisk && !hasAcknowledgedRiskWarning}
-                  isCancellingOrder={isCancellingOrder}
-                  isExecuting={isExecuting}
-                  isQuoting={isQuoting}
-                  onCancelOrder={handleCancelDlnOrder}
+                  error={c.executionError}
+                  executionRiskWarning={c.executionRiskWarning}
+                  hasSubmittedTx={c.hasSubmittedTx}
+                  hasUnconfirmedRiskWarning={c.hasHighWalletMismatchRisk && !c.hasAcknowledgedRiskWarning}
+                  isCancellingOrder={c.isCancellingOrder}
+                  isExecuting={c.isExecuting}
+                  isQuoting={c.isQuoting}
+                  onCancelOrder={c.handleCancelDlnOrder}
                   onConfirm={handleConfirmOrder}
-                  onFallbackToTransfer={openTransferStep}
-                  quoteWarning={quoteWarning}
-                  snapshot={snapshot}
+                  onFallbackToTransfer={tf.openTransferStep}
+                  quoteWarning={c.quoteWarning}
+                  snapshot={c.snapshot}
                   walletLabel={walletLabel}
                 />
               )}
 
-              {step === "transfer" && (
-                // 红条仅展示收款地址生成等业务错误；桥 status 轮询失败由 SWR 间隔自动重试，不并入 error
+              {c.step === "transfer" && (
                 <TransferStep
-                  assets={transferAssets}
-                  chainOptions={transferChainOptions}
-                  copied={copied}
-                  error={transferError}
-                  isCreating={isCreatingTransferAddress}
+                  assets={tf.transferAssets}
+                  chainOptions={tf.transferChainOptions}
+                  copied={tf.copied}
+                  error={tf.transferError}
+                  isCreating={tf.isCreatingTransferAddress}
                   locale={locale}
-                  onAssetChange={setSelectedTransferAssetId}
-                  onChainChange={setSelectedTransferChainId}
-                  onCopy={handleCopy}
-                  onCreate={handleCreateTransferAddress}
-                  onRetryPolling={() => void transferStatus.mutate()}
-                  selectedAssetId={selectedTransferAssetId}
-                  selectedChainId={selectedTransferChainId}
-                  statusCode={transferLatestStatus}
+                  onAssetChange={tf.setSelectedTransferAssetId}
+                  onChainChange={tf.setSelectedTransferChainId}
+                  onCopy={tf.handleCopy}
+                  onCreate={tf.handleCreateTransferAddress}
+                  onRetryPolling={() => void tf.transferStatus.mutate()}
+                  selectedAssetId={tf.selectedTransferAssetId}
+                  selectedChainId={tf.selectedTransferChainId}
+                  statusCode={tf.transferLatestStatus}
                   statusText={locale === "zh" ? "等待转账" : "Waiting"}
-                  transferAddress={transferAddress}
+                  transferAddress={tf.transferAddress}
                 />
               )}
             </div>
@@ -701,19 +405,9 @@ function DrawerContent({
         </>
         )}
       </AnimatePresence>
-      <FundsMovementTermsPanel isOpen={fundsTermsOpen} onClose={() => setFundsTermsOpen(false)} />
+      <FundsMovementTermsPanel isOpen={c.fundsTermsOpen} onClose={() => c.setFundsTermsOpen(false)} />
     </>
   );
-}
-
-function isHighWalletMismatchRisk(snapshot: ExecutionSnapshot): boolean {
-  if (snapshot.kind === "direct-transfer") return false;
-  const sendUsd = snapshot.sendUsd;
-  const receiveUsd = snapshot.receiveUsd;
-  if (!Number.isFinite(sendUsd) || !Number.isFinite(receiveUsd)) return false;
-  if ((sendUsd ?? 0) < 5) return false;
-  const diffRatio = Math.abs((sendUsd ?? 0) - (receiveUsd ?? 0)) / (sendUsd ?? 1);
-  return diffRatio > 0.2;
 }
 
 export function DepositDrawer(props: DepositDrawerProps) {
@@ -721,4 +415,3 @@ export function DepositDrawer(props: DepositDrawerProps) {
 
   return createPortal(<DrawerContent {...props} />, document.body);
 }
-
