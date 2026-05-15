@@ -6,8 +6,9 @@ import { usePrivy, useWallets, useCreateWallet, useActiveWallet } from "@privy-i
 import { clearCredsCache, shortenAddress } from "@/lib/utils";
 import { selectPrimaryWallet } from "@/lib/primaryWallet";
 import { shouldSyncPrivyActiveWallet } from "@/lib/privyActiveWalletSync";
-import { isAccountDrift, normalizeAddress } from "@/lib/accountSwitchGuard";
+import { normalizeAddress } from "@/lib/accountSwitchGuard";
 import { useBalanceSync } from "@/auth/useBalanceSync";
+import { useExternalAccountDrift } from "@/auth/useExternalAccountDrift";
 
 // --- Context Value Type ---
 interface PolymarketAuthContextValue {
@@ -50,10 +51,6 @@ export function PolymarketAuthProvider({ children }: { children: ReactNode }) {
   const [proxyAddress, setProxyAddress] = useState<string | null>(null);
   const [hasCreds, setHasCreds] = useState(false);
   const [stickyExternalWalletClientType, setStickyExternalWalletClientType] = useState<string | null>(null);
-  const [isReloginPending, setIsReloginPending] = useState(false);
-  const [reloginRequested, setReloginRequested] = useState(false);
-  /** 重登流程中暂停漂移检测，避免登出窗口期内再次弹出阻断层 */
-  const [suppressAccountDrift, setSuppressAccountDrift] = useState(false);
 
   const isEvmSignerReady = useMemo(
     () =>
@@ -65,6 +62,7 @@ export function PolymarketAuthProvider({ children }: { children: ReactNode }) {
     [wallets, user?.wallet?.address, stickyExternalWalletClientType]
   );
   const sessionAddress = useMemo(() => normalizeAddress(user?.wallet?.address), [user?.wallet?.address]);
+  const hasTriedCreateWalletRef = useRef(false);
 
   const {
     usdcBalance,
@@ -83,6 +81,29 @@ export function PolymarketAuthProvider({ children }: { children: ReactNode }) {
     setHasCreds,
     setWalletAddress,
     setProxyAddress,
+  });
+
+  const performSessionLogout = useCallback(async () => {
+    clearCredsCache();
+    setWalletAddress("");
+    setProxyAddress(null);
+    setHasCreds(false);
+    resetBalanceState();
+    hasTriedCreateWalletRef.current = false;
+    setStickyExternalWalletClientType(null);
+    await logout();
+    console.log("[退出登录] 已清除所有状态 ✅");
+  }, [logout, resetBalanceState]);
+
+  const { clearAccountChangeDebounce, resetReloginState } = useExternalAccountDrift({
+    ready,
+    authenticated,
+    user,
+    wallets,
+    sessionAddress,
+    stickyExternalWalletClientType,
+    login,
+    performLogout: performSessionLogout,
   });
 
   // --- 与 Privy active wallet 对齐：选主结果与 SDK 当前 active 地址不一致时显式 setActiveWallet ---
@@ -106,56 +127,11 @@ export function PolymarketAuthProvider({ children }: { children: ReactNode }) {
     setActiveWallet,
   ]);
 
-  // --- 防护机制（Provider 级别） ---
-  const hasTriedCreateWalletRef = useRef(false);
-  const accountChangeDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const prevAuthenticatedRef = useRef<boolean | null>(null);
-  const reloginAfterExternalDriftRef = useRef<() => Promise<void>>(async () => {});
-
-  const clearAccountChangeDebounce = useCallback(() => {
-    if (accountChangeDebounceRef.current) {
-      clearTimeout(accountChangeDebounceRef.current);
-      accountChangeDebounceRef.current = null;
-    }
-  }, []);
-
-  // --- 完整退出登录：清除所有缓存 + 重置所有 ref ---
   const handleLogout = useCallback(async () => {
-    // 1. 清除 localStorage 中的 CLOB creds
-    clearCredsCache();
-    // 2. 重置内存状态
-    setWalletAddress("");
-    setProxyAddress(null);
-    setHasCreds(false);
-    resetBalanceState();
-    // 3. 重置所有 ref，让下次登录时能重新触发
-    hasTriedCreateWalletRef.current = false;
-    setStickyExternalWalletClientType(null);
     clearAccountChangeDebounce();
-    setIsReloginPending(false);
-    // 4. 调用 Privy logout（清除 session/cookie/JWT）
-    await logout();
-    console.log("[退出登录] 已清除所有状态 ✅");
-  }, [logout, clearAccountChangeDebounce, resetBalanceState]);
-
-  const handleReloginWithNewAccount = useCallback(async () => {
-    if (isReloginPending) return;
-    setSuppressAccountDrift(true);
-    clearAccountChangeDebounce();
-    setIsReloginPending(true);
-    try {
-      await handleLogout();
-      setReloginRequested(true);
-    } catch (error) {
-      console.warn("[账户切换检测] 重新登录流程失败:", error);
-      setIsReloginPending(false);
-      setSuppressAccountDrift(false);
-    }
-  }, [handleLogout, isReloginPending, clearAccountChangeDebounce]);
-
-  useEffect(() => {
-    reloginAfterExternalDriftRef.current = handleReloginWithNewAccount;
-  }, [handleReloginWithNewAccount]);
+    resetReloginState();
+    await performSessionLogout();
+  }, [clearAccountChangeDebounce, resetReloginState, performSessionLogout]);
 
   // --- 自动为社交登录用户创建 Embedded Wallet ---
   useEffect(() => {
@@ -169,101 +145,6 @@ export function PolymarketAuthProvider({ children }: { children: ReactNode }) {
         .catch(err => console.warn("[自动钱包] Embedded Wallet 创建失败（可能已存在）:", err));
     }
   }, [ready, authenticated, user, wallets, createWallet]);
-
-  // === 状态驱动自动重登：登出完成（authenticated=false）后自动触发 login ===
-  useEffect(() => {
-    if (!reloginRequested || !ready || authenticated) return;
-    login();
-    setReloginRequested(false);
-    setIsReloginPending(false);
-  }, [reloginRequested, ready, authenticated, login]);
-
-  // === 重登完成后恢复漂移检测（仅在一次「未登录 -> 已登录」跃迁时解除抑制）===
-  useEffect(() => {
-    if (prevAuthenticatedRef.current === null) {
-      prevAuthenticatedRef.current = authenticated;
-      return;
-    }
-    const prev = prevAuthenticatedRef.current;
-    prevAuthenticatedRef.current = authenticated;
-    if (prev === false && authenticated && user) {
-      setSuppressAccountDrift(false);
-    }
-  }, [authenticated, user]);
-
-  // === 外链扩展账户切换检测（accountsChanged）：漂移后与 Polymarket 一致，自动登出并拉起登录 ===
-  useEffect(() => {
-    if (suppressAccountDrift) {
-      clearAccountChangeDebounce();
-      return;
-    }
-
-    if (!ready || !authenticated || !sessionAddress || !Array.isArray(wallets) || wallets.length === 0) {
-      clearAccountChangeDebounce();
-      return;
-    }
-
-    const primaryWallet = selectPrimaryWallet(wallets, user?.wallet?.address, {
-      stickyClientType: stickyExternalWalletClientType,
-    });
-    if (!primaryWallet || !primaryWallet.walletClientType || primaryWallet.walletClientType === "privy") {
-      return;
-    }
-
-    let cancelled = false;
-    type EthereumProviderLike = {
-      on?: (event: string, handler: (...args: any[]) => void) => void;
-      removeListener?: (event: string, handler: (...args: any[]) => void) => void;
-      request?: (args: { method: string }) => Promise<unknown>;
-    };
-
-    const processAccountCandidate = (candidate: string | null) => {
-      if (cancelled || !sessionAddress || !candidate) return;
-      if (accountChangeDebounceRef.current) {
-        clearTimeout(accountChangeDebounceRef.current);
-      }
-      accountChangeDebounceRef.current = setTimeout(() => {
-        if (cancelled) return;
-        if (isAccountDrift(sessionAddress, candidate)) {
-          void reloginAfterExternalDriftRef.current();
-        }
-      }, 300);
-    };
-
-    let provider: EthereumProviderLike | null = null;
-    const accountsChangedHandler = (accounts: string[]) => {
-      const latest = normalizeAddress(accounts?.[0]);
-      processAccountCandidate(latest);
-    };
-
-    void (async () => {
-      try {
-        provider = (await primaryWallet.getEthereumProvider()) as EthereumProviderLike;
-        if (cancelled || !provider) return;
-        provider.on?.("accountsChanged", accountsChangedHandler);
-        const initialAccounts = await provider.request?.({ method: "eth_accounts" });
-        const initial = Array.isArray(initialAccounts) ? normalizeAddress(initialAccounts[0]) : null;
-        processAccountCandidate(initial);
-      } catch (error) {
-        console.warn("[账户切换检测] 监听 provider 失败:", error);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-      clearAccountChangeDebounce();
-      provider?.removeListener?.("accountsChanged", accountsChangedHandler);
-    };
-  }, [
-    ready,
-    authenticated,
-    wallets,
-    sessionAddress,
-    user?.wallet?.address,
-    stickyExternalWalletClientType,
-    suppressAccountDrift,
-    clearAccountChangeDebounce,
-  ]);
 
   // Derived Values — Google 登录时 email 存在 user.google.email 而非 user.email.address
   const displayIdentifier = user?.twitter?.username 
