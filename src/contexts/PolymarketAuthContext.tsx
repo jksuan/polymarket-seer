@@ -26,6 +26,7 @@ import { selectPrimaryWallet } from "@/lib/primaryWallet";
 import { shouldSyncPrivyActiveWallet } from "@/lib/privyActiveWalletSync";
 import { isAccountDrift, normalizeAddress } from "@/lib/accountSwitchGuard";
 import { isValidApiKeyCreds } from "@/lib/clobApiKeyCreds";
+import { resolveClobApiKeyCreds } from "@/auth/resolveClobApiKeyCreds";
 
 /** 首次进入后拉余额的最大尝试次数（含第一次） */
 const BALANCE_INITIAL_MAX_ATTEMPTS = 4;
@@ -67,22 +68,6 @@ interface PolymarketAuthContextValue {
 }
 
 const PolymarketAuthContext = createContext<PolymarketAuthContextValue | null>(null);
-
-// --- 判断是否为用户主动拒绝签名 ---
-function isUserRejection(err: any): boolean {
-  const msg = String(err?.message || err || "").toLowerCase();
-  return msg.includes("denied") || msg.includes("rejected") || msg.includes("user refused")
-    || msg.includes("user cancelled") || msg.includes("user canceled");
-}
-
-// --- 判断是否为 CLOB 永久性失败（账户不存在） ---
-function isPermanentClobFailure(err: any): boolean {
-  const msg = String(err?.message || err || "").toLowerCase();
-  const data = err?.response?.data || err?.data;
-  const dataStr = JSON.stringify(data || "").toLowerCase();
-  return msg.includes("could not derive api key") || dataStr.includes("could not derive api key")
-    || msg.includes("could not create api key") || dataStr.includes("could not create api key");
-}
 
 // --- Provider ---
 export function PolymarketAuthProvider({ children }: { children: ReactNode }) {
@@ -249,82 +234,23 @@ export function PolymarketAuthProvider({ children }: { children: ReactNode }) {
       const derivedProxy = deriveSafe(wallet.address, SAFE_FACTORY_POLYGON);
       setProxyAddress(derivedProxy);
 
-      let creds = getCachedCreds(wallet.address);
-      if (creds && !isValidApiKeyCreds(creds)) {
-        clearCachedCredsForWallet(wallet.address);
-        creds = null;
-      }
-
-      if (!creds) {
+      if (!getCachedCreds(wallet.address)) {
         await new Promise((r) => setTimeout(r, 200));
-        creds = getCachedCreds(wallet.address);
-        if (creds && !isValidApiKeyCreds(creds)) {
-          clearCachedCredsForWallet(wallet.address);
-          creds = null;
-        }
       }
 
-      const tryCreateApiKey = async () => {
-        try {
-          const created = await clobClient.createApiKey();
-          if (isValidApiKeyCreds(created)) {
-            creds = created;
-            console.log("[CLOB] createApiKey 成功 ✅");
-            return;
-          }
-          console.log("[CLOB] createApiKey 未返回有效密钥");
-        } catch (createErr: any) {
-          if (isUserRejection(createErr)) {
-            console.log("[CLOB] 用户拒绝签名");
-          } else if (isPermanentClobFailure(createErr)) {
-            console.log("[CLOB] 注册被拒绝。可能原因：账号在 Polygon 上无资金记录或未发生交互");
-          } else {
-            console.log("[CLOB] 无法注册 API Key。原因：" + (createErr?.message || "未知报错"));
-          }
-        }
-      };
-
-      // --- CLOB API Key 获取（仅一次）：先 derive 再 create ---
-      if (!creds && !hasTriedDeriveCredsRef.current) {
-        hasTriedDeriveCredsRef.current = true;
-        console.log("[CLOB] 缓存中无 API Key，尝试获取...");
-        try {
-          await wallet.switchChain(POLYGON_CHAIN_ID);
-          try {
-            const derived = await clobClient.deriveApiKey();
-            if (isValidApiKeyCreds(derived)) {
-              creds = derived;
-              console.log("[CLOB] deriveApiKey 成功 ✅");
-            } else {
-              console.log("[CLOB] deriveApiKey 未返回有效密钥（可能服务端 400），尝试 createApiKey...");
-              await tryCreateApiKey();
-            }
-          } catch (deriveErr: any) {
-            if (isUserRejection(deriveErr)) {
-              console.log("[CLOB] 用户拒绝签名");
-            } else {
-              if (isPermanentClobFailure(deriveErr)) {
-                console.log("[CLOB] 链上无可用 API Key（新账号），准备注册...");
-              } else {
-                console.log("[CLOB] deriveApiKey 发生未知错误，尝试备用注册...");
-              }
-              await tryCreateApiKey();
-            }
-          }
-          if (isValidApiKeyCreds(creds)) {
-            setCachedCreds(wallet.address, creds);
-            setHasCreds(true);
-            console.log("[CLOB] API Key 已生成并缓存");
-          } else {
-            creds = null;
-            setHasCreds(false);
-          }
-        } catch (keyErr: any) {
-          console.warn("[CLOB] API Key 获取流程异常:", keyErr);
-        }
-      } else if (isValidApiKeyCreds(creds)) {
-        setHasCreds(true);
-      }
+      const { creds, hasCreds: resolvedHasCreds } = await resolveClobApiKeyCreds({
+        walletAddress: wallet.address,
+        getCachedCreds,
+        clearCachedCredsForWallet,
+        setCachedCreds,
+        switchChain: () => wallet.switchChain(POLYGON_CHAIN_ID),
+        clobClient,
+        hasAttemptedDerive: hasTriedDeriveCredsRef.current,
+        markDeriveAttempted: () => {
+          hasTriedDeriveCredsRef.current = true;
+        },
+      });
+      setHasCreds(resolvedHasCreds);
 
       // --- 余额：优先 CLOB，失败或无有效数据则链上 USDC.e（读 proxy Safe）---
       if (isValidApiKeyCreds(creds)) {
