@@ -51,6 +51,11 @@ export function setCachedCreds(walletAddress: string, creds: any): void {
   localStorage.setItem(`poly_creds_${walletAddress}`, JSON.stringify(creds));
 }
 
+export function clearCachedCredsForWallet(walletAddress: string): void {
+  if (typeof window === "undefined" || !walletAddress) return;
+  localStorage.removeItem(`poly_creds_${walletAddress}`);
+}
+
 export function shortenAddress(address: string, prefixLen = 6, suffixLen = 4): string {
   if (!address) return "";
   return `${address.slice(0, prefixLen)}...${address.slice(-suffixLen)}`;
