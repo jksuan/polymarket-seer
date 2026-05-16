@@ -9,6 +9,7 @@ import {
   estimateUsdValue,
   normalizeSupportedAssets,
   readAssetBalance,
+  sumVisibleWalletUsd,
 } from "./assets";
 import { isEmailOrSocialLogin } from "./connected/loginIdentity";
 import { formatExecutionError } from "./errors";
@@ -90,7 +91,7 @@ export function useDepositDrawerController({
     [assetBalances, assetUsdValues, depositAssets]
   );
   const totalWalletUsd = useMemo(
-    () => assetsWithBalances.reduce((sum, asset) => sum + (asset.usdValue ?? 0), 0),
+    () => sumVisibleWalletUsd(assetsWithBalances),
     [assetsWithBalances]
   );
 

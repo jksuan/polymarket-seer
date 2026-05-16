@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { DepositAsset } from "./types";
-import { normalizeSupportedAssets, sortVisibleAssets } from "./assets";
+import { normalizeSupportedAssets, sortVisibleAssets, sumVisibleWalletUsd } from "./assets";
 
 describe("normalizeSupportedAssets", () => {
   it("将 Polygon 上 bridge 返回的 USDT0 规范为 USDT，以便 Transfer 白名单与网络列表一致", () => {
@@ -107,5 +107,36 @@ describe("normalizeSupportedAssets", () => {
     expect(visible[0]?.tokenAddress.toLowerCase()).toBe(
       "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
     );
+  });
+
+  it("首页钱包总余额对 137:native 去重后求和，避免 POL 双计", () => {
+    const list: DepositAsset[] = [
+      {
+        id: "137-1010",
+        chainId: "137",
+        chainName: "Polygon",
+        symbol: "POL",
+        name: "POL",
+        tokenAddress: "0x0000000000000000000000000000000000001010",
+        decimals: 18,
+        isNative: true,
+        balance: "46.62",
+        usdValue: 4.23,
+      },
+      {
+        id: "137-eee",
+        chainId: "137",
+        chainName: "Polygon",
+        symbol: "POL",
+        name: "Polygon",
+        tokenAddress: "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+        decimals: 18,
+        isNative: true,
+        balance: "46.62",
+        usdValue: 4.23,
+      },
+    ];
+
+    expect(sumVisibleWalletUsd(list)).toBe(4.23);
   });
 });

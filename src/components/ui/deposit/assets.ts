@@ -102,6 +102,11 @@ function sortPreferredAssets(assets: DepositAsset[]): DepositAsset[] {
   });
 }
 
+/** 与 sortVisibleAssets 相同去重规则，用于首页钱包总余额（避免 137 多路 native 重复计价）。 */
+export function sumVisibleWalletUsd(assets: DepositAsset[]): number {
+  return sortVisibleAssets(assets).reduce((sum, asset) => sum + (asset.usdValue ?? 0), 0);
+}
+
 export function sortVisibleAssets(assets: DepositAsset[]): DepositAsset[] {
   const visibleAssets = assets
     .filter((asset) => isSupportedReadableChain(asset.chainId))
