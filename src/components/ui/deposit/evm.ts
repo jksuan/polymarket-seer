@@ -75,9 +75,69 @@ function getWeb3Provider(provider: Eip1193Provider) {
   );
 }
 
+type EvmTxRequest = {
+  from: string;
+  to: string;
+  data: string;
+  value: string;
+};
+
+/** JSON-RPC quantity：禁止 0x 后出现前导 0（Go hexutil.Big 会拒绝） */
+export function formatRpcQuantityHex(value: ethers.BigNumberish): string {
+  return ethers.utils.hexValue(value);
+}
+
+async function buildEvmTxRequest(
+  provider: Eip1193Provider,
+  tx: ExecutionTx
+): Promise<EvmTxRequest> {
+  const web3Provider = getWeb3Provider(provider);
+  const signer = web3Provider.getSigner();
+  const from = await signer.getAddress();
+  const valueBn = ethers.BigNumber.from(tx.value || "0");
+
+  return {
+    from,
+    to: tx.to,
+    data: tx.data || "0x",
+    value: formatRpcQuantityHex(valueBn),
+  };
+}
+
 /**
- * 通过钱包发送交易。不手动设置 gasLimit / gasPrice，由 MetaMask 估算（与重构前 63d2c77 行为一致）。
- * 手动 gasLimit 会导致 Polygon 上出现 maxFee≈0、链上失败且 Polygonscan 查不到记录。
+ * 发送前经钱包 eth_estimateGas 预检（不改 value / gasLimit）。
+ * 避免 MetaMask 在估 gas 失败时回退到 49M limit 并触发 Polygon cap 报错。
+ */
+export async function preflightWalletEstimateGas(
+  provider: Eip1193Provider,
+  request: EvmTxRequest
+): Promise<void> {
+  await provider.request({
+    method: "eth_estimateGas",
+    params: [request],
+  });
+}
+
+/**
+ * 原生币转账：链上余额必须严格大于 value，否则无法支付网络费。
+ * 不做固定 gas 预留，仅依据 getBalance 与 value 比较。
+ */
+export async function assertNativeTransferBalanceCoversValue(
+  provider: Eip1193Provider,
+  valueWei: ethers.BigNumberish
+): Promise<void> {
+  const value = ethers.BigNumber.from(valueWei);
+  if (value.lte(0)) return;
+
+  const signer = getWeb3Provider(provider).getSigner();
+  const balance = await signer.getBalance();
+  if (!balance.gt(value)) {
+    throw new Error("insufficient funds for gas * price + value");
+  }
+}
+
+/**
+ * 通过钱包发送交易。不设置 gasLimit / gasPrice，由 MetaMask 估算。
  */
 export async function sendPreparedEvmTx(
   provider: Eip1193Provider,
@@ -85,21 +145,21 @@ export async function sendPreparedEvmTx(
   options?: SendPreparedEvmTxOptions
 ): Promise<string> {
   const valueBn = ethers.BigNumber.from(tx.value || "0");
-  const valueHex = ethers.utils.hexlify(valueBn);
+  const request = await buildEvmTxRequest(provider, tx);
 
-  const web3Provider = getWeb3Provider(provider);
-  const signer = web3Provider.getSigner();
-  const from = await signer.getAddress();
+  if (valueBn.gt(0)) {
+    await assertNativeTransferBalanceCoversValue(provider, valueBn);
+    await preflightWalletEstimateGas(provider, request);
+  }
 
-  const txHash = (await web3Provider.send("eth_sendTransaction", [
-    {
-      from,
-      to: tx.to,
-      data: tx.data || "0x",
-      value: valueHex,
-    },
-  ])) as string;
+  const signer = getWeb3Provider(provider).getSigner();
+  const response = await signer.sendTransaction({
+    to: request.to,
+    data: request.data,
+    value: valueBn,
+  });
 
+  const txHash = response.hash;
   if (!txHash) {
     throw new Error("Wallet did not return a transaction hash.");
   }
@@ -109,11 +169,9 @@ export async function sendPreparedEvmTx(
   }
 
   try {
-    const receipt = await web3Provider.waitForTransaction(txHash, 1, 90_000);
+    const receipt = await response.wait(1);
     if (receipt?.status === 0) {
-      throw new Error(
-        "Transaction failed on chain. Lower the amount, keep POL for gas, or use Transfer Crypto."
-      );
+      throw new Error("Transaction failed on chain.");
     }
     return receipt?.transactionHash ?? txHash;
   } catch (error) {

@@ -1,17 +1,12 @@
-/** Connected 确认页执行流（EVM 经 signer.sendTransaction 广播，见 issue #6）。 */
+/** Connected 确认页执行流：交易参数来自 snapshot，gas 由钱包估算（见 issue #6）。 */
 import { useCallback, type MutableRefObject } from "react";
 import type { CreateDepositResponse } from "@/types/bridge";
 import { ensureEvmDepositAddress } from "../addresses";
 import { DEPOSIT_SINGLE_TX_CAP_USD } from "../constants";
-import { formatNativeGasReserveError } from "../nativeGas";
 import { buildExecutionSnapshot, isQuotePriceChanged, resolveExecutionEngine, validateBridgeReceiveMinimum, validateDepositSelection } from "../execution";
 import { formatExecutionError } from "../errors";
 import { executeConnectedOrder } from "../executor";
 import { pollEvmTxReceiptOutcome } from "../evm";
-import {
-  formatNativeAmountClampedWarning,
-  prepareNativeTransferTx,
-} from "../prepareNativeTransfer";
 import { shouldApplyConfirmResult, startConfirmAttempt } from "./confirmAttemptGeneration";
 import type { DepositAsset, ExecutionSnapshot } from "../types";
 
@@ -151,31 +146,9 @@ export function useConnectedConfirmFlow({
       }
       setExecutionRiskWarning("");
 
-      let executionSnapshot = activeSnapshot;
-      if (activeSnapshot.asset.isNative) {
-        try {
-          const prepared = await prepareNativeTransferTx(activeSnapshot, walletAddress, locale);
-          if (prepared.wasClamped) {
-            setQuoteWarning(formatNativeAmountClampedWarning(locale));
-          }
-          executionSnapshot = {
-            ...activeSnapshot,
-            tx: prepared.tx,
-            sourceAmountBaseUnit: prepared.tx.value ?? activeSnapshot.sourceAmountBaseUnit,
-          };
-        } catch (nativeErr) {
-          setExecutionError(
-            nativeErr instanceof Error
-              ? nativeErr.message
-              : formatNativeGasReserveError(locale, activeSnapshot.asset.chainId)
-          );
-          return;
-        }
-      }
-
       const { txHash, orderId } = await executeConnectedOrder({
         locale,
-        snapshot: executionSnapshot,
+        snapshot: activeSnapshot,
         wallet: activeWallet as never,
         walletAddress,
       });
@@ -188,7 +161,7 @@ export function useConnectedConfirmFlow({
         setSubmittedOrderId(orderId);
       }
 
-      const chainId = executionSnapshot.asset.chainId;
+      const chainId = activeSnapshot.asset.chainId;
       void pollEvmTxReceiptOutcome(chainId, txHash).then((outcome) => {
         if (!shouldApplyConfirmResult(confirmAttemptId, confirmAttemptGenerationRef)) {
           return;

@@ -71,26 +71,14 @@ describe("getConnectedDefaultAmountUsd", () => {
 });
 
 describe("getConnectedMaxAllowedUsdForAsset", () => {
-  it("原生 POL：$4.23 余额充 $3 应允许（仅预留约 0.05 POL 作 gas）", () => {
-    const max = getConnectedMaxAllowedUsdForAsset(
-      {
-        isNative: true,
-        chainId: "137",
-        usdValue: 4.23,
-        balance: "47",
-      },
-      100_000
-    );
-    expect(max).toBeGreaterThanOrEqual(3);
-    expect(max).toBeLessThanOrEqual(4.23);
+  it("原生 POL 与 ERC20 均使用 USD 缓冲上限", () => {
+    const max = getConnectedMaxAllowedUsdForAsset({ usdValue: 4.23 }, 100_000);
+    expect(max).toBe(3.23);
   });
 
   it("ERC20 仍使用 USD 缓冲", () => {
     expect(
-      getConnectedMaxAllowedUsdForAsset(
-        { isNative: false, chainId: "1", usdValue: 36.13 },
-        100_000
-      )
+      getConnectedMaxAllowedUsdForAsset({ usdValue: 36.13 }, 100_000)
     ).toBe(35.13);
   });
 });
