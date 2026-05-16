@@ -34,6 +34,20 @@ export function formatExecutionError(
       ? "网络费估算异常，通常因原生币余额未预留 gas。请降低充值金额或补充少量原生币后重试。"
       : "Gas estimation failed, often because the full native balance was sent without reserving gas. Lower the amount or add native tokens for fees.";
   }
+  if (
+    upper.includes("FAILED TO SIGN") ||
+    upper.includes("-32603") ||
+    upper.includes("INTERNAL JSON-RPC")
+  ) {
+    return zh
+      ? "钱包无法签名或提交交易。请确认已切换到正确网络、金额与 gas 合理，或在钱包中拒绝后重试；亦可改用 Transfer Crypto。"
+      : "The wallet could not sign or submit the transaction. Check the network and amount, reject and retry in the wallet, or use Transfer Crypto.";
+  }
+  if (upper.includes("TIMEOUT") && upper.includes("PROVIDERS/")) {
+    return zh
+      ? "交易已提交但暂未在链上确认。请在钱包或区块浏览器查看进度；若长时间无记录，可改用 Transfer Crypto 重试。"
+      : "The transaction was submitted but not confirmed yet. Check your wallet or a block explorer; if nothing appears, retry with Transfer Crypto.";
+  }
   if (upper.includes("NOT CONFIRMED ON CHAIN") || upper.includes("WITHIN 90S")) {
     return zh
       ? "交易未在链上确认（可能已被丢弃）。请在钱包活动记录中查看，或改用 Transfer Crypto。"

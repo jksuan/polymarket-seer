@@ -76,39 +76,28 @@ describe("executeConnectedOrder", () => {
     sendSpy.mockRestore();
   });
 
-  it("原生币直转在余额未预留 gas 时抛出可读错误", async () => {
-    const nativeGas = await import("./nativeGas");
+  it("使用 snapshot.tx 直接发送，不再在 executor 内二次 prepare", async () => {
     vi.spyOn(evmModule, "getWalletEthereumProvider").mockResolvedValue({ request: vi.fn() });
     vi.spyOn(evmModule, "switchEvmChain").mockResolvedValue();
-    vi.spyOn(nativeGas, "getNativeGasReserveWei").mockResolvedValue(ethers.utils.parseEther("0.05"));
-    vi.spyOn(nativeGas, "clampNativeTransferValue").mockReturnValue({
-      valueWei: ethers.BigNumber.from(0),
-      error: "insufficient_for_gas",
-      wasClamped: false,
-    });
+    vi.spyOn(evmModule, "approveErc20IfNeeded").mockResolvedValue();
+    const sendSpy = vi.spyOn(evmModule, "sendPreparedEvmTx").mockResolvedValue("0xtx");
 
     const snapshot = makeSnapshot("evm");
-    snapshot.asset = {
-      ...snapshot.asset,
-      chainId: "137",
-      symbol: "POL",
-      isNative: true,
-      decimals: 18,
-    };
+    snapshot.approveSpender = undefined;
     snapshot.tx = {
-      to: "0x1111111111111111111111111111111111111111",
-      data: "0x",
-      value: ethers.utils.parseEther("1").toString(),
+      to: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      data: "0xdead",
+      value: "123",
     };
 
-    await expect(
-      executeConnectedOrder({
-        locale: "zh",
-        snapshot,
-        wallet: {},
-        walletAddress: "0x3333333333333333333333333333333333333333",
-      })
-    ).rejects.toThrow("保留少量");
+    await executeConnectedOrder({
+      locale: "zh",
+      snapshot,
+      wallet: {},
+      walletAddress: "0x3333333333333333333333333333333333333333",
+    });
+
+    expect(sendSpy).toHaveBeenCalledWith(expect.anything(), snapshot.tx);
 
     vi.restoreAllMocks();
   });

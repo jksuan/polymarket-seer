@@ -4,7 +4,6 @@ import {
   sendPreparedEvmTx,
   switchEvmChain,
 } from "./evm";
-import { prepareNativeTransferTx } from "./prepareNativeTransfer";
 import type { ExecutionSnapshot } from "./types";
 
 export type ExecuteConnectedOrderParams = {
@@ -41,11 +40,7 @@ export async function executeConnectedOrder({
     });
   }
 
-  const txToSend = snapshot.asset.isNative
-    ? (await prepareNativeTransferTx(snapshot, walletAddress, locale)).tx
-    : snapshot.tx;
-
-  const txHash = await sendPreparedEvmTx(ethereumProvider, txToSend);
+  const txHash = await sendPreparedEvmTx(ethereumProvider, snapshot.tx);
   return {
     txHash,
     orderId: snapshot.orderId,

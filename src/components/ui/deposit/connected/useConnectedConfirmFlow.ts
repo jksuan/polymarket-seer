@@ -1,6 +1,4 @@
-/**
- * Connected 确认页执行流。已知问题：Polygon 原生 POL 充值老/新账户仍失败，非 gas 不足，见 issue。
- */
+/** Connected 确认页执行流（EVM 经 signer.sendTransaction 广播，见 issue #6）。 */
 import { useCallback, type MutableRefObject } from "react";
 import type { CreateDepositResponse } from "@/types/bridge";
 import { ensureEvmDepositAddress } from "../addresses";
@@ -9,6 +7,7 @@ import { formatNativeGasReserveError } from "../nativeGas";
 import { buildExecutionSnapshot, isQuotePriceChanged, resolveExecutionEngine, validateBridgeReceiveMinimum, validateDepositSelection } from "../execution";
 import { formatExecutionError } from "../errors";
 import { executeConnectedOrder } from "../executor";
+import { pollEvmTxReceiptOutcome } from "../evm";
 import {
   formatNativeAmountClampedWarning,
   prepareNativeTransferTx,
@@ -152,12 +151,18 @@ export function useConnectedConfirmFlow({
       }
       setExecutionRiskWarning("");
 
+      let executionSnapshot = activeSnapshot;
       if (activeSnapshot.asset.isNative) {
         try {
           const prepared = await prepareNativeTransferTx(activeSnapshot, walletAddress, locale);
           if (prepared.wasClamped) {
             setQuoteWarning(formatNativeAmountClampedWarning(locale));
           }
+          executionSnapshot = {
+            ...activeSnapshot,
+            tx: prepared.tx,
+            sourceAmountBaseUnit: prepared.tx.value ?? activeSnapshot.sourceAmountBaseUnit,
+          };
         } catch (nativeErr) {
           setExecutionError(
             nativeErr instanceof Error
@@ -170,7 +175,7 @@ export function useConnectedConfirmFlow({
 
       const { txHash, orderId } = await executeConnectedOrder({
         locale,
-        snapshot: activeSnapshot,
+        snapshot: executionSnapshot,
         wallet: activeWallet as never,
         walletAddress,
       });
@@ -182,6 +187,20 @@ export function useConnectedConfirmFlow({
       if (orderId) {
         setSubmittedOrderId(orderId);
       }
+
+      const chainId = executionSnapshot.asset.chainId;
+      void pollEvmTxReceiptOutcome(chainId, txHash).then((outcome) => {
+        if (!shouldApplyConfirmResult(confirmAttemptId, confirmAttemptGenerationRef)) {
+          return;
+        }
+        if (outcome === "failed") {
+          setExecutionError(
+            locale === "zh"
+              ? "交易已在链上失败。请检查 MetaMask 中的网络费与金额，或改用 Transfer Crypto。"
+              : "Transaction failed on chain. Check network fees and amount in MetaMask, or use Transfer Crypto."
+          );
+        }
+      });
     } catch (error) {
       setExecutionError(formatExecutionError(error, locale, "execute"));
     } finally {

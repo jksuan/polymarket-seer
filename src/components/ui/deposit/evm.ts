@@ -1,14 +1,14 @@
 import { ethers } from "ethers";
-import { ERC20_EXECUTION_ABI } from "./constants";
-import {
-  EVM_TX_GAS_LIMIT_CAP,
-  isSimpleNativeTransferTx,
-  SIMPLE_NATIVE_TRANSFER_GAS_LIMIT,
-} from "./nativeGas";
+import { ERC20_EXECUTION_ABI, PUBLIC_RPC_URLS } from "./constants";
 import type { DepositAsset, Eip1193Provider, ExecutionTx } from "./types";
 
-/** 等待链上回执的最长时间（未上链/被丢弃时避免 UI 一直卡在等待钱包） */
-const TX_RECEIPT_TIMEOUT_MS = 90_000;
+const RECEIPT_POLL_INTERVAL_MS = 4_000;
+const RECEIPT_POLL_TIMEOUT_MS = 120_000;
+
+export type SendPreparedEvmTxOptions = {
+  /** 为 true 时等待 1 个确认；默认广播后立即返回 hash */
+  waitForReceipt?: boolean;
+};
 
 export async function getWalletEthereumProvider(wallet: unknown): Promise<Eip1193Provider> {
   const maybeWallet = wallet as {
@@ -69,85 +69,86 @@ export async function approveErc20IfNeeded({
   await approval.wait();
 }
 
+function getWeb3Provider(provider: Eip1193Provider) {
+  return new ethers.providers.Web3Provider(
+    provider as ethers.providers.ExternalProvider
+  );
+}
+
+/**
+ * 通过钱包发送交易。不手动设置 gasLimit / gasPrice，由 MetaMask 估算（与重构前 63d2c77 行为一致）。
+ * 手动 gasLimit 会导致 Polygon 上出现 maxFee≈0、链上失败且 Polygonscan 查不到记录。
+ */
 export async function sendPreparedEvmTx(
   provider: Eip1193Provider,
-  tx: ExecutionTx
+  tx: ExecutionTx,
+  options?: SendPreparedEvmTxOptions
 ): Promise<string> {
   const valueBn = ethers.BigNumber.from(tx.value || "0");
   const valueHex = ethers.utils.hexlify(valueBn);
 
-  const web3Provider = new ethers.providers.Web3Provider(
-    provider as ethers.providers.ExternalProvider
-  );
+  const web3Provider = getWeb3Provider(provider);
   const signer = web3Provider.getSigner();
   const from = await signer.getAddress();
 
-  const txRequest: Record<string, string> = {
-    from,
-    to: tx.to,
-    data: tx.data || "0x",
-    value: valueHex,
-  };
+  const txHash = (await web3Provider.send("eth_sendTransaction", [
+    {
+      from,
+      to: tx.to,
+      data: tx.data || "0x",
+      value: valueHex,
+    },
+  ])) as string;
 
-  const feeData = await web3Provider.getFeeData();
-  const gasPrice =
-    feeData.gasPrice ??
-    feeData.maxFeePerGas ??
-    ethers.BigNumber.from(await web3Provider.send("eth_gasPrice", []));
+  if (!txHash) {
+    throw new Error("Wallet did not return a transaction hash.");
+  }
 
-  if (isSimpleNativeTransferTx(tx)) {
-    txRequest.gas = ethers.utils.hexlify(SIMPLE_NATIVE_TRANSFER_GAS_LIMIT);
-    if (feeData.maxFeePerGas) {
-      txRequest.maxFeePerGas = ethers.utils.hexlify(feeData.maxFeePerGas);
-      txRequest.maxPriorityFeePerGas = ethers.utils.hexlify(
-        feeData.maxPriorityFeePerGas ?? feeData.maxFeePerGas
+  if (options?.waitForReceipt !== true) {
+    return txHash;
+  }
+
+  try {
+    const receipt = await web3Provider.waitForTransaction(txHash, 1, 90_000);
+    if (receipt?.status === 0) {
+      throw new Error(
+        "Transaction failed on chain. Lower the amount, keep POL for gas, or use Transfer Crypto."
       );
-    } else {
-      txRequest.gasPrice = ethers.utils.hexlify(gasPrice);
     }
-  } else {
-    try {
-      const estimated = await web3Provider.estimateGas({
-        from,
-        to: tx.to,
-        data: txRequest.data,
-        value: valueHex,
-      });
-      const capped = estimated.gt(EVM_TX_GAS_LIMIT_CAP)
-        ? ethers.BigNumber.from(EVM_TX_GAS_LIMIT_CAP)
-        : estimated;
-      txRequest.gas = ethers.utils.hexlify(capped.mul(120).div(100));
-    } catch {
-      txRequest.gas = ethers.utils.hexlify(EVM_TX_GAS_LIMIT_CAP);
+    return receipt?.transactionHash ?? txHash;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (message.toUpperCase().includes("TIMEOUT")) {
+      return txHash;
     }
-    if (feeData.maxFeePerGas) {
-      txRequest.maxFeePerGas = ethers.utils.hexlify(feeData.maxFeePerGas);
-      txRequest.maxPriorityFeePerGas = ethers.utils.hexlify(
-        feeData.maxPriorityFeePerGas ?? feeData.maxFeePerGas
-      );
-    } else {
-      txRequest.gasPrice = ethers.utils.hexlify(gasPrice);
-    }
+    throw error;
   }
-
-  const txHash = (await web3Provider.send("eth_sendTransaction", [txRequest])) as string;
-
-  const receipt = await web3Provider.waitForTransaction(txHash, 1, TX_RECEIPT_TIMEOUT_MS);
-  if (!receipt) {
-    throw new Error(
-      "Transaction was not confirmed on chain within 90s. It may have been dropped. Check your wallet activity or use Transfer Crypto."
-    );
-  }
-  if (receipt.status === 0) {
-    throw new Error(
-      "Transaction failed on chain. Lower the amount, keep POL for gas, or use Transfer Crypto."
-    );
-  }
-  return receipt.transactionHash ?? txHash;
 }
 
 export function getEthersSigner(provider: Eip1193Provider) {
-  return new ethers.providers.Web3Provider(
-    provider as ethers.providers.ExternalProvider
-  ).getSigner();
+  return getWeb3Provider(provider).getSigner();
+}
+
+/** 广播后轮询链上回执，用于在 UI 展示链上失败（不阻塞签名返回） */
+export async function pollEvmTxReceiptOutcome(
+  chainId: string,
+  txHash: string
+): Promise<"success" | "failed" | "timeout"> {
+  const rpcUrl = PUBLIC_RPC_URLS[chainId];
+  if (!rpcUrl || !txHash) return "timeout";
+
+  const provider = new ethers.providers.JsonRpcProvider(rpcUrl);
+  const deadline = Date.now() + RECEIPT_POLL_TIMEOUT_MS;
+
+  while (Date.now() < deadline) {
+    const receipt = await provider.getTransactionReceipt(txHash);
+    if (receipt) {
+      return receipt.status === 1 ? "success" : "failed";
+    }
+    await new Promise((resolve) => {
+      setTimeout(resolve, RECEIPT_POLL_INTERVAL_MS);
+    });
+  }
+
+  return "timeout";
 }
