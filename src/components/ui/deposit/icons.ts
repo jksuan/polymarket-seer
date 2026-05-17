@@ -6,6 +6,7 @@ const TOKEN_ICON_BY_SYMBOL: Record<string, string> = {
   BNB: "/images/crypto/bnb.svg",
   BUSD: "/images/crypto/busd.svg",
   BTC: "/images/crypto/bitcoin.svg",
+  BTCB: "/images/crypto/bitcoin.svg",
   BITCOIN: "/images/crypto/bitcoin.svg",
   DAI: "/images/crypto/dai.svg",
   ETH: "/images/crypto/ethereum-eth.svg",

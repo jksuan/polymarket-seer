@@ -9,6 +9,9 @@ import { normalizeWithdrawTokenSymbol } from "./withdrawWhitelist";
 
 type ChainOption = { chainId: string; chainName: string };
 
+const PICKER_MENU_CLASS =
+  "absolute bottom-full left-0 right-0 z-20 mb-1 max-h-64 overflow-y-auto rounded-2xl border border-white/10 bg-[#0d1118] p-2 shadow-2xl";
+
 export function WithdrawAssetPickers({
   assetsLoading,
   chainOptions,
@@ -74,8 +77,9 @@ export function WithdrawAssetPickers({
 
   return (
     <div ref={rootRef} className="grid grid-cols-2 gap-3">
-      <div className="relative">
+      <div>
         <p className="mb-2 text-xs font-bold text-white/45">{receiveTokenLabel}</p>
+        <div className="relative">
         <button
           type="button"
           data-testid="withdraw-token-trigger"
@@ -106,7 +110,7 @@ export function WithdrawAssetPickers({
         {tokenOpen ? (
           <div
             data-testid="withdraw-token-menu"
-            className="absolute left-0 right-0 top-[4.25rem] z-20 max-h-64 overflow-y-auto rounded-2xl border border-white/10 bg-[#0d1118] p-2 shadow-2xl"
+            className={PICKER_MENU_CLASS}
           >
             {tokenOptions.map((asset) => {
               const isSelected =
@@ -139,10 +143,12 @@ export function WithdrawAssetPickers({
             })}
           </div>
         ) : null}
+        </div>
       </div>
 
-      <div className="relative">
+      <div>
         <p className="mb-2 text-xs font-bold text-white/45">{receiveChainLabel}</p>
+        <div className="relative">
         <button
           type="button"
           data-testid="withdraw-chain-trigger"
@@ -164,7 +170,7 @@ export function WithdrawAssetPickers({
         {chainOpen ? (
           <div
             data-testid="withdraw-chain-menu"
-            className="absolute left-0 right-0 top-[4.25rem] z-20 max-h-64 overflow-y-auto rounded-2xl border border-white/10 bg-[#0d1118] p-2 shadow-2xl"
+            className={PICKER_MENU_CLASS}
           >
             {chainOptions.map((chain) => (
               <button
@@ -189,10 +195,13 @@ export function WithdrawAssetPickers({
             ))}
           </div>
         ) : null}
+        </div>
       </div>
     </div>
   );
 }
+
+const CHAIN_ICON_SIZE_CLASS = "h-5 w-5";
 
 function ChainIcon({ chainId, chainName }: { chainId?: string; chainName?: string }) {
   const iconUrl = resolveChainIconUrl(chainId, chainName);
@@ -200,7 +209,7 @@ function ChainIcon({ chainId, chainName }: { chainId?: string; chainName?: strin
     return (
       <span
         aria-hidden="true"
-        className="h-4 w-4 shrink-0 rounded-full bg-cover bg-center bg-no-repeat"
+        className={`${CHAIN_ICON_SIZE_CLASS} shrink-0 rounded-full bg-cover bg-center bg-no-repeat`}
         style={{ backgroundImage: `url(${iconUrl})` }}
       />
     );
@@ -210,7 +219,7 @@ function ChainIcon({ chainId, chainName }: { chainId?: string; chainName?: strin
   return (
     <span
       aria-hidden="true"
-      className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-white/20 text-[9px] font-bold text-white/90"
+      className={`flex ${CHAIN_ICON_SIZE_CLASS} shrink-0 items-center justify-center rounded-full bg-white/20 text-[8px] font-bold leading-none text-white/90`}
     >
       {initial}
     </span>
