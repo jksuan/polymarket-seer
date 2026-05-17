@@ -3,7 +3,7 @@
 import { Loader2, Wallet } from "lucide-react";
 import { useLayoutEffect, useRef } from "react";
 import { formatUsd } from "@/components/ui/deposit/format";
-import { WithdrawAssetPickers } from "./WithdrawAssetPickers";
+import { WithdrawAssetPickers } from "@/components/ui/withdraw/WithdrawAssetPickers";
 import { useTranslation } from "@/i18n";
 import { WithdrawBreakdown } from "./WithdrawBreakdown";
 import type { useWithdrawDrawerController } from "./useWithdrawDrawerController";
@@ -21,7 +21,7 @@ export function WithdrawFormStep({ c }: { c: Controller }) {
         <label className="text-xs font-bold text-white/45">{wf.recipientLabel}</label>
         <WithdrawRecipientField
           error={c.recipientError}
-          onChange={c.setRecipientAddr}
+          onChange={(value) => c.setRecipientAddr(value)}
           onUseConnected={c.handleUseConnected}
           showUseConnected={c.showUseConnected}
           useConnectedLabel={wf.useConnected}
