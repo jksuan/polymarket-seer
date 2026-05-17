@@ -30,6 +30,7 @@ const en: TranslationKeys = {
   header: {
     balance: 'Balance',
     deposit: 'Deposit',
+    fundsAriaLabel: 'Funds',
     evmSignerUnavailableTitle: 'EVM wallet unavailable',
     evmSignerUnavailableHint:
       'Switch back to an Ethereum-capable account in your wallet extension, or disconnect and reconnect.',
@@ -396,6 +397,36 @@ const en: TranslationKeys = {
   // ─── Deposit Drawer ───
   deposit: {
     title: 'Deposit USDC',
+  },
+
+  fundsMenu: {
+    title: 'Funds',
+    deposit: 'Deposit',
+    withdraw: 'Withdraw',
+    balanceLabel: (amount: string) => `Balance: $${amount}`,
+  },
+
+  withdrawFlow: {
+    title: 'Withdraw',
+    recipientLabel: 'Recipient address',
+    useConnected: 'Use connected',
+    amountLabel: 'Amount',
+    currency: 'pUSD',
+    balance: (amount: string) => `Balance: ${amount} pUSD`,
+    receiveToken: 'Receive token',
+    receiveChain: 'Receive chain',
+    youWillReceive: 'You will receive',
+    breakdownTitle: 'Transaction breakdown',
+    networkCost: 'Network cost',
+    priceImpact: 'Price impact',
+    maxSlippage: 'Max slippage',
+    enterAmount: 'Enter amount',
+    withdraw: 'Withdraw',
+    withdrawing: 'Processing…',
+    success: 'Withdrawal submitted',
+    failed: 'Withdrawal failed',
+    invalidRecipient: 'Enter a valid recipient address',
+    quoteError: 'Could not fetch quote. Try again.',
   },
 
   /** Deposit flow copy (Connected / amount / confirm) */

@@ -28,6 +28,7 @@ const zh = {
   header: {
     balance: '可用余额',
     deposit: '充值',
+    fundsAriaLabel: '资金操作',
     evmSignerUnavailableTitle: 'EVM 钱包暂不可用',
     evmSignerUnavailableHint:
       '请在钱包扩展中切回支持以太坊的账户，或退出后重新连接。',
@@ -394,6 +395,37 @@ const zh = {
   // ─── 充值抽屉 ───
   deposit: {
     title: '充值 USDC',
+  },
+
+  fundsMenu: {
+    title: '资金',
+    deposit: '充值',
+    withdraw: '提现',
+    balanceLabel: (amount: string) => `余额：$${amount}`,
+  },
+
+  /** 提现抽屉 */
+  withdrawFlow: {
+    title: '提现',
+    recipientLabel: 'Recipient address',
+    useConnected: 'Use connected',
+    amountLabel: 'Amount',
+    currency: 'pUSD',
+    balance: (amount: string) => `Balance: ${amount} pUSD`,
+    receiveToken: 'Receive token',
+    receiveChain: 'Receive chain',
+    youWillReceive: 'You will receive',
+    breakdownTitle: 'Transaction breakdown',
+    networkCost: 'Network cost',
+    priceImpact: 'Price impact',
+    maxSlippage: 'Max slippage',
+    enterAmount: 'Enter amount',
+    withdraw: 'Withdraw',
+    withdrawing: '处理中…',
+    success: '提现已提交',
+    failed: '提现失败',
+    invalidRecipient: '请输入有效的收款地址',
+    quoteError: '无法获取报价，请稍后重试',
   },
 
   /** 充值流程界面文案（Connected / 金额 / 确认） */

@@ -3,10 +3,12 @@
 import { useState, useCallback } from 'react';
 import { resolveOverlayOpen } from '@/auth/sessionOverlays';
 import { useCloseOnSessionEpoch } from '@/auth/useSessionOverlays';
-import { Zap, Wallet, Globe, Plus, Loader2, AlertTriangle } from 'lucide-react';
+import { Zap, Wallet, Globe, ChevronDown, Loader2, AlertTriangle } from 'lucide-react';
 import { usePolymarketAuth } from '@/contexts/PolymarketAuthContext';
 import { SettingsDrawer } from '@/components/ui/SettingsDrawer';
 import { DepositDrawer } from '@/components/ui/DepositDrawer';
+import { WithdrawDrawer } from '@/components/ui/WithdrawDrawer';
+import { FundsActionSheet } from '@/components/ui/FundsActionSheet';
 import { LanguageDrawer } from '@/components/ui/LanguageDrawer';
 import { useTranslation } from '@/i18n';
 
@@ -48,10 +50,14 @@ export function TopHeader({ isSticky = false }: TopHeaderProps = {}) {
 
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [depositOpen, setDepositOpen] = useState(false);
+  const [withdrawOpen, setWithdrawOpen] = useState(false);
+  const [fundsSheetOpen, setFundsSheetOpen] = useState(false);
   const [langOpen, setLangOpen] = useState(false);
 
   const closeHeaderOverlays = useCallback(() => {
     setDepositOpen(false);
+    setWithdrawOpen(false);
+    setFundsSheetOpen(false);
     setSettingsOpen(false);
     setLangOpen(false);
   }, []);
@@ -101,27 +107,31 @@ export function TopHeader({ isSticky = false }: TopHeaderProps = {}) {
                 type="button"
                 disabled={!isEvmSignerReady}
                 aria-disabled={!isEvmSignerReady}
+                aria-haspopup="menu"
+                aria-expanded={fundsSheetOpen}
+                aria-label={t.header.fundsAriaLabel}
                 onClick={() => {
                   if (!isEvmSignerReady) return;
-                  setDepositOpen(true);
+                  setFundsSheetOpen(true);
                 }}
                 aria-busy={isInitialBalanceLoading}
-                className={`flex items-center h-8 bg-[#ADFF2F]/10 border border-[#ADFF2F]/30 rounded-full transition-all overflow-hidden shadow-[0_0_12px_rgba(173,255,47,0.1)] ${
+                className={`flex h-8 items-center gap-1.5 rounded-full border border-[#ADFF2F]/30 bg-[#ADFF2F]/10 px-3 shadow-[0_0_12px_rgba(173,255,47,0.1)] transition-all ${
                   isEvmSignerReady ? "hover:bg-[#ADFF2F]/20 active:scale-95" : "opacity-45 cursor-not-allowed"
                 }`}
               >
-                <div className="flex min-w-[4.25rem] items-center justify-center px-3 h-full">
-                  {isInitialBalanceLoading ? (
-                    <Loader2 className="h-[15px] w-[15px] animate-spin text-[#ADFF2F]" aria-hidden />
-                  ) : (
-                    <span className="text-[13px] font-black text-[#ADFF2F] tracking-wide" style={{ textShadow: "0 0 10px rgba(173,255,47,0.4)" }}>
-                      ${Number(usdcBalance || 0).toFixed(2)}
-                    </span>
-                  )}
-                </div>
-                <div className="w-8 h-8 bg-[#ADFF2F] flex items-center justify-center text-[#0D0518] shrink-0 shadow-[-2px_0_8px_rgba(173,255,47,0.2)]">
-                  <Plus size={15} strokeWidth={3} />
-                </div>
+                {isInitialBalanceLoading ? (
+                  <Loader2 className="h-[15px] w-[15px] animate-spin text-[#ADFF2F]" aria-hidden />
+                ) : (
+                  <span
+                    className="min-w-[4.25rem] text-center text-[13px] font-black tracking-wide text-[#ADFF2F]"
+                    style={{ textShadow: "0 0 10px rgba(173,255,47,0.4)" }}
+                  >
+                    ${Number(usdcBalance || 0).toFixed(2)}
+                  </span>
+                )}
+                {!isInitialBalanceLoading ? (
+                  <ChevronDown size={14} className="shrink-0 text-[#ADFF2F]/70" aria-hidden />
+                ) : null}
               </button>
               
               <LangToggle locale={locale} onOpen={() => setLangOpen(true)} />
@@ -162,9 +172,23 @@ export function TopHeader({ isSticky = false }: TopHeaderProps = {}) {
         authenticated={authenticated}
         onLogout={handleLogout}
       />
+      <FundsActionSheet
+        isOpen={resolveOverlayOpen(fundsSheetOpen, authenticated)}
+        onClose={() => setFundsSheetOpen(false)}
+        balanceUsd={usdcBalance}
+        onDeposit={() => setDepositOpen(true)}
+        onWithdraw={() => setWithdrawOpen(true)}
+      />
       <DepositDrawer
         isOpen={resolveOverlayOpen(depositOpen, authenticated)}
         onClose={() => setDepositOpen(false)}
+        proxyAddress={proxyAddress || ""}
+        balanceUsd={usdcBalance}
+        onBalanceRefresh={() => fetchBalance(true)}
+      />
+      <WithdrawDrawer
+        isOpen={resolveOverlayOpen(withdrawOpen, authenticated)}
+        onClose={() => setWithdrawOpen(false)}
         proxyAddress={proxyAddress || ""}
         balanceUsd={usdcBalance}
         onBalanceRefresh={() => fetchBalance(true)}

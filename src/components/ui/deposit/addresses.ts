@@ -38,7 +38,8 @@ export function extractDepositAddress(
   addressType: BridgeAddressType
 ): string {
   const record = response as Record<string, unknown>;
-  const nested = record.address ?? record.depositAddresses ?? record.addresses;
+  const nested =
+    record.address ?? record.depositAddresses ?? record.withdrawAddresses ?? record.addresses;
 
   if (nested && typeof nested === "object") {
     const address = (nested as DepositAddressMap)[addressType];
