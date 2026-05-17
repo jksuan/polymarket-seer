@@ -18,7 +18,16 @@ export const BRIDGE_MIN_OUTPUT_BUFFER_USD = 0.05;
 export const DEFAULT_SINGLE_TX_CAP_USD = 100_000;
 export const DEPOSIT_SINGLE_TX_CAP_USD =
   Number(process.env.NEXT_PUBLIC_DEPOSIT_SINGLE_TX_CAP_USD) || DEFAULT_SINGLE_TX_CAP_USD;
-export const SUPPORTED_DLN_EVM_CHAIN_IDS = new Set(["1", "10", "56", "137", "8453", "42161"]);
+export const SUPPORTED_DLN_EVM_CHAIN_IDS = new Set([
+  "1",
+  "10",
+  "56",
+  "137",
+  "143",
+  "8453",
+  "999",
+  "42161",
+]);
 export const ERC20_EXECUTION_ABI = [
   ...ERC20_ABI,
   "function allowance(address owner, address spender) view returns (uint256)",
@@ -34,7 +43,9 @@ export const PUBLIC_RPC_URLS: Record<string, string> = {
   "10": "https://optimism-rpc.publicnode.com",
   "56": "https://bsc-rpc.publicnode.com",
   "137": "https://polygon-bor-rpc.publicnode.com",
+  "143": "https://rpc.monad.xyz",
   "8453": "https://base-rpc.publicnode.com",
+  "999": "https://rpc.hyperliquid.xyz/evm",
   "42161": "https://arbitrum-one-rpc.publicnode.com",
 };
 

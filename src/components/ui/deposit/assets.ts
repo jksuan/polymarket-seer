@@ -94,7 +94,7 @@ function normalizeSupportedAsset(item: Record<string, unknown>): DepositAsset | 
 }
 
 function sortPreferredAssets(assets: DepositAsset[]): DepositAsset[] {
-  const priority = ["ETH", "POL", "MATIC", "USDC.E", "USDC", "PUSD"];
+  const priority = ["ETH", "POL", "MATIC", "HYPE", "MON", "USDC.E", "USDC", "PUSD"];
   return [...assets].sort((a, b) => {
     const ap = priority.indexOf(a.symbol.toUpperCase());
     const bp = priority.indexOf(b.symbol.toUpperCase());
@@ -281,7 +281,9 @@ function isNativeSymbol(symbol: string, chainId: string): boolean {
     (chainId === "10" && normalized === "ETH") ||
     (chainId === "8453" && normalized === "ETH") ||
     (chainId === "42161" && normalized === "ETH") ||
-    (chainId === "56" && normalized === "BNB")
+    (chainId === "56" && normalized === "BNB") ||
+    (chainId === "143" && normalized === "MON") ||
+    (chainId === "999" && normalized === "HYPE")
   );
 }
 
@@ -295,6 +297,8 @@ function getAssetDedupeKey(asset: DepositAsset): string {
 export function getNativeFeeSymbol(chainId: string): string {
   if (chainId === "56") return "BNB";
   if (chainId === String(POLYGON_CHAIN_ID)) return "POL";
+  if (chainId === "143") return "MON";
+  if (chainId === "999") return "HYPE";
   return "ETH";
 }
 

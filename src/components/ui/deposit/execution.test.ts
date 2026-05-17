@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { DepositAsset } from "./types";
+import { SUPPORTED_DLN_EVM_CHAIN_IDS } from "./constants";
 import { resolveExecutionEngine, validateDepositSelection } from "./execution";
 
 function makeAsset(partial: Partial<DepositAsset>): DepositAsset {
@@ -57,5 +58,27 @@ describe("validateDepositSelection", () => {
     });
 
     expect(error).toContain("$5.00");
+  });
+
+  it("Monad 与 HyperEVM 在 Connected EVM 白名单内", () => {
+    expect(SUPPORTED_DLN_EVM_CHAIN_IDS.has("143")).toBe(true);
+    expect(SUPPORTED_DLN_EVM_CHAIN_IDS.has("999")).toBe(true);
+
+    const monadAsset = makeAsset({
+      chainId: "143",
+      chainName: "Monad",
+      symbol: "USDC",
+      minCheckoutUsd: 2,
+      usdValue: 50,
+    });
+
+    expect(
+      validateDepositSelection({
+        amountUsd: 10,
+        asset: monadAsset,
+        allAssets: [monadAsset],
+        locale: "zh",
+      })
+    ).toBeNull();
   });
 });

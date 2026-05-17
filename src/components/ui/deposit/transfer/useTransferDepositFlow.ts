@@ -44,7 +44,16 @@ const TRANSFER_ALLOWED_CHAIN_NAMES = new Set([
   "monad",
 ]);
 
-const TRANSFER_ALLOWED_CHAIN_IDS = new Set(["1", "137", "42161", "8453", "10", "56"]);
+const TRANSFER_ALLOWED_CHAIN_IDS = new Set([
+  "1",
+  "10",
+  "56",
+  "137",
+  "143",
+  "8453",
+  "999",
+  "42161",
+]);
 const TRANSFER_ALLOWED_TOKEN_SYMBOLS = new Set([
   "1INCH",
   "AAVE",

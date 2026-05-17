@@ -32,7 +32,9 @@ const CHAIN_ICON_BY_ID: Record<string, string> = {
   "10": "/images/crypto/op.svg",
   "56": "/images/crypto/bnb.svg",
   "137": "/images/crypto/pol.svg",
+  "143": "/images/crypto/mon.svg",
   "8453": "/images/crypto/base.svg",
+  "999": "/images/crypto/hype.svg",
   "42161": "/images/crypto/arb.svg",
 };
 
