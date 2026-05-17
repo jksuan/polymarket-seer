@@ -1,6 +1,7 @@
 "use client";
 
 import { Loader2, Wallet } from "lucide-react";
+import { useLayoutEffect, useRef } from "react";
 import { formatUsd } from "@/components/ui/deposit/format";
 import { WithdrawAssetPickers } from "./WithdrawAssetPickers";
 import { useTranslation } from "@/i18n";
@@ -18,26 +19,14 @@ export function WithdrawFormStep({ c }: { c: Controller }) {
     <div className="space-y-5">
       <section className="space-y-2">
         <label className="text-xs font-bold text-white/45">{wf.recipientLabel}</label>
-        <div className="relative rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-2">
-          <textarea
-            data-testid="withdraw-recipient"
-            value={c.recipientAddr}
-            onChange={(e) => c.setRecipientAddr(e.target.value)}
-            rows={2}
-            placeholder="0x…"
-            className="min-h-[3.25rem] w-full resize-none bg-transparent text-sm font-medium text-white outline-none placeholder:text-white/25"
-          />
-          {c.showUseConnected ? (
-            <button
-              type="button"
-              onClick={c.handleUseConnected}
-              className="absolute bottom-2 right-2 flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-[11px] font-bold text-white/80 hover:bg-white/10"
-            >
-              <Wallet size={12} />
-              {wf.useConnected}
-            </button>
-          ) : null}
-        </div>
+        <WithdrawRecipientField
+          error={c.recipientError}
+          onChange={c.setRecipientAddr}
+          onUseConnected={c.handleUseConnected}
+          showUseConnected={c.showUseConnected}
+          useConnectedLabel={wf.useConnected}
+          value={c.recipientAddr}
+        />
         {c.recipientError ? (
           <p className="text-xs font-medium text-red-400">{c.recipientError}</p>
         ) : null}
@@ -134,6 +123,66 @@ export function WithdrawFormStep({ c }: { c: Controller }) {
           wf.enterAmount
         )}
       </button>
+    </div>
+  );
+}
+
+function WithdrawRecipientField({
+  error,
+  onChange,
+  onUseConnected,
+  showUseConnected,
+  useConnectedLabel,
+  value,
+}: {
+  error: string | null;
+  onChange: (value: string) => void;
+  onUseConnected: () => void;
+  showUseConnected: boolean;
+  useConnectedLabel: string;
+  value: string;
+}) {
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const syncHeight = () => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  };
+
+  useLayoutEffect(() => {
+    syncHeight();
+  }, [value, showUseConnected]);
+
+  return (
+    <div
+      className={`flex items-center gap-2 rounded-2xl border bg-white/[0.03] px-3 py-2.5 ${
+        error ? "border-red-400/40" : "border-white/10"
+      }`}
+    >
+      <textarea
+        ref={textareaRef}
+        data-testid="withdraw-recipient"
+        value={value}
+        rows={1}
+        placeholder="0x..."
+        onChange={(e) => {
+          onChange(e.target.value);
+          syncHeight();
+        }}
+        className="min-h-5 max-h-32 min-w-0 flex-1 resize-none overflow-hidden bg-transparent text-sm font-medium leading-5 text-white break-all outline-none placeholder:text-white/25"
+      />
+      {showUseConnected ? (
+        <button
+          type="button"
+          onClick={onUseConnected}
+          className="flex shrink-0 items-center gap-1.5 self-center rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-[11px] font-bold text-white/80 hover:bg-white/10"
+        >
+          <Wallet size={12} />
+          {useConnectedLabel}
+        </button>
+      ) : null}
     </div>
   );
 }
