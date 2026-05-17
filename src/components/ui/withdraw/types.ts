@@ -8,6 +8,7 @@ export type WithdrawDestinationAsset = {
   tokenAddress: string;
   decimals: number;
   iconUrl?: string;
+  minCheckoutUsd?: number;
 };
 
 export type WithdrawDrawerProps = {

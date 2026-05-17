@@ -1,9 +1,8 @@
 "use client";
 
-import { ChevronDown, Loader2, Wallet } from "lucide-react";
-import type { ReactNode } from "react";
+import { Loader2, Wallet } from "lucide-react";
 import { formatUsd } from "@/components/ui/deposit/format";
-import { TokenIcon } from "@/components/ui/deposit/shared-ui";
+import { WithdrawAssetPickers } from "./WithdrawAssetPickers";
 import { useTranslation } from "@/i18n";
 import { WithdrawBreakdown } from "./WithdrawBreakdown";
 import type { useWithdrawDrawerController } from "./useWithdrawDrawerController";
@@ -74,41 +73,17 @@ export function WithdrawFormStep({ c }: { c: Controller }) {
         </div>
       </section>
 
-      <div className="grid grid-cols-2 gap-3">
-        <SelectField
-          testId="withdraw-token"
-          label={wf.receiveToken}
-          value={c.selectedAsset?.id ?? ""}
-          disabled={c.assetsLoading || c.tokenOptions.length === 0}
-          onChange={c.handleTokenChange}
-          options={c.tokenOptions.map((asset) => ({
-            value: asset.id,
-            label: asset.symbol,
-            icon: (
-              <TokenIcon
-                chainId={asset.chainId}
-                compact
-                iconUrl={asset.iconUrl}
-                symbol={asset.symbol}
-              />
-            ),
-          }))}
-        />
-        <SelectField
-          testId="withdraw-chain"
-          label={wf.receiveChain}
-          value={c.selectedChainId}
-          disabled={c.assetsLoading || c.chainOptions.length === 0}
-          onChange={c.handleChainChange}
-          options={c.chainOptions.map((chain) => ({
-            value: chain.chainId,
-            label: chain.chainName,
-            icon: (
-              <TokenIcon chainId={chain.chainId} compact symbol={chain.chainName.slice(0, 1)} />
-            ),
-          }))}
-        />
-      </div>
+      <WithdrawAssetPickers
+        assetsLoading={c.assetsLoading}
+        chainOptions={c.chainOptions}
+        onChainChange={c.handleChainChange}
+        onTokenChange={c.handleTokenChange}
+        receiveChainLabel={wf.receiveChain}
+        receiveTokenLabel={wf.receiveToken}
+        selectedChainId={c.selectedChainId}
+        selectedTokenOptionId={c.selectedTokenOptionId}
+        tokenOptions={c.tokenOptions}
+      />
 
       <div className="flex items-center justify-between gap-3">
         <span className="text-sm text-white/45">{wf.youWillReceive}</span>
@@ -159,52 +134,6 @@ export function WithdrawFormStep({ c }: { c: Controller }) {
           wf.enterAmount
         )}
       </button>
-    </div>
-  );
-}
-
-function SelectField({
-  testId,
-  label,
-  value,
-  onChange,
-  options,
-  disabled,
-}: {
-  testId?: string;
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  options: { value: string; label: string; icon?: ReactNode }[];
-  disabled?: boolean;
-}) {
-  const selected = options.find((o) => o.value === value) ?? options[0];
-
-  return (
-    <div className="space-y-2">
-      <label className="text-xs font-bold text-white/45">{label}</label>
-      <div className="relative">
-        <select
-          data-testid={testId}
-          value={value || selected?.value || ""}
-          disabled={disabled}
-          onChange={(e) => onChange(e.target.value)}
-          className="absolute inset-0 z-10 cursor-pointer opacity-0 disabled:cursor-not-allowed"
-        >
-          {options.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
-        <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-3">
-          {selected?.icon}
-          <span className="min-w-0 flex-1 truncate text-sm font-bold text-white">
-            {selected?.label ?? "—"}
-          </span>
-          <ChevronDown className="shrink-0 text-white/40" size={16} />
-        </div>
-      </div>
     </div>
   );
 }

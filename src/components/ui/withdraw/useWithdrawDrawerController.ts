@@ -31,11 +31,13 @@ import type { WithdrawDestinationAsset, WithdrawQuoteState } from "./types";
 import { resolveRecipientAddressType } from "./recipientAddressType";
 import { isValidWithdrawRecipient, validateWithdrawAmountUsd, validateWithdrawRecipient } from "./validation";
 import {
-  assetsForChain,
   buildWithdrawDestinationAssets,
+  findWithdrawAssetForChainAndSymbol,
   getDefaultWithdrawAsset,
-  groupChains,
+  getUniqueWithdrawTokenOptions,
+  getWithdrawChainOptionsForSymbol,
 } from "./withdrawAssets";
+import { normalizeWithdrawTokenSymbol } from "./withdrawWhitelist";
 
 export function useWithdrawDrawerController({
   isOpen,
@@ -86,8 +88,8 @@ export function useWithdrawDrawerController({
     [supportedAssets]
   );
 
-  const chainOptions = useMemo(
-    () => groupChains(destinationAssets),
+  const uniqueTokenOptions = useMemo(
+    () => getUniqueWithdrawTokenOptions(destinationAssets),
     [destinationAssets]
   );
 
@@ -97,10 +99,27 @@ export function useWithdrawDrawerController({
     return getDefaultWithdrawAsset(destinationAssets);
   }, [destinationAssets, selectedAssetId]);
 
-  const tokenOptions = useMemo(() => {
-    const chainId = selectedChainId || selectedAsset?.chainId || "";
-    return assetsForChain(destinationAssets, chainId);
-  }, [destinationAssets, selectedAsset?.chainId, selectedChainId]);
+  const selectedTokenSymbol = useMemo(
+    () => normalizeWithdrawTokenSymbol(selectedAsset?.symbol ?? ""),
+    [selectedAsset?.symbol]
+  );
+
+  const chainOptions = useMemo(
+    () =>
+      selectedTokenSymbol
+        ? getWithdrawChainOptionsForSymbol(destinationAssets, selectedTokenSymbol)
+        : [],
+    [destinationAssets, selectedTokenSymbol]
+  );
+
+  const tokenOptions = uniqueTokenOptions;
+
+  const selectedTokenOptionId = useMemo(() => {
+    const option = tokenOptions.find(
+      (asset) => normalizeWithdrawTokenSymbol(asset.symbol) === selectedTokenSymbol
+    );
+    return option?.id ?? selectedAsset?.id ?? "";
+  }, [tokenOptions, selectedTokenSymbol, selectedAsset?.id]);
 
   const recipientAddressType = useMemo(() => {
     const chainId = selectedChainId || selectedAsset?.chainId || "";
@@ -168,21 +187,53 @@ export function useWithdrawDrawerController({
     setAmountInput(formatAmountUsdInput(balanceNumber));
   }, [balanceNumber]);
 
-  const handleChainChange = useCallback(
-    (chainId: string) => {
-      setSelectedChainId(chainId);
-      const tokens = assetsForChain(destinationAssets, chainId);
-      const next = tokens[0];
-      if (next) setSelectedAssetId(next.id);
-    },
-    [destinationAssets]
-  );
+  const handleChainChange = useCallback((chainId: string) => {
+    setSelectedChainId(chainId);
+    setQuote(null);
+    setQuoteError("");
+  }, []);
 
   const handleTokenChange = useCallback((assetId: string) => {
     setSelectedAssetId(assetId);
-    const asset = destinationAssets.find((a) => a.id === assetId);
-    if (asset) setSelectedChainId(asset.chainId);
-  }, [destinationAssets]);
+    setQuote(null);
+    setQuoteError("");
+  }, []);
+
+  useEffect(() => {
+    if (destinationAssets.length === 0) return;
+    const exists = destinationAssets.some((asset) => asset.id === selectedAssetId);
+    if (!exists) {
+      const fallback = getDefaultWithdrawAsset(destinationAssets);
+      if (fallback) setSelectedAssetId(fallback.id);
+    }
+  }, [destinationAssets, selectedAssetId]);
+
+  useEffect(() => {
+    if (!selectedTokenSymbol) {
+      if (selectedChainId) setSelectedChainId("");
+      return;
+    }
+    if (chainOptions.length === 0) {
+      if (selectedChainId) setSelectedChainId("");
+      return;
+    }
+    const chainExists = chainOptions.some((chain) => chain.chainId === selectedChainId);
+    if (!chainExists) {
+      setSelectedChainId(chainOptions[0].chainId);
+    }
+  }, [chainOptions, selectedChainId, selectedTokenSymbol]);
+
+  useEffect(() => {
+    if (!selectedTokenSymbol || !selectedChainId) return;
+    const matched = findWithdrawAssetForChainAndSymbol(
+      destinationAssets,
+      selectedChainId,
+      selectedTokenSymbol
+    );
+    if (matched && matched.id !== selectedAssetId) {
+      setSelectedAssetId(matched.id);
+    }
+  }, [destinationAssets, selectedAssetId, selectedChainId, selectedTokenSymbol]);
 
   const canQuote = Boolean(
     proxyAddress &&
@@ -384,6 +435,8 @@ export function useWithdrawDrawerController({
     canSubmit,
     chainOptions,
     destinationAssets,
+    selectedTokenSymbol,
+    uniqueTokenOptions,
     executionError,
     fundsTermsOpen,
     handleAmountChange,
@@ -402,6 +455,7 @@ export function useWithdrawDrawerController({
     recipientError,
     selectedAsset,
     selectedChainId,
+    selectedTokenOptionId,
     setFundsTermsOpen,
     setRecipientAddr,
     recipientAddressType,

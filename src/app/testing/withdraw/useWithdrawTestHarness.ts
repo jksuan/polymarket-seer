@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   formatAmountUsdInput,
   parseAmountUsd,
@@ -15,10 +15,12 @@ import {
   validateWithdrawRecipient,
 } from "@/components/ui/withdraw/validation";
 import {
-  assetsForChain,
+  findWithdrawAssetForChainAndSymbol,
   getDefaultWithdrawAsset,
-  groupChains,
+  getUniqueWithdrawTokenOptions,
+  getWithdrawChainOptionsForSymbol,
 } from "@/components/ui/withdraw/withdrawAssets";
+import { normalizeWithdrawTokenSymbol } from "@/components/ui/withdraw/withdrawWhitelist";
 
 export const WITHDRAW_TEST_ASSETS: WithdrawDestinationAsset[] = [
   {
@@ -30,27 +32,27 @@ export const WITHDRAW_TEST_ASSETS: WithdrawDestinationAsset[] = [
     decimals: 6,
   },
   {
+    id: "42161-usdc",
+    chainId: "42161",
+    chainName: "Arbitrum",
+    symbol: "USDC",
+    tokenAddress: "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
+    decimals: 6,
+  },
+  {
+    id: "1-eth",
+    chainId: "1",
+    chainName: "Ethereum",
+    symbol: "ETH",
+    tokenAddress: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE",
+    decimals: 18,
+  },
+  {
     id: "sol-usdc",
     chainId: "1151111081099710",
     chainName: "Solana",
     symbol: "USDC",
     tokenAddress: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
-    decimals: 6,
-  },
-  {
-    id: "btc-btc",
-    chainId: "8253038",
-    chainName: "Bitcoin",
-    symbol: "BTC",
-    tokenAddress: "bc1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqmql8k8",
-    decimals: 8,
-  },
-  {
-    id: "tron-usdt",
-    chainId: "728126428",
-    chainName: "Tron",
-    symbol: "USDT",
-    tokenAddress: "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t",
     decimals: 6,
   },
 ];
@@ -61,18 +63,35 @@ export function useWithdrawTestHarness() {
 
   const [recipientAddr, setRecipientAddr] = useState("");
   const [amountInput, setAmountInput] = useState("");
-  const defaultAsset = getDefaultWithdrawAsset(WITHDRAW_TEST_ASSETS)!;
+  const destinationAssets = WITHDRAW_TEST_ASSETS;
+  const defaultAsset = getDefaultWithdrawAsset(destinationAssets)!;
   const [selectedChainId, setSelectedChainId] = useState(defaultAsset.chainId);
   const [selectedAssetId, setSelectedAssetId] = useState(defaultAsset.id);
   const [quoteReady, setQuoteReady] = useState(false);
 
-  const destinationAssets = WITHDRAW_TEST_ASSETS;
-  const chainOptions = useMemo(() => groupChains(destinationAssets), [destinationAssets]);
+  const tokenOptions = useMemo(
+    () => getUniqueWithdrawTokenOptions(destinationAssets),
+    [destinationAssets]
+  );
+
   const selectedAsset =
     destinationAssets.find((a) => a.id === selectedAssetId) ?? defaultAsset;
-  const tokenOptions = useMemo(
-    () => assetsForChain(destinationAssets, selectedChainId),
-    [destinationAssets, selectedChainId]
+
+  const selectedTokenSymbol = useMemo(
+    () => normalizeWithdrawTokenSymbol(selectedAsset.symbol),
+    [selectedAsset.symbol]
+  );
+
+  const selectedTokenOptionId = useMemo(() => {
+    const option = tokenOptions.find(
+      (asset) => normalizeWithdrawTokenSymbol(asset.symbol) === selectedTokenSymbol
+    );
+    return option?.id ?? selectedAsset.id;
+  }, [tokenOptions, selectedAsset.id, selectedTokenSymbol]);
+
+  const chainOptions = useMemo(
+    () => getWithdrawChainOptionsForSymbol(destinationAssets, selectedTokenSymbol),
+    [destinationAssets, selectedTokenSymbol]
   );
 
   const recipientAddressType = useMemo(
@@ -105,25 +124,34 @@ export function useWithdrawTestHarness() {
     setQuoteReady(false);
   }, [balanceNumber]);
 
-  const handleChainChange = useCallback(
-    (chainId: string) => {
-      setSelectedChainId(chainId);
-      const next = assetsForChain(destinationAssets, chainId)[0];
-      if (next) setSelectedAssetId(next.id);
-      setQuoteReady(false);
-    },
-    [destinationAssets]
-  );
+  const handleChainChange = useCallback((chainId: string) => {
+    setSelectedChainId(chainId);
+    setQuoteReady(false);
+  }, []);
 
-  const handleTokenChange = useCallback(
-    (assetId: string) => {
-      setSelectedAssetId(assetId);
-      const asset = destinationAssets.find((a) => a.id === assetId);
-      if (asset) setSelectedChainId(asset.chainId);
-      setQuoteReady(false);
-    },
-    [destinationAssets]
-  );
+  const handleTokenChange = useCallback((assetId: string) => {
+    setSelectedAssetId(assetId);
+    setQuoteReady(false);
+  }, []);
+
+  useEffect(() => {
+    if (!selectedTokenSymbol) return;
+    if (chainOptions.length === 0) return;
+    const exists = chainOptions.some((c) => c.chainId === selectedChainId);
+    if (!exists) setSelectedChainId(chainOptions[0].chainId);
+  }, [chainOptions, selectedChainId, selectedTokenSymbol]);
+
+  useEffect(() => {
+    if (!selectedTokenSymbol || !selectedChainId) return;
+    const matched = findWithdrawAssetForChainAndSymbol(
+      destinationAssets,
+      selectedChainId,
+      selectedTokenSymbol
+    );
+    if (matched && matched.id !== selectedAssetId) {
+      setSelectedAssetId(matched.id);
+    }
+  }, [destinationAssets, selectedAssetId, selectedChainId, selectedTokenSymbol]);
 
   const refreshQuote = useCallback(() => {
     if (canQuote) setQuoteReady(true);
@@ -160,6 +188,8 @@ export function useWithdrawTestHarness() {
     recipientError,
     selectedAsset,
     selectedChainId,
+    selectedTokenOptionId,
+    selectedTokenSymbol,
     setRecipientAddr: (value: string) => {
       setRecipientAddr(value);
       setQuoteReady(false);
