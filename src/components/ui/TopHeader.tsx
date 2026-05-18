@@ -115,7 +115,7 @@ export function TopHeader({ isSticky = false }: TopHeaderProps = {}) {
                   setFundsSheetOpen(true);
                 }}
                 aria-busy={isInitialBalanceLoading}
-                className={`flex h-8 items-center gap-1.5 rounded-full border border-[#ADFF2F]/30 bg-[#ADFF2F]/10 px-3 shadow-[0_0_12px_rgba(173,255,47,0.1)] transition-all ${
+                className={`flex h-8 items-center gap-1.5 rounded-full border border-[#ADFF2F]/30 bg-[#ADFF2F]/10 px-2 shadow-[0_0_12px_rgba(173,255,47,0.1)] transition-all ${
                   isEvmSignerReady ? "hover:bg-[#ADFF2F]/20 active:scale-95" : "opacity-45 cursor-not-allowed"
                 }`}
               >
@@ -130,7 +130,7 @@ export function TopHeader({ isSticky = false }: TopHeaderProps = {}) {
                   </span>
                 )}
                 {!isInitialBalanceLoading ? (
-                  <ChevronDown size={14} className="shrink-0 text-[#ADFF2F]/70" aria-hidden />
+                  <ChevronDown size={14} className="-ml-1 shrink-0 text-[#ADFF2F]/70" aria-hidden />
                 ) : null}
               </button>
               
