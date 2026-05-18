@@ -420,6 +420,7 @@ const en: TranslationKeys = {
     networkCost: 'Network cost',
     priceImpact: 'Price impact',
     maxSlippage: 'Max slippage',
+    slippageAuto: 'Auto',
     enterAmount: 'Enter amount',
     withdraw: 'Withdraw',
     withdrawing: 'Processing…',

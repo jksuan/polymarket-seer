@@ -15,6 +15,10 @@ export function WithdrawBreakdown({ fee }: { fee?: QuoteFeeBreakdown }) {
   const gasUsd = toNumber(fee?.gasUsd);
   const impact = toNumber(fee?.swapImpact ?? fee?.totalImpact) ?? 0;
   const slippage = fee?.maxSlippage;
+  const slippageValue =
+    slippage === undefined
+      ? `${wf.slippageAuto} • 0.00%`
+      : `${wf.slippageAuto} • ${formatPercent(slippage)}`;
 
   const summary = `${formatUsd(gasUsd)} • ${formatPercent(impact)}`;
 
@@ -25,10 +29,7 @@ export function WithdrawBreakdown({ fee }: { fee?: QuoteFeeBreakdown }) {
       icon: <Fuel className="text-white/40" size={14} />,
     },
     [wf.priceImpact, formatPercent(impact)],
-    [
-      wf.maxSlippage,
-      slippage === undefined ? "Auto • 0.00%" : `Auto • ${formatPercent(slippage)}`,
-    ],
+    [wf.maxSlippage, slippageValue],
   ];
 
   return (
