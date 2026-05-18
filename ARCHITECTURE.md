@@ -1,6 +1,6 @@
 # Polymarket Seer — 工程架构文档 (ARCHITECTURE)
 
-> **版本**：v1.3 · 最后更新：2026-04-30
+> **版本**：v1.4 · 最后更新：2026-05-17
 > **技术栈**：Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS v4 · SWR · ethers.js · Privy
 
 ## 文档维护边界
@@ -26,7 +26,18 @@ polymarket-seer/
 │   │   │   ├── search/route.ts     # 搜索 API 代理
 │   │   │   ├── share-card/route.tsx # 分享卡片 SSR 渲染
 │   │   │   ├── sign/route.ts       # Polymarket CLOB 签名代理
-│   │   │   └── sports/route.ts     # 体育赛事数据代理
+│   │   │   ├── sports/route.ts     # 体育赛事数据代理
+│   │   │   ├── bridge/             # Polymarket Bridge 代理（充值地址 / 报价 / 提现 / 状态）
+│   │   │   │   ├── deposit/route.ts
+│   │   │   │   ├── withdraw/route.ts
+│   │   │   │   ├── quote/route.ts
+│   │   │   │   ├── supported-assets/route.ts
+│   │   │   │   └── status/[address]/route.ts
+│   │   │   └── dln/                # deBridge DLN 代理（Connected 跨链报价与订单）
+│   │   │       ├── quote/route.ts
+│   │   │       ├── same-chain/route.ts
+│   │   │       └── order/[id]/route.ts (+ cancel-tx)
+│   │   ├── testing/                # 开发联调页（生产默认关闭，见 README）
 │   │   ├── c/[id]/                 # 动态路由：分享卡片详情页
 │   │   ├── globals.css             # 全局样式（Tailwind + 自定义）
 │   │   ├── layout.tsx              # 根布局（HTML head、字体、Providers）
@@ -67,7 +78,8 @@ polymarket-seer/
 │   │   │
 │   │   └── ui/                     # ★ 通用 UI 组件库
 │   │       ├── Skeleton.tsx        # 原子骨架屏基础组件（标准化无布局偏移加载）
-│   │       ├── TopHeader.tsx       # 吸顶头部栏
+│   │       ├── TopHeader.tsx       # 吸顶头部栏（余额 pill + 资金菜单入口）
+│   │       ├── FundsActionSheet.tsx # 资金菜单（充值 / 提现）
 │   │       ├── BottomNav.tsx       # 底部导航栏
 │   │       ├── DiscoverCard.tsx    # ★ 聚合发现流组件集合包 (包含 Champion/Trending/Split/Underdog)
 │   │       ├── CategoryTabs.tsx    # 分类导航标签
@@ -82,7 +94,11 @@ polymarket-seer/
 │   │       ├── ChooseSideDrawer.tsx# 独立阵营选择弹窗（支持 SVG 高保真国旗与动态 i18n 映射）
 │   │       ├── SellDrawer.tsx      # 卖出抽屉（市价/限价，i18n适配）
 │   │       ├── RedeemDrawer.tsx    # 兑现抽屉
-│   │       ├── DepositDrawer.tsx   # 充值抽屉（含 i18n 适配与 Polygon 风险提示）
+│   │       ├── DepositDrawer.tsx   # 充值抽屉（Connected + Transfer Crypto）
+│   │       ├── WithdrawDrawer.tsx  # 提现抽屉（Bridge withdraw + 状态轮询）
+│   │       ├── FundsMovementTermsPanel.tsx # 充/提/转入共用适用条款摘要
+│   │       ├── deposit/            # 充值子模块（connected / transfer / confirm 等）
+│   │       ├── withdraw/           # 提现子模块（表单 / 报价 / 校验 / 执行）
 │   │       ├── SettingsDrawer.tsx  # 设置抽屉（账户信息、法律文档入口）
 │   │       ├── LanguageDrawer.tsx  # ★ 语言选择抽屉（全局一级入口，Portaled 底部滑出）
 │   │       ├── settings/           # ★ 模块化设置内容组件
@@ -104,11 +120,19 @@ polymarket-seer/
 │   │           ├── PositionShareCard.tsx  # 持仓分享卡片
 │   │           └── HistoryShareCard.tsx   # 战绩分享卡片
 │   │
+│   ├── auth/                       # 认证与余额同步（从 Context 拆出的逻辑）
+│   │   ├── useBalanceSync.ts       # CLOB / 链上余额拉取与重试
+│   │   ├── useExternalAccountDrift.ts # 外链钱包漂移检测
+│   │   └── resolveClobApiKeyCreds.ts  # CLOB 凭证解析
+│   │
 │   ├── contexts/                   # React Context 全局状态
 │   │   └── PolymarketAuthContext.tsx # ★ 认证上下文（Privy + Polymarket CLOB 鉴权）
 │   │
 │   ├── hooks/                      # 自定义 Hooks
 │   │   ├── useTrading.ts           # ★ 核心交易 Hook（下单/卖出/兑现/SWR轮询）
+│   │   ├── useBridge.ts            # Bridge 充值地址 / 状态 / 提现 API
+│   │   ├── useDln.ts               # deBridge DLN 报价与订单状态
+│   │   ├── useLockBodyScroll.ts    # 抽屉打开时锁定 body 滚动
 │   │   ├── useMatchData.ts         # 比赛数据获取 Hook
 │   │   ├── useOutrightData.ts      # 趣味投注数据获取 Hook
 │   │   ├── useShareCard.ts         # 分享卡片生成 Hook
@@ -122,6 +146,8 @@ polymarket-seer/
 │   │
 │   ├── lib/                        # 工具库 & 静态数据
 │   │   ├── constants.ts            # 全局常量（合约地址、API 端点等）
+│   │   ├── bridgeClient.ts         # Bridge API 客户端封装
+│   │   ├── dlnClient.ts            # DLN API 客户端封装
 │   │   ├── utils.ts                # 通用工具函数
 │   │   ├── countryFlags.ts         # 国旗 Emoji + 国家名映射表
 │   │   ├── mockStandings.ts        # 世界杯积分榜静态数据（2026/2022/2018/2014）
@@ -130,7 +156,9 @@ polymarket-seer/
 │   │   └── mockMarkets.ts          # 市场模拟数据
 │   │
 │   └── types/                      # TypeScript 类型定义
-│       └── sports.ts               # 体育相关类型
+│       ├── sports.ts               # 体育相关类型
+│       ├── bridge.ts               # Bridge 充提 API 类型
+│       └── dln.ts                  # DLN 报价 / 订单类型
 │
 ├── requirement.md                  # 产品需求文档 (PRD)
 ├── ARCHITECTURE.md                 # 本文档（工程架构）
@@ -251,12 +279,33 @@ polymarket-seer/
 | `/api/images/[id]` | 外部图片 CDN | 图片代理（绕 CORS） |
 | `/api/proxy-image` | 任意图片 URL | 通用图片代理 |
 | `/api/share-card` | — (SSR) | 服务端渲染分享卡片 |
+| `/api/bridge/deposit` | Polymarket Bridge | 创建 Transfer 入账地址 |
+| `/api/bridge/withdraw` | Polymarket Bridge | 创建提现临时 bridge 地址 |
+| `/api/bridge/quote` | Polymarket Bridge | 提现报价 |
+| `/api/bridge/status/[address]` | Polymarket Bridge | 入账地址交易状态轮询 |
+| `/api/bridge/supported-assets` | Polymarket Bridge | 可充值资产列表 |
+| `/api/dln/quote` | deBridge DLN | Connected 跨链报价 |
+| `/api/dln/same-chain` | deBridge DLN | 同链报价 |
+| `/api/dln/order/[id]` | deBridge DLN | 订单状态查询 |
+| `/api/dln/order/[id]/cancel-tx` | deBridge DLN | 取消交易构造（如适用） |
 
 ---
 
 ## 3. 核心模块详解
 
-### 3.1 useTrading.ts — 交易核心引擎
+### 3.1 资金模块（充值 / 提现）
+
+顶栏 **余额 pill**（`$` + `▾`）展开 `FundsActionSheet`，分别进入 `DepositDrawer` 与 `WithdrawDrawer`。领域术语与不变量见 `CONTEXT.md`；Transfer 白名单、Connected 引擎分流、bridge 状态行顺序等见 `docs/adr/0001`–`0004`。
+
+| 模块 | 入口 | 要点 |
+|---|---|---|
+| **充值 · Connected** | 已连接钱包 → 选资产 / 金额 → 确认 | EVM / SVM 执行引擎分流；报价经 `/api/dln/*`；失败可回退 Transfer |
+| **充值 · Transfer** | 链上转入 | 自动创建 `Deposit Address`；`/api/bridge/status` 轮询；会话基线过滤历史终态 |
+| **提现** | 选 Receive token/chain、收款地址、金额 | `/api/bridge/quote` + `POST /withdraw`；状态轮询与超时重试 |
+
+`isEvmSignerReady` 为 false 时顶栏禁用资金入口并展示说明条（见 `docs/superpowers/specs/2026-05-12-evm-wallet-readiness-design.md`）。
+
+### 3.2 useTrading.ts — 交易核心引擎
 
 项目中最核心、最复杂的文件（~770 行），承担以下职责：
 
@@ -275,7 +324,7 @@ polymarket-seer/
 - `isAuthInitializing`：当 `authenticated=true` 但 `swrKey=null && !data` 时强制为 loading，消除空态文字闪现
 - SWR 的 `isLoading` vs `isValidating`：前者仅首次加载为 true，后者每次轮询为 true。`portfolioLoading` 只绑定 `isLoading`，确保后台静默轮询不会触发骨架屏
 
-### 3.2 PolymarketAuthContext.tsx — 认证上下文
+### 3.3 PolymarketAuthContext.tsx — 认证上下文
 
 管理整个应用的认证生命周期：
 
@@ -286,7 +335,7 @@ polymarket-seer/
 5. **余额查询**：实时获取 USDC 余额
 6. **登出清理**：`handleLogout()` 清除所有 localStorage 状态
 
-### 3.3 UI 与动画体系设计
+### 3.4 UI 与动画体系设计
 
 1. **统一骨架屏 (Skeleton Architecture)**
    - 痛点：使用传统 Spinner 在数据加载时导致巨大的 Layout Shifts（组件跳动/突变），导致体验廉价。
@@ -306,7 +355,7 @@ polymarket-seer/
    - 实现了特殊的 `countryNames.ts` 翻译器，确保由于 API 返回的原生国家名称（甚至特殊变体如 `BIH/ITA/NIR/WAL`）可以无缝、原子化地翻译，不再出现中英混杂硬编码问题。
    - 全局图文架构中，涉及到 `国旗` 的场景，全部使用 `getCountryFlagUrl(name, 'svg')` 请求统一的正规 4:3 矢量 SVG 资源，取代失真 PNG，强化“转播级”专业感。
    - 【核心演进】将语言切换提升为全局一级交互，使用 **LanguageDrawer** 配合 `createPortal` 挂载至 `document.body`，彻底解决了 `fixed` 定位在嵌套容器中的渲染冲突，确保在移动端始终能稳固贴底。
-   - 【核心演进】完成了核心交易流（`useTrading.ts` 及其挂载弹窗等）的状态文案与语言系统的深度解耦，实现了 40+ 交易进度文案的多语言自动化映射，并针对 `DepositDrawer` 补齐了高风险场景的中英双语引导。
+   - 【核心演进】完成了核心交易流（`useTrading.ts` 及其挂载弹窗等）的状态文案与语言系统的深度解耦，实现了 40+ 交易进度文案的多语言自动化映射，并针对 `DepositDrawer`、`WithdrawDrawer` 与资金菜单补齐了充提流程的中英双语文案。
    - 【核心演进】推行“组件级双语渲染”模式处理复杂文档（如隐私政策等），绕过传统的 JSON 字典，确保了富文本排版的灵活性与开发效率。
 
 ---
