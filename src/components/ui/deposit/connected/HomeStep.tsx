@@ -1,5 +1,6 @@
 import {
   ArrowRight,
+  Landmark,
   Loader2,
   QrCode,
   Store,
@@ -26,8 +27,6 @@ export function HomeStep({
   walletLabel,
   walletUsdLoading,
   walletUsd,
-  fundsTermsLinkLabel,
-  onOpenFundsTerms,
   onWallet,
   onTransfer,
 }: {
@@ -35,8 +34,6 @@ export function HomeStep({
   walletLabel: string;
   walletUsdLoading: boolean;
   walletUsd: number;
-  fundsTermsLinkLabel?: string;
-  onOpenFundsTerms?: () => void;
   onWallet: () => void;
   onTransfer: () => void;
 }) {
@@ -50,9 +47,12 @@ export function HomeStep({
           <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-black">{"₿"}</span>
           {df.useCrypto}
         </div>
-        <div className="flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-black text-white/30">
-          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/20">$</span>
-          {df.useCash}
+        <div className="flex items-center gap-3 rounded-xl px-3 py-3 opacity-50">
+          <Landmark className="shrink-0 text-white/70" size={24} strokeWidth={1.75} />
+          <div className="min-w-0 text-left">
+            <p className="text-sm font-black text-white">{df.useCash}</p>
+            <p className="text-xs text-white/40">{t.common.comingSoon}</p>
+          </div>
         </div>
       </div>
 
@@ -129,18 +129,6 @@ export function HomeStep({
           </div>
         </div>
       </section>
-
-      {fundsTermsLinkLabel && onOpenFundsTerms ? (
-        <div className="flex justify-center pt-1">
-          <button
-            type="button"
-            onClick={onOpenFundsTerms}
-            className="text-[11px] font-semibold text-[#5eb8ff] underline decoration-white/20 underline-offset-2 hover:text-white/90"
-          >
-            {fundsTermsLinkLabel}
-          </button>
-        </div>
-      ) : null}
     </div>
   );
 }

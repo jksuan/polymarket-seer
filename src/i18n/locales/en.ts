@@ -443,7 +443,7 @@ const en: TranslationKeys = {
   /** Deposit flow copy (Connected / amount / confirm) */
   depositFlow: {
     useCrypto: 'Use Crypto',
-    useCash: 'Use Cash',
+    useCash: 'Bank',
     connectedHeading: 'Connected',
     otherOptionsHeading: 'Other options',
     transferCrypto: 'Transfer Crypto',

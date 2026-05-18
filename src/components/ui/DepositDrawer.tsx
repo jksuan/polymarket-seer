@@ -315,16 +315,23 @@ function DrawerContent({
               </div>
 
               {c.step === "home" && (
-                <HomeStep
-                  fundsTermsLinkLabel={t.fundsMovementTerms.linkLabel}
-                  onOpenFundsTerms={() => c.setFundsTermsOpen(true)}
-                  showConnectedWalletOption={c.showConnectedWalletOption}
-                  walletLabel={walletLabel}
-                  walletUsdLoading={c.walletBalancesLoading}
-                  walletUsd={c.totalWalletUsd}
-                  onWallet={openConnectedAssetStep}
-                  onTransfer={tf.openTransferStep}
-                />
+                <>
+                  <HomeStep
+                    showConnectedWalletOption={c.showConnectedWalletOption}
+                    walletLabel={walletLabel}
+                    walletUsdLoading={c.walletBalancesLoading}
+                    walletUsd={c.totalWalletUsd}
+                    onWallet={openConnectedAssetStep}
+                    onTransfer={tf.openTransferStep}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => c.setFundsTermsOpen(true)}
+                    className="mt-4 w-full text-center text-xs font-medium text-white/35 underline-offset-2 hover:text-white/55 hover:underline"
+                  >
+                    {t.fundsMovementTerms.linkLabel}
+                  </button>
+                </>
               )}
 
               {c.step === "asset" && (

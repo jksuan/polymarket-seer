@@ -74,7 +74,7 @@ function DrawerContent({
                 <button
                   type="button"
                   onClick={() => c.setFundsTermsOpen(true)}
-                  className="mt-4 text-center text-xs font-medium text-white/35 underline-offset-2 hover:text-white/55 hover:underline"
+                  className="mt-4 w-full text-center text-xs font-medium text-white/35 underline-offset-2 hover:text-white/55 hover:underline"
                 >
                   {t.fundsMovementTerms.linkLabel}
                 </button>

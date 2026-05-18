@@ -8,8 +8,6 @@ function renderHomeZh() {
   return render(
     <I18nContext.Provider value={{ locale: "zh", setLocale: vi.fn(), t: zh }}>
       <HomeStep
-        fundsTermsLinkLabel="适用条款"
-        onOpenFundsTerms={vi.fn()}
         showConnectedWalletOption
         walletLabel="钱包 (0xabcd…1234)"
         walletUsdLoading={false}
@@ -26,7 +24,8 @@ describe("HomeStep", () => {
     renderHomeZh();
 
     expect(screen.getByText("加密货币")).toBeInTheDocument();
-    expect(screen.getByText("法币")).toBeInTheDocument();
+    expect(screen.getByText("银行")).toBeInTheDocument();
+    expect(screen.getByText("即将上线")).toBeInTheDocument();
     expect(screen.getByText("已连接钱包")).toBeInTheDocument();
     expect(screen.getByText("其他方式")).toBeInTheDocument();
     expect(screen.getByText("链上转入")).toBeInTheDocument();

@@ -442,7 +442,7 @@ const zh = {
   /** 充值流程界面文案（Connected / 金额 / 确认） */
   depositFlow: {
     useCrypto: '加密货币',
-    useCash: '法币',
+    useCash: '银行',
     connectedHeading: '已连接钱包',
     otherOptionsHeading: '其他方式',
     transferCrypto: '链上转入',
