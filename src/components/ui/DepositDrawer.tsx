@@ -293,7 +293,7 @@ function DrawerContent({
                       : (locale === "zh" ? "充值" : "Deposit")}
                   </h2>
                   <p className="text-xs text-white/40">
-                    Polymarket {locale === "zh" ? "余额" : "Balance"}: ${Number(balanceUsd || 0).toFixed(2)}
+                    {t.fundsMenu.balanceLabel(Number(balanceUsd || 0).toFixed(2))}
                   </p>
                 </div>
                 {c.step === "confirm" && c.snapshot && !c.hasSubmittedTx ? (
