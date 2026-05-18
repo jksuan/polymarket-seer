@@ -41,39 +41,19 @@ export function WithdrawFeedbackLine({ feedback }: { feedback: WithdrawFeedback 
 
 function WithdrawSuccessBadge() {
   return (
-    <div className="relative flex h-14 w-14 items-center justify-center">
-      <motion.span
+    <motion.div
+      className="relative flex h-10 w-10 items-center justify-center"
+      initial={{ opacity: 0, scale: 0.92 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.28, ease: "easeOut" }}
+    >
+      <span
         aria-hidden
-        className="absolute inset-0 rounded-full bg-[#ADFF2F]/30"
-        animate={{ scale: [1, 1.45, 1], opacity: [0.5, 0.12, 0.5] }}
-        transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
+        className="absolute h-10 w-10 rounded-full bg-[#ADFF2F]/28"
       />
-      <motion.span
-        aria-hidden
-        className="absolute inset-1 rounded-full bg-[#ADFF2F]/20"
-        animate={{ scale: [1.05, 1.2, 1.05], opacity: [0.35, 0.15, 0.35] }}
-        transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut", delay: 0.12 }}
-      />
-      <motion.span
-        className="relative flex h-9 w-9 items-center justify-center rounded-full bg-[#ADFF2F] shadow-[0_0_20px_rgba(173,255,47,0.45)]"
-        initial={{ scale: 0.45, opacity: 0 }}
-        animate={{
-          scale: [0.45, 1.08, 1],
-          opacity: [0, 1, 1],
-          boxShadow: [
-            "0 0 0 rgba(173,255,47,0)",
-            "0 0 24px rgba(173,255,47,0.5)",
-            "0 0 16px rgba(173,255,47,0.35)",
-          ],
-        }}
-        transition={{
-          scale: { duration: 0.55, ease: [0.22, 1, 0.36, 1] },
-          opacity: { duration: 0.35 },
-          boxShadow: { duration: 0.55, ease: "easeOut" },
-        }}
-      >
+      <span className="relative flex h-9 w-9 items-center justify-center rounded-full bg-[#ADFF2F] shadow-[0_0_12px_rgba(173,255,47,0.35)]">
         <Check className="text-[#0D0518]" size={20} strokeWidth={3} />
-      </motion.span>
-    </div>
+      </span>
+    </motion.div>
   );
 }
