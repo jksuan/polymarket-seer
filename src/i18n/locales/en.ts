@@ -433,6 +433,10 @@ const en: TranslationKeys = {
     failed: 'Withdrawal failed',
     invalidRecipient: 'Enter a valid recipient address',
     quoteError: 'Could not fetch quote. Try again.',
+    statusPollError: 'Could not fetch withdrawal status. Check your connection and retry.',
+    statusPollTimeout:
+      'Status is taking longer than expected. Your withdrawal may still be processing. Retry or check your recipient wallet.',
+    retryStatusPoll: 'Retry',
   },
 
   /** Deposit flow copy (Connected / amount / confirm) */

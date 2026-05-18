@@ -25,7 +25,9 @@ import {
   PUSD_ADDRESS,
   PUSD_DECIMALS,
   QUOTE_DEBOUNCE_MS,
+  WITHDRAW_STATUS_POLL_TIMEOUT_MS,
 } from "./constants";
+import { isWithdrawStatusPollTimedOut } from "./withdrawStatusPoll";
 import { executePusdWithdrawTransfer } from "./executePusdWithdraw";
 import type { WithdrawDestinationAsset, WithdrawFeedback, WithdrawQuoteState } from "./types";
 import { resolveRecipientAddressType } from "./recipientAddressType";
@@ -85,6 +87,8 @@ export function useWithdrawDrawerController({
   const lastWithdrawTokenRef = useRef<{ symbol: string; iconUrl?: string }>({
     symbol: "USDC",
   });
+  const bridgePollStartedAtRef = useRef<number | null>(null);
+  const [statusPollTick, setStatusPollTick] = useState(0);
 
   const wfMessages = useMemo(() => getWithdrawFlowMessages(locale), [locale]);
 
@@ -93,6 +97,7 @@ export function useWithdrawDrawerController({
     setStatusMessage("");
     setWithdrawFeedback(null);
     setBridgePollAddress(null);
+    bridgePollStartedAtRef.current = null;
   }, []);
 
   const showWithdrawFeedback = useCallback(
@@ -211,6 +216,7 @@ export function useWithdrawDrawerController({
     setStatusMessage("");
     setWithdrawFeedback(null);
     setBridgePollAddress(null);
+    bridgePollStartedAtRef.current = null;
     lastCompletedPollAddressRef.current = null;
     lastWithdrawAmountRef.current = 0;
     lastWithdrawTokenRef.current = { symbol: "USDC" };
@@ -391,6 +397,55 @@ export function useWithdrawDrawerController({
 
   const bridgeStatus = useBridgeStatus(bridgePollAddress, Boolean(bridgePollAddress));
 
+  const isWithdrawInFlight = Boolean(bridgePollAddress);
+
+  useEffect(() => {
+    if (!bridgePollAddress) {
+      bridgePollStartedAtRef.current = null;
+      return;
+    }
+    if (!bridgePollStartedAtRef.current) {
+      bridgePollStartedAtRef.current = Date.now();
+    }
+  }, [bridgePollAddress]);
+
+  useEffect(() => {
+    if (!isWithdrawInFlight || bridgeStatus.isFinal) return;
+    const id = window.setInterval(() => {
+      setStatusPollTick((value) => value + 1);
+    }, 30_000);
+    return () => window.clearInterval(id);
+  }, [bridgeStatus.isFinal, isWithdrawInFlight]);
+
+  const isStatusPollTimedOut = useMemo(
+    () =>
+      isWithdrawStatusPollTimedOut(
+        bridgePollStartedAtRef.current,
+        bridgeStatus.isFinal,
+        Date.now(),
+        WITHDRAW_STATUS_POLL_TIMEOUT_MS
+      ),
+    [bridgePollAddress, bridgeStatus.isFinal, isWithdrawInFlight, statusPollTick]
+  );
+
+  const statusPollAlertMessage = useMemo(() => {
+    if (!isWithdrawInFlight || bridgeStatus.isFinal) return null;
+    if (bridgeStatus.error) return wfMessages.statusPollError;
+    if (isStatusPollTimedOut) return wfMessages.statusPollTimeout;
+    return null;
+  }, [
+    bridgeStatus.error,
+    bridgeStatus.isFinal,
+    isStatusPollTimedOut,
+    isWithdrawInFlight,
+    wfMessages.statusPollError,
+    wfMessages.statusPollTimeout,
+  ]);
+
+  const handleRetryStatusPoll = useCallback(() => {
+    void bridgeStatus.mutate();
+  }, [bridgeStatus]);
+
   useEffect(() => {
     const status = bridgeStatus.latestStatus;
     if (!status || !bridgePollAddress) return;
@@ -436,8 +491,6 @@ export function useWithdrawDrawerController({
     recipientAddr,
     recipientError,
   ]);
-
-  const isWithdrawInFlight = Boolean(bridgePollAddress);
 
   const canSubmit = Boolean(
     canQuote &&
@@ -494,7 +547,9 @@ export function useWithdrawDrawerController({
         amountBaseUnit,
       });
 
+      bridgePollStartedAtRef.current = Date.now();
       setBridgePollAddress(bridgeDepositAddress);
+      setStatusPollTick((value) => value + 1);
       showWithdrawFeedback(wfMessages.submitted, "success", amountUsd);
       onBalanceRefresh();
     } catch (error) {
@@ -567,6 +622,9 @@ export function useWithdrawDrawerController({
     recipientAddressType,
     showUseConnected,
     statusMessage,
+    statusPollAlertMessage,
+    isRetryingStatusPoll: bridgeStatus.isValidating,
+    onRetryStatusPoll: handleRetryStatusPoll,
     tokenOptions,
     withdrawFeedback,
   };

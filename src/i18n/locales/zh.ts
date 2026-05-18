@@ -432,6 +432,10 @@ const zh = {
     failed: '提现失败',
     invalidRecipient: '请输入有效的收款地址',
     quoteError: '无法获取报价，请稍后重试',
+    statusPollError: '无法获取提现状态，请检查网络后重试查询。',
+    statusPollTimeout:
+      '状态更新较慢，提现可能仍在处理中。请稍后重试查询，或在收款钱包中确认是否到账。',
+    retryStatusPoll: '重试查询',
   },
 
   /** 充值流程界面文案（Connected / 金额 / 确认） */

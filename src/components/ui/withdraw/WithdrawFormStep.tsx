@@ -1,6 +1,6 @@
 "use client";
 
-import { Loader2, Wallet } from "lucide-react";
+import { AlertTriangle, Loader2, Wallet } from "lucide-react";
 import { useLayoutEffect, useRef } from "react";
 import { formatUsd } from "@/components/ui/deposit/format";
 import { WithdrawAssetPickers } from "@/components/ui/withdraw/WithdrawAssetPickers";
@@ -102,6 +102,29 @@ export function WithdrawFormStep({ c }: { c: Controller }) {
       {c.withdrawFeedback ? <WithdrawFeedbackLine feedback={c.withdrawFeedback} /> : null}
       {c.statusMessage ? (
         <p className="text-center text-xs font-medium text-[#ADFF2F]">{c.statusMessage}</p>
+      ) : null}
+      {c.statusPollAlertMessage ? (
+        <div className="flex gap-3 rounded-2xl border border-amber-400/25 bg-amber-400/10 p-4">
+          <AlertTriangle className="mt-0.5 shrink-0 text-amber-300" size={18} />
+          <div className="flex min-w-0 flex-1 items-start justify-between gap-3">
+            <p className="min-w-0 flex-1 text-xs leading-relaxed text-amber-100/85">
+              {c.statusPollAlertMessage}
+            </p>
+            <button
+              type="button"
+              data-testid="withdraw-retry-status-poll"
+              disabled={c.isRetryingStatusPoll}
+              onClick={c.onRetryStatusPoll}
+              className="shrink-0 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-[11px] font-black text-white active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {c.isRetryingStatusPoll ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                wf.retryStatusPoll
+              )}
+            </button>
+          </div>
+        </div>
       ) : null}
 
       <button

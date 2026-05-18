@@ -10,6 +10,9 @@ export type WithdrawFlowMessages = {
   noWallet: string;
   noWithdrawAddress: string;
   quoteError: string;
+  statusPollError: string;
+  statusPollTimeout: string;
+  retryStatusPoll: string;
 };
 
 export function getWithdrawFlowMessages(locale: string): WithdrawFlowMessages {
@@ -23,6 +26,9 @@ export function getWithdrawFlowMessages(locale: string): WithdrawFlowMessages {
     noWallet: wf.noWallet,
     noWithdrawAddress: wf.noWithdrawAddress,
     quoteError: wf.quoteError,
+    statusPollError: wf.statusPollError,
+    statusPollTimeout: wf.statusPollTimeout,
+    retryStatusPoll: wf.retryStatusPoll,
   };
 }
 
