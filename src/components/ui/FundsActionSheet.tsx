@@ -2,7 +2,7 @@
 
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "motion/react";
-import { ArrowDownToLine, ArrowUpFromLine } from "lucide-react";
+import { CircleArrowDown, CircleArrowUp } from "lucide-react";
 import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 import { useTranslation } from "@/i18n";
 
@@ -61,10 +61,10 @@ export function FundsActionSheet({
                   onClose();
                   onDeposit();
                 }}
-                className="flex items-center gap-3 rounded-2xl border border-[#ADFF2F]/30 bg-[#ADFF2F]/10 p-4 text-left active:scale-[0.98] hover:bg-[#ADFF2F]/15"
+                className="flex items-center justify-center gap-3 rounded-2xl border border-[#ADFF2F]/30 bg-[#ADFF2F]/10 p-4 active:scale-[0.98] hover:bg-[#ADFF2F]/15"
               >
                 <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#ADFF2F]/20 text-[#ADFF2F]">
-                  <ArrowDownToLine size={20} />
+                  <CircleArrowDown size={20} strokeWidth={1.75} />
                 </span>
                 <span className="text-base font-black text-[#ADFF2F]">{fm.deposit}</span>
               </button>
@@ -74,10 +74,10 @@ export function FundsActionSheet({
                   onClose();
                   onWithdraw();
                 }}
-                className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-left active:scale-[0.98] hover:bg-white/[0.06]"
+                className="flex items-center justify-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4 active:scale-[0.98] hover:bg-white/[0.06]"
               >
                 <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 text-white/80">
-                  <ArrowUpFromLine size={20} />
+                  <CircleArrowUp size={20} strokeWidth={1.75} />
                 </span>
                 <span className="text-base font-black text-white">{fm.withdraw}</span>
               </button>
