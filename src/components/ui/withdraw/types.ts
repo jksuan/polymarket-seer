@@ -34,4 +34,6 @@ export type WithdrawFeedback = {
   tone: "success" | "error";
   tokenSymbol: string;
   tokenIconUrl?: string;
+  /** Play success check + pulse when withdrawal is completed. */
+  celebrate?: boolean;
 };

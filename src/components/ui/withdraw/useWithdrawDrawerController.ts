@@ -96,7 +96,12 @@ export function useWithdrawDrawerController({
   }, []);
 
   const showWithdrawFeedback = useCallback(
-    (message: string, tone: WithdrawFeedback["tone"], amountUsd?: number) => {
+    (
+      message: string,
+      tone: WithdrawFeedback["tone"],
+      amountUsd?: number,
+      options?: { celebrate?: boolean }
+    ) => {
       const amount = amountUsd ?? lastWithdrawAmountRef.current;
       const token = lastWithdrawTokenRef.current;
       setWithdrawFeedback({
@@ -105,6 +110,7 @@ export function useWithdrawDrawerController({
         tone,
         tokenSymbol: token.symbol,
         tokenIconUrl: token.iconUrl,
+        celebrate: options?.celebrate ?? false,
       });
       setStatusMessage("");
       setExecutionError("");
@@ -391,7 +397,9 @@ export function useWithdrawDrawerController({
     if (status === "COMPLETED") {
       if (lastCompletedPollAddressRef.current === bridgePollAddress) return;
       lastCompletedPollAddressRef.current = bridgePollAddress;
-      showWithdrawFeedback(wfMessages.completed, "success", lastWithdrawAmountRef.current);
+      showWithdrawFeedback(wfMessages.completed, "success", lastWithdrawAmountRef.current, {
+        celebrate: true,
+      });
       resetWithdrawFormAfterSuccess();
       onBalanceRefresh();
       return;
@@ -429,13 +437,16 @@ export function useWithdrawDrawerController({
     recipientError,
   ]);
 
+  const isWithdrawInFlight = Boolean(bridgePollAddress);
+
   const canSubmit = Boolean(
     canQuote &&
       quote &&
       !isQuoting &&
       !isExecuting &&
       !recipientError &&
-      !amountError
+      !amountError &&
+      !isWithdrawInFlight
   );
 
   const handleWithdraw = useCallback(async () => {
@@ -527,6 +538,7 @@ export function useWithdrawDrawerController({
     balanceNumber,
     bridgeStatus,
     canSubmit,
+    isWithdrawInFlight,
     chainOptions,
     destinationAssets,
     selectedTokenSymbol,
