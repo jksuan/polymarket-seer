@@ -13,7 +13,11 @@ export function WithdrawFeedbackLine({ feedback }: { feedback: WithdrawFeedback 
       className={`flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-center text-xs font-medium ${toneClass}`}
     >
       <span className="inline-flex items-center gap-1.5">
-        <TokenIcon compact iconUrl={resolveTokenIconUrl("PUSD")} symbol="PUSD" />
+        <TokenIcon
+          compact
+          iconUrl={resolveTokenIconUrl(feedback.tokenSymbol, feedback.tokenIconUrl)}
+          symbol={feedback.tokenSymbol}
+        />
         <span className="font-bold">{formatUsd(feedback.amountUsd)}</span>
       </span>
       <span>{feedback.message}</span>

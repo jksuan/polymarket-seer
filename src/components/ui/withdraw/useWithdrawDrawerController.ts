@@ -82,6 +82,9 @@ export function useWithdrawDrawerController({
   const isExecutingRef = useRef(false);
   const lastCompletedPollAddressRef = useRef<string | null>(null);
   const lastWithdrawAmountRef = useRef(0);
+  const lastWithdrawTokenRef = useRef<{ symbol: string; iconUrl?: string }>({
+    symbol: "USDC",
+  });
 
   const wfMessages = useMemo(() => getWithdrawFlowMessages(locale), [locale]);
 
@@ -95,7 +98,14 @@ export function useWithdrawDrawerController({
   const showWithdrawFeedback = useCallback(
     (message: string, tone: WithdrawFeedback["tone"], amountUsd?: number) => {
       const amount = amountUsd ?? lastWithdrawAmountRef.current;
-      setWithdrawFeedback({ amountUsd: amount, message, tone });
+      const token = lastWithdrawTokenRef.current;
+      setWithdrawFeedback({
+        amountUsd: amount,
+        message,
+        tone,
+        tokenSymbol: token.symbol,
+        tokenIconUrl: token.iconUrl,
+      });
       setStatusMessage("");
       setExecutionError("");
     },
@@ -197,6 +207,7 @@ export function useWithdrawDrawerController({
     setBridgePollAddress(null);
     lastCompletedPollAddressRef.current = null;
     lastWithdrawAmountRef.current = 0;
+    lastWithdrawTokenRef.current = { symbol: "USDC" };
     quoteRequestRef.current += 1;
   }, []);
 
@@ -435,6 +446,10 @@ export function useWithdrawDrawerController({
     setStatusMessage("");
     setWithdrawFeedback(null);
     lastWithdrawAmountRef.current = amountUsd;
+    lastWithdrawTokenRef.current = {
+      symbol: selectedAsset.symbol,
+      iconUrl: selectedAsset.iconUrl,
+    };
 
     try {
       const wallet = selectPrimaryWallet(wallets, user?.wallet?.address, {

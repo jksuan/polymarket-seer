@@ -27,9 +27,11 @@ export type WithdrawQuoteState = {
   quotedAtMs: number;
 };
 
-/** Status line with pUSD amount prefix (submitted / completed / failed / cancelled). */
+/** Status line with receive-token icon and withdraw amount (submitted / completed / failed / cancelled). */
 export type WithdrawFeedback = {
   amountUsd: number;
   message: string;
   tone: "success" | "error";
+  tokenSymbol: string;
+  tokenIconUrl?: string;
 };
