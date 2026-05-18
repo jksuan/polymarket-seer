@@ -26,6 +26,16 @@ export function getWithdrawFlowMessages(locale: string): WithdrawFlowMessages {
   };
 }
 
+export function isWithdrawUserRejection(message: string): boolean {
+  const lower = message.trim().toLowerCase();
+  return (
+    lower.includes("user rejected") ||
+    lower.includes("user denied") ||
+    lower.includes("action_rejected") ||
+    lower.includes("request rejected")
+  );
+}
+
 /** Map wallet/ethers rejection copy to localized withdraw feedback. */
 export function formatWithdrawExecutionError(locale: string, message: string): string {
   const trimmed = message.trim();
@@ -33,13 +43,7 @@ export function formatWithdrawExecutionError(locale: string, message: string): s
     return getWithdrawFlowMessages(locale).failed;
   }
 
-  const lower = trimmed.toLowerCase();
-  if (
-    lower.includes("user rejected") ||
-    lower.includes("user denied") ||
-    lower.includes("action_rejected") ||
-    lower.includes("request rejected")
-  ) {
+  if (isWithdrawUserRejection(trimmed)) {
     return getWithdrawFlowMessages(locale).userRejected;
   }
 

@@ -3,12 +3,12 @@ import { formatWithdrawExecutionError, getWithdrawFlowMessages } from "./withdra
 
 describe("formatWithdrawExecutionError", () => {
   it("maps user rejected to Chinese copy", () => {
-    expect(formatWithdrawExecutionError("zh", "User rejected the request")).toBe("您已取消交易");
+    expect(formatWithdrawExecutionError("zh", "User rejected the request")).toBe("提现请求被取消");
   });
 
   it("maps user rejected to English copy", () => {
     expect(formatWithdrawExecutionError("en", "User rejected the request")).toBe(
-      "You cancelled the transaction"
+      "Withdrawal request cancelled"
     );
   });
 

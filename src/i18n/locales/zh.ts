@@ -425,7 +425,7 @@ const zh = {
     submitted: '已发起提现',
     completed: '提现已完成',
     processing: '处理中…',
-    userRejected: '您已取消交易',
+    userRejected: '提现请求被取消',
     noWallet: '未找到已连接钱包',
     noWithdrawAddress: '无法创建提现地址',
     success: '已发起提现',

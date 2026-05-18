@@ -27,7 +27,7 @@ import {
   QUOTE_DEBOUNCE_MS,
 } from "./constants";
 import { executePusdWithdrawTransfer } from "./executePusdWithdraw";
-import type { WithdrawDestinationAsset, WithdrawQuoteState } from "./types";
+import type { WithdrawDestinationAsset, WithdrawFeedback, WithdrawQuoteState } from "./types";
 import { resolveRecipientAddressType } from "./recipientAddressType";
 import { isValidWithdrawRecipient, validateWithdrawAmountUsd, validateWithdrawRecipient } from "./validation";
 import {
@@ -41,6 +41,7 @@ import { normalizeWithdrawTokenSymbol } from "./withdrawWhitelist";
 import {
   formatWithdrawExecutionError,
   getWithdrawFlowMessages,
+  isWithdrawUserRejection,
 } from "./withdrawMessages";
 
 export function useWithdrawDrawerController({
@@ -74,19 +75,32 @@ export function useWithdrawDrawerController({
   const [isExecuting, setIsExecuting] = useState(false);
   const [executionError, setExecutionError] = useState("");
   const [statusMessage, setStatusMessage] = useState("");
+  const [withdrawFeedback, setWithdrawFeedback] = useState<WithdrawFeedback | null>(null);
   const [bridgePollAddress, setBridgePollAddress] = useState<string | null>(null);
 
   const quoteRequestRef = useRef(0);
   const isExecutingRef = useRef(false);
   const lastCompletedPollAddressRef = useRef<string | null>(null);
+  const lastWithdrawAmountRef = useRef(0);
 
   const wfMessages = useMemo(() => getWithdrawFlowMessages(locale), [locale]);
 
   const clearWithdrawFeedback = useCallback(() => {
     setExecutionError("");
     setStatusMessage("");
+    setWithdrawFeedback(null);
     setBridgePollAddress(null);
   }, []);
+
+  const showWithdrawFeedback = useCallback(
+    (message: string, tone: WithdrawFeedback["tone"], amountUsd?: number) => {
+      const amount = amountUsd ?? lastWithdrawAmountRef.current;
+      setWithdrawFeedback({ amountUsd: amount, message, tone });
+      setStatusMessage("");
+      setExecutionError("");
+    },
+    []
+  );
 
   const activeWallet = useMemo(
     () =>
@@ -179,8 +193,10 @@ export function useWithdrawDrawerController({
     setIsExecuting(false);
     setExecutionError("");
     setStatusMessage("");
+    setWithdrawFeedback(null);
     setBridgePollAddress(null);
     lastCompletedPollAddressRef.current = null;
+    lastWithdrawAmountRef.current = 0;
     quoteRequestRef.current += 1;
   }, []);
 
@@ -364,21 +380,23 @@ export function useWithdrawDrawerController({
     if (status === "COMPLETED") {
       if (lastCompletedPollAddressRef.current === bridgePollAddress) return;
       lastCompletedPollAddressRef.current = bridgePollAddress;
-      setStatusMessage(wfMessages.completed);
+      showWithdrawFeedback(wfMessages.completed, "success", lastWithdrawAmountRef.current);
       resetWithdrawFormAfterSuccess();
       onBalanceRefresh();
       return;
     }
     if (status === "FAILED") {
-      setStatusMessage(wfMessages.failed);
+      showWithdrawFeedback(wfMessages.failed, "error", lastWithdrawAmountRef.current);
       return;
     }
     setStatusMessage(wfMessages.processing);
+    setWithdrawFeedback(null);
   }, [
     bridgePollAddress,
     bridgeStatus.latestStatus,
     onBalanceRefresh,
     resetWithdrawFormAfterSuccess,
+    showWithdrawFeedback,
     wfMessages,
   ]);
 
@@ -415,6 +433,8 @@ export function useWithdrawDrawerController({
     setIsExecuting(true);
     setExecutionError("");
     setStatusMessage("");
+    setWithdrawFeedback(null);
+    lastWithdrawAmountRef.current = amountUsd;
 
     try {
       const wallet = selectPrimaryWallet(wallets, user?.wallet?.address, {
@@ -449,12 +469,21 @@ export function useWithdrawDrawerController({
       });
 
       setBridgePollAddress(bridgeDepositAddress);
-      setStatusMessage(wfMessages.submitted);
+      showWithdrawFeedback(wfMessages.submitted, "success", amountUsd);
       onBalanceRefresh();
     } catch (error) {
-      const raw =
-        error instanceof Error ? error.message : wfMessages.failed;
-      setExecutionError(formatWithdrawExecutionError(locale, raw));
+      const raw = error instanceof Error ? error.message : wfMessages.failed;
+      if (isWithdrawUserRejection(raw)) {
+        showWithdrawFeedback(wfMessages.userRejected, "error", lastWithdrawAmountRef.current);
+      } else {
+        const formatted = formatWithdrawExecutionError(locale, raw);
+        if (formatted === wfMessages.failed) {
+          showWithdrawFeedback(wfMessages.failed, "error", lastWithdrawAmountRef.current);
+        } else {
+          setExecutionError(formatted);
+          setWithdrawFeedback(null);
+        }
+      }
     } finally {
       isExecutingRef.current = false;
       setIsExecuting(false);
@@ -471,6 +500,7 @@ export function useWithdrawDrawerController({
     stickyExternalWalletClientType,
     user?.wallet?.address,
     wallets,
+    showWithdrawFeedback,
   ]);
 
   return {
@@ -511,5 +541,6 @@ export function useWithdrawDrawerController({
     showUseConnected,
     statusMessage,
     tokenOptions,
+    withdrawFeedback,
   };
 }

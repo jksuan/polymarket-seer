@@ -426,7 +426,7 @@ const en: TranslationKeys = {
     submitted: 'Withdrawal initiated',
     completed: 'Withdrawal completed',
     processing: 'Processing…',
-    userRejected: 'You cancelled the transaction',
+    userRejected: 'Withdrawal request cancelled',
     noWallet: 'No connected wallet',
     noWithdrawAddress: 'Could not create withdrawal address',
     success: 'Withdrawal initiated',

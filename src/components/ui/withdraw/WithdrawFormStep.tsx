@@ -6,6 +6,7 @@ import { formatUsd } from "@/components/ui/deposit/format";
 import { WithdrawAssetPickers } from "@/components/ui/withdraw/WithdrawAssetPickers";
 import { useTranslation } from "@/i18n";
 import { WithdrawBreakdown } from "./WithdrawBreakdown";
+import { WithdrawFeedbackLine } from "./WithdrawFeedbackLine";
 import type { useWithdrawDrawerController } from "./useWithdrawDrawerController";
 
 type Controller = ReturnType<typeof useWithdrawDrawerController>;
@@ -98,6 +99,7 @@ export function WithdrawFormStep({ c }: { c: Controller }) {
       {c.executionError ? (
         <p className="text-center text-xs font-medium text-red-400">{c.executionError}</p>
       ) : null}
+      {c.withdrawFeedback ? <WithdrawFeedbackLine feedback={c.withdrawFeedback} /> : null}
       {c.statusMessage ? (
         <p className="text-center text-xs font-medium text-[#ADFF2F]">{c.statusMessage}</p>
       ) : null}
