@@ -38,6 +38,10 @@ import {
   getWithdrawChainOptionsForSymbol,
 } from "./withdrawAssets";
 import { normalizeWithdrawTokenSymbol } from "./withdrawWhitelist";
+import {
+  formatWithdrawExecutionError,
+  getWithdrawFlowMessages,
+} from "./withdrawMessages";
 
 export function useWithdrawDrawerController({
   isOpen,
@@ -74,6 +78,15 @@ export function useWithdrawDrawerController({
 
   const quoteRequestRef = useRef(0);
   const isExecutingRef = useRef(false);
+  const lastCompletedPollAddressRef = useRef<string | null>(null);
+
+  const wfMessages = useMemo(() => getWithdrawFlowMessages(locale), [locale]);
+
+  const clearWithdrawFeedback = useCallback(() => {
+    setExecutionError("");
+    setStatusMessage("");
+    setBridgePollAddress(null);
+  }, []);
 
   const activeWallet = useMemo(
     () =>
@@ -147,6 +160,16 @@ export function useWithdrawDrawerController({
     return validateWithdrawRecipient(recipientAddr, recipientAddressType, locale);
   }, [recipientAddr, recipientAddressType, locale]);
 
+  const resetWithdrawFormAfterSuccess = useCallback(() => {
+    setAmountInput("");
+    setQuote(null);
+    setQuoteError("");
+    setIsQuoting(false);
+    setExecutionError("");
+    setBridgePollAddress(null);
+    quoteRequestRef.current += 1;
+  }, []);
+
   const resetState = useCallback(() => {
     setRecipientAddr("");
     setAmountInput("");
@@ -157,6 +180,7 @@ export function useWithdrawDrawerController({
     setExecutionError("");
     setStatusMessage("");
     setBridgePollAddress(null);
+    lastCompletedPollAddressRef.current = null;
     quoteRequestRef.current += 1;
   }, []);
 
@@ -176,28 +200,50 @@ export function useWithdrawDrawerController({
 
   const handleUseConnected = useCallback(() => {
     if (!activeWallet?.address) return;
+    clearWithdrawFeedback();
     setRecipientAddr(activeWallet.address);
-  }, [activeWallet?.address]);
+  }, [activeWallet?.address, clearWithdrawFeedback]);
 
-  const handleAmountChange = useCallback((value: string) => {
-    setAmountInput(sanitizeAmountUsdInput(value));
-  }, []);
+  const handleAmountChange = useCallback(
+    (value: string) => {
+      clearWithdrawFeedback();
+      setAmountInput(sanitizeAmountUsdInput(value));
+    },
+    [clearWithdrawFeedback]
+  );
 
   const handleMax = useCallback(() => {
+    clearWithdrawFeedback();
     setAmountInput(formatAmountUsdInput(balanceNumber));
-  }, [balanceNumber]);
+  }, [balanceNumber, clearWithdrawFeedback]);
 
-  const handleChainChange = useCallback((chainId: string) => {
-    setSelectedChainId(chainId);
-    setQuote(null);
-    setQuoteError("");
-  }, []);
+  const handleChainChange = useCallback(
+    (chainId: string) => {
+      setSelectedChainId(chainId);
+      setQuote(null);
+      setQuoteError("");
+      clearWithdrawFeedback();
+    },
+    [clearWithdrawFeedback]
+  );
 
-  const handleTokenChange = useCallback((assetId: string) => {
-    setSelectedAssetId(assetId);
-    setQuote(null);
-    setQuoteError("");
-  }, []);
+  const handleTokenChange = useCallback(
+    (assetId: string) => {
+      setSelectedAssetId(assetId);
+      setQuote(null);
+      setQuoteError("");
+      clearWithdrawFeedback();
+    },
+    [clearWithdrawFeedback]
+  );
+
+  const handleRecipientChange = useCallback(
+    (value: string) => {
+      clearWithdrawFeedback();
+      setRecipientAddr(value);
+    },
+    [clearWithdrawFeedback]
+  );
 
   useEffect(() => {
     if (destinationAssets.length === 0) return;
@@ -290,7 +336,7 @@ export function useWithdrawDrawerController({
       } catch {
         if (quoteRequestRef.current !== requestId) return;
         setQuote(null);
-        setQuoteError(locale === "zh" ? "无法获取报价，请稍后重试" : "Could not fetch quote. Try again.");
+        setQuoteError(wfMessages.quoteError);
       } finally {
         if (quoteRequestRef.current === requestId) {
           setIsQuoting(false);
@@ -307,6 +353,7 @@ export function useWithdrawDrawerController({
     recipientAddr,
     selectedAsset,
     proxyAddress,
+    wfMessages.quoteError,
   ]);
 
   const bridgeStatus = useBridgeStatus(bridgePollAddress, Boolean(bridgePollAddress));
@@ -315,22 +362,29 @@ export function useWithdrawDrawerController({
     const status = bridgeStatus.latestStatus;
     if (!status || !bridgePollAddress) return;
     if (status === "COMPLETED") {
-      setStatusMessage(locale === "zh" ? "提现已完成" : "Withdrawal completed");
+      if (lastCompletedPollAddressRef.current === bridgePollAddress) return;
+      lastCompletedPollAddressRef.current = bridgePollAddress;
+      setStatusMessage(wfMessages.completed);
+      resetWithdrawFormAfterSuccess();
       onBalanceRefresh();
       return;
     }
     if (status === "FAILED") {
-      setStatusMessage(locale === "zh" ? "提现失败" : "Withdrawal failed");
+      setStatusMessage(wfMessages.failed);
       return;
     }
-    setStatusMessage(
-      locale === "zh" ? "处理中…" : "Processing…"
-    );
-  }, [bridgePollAddress, bridgeStatus.latestStatus, locale, onBalanceRefresh]);
+    setStatusMessage(wfMessages.processing);
+  }, [
+    bridgePollAddress,
+    bridgeStatus.latestStatus,
+    onBalanceRefresh,
+    resetWithdrawFormAfterSuccess,
+    wfMessages,
+  ]);
 
   const primaryButtonLabel = useMemo(() => {
     if (isExecuting) {
-      return locale === "zh" ? "处理中…" : "Processing…";
+      return wfMessages.processing;
     }
     if (!recipientAddr.trim() || !amountInput.trim() || amountError || recipientError || !quote) {
       return "Enter amount";
@@ -340,8 +394,8 @@ export function useWithdrawDrawerController({
     amountError,
     amountInput,
     isExecuting,
-    locale,
     quote,
+    wfMessages.processing,
     recipientAddr,
     recipientError,
   ]);
@@ -366,7 +420,7 @@ export function useWithdrawDrawerController({
       const wallet = selectPrimaryWallet(wallets, user?.wallet?.address, {
         stickyClientType: stickyExternalWalletClientType,
       });
-      if (!wallet) throw new Error(locale === "zh" ? "未找到已连接钱包" : "No connected wallet");
+      if (!wallet) throw new Error(wfMessages.noWallet);
 
       const amountBaseUnit = ethers.utils
         .parseUnits(amountUsd.toFixed(PUSD_DECIMALS), PUSD_DECIMALS)
@@ -381,9 +435,7 @@ export function useWithdrawDrawerController({
 
       const bridgeDepositAddress = extractDepositAddress(withdrawResponse, "evm");
       if (!ethers.utils.isAddress(bridgeDepositAddress)) {
-        throw new Error(
-          locale === "zh" ? "无法创建提现地址" : "Could not create withdrawal address"
-        );
+        throw new Error(wfMessages.noWithdrawAddress);
       }
 
       const ethereumProvider = await wallet.getEthereumProvider();
@@ -397,16 +449,12 @@ export function useWithdrawDrawerController({
       });
 
       setBridgePollAddress(bridgeDepositAddress);
-      setStatusMessage(locale === "zh" ? "提现已提交" : "Withdrawal submitted");
+      setStatusMessage(wfMessages.submitted);
       onBalanceRefresh();
     } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : locale === "zh"
-            ? "提现失败"
-            : "Withdrawal failed";
-      setExecutionError(message);
+      const raw =
+        error instanceof Error ? error.message : wfMessages.failed;
+      setExecutionError(formatWithdrawExecutionError(locale, raw));
     } finally {
       isExecutingRef.current = false;
       setIsExecuting(false);
@@ -416,6 +464,7 @@ export function useWithdrawDrawerController({
     canSubmit,
     locale,
     onBalanceRefresh,
+    wfMessages,
     proxyAddress,
     recipientAddr,
     selectedAsset,
@@ -457,7 +506,7 @@ export function useWithdrawDrawerController({
     selectedChainId,
     selectedTokenOptionId,
     setFundsTermsOpen,
-    setRecipientAddr,
+    setRecipientAddr: handleRecipientChange,
     recipientAddressType,
     showUseConnected,
     statusMessage,

@@ -93,13 +93,13 @@ export function WithdrawFormStep({ c }: { c: Controller }) {
       {c.quote?.fee ? <WithdrawBreakdown fee={c.quote.fee} /> : null}
 
       {c.quoteError ? (
-        <p className="text-xs font-medium text-red-400">{c.quoteError}</p>
+        <p className="text-center text-xs font-medium text-red-400">{c.quoteError}</p>
       ) : null}
       {c.executionError ? (
-        <p className="text-xs font-medium text-red-400">{c.executionError}</p>
+        <p className="text-center text-xs font-medium text-red-400">{c.executionError}</p>
       ) : null}
       {c.statusMessage ? (
-        <p className="text-xs font-medium text-[#ADFF2F]">{c.statusMessage}</p>
+        <p className="text-center text-xs font-medium text-[#ADFF2F]">{c.statusMessage}</p>
       ) : null}
 
       <button
