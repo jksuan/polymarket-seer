@@ -40,6 +40,7 @@ export type UseBalanceSyncParams = {
   wallets: any[] | undefined;
   userWalletAddress: string | undefined;
   stickyExternalWalletClientType: string | null;
+  preferEmbeddedForPrimaryWallet: boolean;
   setStickyExternalWalletClientType: (value: string | null) => void;
   setHasCreds: (value: boolean) => void;
   setWalletAddress: (value: string) => void;
@@ -52,6 +53,7 @@ export function useBalanceSync({
   wallets,
   userWalletAddress,
   stickyExternalWalletClientType,
+  preferEmbeddedForPrimaryWallet,
   setStickyExternalWalletClientType,
   setHasCreds,
   setWalletAddress,
@@ -100,6 +102,7 @@ export function useBalanceSync({
       try {
         const wallet = selectPrimaryWallet(wallets, userWalletAddress, {
           stickyClientType: stickyExternalWalletClientType,
+          preferEmbedded: preferEmbeddedForPrimaryWallet,
         });
         if (!wallet) {
           setHasCreds(false);
@@ -181,6 +184,7 @@ export function useBalanceSync({
       wallets,
       userWalletAddress,
       stickyExternalWalletClientType,
+      preferEmbeddedForPrimaryWallet,
       setStickyExternalWalletClientType,
       setHasCreds,
       setWalletAddress,

@@ -10,6 +10,8 @@ export type SelectPrimaryWalletOptions = {
    * 有值且首选地址对不上时：只在该扩展下找；找不到则 undefined，不选其它扩展、不用 embedded。
    */
   stickyClientType?: string | null;
+  /** embedded 会话：优先 privy，且无 embedded 时不回退外链 */
+  preferEmbedded?: boolean;
 };
 
 function normalizeClientType(type: string | undefined): string | undefined {
@@ -42,15 +44,19 @@ export function selectPrimaryWallet<T extends WalletLike>(
     return sameConnector ?? undefined;
   }
 
-  // 无 sticky：首次解析，外链优先再 embedded
-  const externalWallet = wallets.find(
-    (wallet) => wallet.walletClientType && wallet.walletClientType !== "privy"
-  );
-  if (externalWallet) return externalWallet;
-
   const embeddedWallet = wallets.find(
     (wallet) => wallet.walletClientType === "privy"
   );
+  const externalWallet = wallets.find(
+    (wallet) => wallet.walletClientType && wallet.walletClientType !== "privy"
+  );
+
+  if (options?.preferEmbedded) {
+    if (embeddedWallet) return embeddedWallet;
+    return undefined;
+  }
+
+  if (externalWallet) return externalWallet;
   if (embeddedWallet) return embeddedWallet;
 
   return wallets[0];

@@ -37,6 +37,8 @@ describe("TopHeader", () => {
       fetchBalance: vi.fn(),
       isInitialBalanceLoading: false,
       isEvmSignerReady: false,
+      sessionMode: null,
+      primaryWalletSelectOptions: { stickyClientType: null, preferEmbedded: false },
     } as unknown as ReturnType<typeof usePolymarketAuth>);
 
     render(<TopHeader />);

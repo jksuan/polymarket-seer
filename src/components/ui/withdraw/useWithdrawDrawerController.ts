@@ -63,7 +63,7 @@ export function useWithdrawDrawerController({
 }) {
   const { user } = usePrivy();
   const { wallets } = useWallets();
-  const { stickyExternalWalletClientType } = usePolymarketAuth();
+  const { primaryWalletSelectOptions } = usePolymarketAuth();
   const { data: supportedAssets, isLoading: assetsLoading } = useSupportedAssets();
 
   const [recipientAddr, setRecipientAddr] = useState("");
@@ -125,10 +125,8 @@ export function useWithdrawDrawerController({
 
   const activeWallet = useMemo(
     () =>
-      selectPrimaryWallet(wallets, user?.wallet?.address, {
-        stickyClientType: stickyExternalWalletClientType,
-      }),
-    [wallets, user?.wallet?.address, stickyExternalWalletClientType]
+      selectPrimaryWallet(wallets, user?.wallet?.address, primaryWalletSelectOptions),
+    [wallets, user?.wallet?.address, primaryWalletSelectOptions]
   );
 
   const destinationAssets = useMemo(
@@ -516,9 +514,7 @@ export function useWithdrawDrawerController({
     };
 
     try {
-      const wallet = selectPrimaryWallet(wallets, user?.wallet?.address, {
-        stickyClientType: stickyExternalWalletClientType,
-      });
+      const wallet = selectPrimaryWallet(wallets, user?.wallet?.address, primaryWalletSelectOptions);
       if (!wallet) throw new Error(wfMessages.noWallet);
 
       const amountBaseUnit = ethers.utils
@@ -578,7 +574,7 @@ export function useWithdrawDrawerController({
     proxyAddress,
     recipientAddr,
     selectedAsset,
-    stickyExternalWalletClientType,
+    primaryWalletSelectOptions,
     user?.wallet?.address,
     wallets,
     showWithdrawFeedback,

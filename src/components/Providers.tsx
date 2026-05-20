@@ -37,6 +37,11 @@ export default function Providers({ children }: { children: React.ReactNode }) {
       appId={appId}
       config={{
         loginMethods: ["email", "wallet", "twitter", "google"],
+        embeddedWallets: {
+          ethereum: {
+            createOnLogin: "users-without-wallets",
+          },
+        },
         appearance: {
           theme: "dark",
           accentColor: "#3b82f6",
