@@ -36,6 +36,8 @@ const en: TranslationKeys = {
       'Switch back to an Ethereum-capable account in your wallet extension, or disconnect and reconnect.',
     evmSignerTradingBlock:
       'Cannot sign right now. Switch back to an active EVM account in your wallet or reconnect, then try again.',
+    accountDriftReloginTitle: 'Wallet account changed',
+    accountDriftReloginHint: 'Please sign in again to connect your current wallet account.',
   },
 
   // ─── Discover Cards ───

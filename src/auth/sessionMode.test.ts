@@ -6,6 +6,7 @@ import {
   loginMethodToSessionMode,
   preferEmbeddedPrimaryWallet,
   readStoredSessionMode,
+  shouldMonitorExternalAccountDrift,
   writeStoredSessionMode,
 } from "./sessionMode";
 
@@ -42,5 +43,11 @@ describe("sessionMode", () => {
     expect(preferEmbeddedPrimaryWallet("embedded")).toBe(true);
     expect(preferEmbeddedPrimaryWallet("external")).toBe(false);
     expect(preferEmbeddedPrimaryWallet(null)).toBe(false);
+  });
+
+  it("shouldMonitorExternalAccountDrift 仅 external 为 true", () => {
+    expect(shouldMonitorExternalAccountDrift("external")).toBe(true);
+    expect(shouldMonitorExternalAccountDrift("embedded")).toBe(false);
+    expect(shouldMonitorExternalAccountDrift(null)).toBe(false);
   });
 });

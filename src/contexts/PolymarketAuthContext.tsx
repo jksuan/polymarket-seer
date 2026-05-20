@@ -6,6 +6,8 @@ import { usePrivy, useWallets, useCreateWallet, useActiveWallet, useLogin } from
 import { clearCredsCache, shortenAddress } from "@/lib/utils";
 import { selectPrimaryWallet, type SelectPrimaryWalletOptions } from "@/lib/primaryWallet";
 import { shouldSyncPrivyActiveWallet } from "@/lib/privyActiveWalletSync";
+import { disconnectExternalWallets } from "@/lib/disconnectExternalWallets";
+import { clearWalletConnectStorage } from "@/lib/clearWalletConnectStorage";
 import { normalizeAddress } from "@/lib/accountSwitchGuard";
 import {
   type AuthSessionMode,
@@ -45,6 +47,9 @@ interface PolymarketAuthContextValue {
   displayAvatar: string;
   hasCreds: boolean;
   sessionEpoch: number;
+  /** ADR-0005：外链漂移登出后提示用户手动重登 */
+  accountDriftRequiresRelogin: boolean;
+  clearAccountDriftPrompt: () => void;
 }
 
 const PolymarketAuthContext = createContext<PolymarketAuthContextValue | null>(null);
@@ -145,6 +150,7 @@ export function PolymarketAuthProvider({ children }: { children: ReactNode }) {
   }, [ready, authenticated, sessionAddress, sessionMode, wallets, stickyExternalWalletClientType]);
 
   const performSessionLogout = useCallback(async () => {
+    const modeForCleanup = sessionMode ?? readStoredSessionMode();
     bumpSessionEpoch();
     clearCredsCache();
     setWalletAddress("");
@@ -155,18 +161,27 @@ export function PolymarketAuthProvider({ children }: { children: ReactNode }) {
     setStickyExternalWalletClientType(null);
     setSessionMode(null);
     clearStoredSessionMode();
+    if (modeForCleanup === "external") {
+      await disconnectExternalWallets(wallets);
+      await clearWalletConnectStorage();
+    }
     await logout();
     console.log("[退出登录] 已清除所有状态 ✅");
-  }, [logout, resetBalanceState, bumpSessionEpoch]);
+  }, [logout, resetBalanceState, bumpSessionEpoch, sessionMode, wallets]);
 
-  const { clearAccountChangeDebounce, resetReloginState } = useExternalAccountDrift({
+  const {
+    accountDriftRequiresRelogin,
+    clearAccountChangeDebounce,
+    clearAccountDriftPrompt,
+    resetReloginState,
+  } = useExternalAccountDrift({
     ready,
     authenticated,
+    sessionMode,
     user,
     wallets,
     sessionAddress,
     stickyExternalWalletClientType,
-    login,
     performLogout: performSessionLogout,
   });
 
@@ -245,6 +260,8 @@ export function PolymarketAuthProvider({ children }: { children: ReactNode }) {
     displayAvatar,
     hasCreds,
     sessionEpoch,
+    accountDriftRequiresRelogin,
+    clearAccountDriftPrompt,
   };
 
   return (

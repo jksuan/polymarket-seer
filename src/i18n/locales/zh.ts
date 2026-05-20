@@ -34,6 +34,8 @@ const zh = {
       '请在钱包扩展中切回支持以太坊的账户，或退出后重新连接。',
     evmSignerTradingBlock:
       '当前无法签名：请先在钱包中切回可用的 EVM 账户或重新连接后再试。',
+    accountDriftReloginTitle: '钱包账户已变更',
+    accountDriftReloginHint: '请重新登录以连接当前钱包账户。',
   },
 
   // ─── 发现页卡片 ───

@@ -45,4 +45,26 @@ describe("TopHeader", () => {
 
     expect(screen.getByText(zh.header.evmSignerUnavailableTitle)).toBeInTheDocument();
   });
+
+  it("未登录且账户漂移时展示重登提示", async () => {
+    const { usePolymarketAuth } = await import("@/contexts/PolymarketAuthContext");
+    vi.mocked(usePolymarketAuth).mockReturnValue({
+      login: vi.fn(),
+      authenticated: false,
+      handleLogout: vi.fn(),
+      proxyAddress: null,
+      displayIdentifier: "",
+      usdcBalance: "0",
+      fetchBalance: vi.fn(),
+      isInitialBalanceLoading: false,
+      isEvmSignerReady: false,
+      sessionEpoch: 0,
+      accountDriftRequiresRelogin: true,
+      clearAccountDriftPrompt: vi.fn(),
+    } as unknown as ReturnType<typeof usePolymarketAuth>);
+
+    render(<TopHeader />);
+
+    expect(screen.getByText(zh.header.accountDriftReloginTitle)).toBeInTheDocument();
+  });
 });

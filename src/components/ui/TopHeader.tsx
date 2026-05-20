@@ -45,6 +45,8 @@ export function TopHeader({ isSticky = false }: TopHeaderProps = {}) {
     isInitialBalanceLoading,
     isEvmSignerReady,
     sessionEpoch,
+    accountDriftRequiresRelogin,
+    clearAccountDriftPrompt,
   } = usePolymarketAuth();
   const { t, locale } = useTranslation();
 
@@ -92,7 +94,10 @@ export function TopHeader({ isSticky = false }: TopHeaderProps = {}) {
           <div className="flex items-center gap-2">
             <LangToggle locale={locale} onOpen={() => setLangOpen(true)} />
             <button
-              onClick={login}
+              onClick={() => {
+                clearAccountDriftPrompt();
+                login();
+              }}
               className="flex items-center gap-2 px-4 py-2 rounded-full active:scale-95 transition-all shadow-[0_0_12px_rgba(173,255,47,0.15)] bg-[#ADFF2F]/10 border border-[#ADFF2F]/50 text-[#ADFF2F] font-bold text-[12px]"
             >
               <Wallet size={14} />
@@ -160,6 +165,23 @@ export function TopHeader({ isSticky = false }: TopHeaderProps = {}) {
               <p className="text-xs font-bold leading-snug">{t.header.evmSignerUnavailableTitle}</p>
               <p className="mt-0.5 text-[11px] leading-relaxed text-white/70">
                 {t.header.evmSignerUnavailableHint}
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {!authenticated && accountDriftRequiresRelogin ? (
+        <div
+          role="status"
+          className="mx-4 mb-2 rounded-xl border border-sky-500/35 bg-sky-500/10 px-3 py-2 text-sky-50"
+        >
+          <div className="flex gap-2">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-sky-300" aria-hidden />
+            <div className="min-w-0">
+              <p className="text-xs font-bold leading-snug">{t.header.accountDriftReloginTitle}</p>
+              <p className="mt-0.5 text-[11px] leading-relaxed text-white/70">
+                {t.header.accountDriftReloginHint}
               </p>
             </div>
           </div>

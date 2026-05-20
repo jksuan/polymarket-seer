@@ -61,3 +61,7 @@ export function clearStoredSessionMode(): void {
 export function preferEmbeddedPrimaryWallet(mode: AuthSessionMode | null): boolean {
   return mode === "embedded";
 }
+
+export function shouldMonitorExternalAccountDrift(mode: AuthSessionMode | null): boolean {
+  return mode === "external";
+}
