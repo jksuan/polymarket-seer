@@ -1,6 +1,6 @@
 import { isAccountDrift } from "@/lib/accountSwitchGuard";
 
-/** 外链 accountsChanged 防抖间隔，与 ADR-0004 一致 */
+/** 外链 accountsChanged 防抖间隔，与 ADR-0005 一致 */
 export const EXTERNAL_ACCOUNT_DRIFT_DEBOUNCE_MS = 300;
 
 export function createAccountDriftProcessor(options: {

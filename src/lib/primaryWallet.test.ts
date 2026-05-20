@@ -52,4 +52,14 @@ describe("selectPrimaryWallet", () => {
       })
     ).toBeUndefined();
   });
+
+  it("preferEmbedded 时优先 embedded", () => {
+    expect(
+      selectPrimaryWallet([embedded, metamask], null, { preferEmbedded: true })
+    ).toEqual(embedded);
+  });
+
+  it("preferEmbedded 且无 embedded 时不回退外链", () => {
+    expect(selectPrimaryWallet([metamask], null, { preferEmbedded: true })).toBeUndefined();
+  });
 });

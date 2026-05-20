@@ -38,7 +38,7 @@ export function useDepositDrawerController({
 }: UseDepositDrawerControllerParams) {
   const { user } = usePrivy();
   const { wallets } = useWallets();
-  const { stickyExternalWalletClientType } = usePolymarketAuth();
+  const { primaryWalletSelectOptions } = usePolymarketAuth();
   const { data: supportedAssets, isLoading: assetsLoading } = useSupportedAssets();
 
   const [step, setStep] = useState<FlowStep>("home");
@@ -70,10 +70,8 @@ export function useDepositDrawerController({
 
   const activeWallet = useMemo(
     () =>
-      selectPrimaryWallet(wallets, user?.wallet?.address, {
-        stickyClientType: stickyExternalWalletClientType,
-      }),
-    [wallets, user?.wallet?.address, stickyExternalWalletClientType]
+      selectPrimaryWallet(wallets, user?.wallet?.address, primaryWalletSelectOptions),
+    [wallets, user?.wallet?.address, primaryWalletSelectOptions]
   );
   const walletAddress = activeWallet?.address ?? "";
 

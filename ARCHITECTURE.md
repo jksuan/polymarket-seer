@@ -295,7 +295,7 @@ polymarket-seer/
 
 ### 3.1 资金模块（充值 / 提现）
 
-顶栏 **余额 pill**（`$` + `▾`）展开 `FundsActionSheet`，分别进入 `DepositDrawer` 与 `WithdrawDrawer`。领域术语与不变量见 `CONTEXT.md`；Transfer 白名单、Connected 引擎分流、bridge 状态行顺序等见 `docs/adr/0001`–`0004`。
+顶栏 **余额 pill**（`$` + `▾`）展开 `FundsActionSheet`，分别进入 `DepositDrawer` 与 `WithdrawDrawer`。领域术语与不变量见 `CONTEXT.md`；Transfer 白名单、Connected 引擎分流、bridge 状态行顺序等见 `docs/adr/0001`–`0003`；**Privy 认证与 sessionMode** 见 `docs/adr/0005`（`0004` 余额/CLOB 条款仍继承自 `0004`）。
 
 | 模块 | 入口 | 要点 |
 |---|---|---|
