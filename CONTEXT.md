@@ -1,4 +1,4 @@
-# Polymarket Seer Context
+# dodoo.pro Context
 
 ## 项目核心目标
 

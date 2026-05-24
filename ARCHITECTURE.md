@@ -1,4 +1,4 @@
-# Polymarket Seer — 工程架构文档 (ARCHITECTURE)
+# dodoo.pro — 工程架构文档 (ARCHITECTURE)
 
 > **版本**：v1.4 · 最后更新：2026-05-17
 > **技术栈**：Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS v4 · SWR · ethers.js · Privy

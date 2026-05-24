@@ -3,7 +3,8 @@
 import { useState, useCallback } from 'react';
 import { resolveOverlayOpen } from '@/auth/sessionOverlays';
 import { useCloseOnSessionEpoch } from '@/auth/useSessionOverlays';
-import { Zap, Wallet, Globe, ChevronDown, Loader2, AlertTriangle } from 'lucide-react';
+import { Wallet, Globe, ChevronDown, Loader2, AlertTriangle } from 'lucide-react';
+import { APP_LOGO_ALT, APP_LOGO_URL } from '@/lib/brandAssets';
 import { usePolymarketAuth } from '@/contexts/PolymarketAuthContext';
 import { SettingsDrawer } from '@/components/ui/SettingsDrawer';
 import { DepositDrawer } from '@/components/ui/DepositDrawer';
@@ -78,14 +79,19 @@ export function TopHeader({ isSticky = false }: TopHeaderProps = {}) {
           WebkitBackdropFilter: "blur(12px)"
         } : {}}
       >
-        <div className="flex items-center gap-1.5 flex-shrink-0">
-          <div className="w-7 h-7 rounded-full flex items-center justify-center p-0.5 shadow-[0_0_10px_rgba(173,255,47,0.4)]" style={{ background: 'linear-gradient(135deg,#ADFF2F,#00F0FF)' }}>
-            <div className="w-full h-full bg-[#0D0518] rounded-full flex items-center justify-center">
-              <Zap size={12} fill="#ADFF2F" color="#ADFF2F" />
-            </div>
+        <div className="flex h-8 items-center gap-1.5 flex-shrink-0">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-visible">
+            <img
+              src={APP_LOGO_URL}
+              alt={APP_LOGO_ALT}
+              className="h-8 w-8 origin-center object-contain scale-[1.35]"
+            />
           </div>
-          <span style={{ fontSize: '16px', fontWeight: 900, fontFamily: 'Inter', color: '#fff', letterSpacing: '-0.5px' }}>
-            SEER<span style={{ color: '#ADFF2F' }}>.</span>SPORTS
+          <span
+            className="leading-none"
+            style={{ fontSize: '16px', fontWeight: 900, fontFamily: 'Inter', color: '#fff', letterSpacing: '-0.5px' }}
+          >
+            dodoo<span style={{ color: '#ADFF2F' }}>.</span>pro
           </span>
         </div>
 

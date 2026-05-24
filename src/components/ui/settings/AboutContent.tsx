@@ -2,20 +2,22 @@
 
 import React from 'react';
 import { useTranslation } from "@/i18n";
+import { APP_BRAND_NAME, APP_LOGO_ALT, APP_LOGO_URL } from "@/lib/brandAssets";
 import { LegalFooter } from './PrivacyContent';
 
 function AboutContentEn() {
   return (
     <div className="flex flex-col items-center pt-8 text-center animate-in fade-in zoom-in-95 duration-500">
       {/* Brand Identity */}
-      <div className="relative mb-8">
-        <div className="absolute inset-0 bg-[#00F0FF] opacity-20 blur-[30px] rounded-full scale-110" />
-        <div className="relative w-24 h-24 bg-gradient-to-tr from-[#00F0FF] to-[#007AFF] rounded-[2rem] shadow-[0_20px_50px_rgba(0,240,255,0.3)] flex items-center justify-center border border-white/20">
-          <span className="text-white text-5xl font-black tracking-tighter">S</span>
-        </div>
+      <div className="mb-8">
+        <img
+          src={APP_LOGO_URL}
+          alt={APP_LOGO_ALT}
+          className="w-28 h-28 object-contain mx-auto"
+        />
       </div>
 
-      <h2 className="text-3xl font-black text-white mb-2 tracking-tight">SEER.SPORTS</h2>
+      <h2 className="text-3xl font-black text-white mb-2 tracking-tight">{APP_BRAND_NAME}</h2>
       <div className="inline-block px-3 py-0.5 rounded-full bg-[#00F0FF]/10 border border-[#00F0FF]/20 mb-8">
         <span className="text-[#00F0FF] font-bold text-[11px] uppercase tracking-widest">Version 1.0.0</span>
       </div>
@@ -48,14 +50,15 @@ function AboutContentZh() {
   return (
     <div className="flex flex-col items-center pt-8 text-center animate-in fade-in zoom-in-95 duration-500">
       {/* Brand Identity */}
-      <div className="relative mb-8">
-        <div className="absolute inset-0 bg-[#00F0FF] opacity-20 blur-[30px] rounded-full scale-110" />
-        <div className="relative w-24 h-24 bg-gradient-to-tr from-[#00F0FF] to-[#007AFF] rounded-[2rem] shadow-[0_20px_50px_rgba(0,240,255,0.3)] flex items-center justify-center border border-white/20">
-          <span className="text-white text-5xl font-black tracking-tighter">S</span>
-        </div>
+      <div className="mb-8">
+        <img
+          src={APP_LOGO_URL}
+          alt={APP_LOGO_ALT}
+          className="w-28 h-28 object-contain mx-auto"
+        />
       </div>
 
-      <h2 className="text-3xl font-black text-white mb-2 tracking-tight">SEER.SPORTS</h2>
+      <h2 className="text-3xl font-black text-white mb-2 tracking-tight">{APP_BRAND_NAME}</h2>
       <div className="inline-block px-3 py-0.5 rounded-full bg-[#00F0FF]/10 border border-[#00F0FF]/20 mb-8">
         <span className="text-[#00F0FF] font-bold text-[11px] uppercase tracking-widest">Version 1.0.0</span>
       </div>

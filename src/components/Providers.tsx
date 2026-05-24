@@ -2,6 +2,7 @@
 
 import { PrivyProvider } from "@privy-io/react-auth";
 import { polygon } from "viem/chains";
+import { APP_LOGO_URL } from "@/lib/brandAssets";
 
 // 模块级别安装拦截器，在 PrivyProvider 渲染之前就生效
 if (typeof window !== "undefined") {
@@ -54,7 +55,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
         appearance: {
           theme: "dark",
           accentColor: "#3b82f6",
-          logo: "/images/crypto/polymarket-icon.png",
+          logo: APP_LOGO_URL,
         },
         defaultChain: polygon,
         supportedChains: [polygon],
