@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Providers from "@/components/Providers";
+import { APP_FAVICON_URL } from "@/lib/brandAssets";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -16,6 +17,11 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "dodoo.pro",
   description: "Sports prediction market on Polymarket",
+  icons: {
+    icon: [{ url: APP_FAVICON_URL, type: "image/svg+xml" }],
+    shortcut: APP_FAVICON_URL,
+    apple: APP_FAVICON_URL,
+  },
 };
 
 export default function RootLayout({
