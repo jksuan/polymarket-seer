@@ -17,7 +17,6 @@ import {
   ChevronLeft,
 } from "lucide-react";
 import { usePolymarketAuth } from "@/contexts/PolymarketAuthContext";
-import { shortenAddress } from "@/lib/utils";
 import { useTranslation } from "@/i18n";
 import PrivacyContent from "./settings/PrivacyContent";
 import TermsContent from "./settings/TermsContent";
@@ -30,7 +29,26 @@ interface SettingsDrawerProps {
   onLogout?: () => void;
 }
 
+function AddressSnippet({
+  address,
+  prefixLen = 6,
+  suffixLen = 6,
+}: {
+  address: string;
+  prefixLen?: number;
+  suffixLen?: number;
+}) {
+  const text = `${address.slice(0, prefixLen)}...${address.slice(-suffixLen)}`;
 
+  return (
+    <p
+      className="m-0 max-w-full overflow-visible font-sans text-[12px] leading-none text-white whitespace-nowrap tabular-nums !tracking-[0px]"
+      style={{ letterSpacing: 0, wordSpacing: 0 }}
+    >
+      {text}
+    </p>
+  );
+}
 
 function DrawerContent({ isOpen, onClose, authenticated = false, onLogout }: SettingsDrawerProps) {
   const { displayIdentifier, proxyAddress, walletAddress } = usePolymarketAuth();
@@ -148,14 +166,16 @@ function DrawerContent({ isOpen, onClose, authenticated = false, onLogout }: Set
             {authenticated && (
               <div className="px-4 mb-6 mt-1">
                 <div 
-                  className="rounded-2xl p-4 flex flex-col gap-4 relative overflow-hidden" 
+                  className="rounded-2xl p-4 flex flex-col gap-4 relative" 
                   style={{
                     background: "linear-gradient(160deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02))",
                     border: "1px solid rgba(255,255,255,0.08)"
                   }}
                 >
-                  <div className="absolute -top-10 -right-10 w-24 h-24 bg-[#00F0FF] opacity-10 rounded-full blur-[40px] pointer-events-none" />
-                  <div className="absolute -bottom-10 -left-10 w-24 h-24 bg-[#007AFF] opacity-10 rounded-full blur-[40px] pointer-events-none" />
+                  <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-2xl">
+                    <div className="absolute -top-10 -right-10 w-24 h-24 bg-[#00F0FF] opacity-10 rounded-full blur-[40px]" />
+                    <div className="absolute -bottom-10 -left-10 w-24 h-24 bg-[#007AFF] opacity-10 rounded-full blur-[40px]" />
+                  </div>
                   
                   {/* Avatar and Name */}
                   <div className="flex items-center gap-3 relative z-10">
@@ -181,13 +201,19 @@ function DrawerContent({ isOpen, onClose, authenticated = false, onLogout }: Set
                       onClick={() => handleCopy(proxyAddress || "", setCopiedProxy)}
                       className="flex items-center justify-between bg-black/40 p-3 rounded-xl border border-white/5 active:bg-white/5 transition-colors cursor-pointer group"
                     >
-                      <div className="flex items-center gap-2.5">
+                      <div className="flex items-center gap-2.5 min-w-0 flex-1">
                         <div className="w-7 h-7 rounded-lg bg-[#ADFF2F]/10 border border-[#ADFF2F]/20 flex items-center justify-center shrink-0">
                           <Building2 size={13} className="text-[#ADFF2F]" />
                         </div>
-                        <div className="flex flex-col">
-                          <span className="text-[10px] text-white/50 font-bold tracking-wider mb-0.5 uppercase">{t.settings.proxyWallet}</span>
-                          <span className="text-[12px] text-white font-mono">{proxyAddress ? shortenAddress(proxyAddress, 6, 6) : t.settings.notAssigned}</span>
+                        <div className="min-w-0 flex-1 [letter-spacing:0!important]">
+                          <span className="mb-0.5 block text-[10px] font-bold uppercase text-white/50 [letter-spacing:0.05em]">
+                            {t.settings.proxyWallet}
+                          </span>
+                          {proxyAddress ? (
+                            <AddressSnippet address={proxyAddress} />
+                          ) : (
+                            <span className="text-[12px] text-white font-mono">{t.settings.notAssigned}</span>
+                          )}
                         </div>
                       </div>
                       <div className={`w-6 h-6 flex items-center justify-center rounded-md ${copiedProxy ? 'text-[#ADFF2F]' : 'text-white/30 group-hover:text-white/60 transition-colors'}`}>
@@ -200,13 +226,19 @@ function DrawerContent({ isOpen, onClose, authenticated = false, onLogout }: Set
                       onClick={() => handleCopy(walletAddress || "", setCopiedEoa)}
                       className="flex items-center justify-between bg-black/40 p-3 rounded-xl border border-white/5 active:bg-white/5 transition-colors cursor-pointer group"
                     >
-                      <div className="flex items-center gap-2.5">
+                      <div className="flex items-center gap-2.5 min-w-0 flex-1">
                         <div className="w-7 h-7 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0">
                           <Wallet size={13} className="text-blue-400" />
                         </div>
-                        <div className="flex flex-col">
-                          <span className="text-[10px] text-white/50 font-bold tracking-wider mb-0.5 uppercase">{t.settings.signerWallet}</span>
-                          <span className="text-[12px] text-white font-mono">{walletAddress ? shortenAddress(walletAddress, 6, 6) : t.settings.notConnected}</span>
+                        <div className="min-w-0 flex-1 [letter-spacing:0!important]">
+                          <span className="mb-0.5 block text-[10px] font-bold uppercase text-white/50 [letter-spacing:0.05em]">
+                            {t.settings.signerWallet}
+                          </span>
+                          {walletAddress ? (
+                            <AddressSnippet address={walletAddress} />
+                          ) : (
+                            <span className="text-[12px] text-white font-mono">{t.settings.notConnected}</span>
+                          )}
                         </div>
                       </div>
                       <div className={`w-6 h-6 flex items-center justify-center rounded-md ${copiedEoa ? 'text-blue-400' : 'text-white/30 group-hover:text-white/60 transition-colors'}`}>
