@@ -84,11 +84,11 @@ export function TopHeader({ isSticky = false }: TopHeaderProps = {}) {
             <img
               src={APP_LOGO_URL}
               alt={APP_LOGO_ALT}
-              className="h-8 w-8 origin-center object-contain scale-[1.35]"
+              className="h-8 w-8 origin-center object-contain scale-[2.2]"
             />
           </div>
           <span
-            className="leading-none"
+            className="leading-none ml-3"
             style={{ fontSize: '16px', fontWeight: 900, fontFamily: 'Inter', color: '#fff', letterSpacing: '-0.5px' }}
           >
             dodoo<span style={{ color: '#ADFF2F' }}>.</span>pro
