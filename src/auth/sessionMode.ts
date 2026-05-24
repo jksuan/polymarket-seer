@@ -1,13 +1,9 @@
+import { hasEmbeddedLinkedIdentity } from "./privyUserIdentity";
+
 /** 本会话登录路线：外链 SIWE 或 Privy embedded（社交/邮箱） */
 export type AuthSessionMode = "external" | "embedded";
 
 export const SESSION_MODE_STORAGE_KEY = "polymarket-seer:session-mode";
-
-type PrivyUserLike = {
-  email?: { address?: string | null } | null;
-  google?: { email?: string | null } | null;
-  twitter?: { username?: string | null; subject?: string | null } | null;
-};
 
 /** Privy useLogin.onComplete 的 loginMethod → 业务 sessionMode */
 export function loginMethodToSessionMode(loginMethod: string | null | undefined): AuthSessionMode | null {
@@ -17,15 +13,7 @@ export function loginMethodToSessionMode(loginMethod: string | null | undefined)
 }
 
 export function inferSessionModeFromUser(user: unknown): AuthSessionMode | null {
-  const identity = user as PrivyUserLike | null | undefined;
-  if (
-    identity?.email?.address ||
-    identity?.google?.email ||
-    identity?.twitter?.username ||
-    identity?.twitter?.subject
-  ) {
-    return "embedded";
-  }
+  if (hasEmbeddedLinkedIdentity(user)) return "embedded";
   return null;
 }
 

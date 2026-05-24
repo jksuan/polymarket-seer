@@ -5,6 +5,7 @@ import { DepositDrawer } from "./DepositDrawer";
 const createDepositAddressMock = vi.fn();
 let mockPrivyUser: unknown = null;
 let mockWallets: Array<{ address: string; walletClientType?: string }> = [];
+let mockSessionMode: "external" | "embedded" | null = null;
 const mockSupportedAssetsData = {
   supportedAssets: [
     {
@@ -80,7 +81,7 @@ vi.mock("@/contexts/PolymarketAuthContext", () => ({
   usePolymarketAuth: () => ({
     stickyExternalWalletClientType: null as string | null,
     primaryWalletSelectOptions: { stickyClientType: null, preferEmbedded: false },
-    sessionMode: null,
+    sessionMode: mockSessionMode,
     isEvmSignerReady: true,
     sessionEpoch: 1,
   }),
@@ -91,6 +92,7 @@ describe("DepositDrawer transfer flow", () => {
     createDepositAddressMock.mockReset();
     mockPrivyUser = null;
     mockWallets = [];
+    mockSessionMode = null;
   });
 
   afterEach(() => {
@@ -208,6 +210,7 @@ describe("DepositDrawer transfer flow", () => {
   });
 
   it("Connected 路径可从首页进入资产页并继续到金额页", async () => {
+    mockSessionMode = "external";
     mockWallets = [
       {
         address: "0x3333333333333333333333333333333333333333",

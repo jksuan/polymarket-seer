@@ -11,7 +11,7 @@ import {
   readAssetBalance,
   sumVisibleWalletUsd,
 } from "./assets";
-import { isEmailOrSocialLogin } from "./connected/loginIdentity";
+import { shouldOfferConnectedWalletFunds } from "@/auth/privyUserIdentity";
 import { formatExecutionError } from "./errors";
 import { getWalletEthereumProvider, sendPreparedEvmTx, switchEvmChain } from "./evm";
 import { parseAmountUsd } from "./format";
@@ -38,7 +38,7 @@ export function useDepositDrawerController({
 }: UseDepositDrawerControllerParams) {
   const { user } = usePrivy();
   const { wallets } = useWallets();
-  const { primaryWalletSelectOptions } = usePolymarketAuth();
+  const { primaryWalletSelectOptions, sessionMode } = usePolymarketAuth();
   const { data: supportedAssets, isLoading: assetsLoading } = useSupportedAssets();
 
   const [step, setStep] = useState<FlowStep>("home");
@@ -94,8 +94,8 @@ export function useDepositDrawerController({
   );
 
   const showConnectedWalletOption = useMemo(
-    () => Boolean(walletAddress) && !isEmailOrSocialLogin(user),
-    [walletAddress, user]
+    () => shouldOfferConnectedWalletFunds(sessionMode, walletAddress),
+    [sessionMode, walletAddress]
   );
 
   const amountNumber = parseAmountUsd(amountUsd);

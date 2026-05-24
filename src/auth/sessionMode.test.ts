@@ -23,11 +23,15 @@ describe("sessionMode", () => {
     expect(loginMethodToSessionMode("siwe")).toBe("external");
     expect(loginMethodToSessionMode("google")).toBe("embedded");
     expect(loginMethodToSessionMode("email")).toBe("embedded");
+    expect(loginMethodToSessionMode("telegram")).toBe("embedded");
+    expect(loginMethodToSessionMode("github")).toBe("embedded");
     expect(loginMethodToSessionMode(null)).toBeNull();
   });
 
   it("从 user 推断 embedded", () => {
     expect(inferSessionModeFromUser({ google: { email: "a@b.com" } })).toBe("embedded");
+    expect(inferSessionModeFromUser({ github: { username: "octo" } })).toBe("embedded");
+    expect(inferSessionModeFromUser({ telegram: { username: "user" } })).toBe("embedded");
     expect(inferSessionModeFromUser({ wallet: { address: "0x1" } })).toBeNull();
   });
 

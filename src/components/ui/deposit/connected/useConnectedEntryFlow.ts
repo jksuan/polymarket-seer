@@ -7,8 +7,6 @@ import { formatAmountUsdInput } from "../format";
 import { getConnectedDefaultAmountUsd, getTransferChainMinUsd } from "../minimums";
 import type { DepositAsset, ExecutionSnapshot, FlowStep } from "../types";
 
-import { isEmailOrSocialLogin } from "./loginIdentity";
-
 type UseConnectedEntryFlowArgs = {
   activeWalletAddress: string;
   confirmAttemptGenerationRef: MutableRefObject<number>;
@@ -26,7 +24,6 @@ type UseConnectedEntryFlowArgs = {
   setSnapshot: (value: ExecutionSnapshot | null) => void;
   setStep: (value: FlowStep) => void;
   setSubmittedOrderId: (value: string) => void;
-  user: unknown;
 };
 
 export function useConnectedEntryFlow({
@@ -46,18 +43,12 @@ export function useConnectedEntryFlow({
   setSnapshot,
   setStep,
   setSubmittedOrderId,
-  user,
 }: UseConnectedEntryFlowArgs) {
   const { t } = useTranslation();
   const walletLabel = useMemo(() => {
     if (!activeWalletAddress) return t.depositFlow.walletStandalone;
     return t.depositFlow.walletWithAddress(shortenAddress(activeWalletAddress, 4, 4));
   }, [activeWalletAddress, t]);
-
-  const showConnectedWalletOption = useMemo(
-    () => Boolean(activeWalletAddress) && !isEmailOrSocialLogin(user),
-    [activeWalletAddress, user]
-  );
 
   const openConnectedAssetStep = useCallback(() => {
     setStep("asset");
@@ -105,7 +96,6 @@ export function useConnectedEntryFlow({
   return {
     handleSelectAsset,
     openConnectedAssetStep,
-    showConnectedWalletOption,
     walletAddress: activeWalletAddress,
     walletLabel,
   };

@@ -22,6 +22,14 @@
 - **Transfer Chain Whitelist**：Transfer 流程允许展示和选择的链集合。
 - **Icon Resolution Strategy**：图标解析优先级策略，用于保证弱网或外链失效时仍可稳定展示。
 
+### 认证（Privy / ADR-0005）
+
+- **Unified Login**：顶栏单一「登录」按钮，Privy 统一弹窗。
+- **登录方式（2026-05-20）**：仅 **embedded** 路线 — `email` / Google / Twitter / **Telegram** / **GitHub**；**不提供** MetaMask / WalletConnect 登录（Issue #8 产品规避，见 `docs/issues/issue-8-handoff.md` §15）。
+- **sessionMode**：新会话均为 `embedded`；`external` 仅兼容历史会话。细则见 `docs/adr/0005-auth-session-mode.md`。
+- **登录身份解析**：统一由 `src/auth/privyUserIdentity.ts` 提供展示名与 Connected 充提门禁（`sessionMode === 'external'` 才展示 Connected）。
+- **Issue #8（已关闭）**：iPhone MM(WC)→退出→Google 为 Privy SDK 已知问题；通过去掉 wallet 登录规避，不做应用层 patch。
+
 ## 当前上下文约定
 
 - Transfer 与 Connected 是两条并行入口，避免互相阻塞主路径。

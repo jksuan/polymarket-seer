@@ -3,7 +3,8 @@
 import { createContext, useContext, useState, useRef, useEffect, useCallback, useMemo, type ReactNode } from "react";
 import { usePrivy, useWallets, useCreateWallet, useActiveWallet, useLogin } from "@privy-io/react-auth";
 
-import { clearCredsCache, shortenAddress } from "@/lib/utils";
+import { resolveAuthDisplayIdentity } from "@/auth/privyUserIdentity";
+import { clearCredsCache } from "@/lib/utils";
 import { selectPrimaryWallet, type SelectPrimaryWalletOptions } from "@/lib/primaryWallet";
 import { shouldSyncPrivyActiveWallet } from "@/lib/privyActiveWalletSync";
 import { disconnectExternalWallets } from "@/lib/disconnectExternalWallets";
@@ -222,19 +223,14 @@ export function PolymarketAuthProvider({ children }: { children: ReactNode }) {
     }
   }, [ready, authenticated, user, wallets, createWallet, sessionMode]);
 
-  const displayIdentifier = user?.twitter?.username
-    ? `@${user.twitter.username}`
-    : user?.google?.email
-      ? user.google.email
-      : user?.email?.address
-        ? user.email.address
-        : walletAddress
-          ? shortenAddress(walletAddress)
-          : "Wallet Connected";
-
-  const displayAvatar =
-    user?.twitter?.profilePictureUrl ||
-    `https://api.dicebear.com/7.x/pixel-art/svg?seed=${walletAddress || "default"}`;
+  const { identifier: displayIdentifier, avatarUrl: displayAvatar } = useMemo(
+    () =>
+      resolveAuthDisplayIdentity(user, {
+        sessionMode,
+        walletAddress,
+      }),
+    [user, sessionMode, walletAddress]
+  );
 
   const value: PolymarketAuthContextValue = {
     ready,

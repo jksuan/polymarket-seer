@@ -12,7 +12,7 @@ import {
 import { usePolymarketAuth } from "@/contexts/PolymarketAuthContext";
 import { selectPrimaryWallet } from "@/lib/primaryWallet";
 import { extractDepositAddress } from "@/components/ui/deposit/addresses";
-import { isEmailOrSocialLogin } from "@/components/ui/deposit/connected/loginIdentity";
+import { shouldOfferConnectedWalletFunds } from "@/auth/privyUserIdentity";
 import {
   formatAmountUsdInput,
   parseAmountUsd,
@@ -63,7 +63,7 @@ export function useWithdrawDrawerController({
 }) {
   const { user } = usePrivy();
   const { wallets } = useWallets();
-  const { primaryWalletSelectOptions } = usePolymarketAuth();
+  const { primaryWalletSelectOptions, sessionMode } = usePolymarketAuth();
   const { data: supportedAssets, isLoading: assetsLoading } = useSupportedAssets();
 
   const [recipientAddr, setRecipientAddr] = useState("");
@@ -176,8 +176,7 @@ export function useWithdrawDrawerController({
   }, [chainOptions, selectedAsset?.chainId, selectedAsset?.chainName, selectedChainId]);
 
   const showUseConnected = Boolean(
-    activeWallet?.address &&
-      !isEmailOrSocialLogin(user) &&
+    shouldOfferConnectedWalletFunds(sessionMode, activeWallet?.address) &&
       recipientAddressType === "evm"
   );
 

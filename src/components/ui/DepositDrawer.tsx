@@ -113,7 +113,6 @@ function DrawerContent({
     setSnapshot: c.setSnapshot,
     setStep: c.setStep,
     setSubmittedOrderId: c.setSubmittedOrderId,
-    user: c.user,
   });
 
   useEffect(() => {
