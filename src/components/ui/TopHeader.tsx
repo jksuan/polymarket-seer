@@ -5,6 +5,7 @@ import { resolveOverlayOpen } from '@/auth/sessionOverlays';
 import { useCloseOnSessionEpoch } from '@/auth/useSessionOverlays';
 import { Wallet, Globe, ChevronDown, Loader2, AlertTriangle } from 'lucide-react';
 import { APP_BRAND_NAME, APP_LOGO_ALT, APP_LOGO_URL } from '@/lib/brandAssets';
+import { brandSignatureFont } from '@/lib/brandFont';
 import { usePolymarketAuth } from '@/contexts/PolymarketAuthContext';
 import { SettingsDrawer } from '@/components/ui/SettingsDrawer';
 import { DepositDrawer } from '@/components/ui/DepositDrawer';
@@ -88,8 +89,8 @@ export function TopHeader({ isSticky = false }: TopHeaderProps = {}) {
             />
           </div>
           <span
-            className="leading-none ml-3"
-            style={{ fontSize: '16px', fontWeight: 900, fontFamily: 'Inter', color: '#fff', letterSpacing: '-0.5px' }}
+            className={`leading-none ml-1 pt-0.5 ${brandSignatureFont.className}`}
+            style={{ fontSize: '20px', color: '#fff' }}
           >
             {APP_BRAND_NAME}
           </span>
