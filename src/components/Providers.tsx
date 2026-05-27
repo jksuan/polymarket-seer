@@ -31,13 +31,27 @@ if (typeof window !== "undefined") {
 }
 
 /** 仅社交/邮箱登录（Issue #8 决议：去掉 wallet/SIWE 入口） */
-const EMBEDDED_ONLY_LOGIN_METHODS = [
+const EMBEDDED_ONLY_LOGIN_METHODS_BASE = [
+  "email",
+  "google",
+  "twitter",
+  "github",
+] as const;
+
+const EMBEDDED_ONLY_LOGIN_METHODS_WITH_TELEGRAM = [
   "email",
   "google",
   "twitter",
   "telegram",
   "github",
 ] as const;
+
+/** Telegram 登录实现保留于 privyUserIdentity；弹窗入口由 env 控制，默认关闭 */
+function resolveEmbeddedLoginMethods() {
+  return process.env.NEXT_PUBLIC_ENABLE_TELEGRAM_LOGIN === "true"
+    ? EMBEDDED_ONLY_LOGIN_METHODS_WITH_TELEGRAM
+    : EMBEDDED_ONLY_LOGIN_METHODS_BASE;
+}
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   const appId = process.env.NEXT_PUBLIC_PRIVY_APP_ID || "cmmj2xch900fy0cl41zbpp3zn";
@@ -46,7 +60,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     <PrivyProvider
       appId={appId}
       config={{
-        loginMethods: [...EMBEDDED_ONLY_LOGIN_METHODS],
+        loginMethods: [...resolveEmbeddedLoginMethods()],
         embeddedWallets: {
           ethereum: {
             createOnLogin: "users-without-wallets",
