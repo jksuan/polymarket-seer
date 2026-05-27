@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { APP_BRAND_NAME } from "@/lib/brandAssets";
 import { useTranslation } from "@/i18n";
 import { LegalFooter } from './PrivacyContent';
 
@@ -25,7 +26,7 @@ function TermsContentEn() {
           </div>
           <div className="space-y-4 text-white/70 text-[15px] leading-relaxed pl-9">
             <p>
-              By accessing, browsing, or using dodoo.pro (the "App"), you acknowledge that you have read, understood, and agree to be bound by these Terms of Service.
+              By accessing, browsing, or using {APP_BRAND_NAME} (the "App"), you acknowledge that you have read, understood, and agree to be bound by these Terms of Service.
             </p>
             <div className="p-4 rounded-xl bg-red-500/5 border border-red-500/10 border-l-4 border-l-red-500">
               <p className="text-red-400/90 font-medium">
@@ -42,7 +43,7 @@ function TermsContentEn() {
             <h4 className="text-white text-lg font-bold">Eligibility & Restricted Territories</h4>
           </div>
           <div className="space-y-6 text-white/70 text-[15px] leading-relaxed pl-9">
-            <p>dodoo.pro is intended only for users in jurisdictions where prediction markets are legal.</p>
+            <p>{APP_BRAND_NAME} is intended only for users in jurisdictions where prediction markets are legal.</p>
             <div className="space-y-4">
               <div>
                 <p className="text-white font-semibold mb-1">Restricted Jurisdictions</p>
@@ -50,7 +51,7 @@ function TermsContentEn() {
               </div>
               <div>
                 <p className="text-white font-semibold mb-1">Geoblocking Circumvention</p>
-                <p>Users are strictly prohibited from using VPNs, proxy servers, or other location-masking technologies to bypass regional restrictions. dodoo.pro reserves the right to restrict or terminate access for any user suspected of such circumvention.</p>
+                <p>Users are strictly prohibited from using VPNs, proxy servers, or other location-masking technologies to bypass regional restrictions. {APP_BRAND_NAME} reserves the right to restrict or terminate access for any user suspected of such circumvention.</p>
               </div>
               <div>
                 <p className="text-white font-semibold mb-1">Age Requirement</p>
@@ -67,7 +68,7 @@ function TermsContentEn() {
             <h4 className="text-white text-lg font-bold">Nature of Service (UI Interface Only)</h4>
           </div>
           <div className="space-y-6 text-white/70 text-[15px] leading-relaxed pl-9">
-            <p>dodoo.pro acts solely as a decentralized user interface (UI) and gateway to the Polymarket protocol and other blockchain-based smart contracts.</p>
+            <p>{APP_BRAND_NAME} acts solely as a decentralized user interface (UI) and gateway to the Polymarket protocol and other blockchain-based smart contracts.</p>
             <ul className="space-y-4 list-disc marker:text-[#00F0FF] ml-4">
               <li><span className="text-white font-semibold">No Custody:</span> We do not hold, manage, or have access to your private keys or digital assets. All assets are managed via the Privy authentication layer and stored on the blockchain.</li>
               <li><span className="text-white font-semibold">No Execution:</span> We do not execute trades or provide liquidity. All market matching and settlements are performed on-chain via third-party decentralized protocols.</li>
@@ -99,7 +100,7 @@ function TermsContentEn() {
             <h4 className="text-white text-lg font-bold">Limitation of Liability</h4>
           </div>
           <div className="space-y-4 text-white/70 text-[15px] leading-relaxed pl-9">
-            <p>To the maximum extent permitted by law, dodoo.pro and its developers shall not be liable for any direct, indirect, incidental, or consequential damages, including but not limited to loss of funds, profits, or data, arising from:</p>
+            <p>To the maximum extent permitted by law, {APP_BRAND_NAME} and its developers shall not be liable for any direct, indirect, incidental, or consequential damages, including but not limited to loss of funds, profits, or data, arising from:</p>
             <ul className="space-y-2 list-disc marker:text-[#00F0FF] ml-4">
               <li>Protocol-level failures or smart contract exploits.</li>
               <li>Errors in market data or odds provided by third-party APIs.</li>
@@ -184,7 +185,7 @@ function TermsContentZh() {
           </div>
           <div className="space-y-4 text-white/70 text-[15px] leading-relaxed pl-9">
             <p>
-              当您访问、浏览或使用 dodoo.pro（简称“本应用”）时，即表示您承认已阅读、理解并同意接受本用户协议的约束。
+              当您访问、浏览或使用 {APP_BRAND_NAME}（简称“本应用”）时，即表示您承认已阅读、理解并同意接受本用户协议的约束。
             </p>
             <div className="p-4 rounded-xl bg-red-500/5 border border-red-500/10 border-l-4 border-l-red-500">
               <p className="text-red-400/90 font-medium">
@@ -201,7 +202,7 @@ function TermsContentZh() {
             <h4 className="text-white text-lg font-bold">资格审查与受限地区</h4>
           </div>
           <div className="space-y-6 text-white/70 text-[15px] leading-relaxed pl-9">
-            <p>dodoo.pro 仅面向预测市场合法的司法管辖区的用户开放。</p>
+            <p>{APP_BRAND_NAME} 仅面向预测市场合法的司法管辖区的用户开放。</p>
             <div className="space-y-4">
               <div>
                 <p className="text-white font-semibold mb-1">受限司法管辖区</p>
@@ -209,7 +210,7 @@ function TermsContentZh() {
               </div>
               <div>
                 <p className="text-white font-semibold mb-1">规避地理屏蔽</p>
-                <p>严禁用户使用 VPN、代理服务器或其他位置伪装技术来绕过区域限制。dodoo.pro 保留对任何涉嫌此类规避行为的用户限制或终止访问权限的权利。</p>
+                <p>严禁用户使用 VPN、代理服务器或其他位置伪装技术来绕过区域限制。{APP_BRAND_NAME} 保留对任何涉嫌此类规避行为的用户限制或终止访问权限的权利。</p>
               </div>
               <div>
                 <p className="text-white font-semibold mb-1">年龄要求</p>
@@ -226,7 +227,7 @@ function TermsContentZh() {
             <h4 className="text-white text-lg font-bold">服务性质（仅前端界面）</h4>
           </div>
           <div className="space-y-6 text-white/70 text-[15px] leading-relaxed pl-9">
-            <p>dodoo.pro 仅作为一个去中心化的用户界面（UI），是连接 Polymarket 协议及其他基于区块链的智能合约的网关。</p>
+            <p>{APP_BRAND_NAME} 仅作为一个去中心化的用户界面（UI），是连接 Polymarket 协议及其他基于区块链的智能合约的网关。</p>
             <ul className="space-y-4 list-disc marker:text-[#00F0FF] ml-4">
               <li><span className="text-white font-semibold">无托管：</span> 我们不持有、不管理且无法访问您的私钥或数字资产。所有资产均通过 Privy 认证层管理，并安全存储在区块链上。</li>
               <li><span className="text-white font-semibold">无执行权限：</span> 我们不执行交易，也不提供流动性。所有市场匹配和结算都在链上通过第三方去中心化协议完成。</li>
@@ -258,7 +259,7 @@ function TermsContentZh() {
             <h4 className="text-white text-lg font-bold">责任限制</h4>
           </div>
           <div className="space-y-4 text-white/70 text-[15px] leading-relaxed pl-9">
-            <p>在法律允许的最大范围内，因以下原因造成的任何直接、间接、附带或后果性损害（包括但不限于资金、利润或数据损失），dodoo.pro 及其开发者概不负责：</p>
+            <p>在法律允许的最大范围内，因以下原因造成的任何直接、间接、附带或后果性损害（包括但不限于资金、利润或数据损失），{APP_BRAND_NAME} 及其开发者概不负责：</p>
             <ul className="space-y-2 list-disc marker:text-[#00F0FF] ml-4">
               <li>协议级别的故障或智能合约漏洞。</li>
               <li>第三方 API 提供的市场数据或赔率错误。</li>

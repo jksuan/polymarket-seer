@@ -1,3 +1,5 @@
+import { APP_BRAND_NAME } from "@/lib/brandAssets";
+
 const zh = {
   // ─── 通用 ───
   common: {
@@ -267,11 +269,11 @@ const zh = {
     language: '语言',
     languageZh: '中文',
     languageEn: 'English',
-    about: '关于 dodoo.pro',
+    about: `关于 ${APP_BRAND_NAME}`,
     legal: '法律与应用',
     privacy: '隐私政策',
     terms: '用户协议',
-    loggedInAccount: 'dodoo.pro 登录账户',
+    loggedInAccount: `${APP_BRAND_NAME} 登录账户`,
     proxyWallet: '智能金库 (Polymarket Proxy)',
     signerWallet: '底层钱包 (Signer EOA)',
     notAssigned: '未分配',
@@ -494,7 +496,7 @@ const zh = {
     section6Body:
       '在适用法律允许的最大范围内，因您违反上述要求、区块链或第三方协议故障、不可抗力等造成的损失，本应用不承担赔偿责任。完整权利义务以应用内《服务条款》及《隐私政策》为准；本说明仅为资金进出相关场景的摘要，不构成法律意见。',
     footerSecurity: '由 Polymarket 协议提供安全保障',
-    footerCopyright: '© 2026 dodoo.pro. 保留所有权利',
+    footerCopyright: `© 2026 ${APP_BRAND_NAME}. 保留所有权利`,
   },
 
   // ─── 日期格式化 ───

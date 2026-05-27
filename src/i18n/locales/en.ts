@@ -1,4 +1,5 @@
 import type { TranslationKeys } from './zh';
+import { APP_BRAND_NAME } from "@/lib/brandAssets";
 
 const en: TranslationKeys = {
   // ─── Common ───
@@ -269,11 +270,11 @@ const en: TranslationKeys = {
     language: 'Language',
     languageZh: '中文',
     languageEn: 'English',
-    about: 'About dodoo.pro',
+    about: `About ${APP_BRAND_NAME}`,
     legal: 'Legal & App',
     privacy: 'Privacy Policy',
     terms: 'Terms of Service',
-    loggedInAccount: 'dodoo.pro Account',
+    loggedInAccount: `${APP_BRAND_NAME} Account`,
     proxyWallet: 'Smart Vault (Polymarket Proxy)',
     signerWallet: 'Signer Wallet (EOA)',
     notAssigned: 'Not Assigned',
@@ -496,7 +497,7 @@ const en: TranslationKeys = {
     section6Body:
       'To the fullest extent permitted by law, this app is not liable for losses arising from your breach of the above, failures of blockchains or third-party protocols, force majeure, or similar causes. Your full rights and obligations are set out in the in-app Terms of Service and Privacy Policy; this text is a summary for funds flows only and is not legal advice.',
     footerSecurity: 'Secured by the Polymarket protocol',
-    footerCopyright: '© 2026 dodoo.pro. All rights reserved.',
+    footerCopyright: `© 2026 ${APP_BRAND_NAME}. All rights reserved.`,
   },
 
   // ─── Date Formatting ───

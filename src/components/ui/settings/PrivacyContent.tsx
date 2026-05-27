@@ -45,7 +45,7 @@ function PrivacyContentEn() {
       <div className="relative mb-12 p-5 rounded-2xl bg-white/[0.03] border border-white/5">
         <h3 className="text-white font-bold text-lg mb-2">Introduction</h3>
         <p className="text-white/80 text-[15px] leading-relaxed font-medium">
-          Welcome to <span className="text-white font-bold">dodoo.pro</span> (the "App"), a decentralized sports prediction platform. We are committed to protecting your privacy while providing a seamless Web3 prediction experience.
+          Welcome to <span className="text-white font-bold">{APP_BRAND_NAME}</span> (the "App"), a decentralized sports prediction platform. We are committed to protecting your privacy while providing a seamless Web3 prediction experience.
         </p>
       </div>
 
@@ -175,7 +175,7 @@ function PrivacyContentZh() {
       <div className="relative mb-12 p-5 rounded-2xl bg-white/[0.03] border border-white/5">
         <h3 className="text-white font-bold text-lg mb-2">引言</h3>
         <p className="text-white/80 text-[15px] leading-relaxed font-medium">
-          欢迎使用去中心化体育预测平台 <span className="text-white font-bold">dodoo.pro</span>（简称“本应用”）。我们在为您提供流畅的 Web3 预测体验的同时，致力于保护您的隐私安全。
+          欢迎使用去中心化体育预测平台 <span className="text-white font-bold">{APP_BRAND_NAME}</span>（简称“本应用”）。我们在为您提供流畅的 Web3 预测体验的同时，致力于保护您的隐私安全。
         </p>
       </div>
 

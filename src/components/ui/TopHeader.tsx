@@ -4,7 +4,7 @@ import { useState, useCallback } from 'react';
 import { resolveOverlayOpen } from '@/auth/sessionOverlays';
 import { useCloseOnSessionEpoch } from '@/auth/useSessionOverlays';
 import { Wallet, Globe, ChevronDown, Loader2, AlertTriangle } from 'lucide-react';
-import { APP_LOGO_ALT, APP_LOGO_URL } from '@/lib/brandAssets';
+import { APP_BRAND_NAME, APP_LOGO_ALT, APP_LOGO_URL } from '@/lib/brandAssets';
 import { usePolymarketAuth } from '@/contexts/PolymarketAuthContext';
 import { SettingsDrawer } from '@/components/ui/SettingsDrawer';
 import { DepositDrawer } from '@/components/ui/DepositDrawer';
@@ -91,7 +91,7 @@ export function TopHeader({ isSticky = false }: TopHeaderProps = {}) {
             className="leading-none ml-3"
             style={{ fontSize: '16px', fontWeight: 900, fontFamily: 'Inter', color: '#fff', letterSpacing: '-0.5px' }}
           >
-            dodoo<span style={{ color: '#ADFF2F' }}>.</span>pro
+            {APP_BRAND_NAME}
           </span>
         </div>
 
