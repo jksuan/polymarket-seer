@@ -305,11 +305,11 @@ npm run dev
 | 根因 | Privy SDK + 同 tab WalletConnect SIWE 后 OAuth 状态机（Privy demo 亦可复现） |
 | 产品决策 | **登录入口仅保留社交/邮箱**（embedded），去掉 MetaMask / WalletConnect **登录** |
 | 实现分支 | `feat/auth-embedded-only`（基于 `main`） |
-| Privy `loginMethods` | `email`、`google`、`twitter`、`telegram`、`github`（无 `wallet`） |
+| Privy `loginMethods` | 默认 `email`、`google`、`twitter`、`github`（无 `wallet`）；`telegram` 由 `NEXT_PUBLIC_ENABLE_TELEGRAM_LOGIN` 控制，默认关 |
 | 充提 | 仍用 Privy **embedded** 签名；Transfer 任意链入账；提现填任意收款地址 |
 
 **为何保留本文档：** 记录复现路径、已排除假设与实验结论，避免后续 AI/开发者重复踩坑或误恢复 `fix/auth-iphone-oauth` 上的补丁代码。
 
-**Dashboard 待办（Telegram）：** 在 Privy Dashboard 启用 Telegram / GitHub；Telegram 需 Bot token + `/setdomain`；若站点为 `.xyz` TLD，Telegram 登录可能不可用（见 Privy 文档）。
+**Dashboard 待办（Telegram，暂缓）**：身份解析代码已保留；启用时需 Privy Dashboard 开 Telegram、Bot token + `/setdomain`，并设 `NEXT_PUBLIC_ENABLE_TELEGRAM_LOGIN=true`。若站点为 `.xyz` TLD，Telegram 登录可能不可用（见 Privy 文档）。
 
 **ADR-0005：** `external` / SIWE 路径保留于代码以兼容历史会话，但新用户无法再选 wallet 登录；ADR 验收第 2 条（MM→Google）改为 **不适用**。

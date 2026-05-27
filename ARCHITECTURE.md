@@ -1,6 +1,6 @@
-# dodoo.pro — 工程架构文档 (ARCHITECTURE)
+# Crazy Fox — 工程架构文档 (ARCHITECTURE)
 
-> **版本**：v1.4 · 最后更新：2026-05-17
+> **版本**：v1.5 · 最后更新：2026-05-20
 > **技术栈**：Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS v4 · SWR · ethers.js · Privy
 
 ## 文档维护边界
@@ -121,6 +121,8 @@ polymarket-seer/
 │   │           └── HistoryShareCard.tsx   # 战绩分享卡片
 │   │
 │   ├── auth/                       # 认证与余额同步（从 Context 拆出的逻辑）
+│   │   ├── sessionMode.ts          # loginMethod → embedded/external
+│   │   ├── privyUserIdentity.ts    # 社交/邮箱展示名与 Connected 门禁
 │   │   ├── useBalanceSync.ts       # CLOB / 链上余额拉取与重试
 │   │   ├── useExternalAccountDrift.ts # 外链钱包漂移检测
 │   │   └── resolveClobApiKeyCreds.ts  # CLOB 凭证解析
@@ -145,6 +147,8 @@ polymarket-seer/
 │   │   └── countryNames.ts         # 体育垂直领域专用：国家名词典映射引擎
 │   │
 │   ├── lib/                        # 工具库 & 静态数据
+│   │   ├── brandAssets.ts          # APP_BRAND_NAME、Logo、favicon 单一来源
+│   │   ├── brandFont.ts            # 顶栏品牌字体（Bigtimes.otf）
 │   │   ├── constants.ts            # 全局常量（合约地址、API 端点等）
 │   │   ├── bridgeClient.ts         # Bridge API 客户端封装
 │   │   ├── dlnClient.ts            # DLN API 客户端封装
@@ -208,7 +212,8 @@ polymarket-seer/
     │
     ▼
 ┌──────────────────────┐
-│  Privy Social Login  │  ← 支持邮箱/Google/Twitter
+│  Privy 统一弹窗       │  ← email / Google / Twitter / GitHub
+│  (无 wallet/SIWE)     │     Telegram 可选（env 默认关）
 │  (嵌入式钱包自动创建)   │
 └──────────┬───────────┘
            │

@@ -1,6 +1,6 @@
-# dodoo.pro — 产品需求文档 (PRD)
+# Crazy Fox — 产品需求文档 (PRD)
 
-> **版本**：v2.4 · 最后更新：2026-05-17
+> **版本**：v2.5 · 最后更新：2026-05-20
 > **产品定位**：2026 世界杯体育预测 H5 应用，以 Polymarket 为底层交易引擎。
 
 ## 文档维护边界
@@ -33,7 +33,7 @@
 ### 2.2 顶部栏 (TopHeader)
 
 - **固定吸顶 (Sticky)**：毛玻璃效果 `backdrop-filter: blur(12px)`
-- **左侧**：品牌 Logo + 应用名称"预测先锋"
+- **左侧**：品牌 Logo（`logo.png`）+ 应用名称（`APP_BRAND_NAME`，当前为 Crazy Fox；Bigtimes 字体）
 - **右侧**：
   - **未登录**：显示"登录"按钮 + 全局语言切换图标
   - **已登录**：
@@ -170,11 +170,12 @@
 ## 4. 核心交互流程
 
 ### 4.1 用户认证流程
-1. 使用 **Privy** 社交登录（支持邮箱、Google、X/Twitter 等方式）
-2. 登录后自动创建/恢复 Polygon 链上嵌入式钱包
-3. 自动向 Polymarket CLOB 服务注册 API Key（签名授权）
-4. 建立 Proxy Wallet 代理关系
-5. 全程免 Gas（Polymarket 代付）
+1. 使用 **Privy** 社交/邮箱登录（默认：邮箱、Google、X/Twitter、GitHub；**不含** MetaMask / WalletConnect 登录入口）
+2. **Telegram** 登录代码已实现，弹窗入口默认关闭（`NEXT_PUBLIC_ENABLE_TELEGRAM_LOGIN=true` 可启用）
+3. 登录后自动创建/恢复 Polygon 链上嵌入式钱包
+4. 自动向 Polymarket CLOB 服务注册 API Key（签名授权）
+5. 建立 Proxy Wallet 代理关系
+6. 全程免 Gas（Polymarket 代付）
 
 ### 4.2 下单交易流程
 1. 用户选择预测方向 → 确认弹窗展示赔率和预期收益

@@ -1,8 +1,13 @@
-# dodoo.pro Context
+# Crazy Fox Context
 
 ## 项目核心目标
 
 面向移动端用户，提供低门槛、可视化、交易反馈清晰的 Polymarket 预测交易体验。
+
+## 品牌与对外资源
+
+- **单一来源**：`src/lib/brandAssets.ts` — `APP_BRAND_NAME`、Logo（`/images/logo.png`）、favicon（`/images/logo.svg`）。
+- **顶栏品牌字体**：`src/lib/brandFont.ts`（Bigtimes.otf）；全站文案引用 `APP_BRAND_NAME`，勿硬编码产品名。
 
 ## 关键领域术语
 
@@ -25,7 +30,8 @@
 ### 认证（Privy / ADR-0005）
 
 - **Unified Login**：顶栏单一「登录」按钮，Privy 统一弹窗。
-- **登录方式（2026-05-20）**：仅 **embedded** 路线 — `email` / Google / Twitter / **Telegram** / **GitHub**；**不提供** MetaMask / WalletConnect 登录（Issue #8 产品规避，见 `docs/issues/issue-8-handoff.md` §15）。
+- **登录方式（2026-05-20）**：仅 **embedded** 路线 — 默认弹窗为 `email` / Google / Twitter / **GitHub**；**不提供** MetaMask / WalletConnect 登录（Issue #8 产品规避，见 `docs/issues/issue-8-handoff.md` §15）。
+- **Telegram（可选）**：`privyUserIdentity` 已实现 Telegram 身份解析；Privy 弹窗入口由 `NEXT_PUBLIC_ENABLE_TELEGRAM_LOGIN` 控制（默认 `false`，见 `.env.local.example`）。
 - **sessionMode**：新会话均为 `embedded`；`external` 仅兼容历史会话。细则见 `docs/adr/0005-auth-session-mode.md`。
 - **登录身份解析**：统一由 `src/auth/privyUserIdentity.ts` 提供展示名与 Connected 充提门禁（`sessionMode === 'external'` 才展示 Connected）。
 - **Issue #8（已关闭）**：iPhone MM(WC)→退出→Google 为 Privy SDK 已知问题；通过去掉 wallet 登录规避，不做应用层 patch。
