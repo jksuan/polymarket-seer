@@ -16,9 +16,6 @@ import {
   DATA_API_URL,
   RELAYER_URL,
   ADDRESSES,
-  USDC_DECIMALS,
-  ERC20_ABI,
-  ERC1155_ABI,
   CTF_ABI,
   NEG_RISK_ADAPTER_ABI,
   SIGNATURE_TYPE_GNOSIS_SAFE,
@@ -27,6 +24,13 @@ import {
 import { usePolymarketAuth } from "@/contexts/PolymarketAuthContext";
 import { getCachedCreds, setCachedCreds } from "@/lib/utils";
 import { selectPrimaryWallet } from "@/lib/primaryWallet";
+import {
+  buildTradingApprovalRelayBatch,
+  ensureProxyCollateralSynced,
+  formatCollateralBalanceFromAtomicUnits,
+  readProxyUsdcEAtomic,
+} from "@/auth/collateralBalance";
+import { createSafeRelayExecutor } from "@/auth/safeRelayExecutor";
 
 export type TxStep = "idle" | "preparing" | "deploying" | "approving" | "placing" | "success" | "error";
 
@@ -406,11 +410,10 @@ export function useTrading(
           // 如果生成失败，可能是因为没激活且余额为 0（Polymarket 拒绝未入金的新地址）。
           // 在此拦截，假装是余额不足，从而让页面弹起充值引导层。
           const derivedProxy = proxyAddress || deriveSafe(wallet.address, SAFE_FACTORY_POLYGON);
-          const contract = new ethers.Contract(ADDRESSES.USDCe, ERC20_ABI, provider);
-          const onchainBalWei = await contract.balanceOf(derivedProxy);
-          const onchainBal = Number(ethers.utils.formatUnits(onchainBalWei, USDC_DECIMALS));
+          const onchainBalWei = await readProxyUsdcEAtomic(provider, derivedProxy);
+          const onchainBal = Number(formatCollateralBalanceFromAtomicUnits(onchainBalWei));
           if (onchainBal < Number(amount)) {
-            throw new Error(`余额不足: 当前金库含 $${onchainBal.toFixed(2)} USDC.e，但下注需要 $${Number(amount).toFixed(2)} USDC.e`);
+            throw new Error(`余额不足: 当前金库含 $${onchainBal.toFixed(2)}，但下注需要 $${Number(amount).toFixed(2)}`);
           }
           throw new Error("API 凭据初始化失败，请在 Polygon 链准备少量资产后重试");
         }
@@ -420,31 +423,24 @@ export function useTrading(
       // --- Step 1: Pre-flight Check (Balance) ---
       setTxMessage(t.tx.checkingBalance);
       const clobClientWithCreds = new ClobClient(CLOB_API_URL, POLYGON_CHAIN_ID, signer as any, creds, SIGNATURE_TYPE_GNOSIS_SAFE, derivedProxy as string);
+      const relayExecutor = createSafeRelayExecutor(signer);
       try {
-        const balanceData = await clobClientWithCreds.getBalanceAllowance({ asset_type: "COLLATERAL" as any });
-        const currentBalance = balanceData?.balance ? Number(ethers.utils.formatUnits(balanceData.balance, USDC_DECIMALS)) : 0;
+        const { balanceAtomic } = await ensureProxyCollateralSynced({
+          clobClient: clobClientWithCreds,
+          provider,
+          proxyAddress: derivedProxy,
+          relayExecutor,
+        });
+        const currentBalance = Number(formatCollateralBalanceFromAtomicUnits(balanceAtomic));
         const targetAmount = Number(amount);
         if (currentBalance < targetAmount) {
-          throw new Error(`余额不足: 当前金库含 $${currentBalance.toFixed(2)} USDC.e，但下注需要 $${targetAmount.toFixed(2)} USDC.e`);
+          throw new Error(`余额不足: 当前可交易余额 $${currentBalance.toFixed(2)}，但下注需要 $${targetAmount.toFixed(2)}`);
         }
       } catch (balErr: any) {
         if (balErr.message && balErr.message.includes("余额不足")) {
           throw balErr;
-        } else {
-          console.warn("余额查询失败，如果确认有钱请忽略", balErr);
-          try {
-            const contract = new ethers.Contract(ADDRESSES.USDCe, ERC20_ABI, provider);
-            const onchainBalWei = await contract.balanceOf(derivedProxy);
-            const onchainBal = Number(ethers.utils.formatUnits(onchainBalWei, USDC_DECIMALS));
-            if (onchainBal < Number(amount)) {
-              throw new Error(`余额不足: 金库可用资金不足以支付此次下注`);
-            }
-          } catch (fallbackBalErr: any) {
-            if (fallbackBalErr.message && fallbackBalErr.message.includes("余额不足")) {
-              throw fallbackBalErr;
-            }
-          }
         }
+        console.warn("余额查询失败，如果确认有钱请忽略", balErr);
       }
 
       setTxMessage(customTokenId ? t.tx.linkedTargetMarket : t.tx.fetchingActiveMarket);
@@ -476,17 +472,9 @@ export function useTrading(
       // --- Step 2: Batch Token Approvals ---
       setTxStep("approving");
       setTxMessage(t.tx.settingApproval);
-      const erc20 = new ethers.utils.Interface(ERC20_ABI);
-      const erc1155 = new ethers.utils.Interface(ERC1155_ABI);
-      const MAX = ethers.constants.MaxUint256;
 
       try {
-        await relayClient.execute([
-          { to: ADDRESSES.USDCe, data: erc20.encodeFunctionData("approve", [ADDRESSES.CTF, MAX]), value: "0" },
-          { to: ADDRESSES.USDCe, data: erc20.encodeFunctionData("approve", [ADDRESSES.CTF_EXCHANGE, MAX]), value: "0" },
-          { to: ADDRESSES.USDCe, data: erc20.encodeFunctionData("approve", [ADDRESSES.NEG_RISK_CTF_EXCHANGE, MAX]), value: "0" },
-          { to: ADDRESSES.CTF, data: erc1155.encodeFunctionData("setApprovalForAll", [ADDRESSES.CTF_EXCHANGE, true]), value: "0" }
-        ], "Batch Approve");
+        await relayClient.execute(buildTradingApprovalRelayBatch(), "Batch Approve");
         setTxMessage(t.tx.approveSuccess);
       } catch (approveErr: any) {
         console.warn("Approval may have already been set:", approveErr);
@@ -546,7 +534,7 @@ export function useTrading(
       }
 
       setTxStep("error");
-      if (finalMsg.includes("not enough balance")) finalMsg = "余额不足或授权尚未生效，请确认金库中有足够的 USDC.e。";
+      if (finalMsg.includes("not enough balance")) finalMsg = "余额不足或授权尚未生效，请确认金库中有足够的可交易余额。";
       if (finalMsg.includes("user rejected")) finalMsg = "用户取消了签名请求。";
 
       if (finalMsg.includes("余额不足") || finalMsg.includes("not enough balance")) {

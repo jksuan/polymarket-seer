@@ -9,8 +9,6 @@ import {
   POLYGON_CHAIN_ID,
   CLOB_API_URL,
   SAFE_FACTORY_POLYGON,
-  ADDRESSES,
-  ERC20_ABI,
   SIGNATURE_TYPE_GNOSIS_SAFE,
 } from "@/lib/constants";
 import {
@@ -22,6 +20,11 @@ import { selectPrimaryWallet } from "@/lib/primaryWallet";
 import { isValidApiKeyCreds } from "@/lib/clobApiKeyCreds";
 import { resolveClobApiKeyCreds } from "@/auth/resolveClobApiKeyCreds";
 import { readUsdcBalanceDisplay } from "@/auth/readUsdcBalanceDisplay";
+import {
+  ensureProxyCollateralSynced,
+  type ClobCollateralClient,
+} from "@/auth/collateralBalance";
+import { createSafeRelayExecutor } from "@/auth/safeRelayExecutor";
 import { isEmbeddedWalletUnavailableError, walletListFingerprint } from "@/lib/accountSwitchGuard";
 
 /** 首次进入后拉余额的最大尝试次数（含第一次） */
@@ -180,8 +183,10 @@ export function useBalanceSync({
         const validCreds = isValidApiKeyCreds(creds) ? creds : null;
         const balanceResult = await readUsdcBalanceDisplay({
           creds: validCreds,
-          fetchClobCollateralBalance: async () => {
-            if (!validCreds) return null;
+          fetchTradableCollateralBalance: async () => {
+            if (!validCreds) {
+              return { balanceAtomic: BigInt(0), readOk: false };
+            }
             const clobWithCreds = new ClobClient(
               CLOB_API_URL,
               POLYGON_CHAIN_ID,
@@ -190,14 +195,15 @@ export function useBalanceSync({
               SIGNATURE_TYPE_GNOSIS_SAFE,
               derivedProxy
             );
-            return clobWithCreds.getBalanceAllowance({ asset_type: "COLLATERAL" as any });
+            const relayExecutor = createSafeRelayExecutor(signer);
+            const { balanceAtomic } = await ensureProxyCollateralSynced({
+              clobClient: clobWithCreds as ClobCollateralClient,
+              provider,
+              proxyAddress: derivedProxy,
+              relayExecutor,
+            });
+            return { balanceAtomic, readOk: true };
           },
-          fetchProxyUsdcBalance: async () => {
-            const contract = new ethers.Contract(ADDRESSES.USDCe, ERC20_ABI, provider);
-            const proxyBal = await contract.balanceOf(derivedProxy);
-            return proxyBal.toString();
-          },
-          switchChainForFallback: () => wallet.switchChain(POLYGON_CHAIN_ID),
         });
 
         setUsdcBalance(balanceResult.displayBalance);

@@ -24,6 +24,8 @@ export const SAFE_FACTORY_POLYGON = "0xaacFeEa03eb1561C4e67d661e40682Bd20E3541b"
 export const ADDRESSES = {
   /** USDC.e on Polygon */
   USDCe: "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174",
+  /** pUSD CollateralToken proxy on Polygon（Polymarket 交易 collateral） */
+  pUSD: "0xC011a7E12a19f7B1f670d46F03B03f3342E82DFB",
   /** Conditional Tokens Framework */
   CTF: "0x4D97DCd97eC945f40cF65F87097ACe5EA0476045",
   /** CTF Exchange (正向市场) */
@@ -32,7 +34,14 @@ export const ADDRESSES = {
   NEG_RISK_CTF_EXCHANGE: "0xC5d563A36AE78145C45a50134d48A1215220f80a",
   /** Neg Risk Adapter (NegRisk 市场的代币管理与兑换) */
   NEG_RISK_ADAPTER: "0xd91E80cF2E7be2e162c6513ceD06f1dD0dA35296",
+  /** Collateral Onramp：USDC.e → pUSD wrap */
+  COLLATERAL_ONRAMP: "0x93070a847efEf7F70739046A929D47a521F5B8ee",
 } as const;
+
+/** Collateral Onramp ABI 片段 */
+export const COLLATERAL_ONRAMP_ABI = [
+  "function wrap(address _asset, address _to, uint256 _amount)",
+];
 
 /** USDC.e 精度 (6位小数) */
 export const USDC_DECIMALS = 6;
