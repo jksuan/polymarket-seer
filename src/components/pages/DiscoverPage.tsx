@@ -20,6 +20,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
+import { DiscoverPageSkeleton } from '@/components/pages/discover/DiscoverPageSkeleton';
 import { ChooseSideDrawer } from '@/components/ui/ChooseSideDrawer';
 import { ParsedMatch } from '@/components/ui/MatchCard';
 
@@ -122,9 +123,7 @@ export function DiscoverPage({ onPlaceBet, positions }: DiscoverPageProps) {
       
       <div className="px-5 mt-6">
         {(isMatchLoading && !allMatches?.length) || (isOutrightLoading && !outrightMarkets?.length) ? (
-          <div className="flex justify-center items-center h-48">
-            <span className="text-[#6bff8f] animate-pulse font-mono tracking-widest text-xs uppercase">{t.discover.loadingMarket}</span>
-          </div>
+          <DiscoverPageSkeleton />
         ) : (
           <DiscoverCardsContainer>
             {/* ── 1. Champion: 夺冠热门 ── */}
