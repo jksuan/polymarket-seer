@@ -22,6 +22,7 @@ import { selectPrimaryWallet } from "@/lib/primaryWallet";
 import { isValidApiKeyCreds } from "@/lib/clobApiKeyCreds";
 import { resolveClobApiKeyCreds } from "@/auth/resolveClobApiKeyCreds";
 import { readUsdcBalanceDisplay } from "@/auth/readUsdcBalanceDisplay";
+import { isEmbeddedWalletUnavailableError, walletListFingerprint } from "@/lib/accountSwitchGuard";
 
 /** 首次进入后拉余额的最大尝试次数（含第一次） */
 export const BALANCE_INITIAL_MAX_ATTEMPTS = 4;
@@ -39,8 +40,13 @@ export type UseBalanceSyncParams = {
   authenticated: boolean;
   wallets: any[] | undefined;
   userWalletAddress: string | undefined;
+  /** Privy user.id：换账号时触发余额/CLOB 重拉 */
+  privyUserId: string | null | undefined;
   stickyExternalWalletClientType: string | null;
   preferEmbeddedForPrimaryWallet: boolean;
+  awaitingEmbeddedWalletSync: boolean;
+  /** embedded 钱包对象失效（换账号残留）时由上层重同步 / createWallet */
+  onEmbeddedWalletUnavailable?: () => void;
   setStickyExternalWalletClientType: (value: string | null) => void;
   setHasCreds: (value: boolean) => void;
   setWalletAddress: (value: string) => void;
@@ -52,8 +58,11 @@ export function useBalanceSync({
   authenticated,
   wallets,
   userWalletAddress,
+  privyUserId,
   stickyExternalWalletClientType,
   preferEmbeddedForPrimaryWallet,
+  awaitingEmbeddedWalletSync,
+  onEmbeddedWalletUnavailable,
   setStickyExternalWalletClientType,
   setHasCreds,
   setWalletAddress,
@@ -67,6 +76,28 @@ export function useBalanceSync({
   const fetchBalanceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const silentRefreshIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const hasTriedDeriveCredsRef = useRef(false);
+  const prevPrivyUserIdRef = useRef<string | null | undefined>(undefined);
+  const awaitingEmbeddedWalletSyncRef = useRef(awaitingEmbeddedWalletSync);
+  const fetchBalanceRef = useRef<((showLoading?: boolean) => Promise<boolean>) | null>(null);
+  const initialLoadKeyRef = useRef<string | null>(null);
+  const prevAwaitingEmbeddedSyncRef = useRef(awaitingEmbeddedWalletSync);
+
+  awaitingEmbeddedWalletSyncRef.current = awaitingEmbeddedWalletSync;
+
+  const walletsFingerprint = walletListFingerprint(wallets);
+  const initialLoadKey = `${privyUserId ?? ""}:${walletsFingerprint}:${userWalletAddress ?? ""}`;
+
+  useEffect(() => {
+    const currentId = privyUserId ?? null;
+    if (prevPrivyUserIdRef.current === undefined) {
+      prevPrivyUserIdRef.current = currentId;
+      return;
+    }
+    if (prevPrivyUserIdRef.current !== currentId) {
+      hasTriedDeriveCredsRef.current = false;
+      prevPrivyUserIdRef.current = currentId;
+    }
+  }, [privyUserId]);
 
   const stopSilentRefresh = useCallback(() => {
     if (silentRefreshIntervalRef.current != null) {
@@ -86,6 +117,7 @@ export function useBalanceSync({
       clearTimeout(fetchBalanceTimerRef.current);
       fetchBalanceTimerRef.current = null;
     }
+    initialLoadKeyRef.current = null;
   }, [stopSilentRefresh]);
 
   const fetchBalance = useCallback(
@@ -103,6 +135,7 @@ export function useBalanceSync({
         const wallet = selectPrimaryWallet(wallets, userWalletAddress, {
           stickyClientType: stickyExternalWalletClientType,
           preferEmbedded: preferEmbeddedForPrimaryWallet,
+          awaitingWalletSync: awaitingEmbeddedWalletSyncRef.current,
         });
         if (!wallet) {
           setHasCreds(false);
@@ -170,7 +203,15 @@ export function useBalanceSync({
         setUsdcBalance(balanceResult.displayBalance);
         readOk = balanceResult.readOk;
       } catch (err) {
-        console.error("Balance fetch failed", err);
+        if (isEmbeddedWalletUnavailableError(err)) {
+          console.warn("[余额/CLOB] embedded 钱包不可用，等待 Privy 重新对齐", err);
+          setWalletAddress("");
+          setProxyAddress(null);
+          setHasCreds(false);
+          onEmbeddedWalletUnavailable?.();
+        } else {
+          console.error("Balance fetch failed", err);
+        }
         readOk = false;
       } finally {
         isFetchingBalanceRef.current = false;
@@ -183,8 +224,10 @@ export function useBalanceSync({
       authenticated,
       wallets,
       userWalletAddress,
+      privyUserId,
       stickyExternalWalletClientType,
       preferEmbeddedForPrimaryWallet,
+      onEmbeddedWalletUnavailable,
       setStickyExternalWalletClientType,
       setHasCreds,
       setWalletAddress,
@@ -192,19 +235,25 @@ export function useBalanceSync({
     ]
   );
 
+  fetchBalanceRef.current = fetchBalance;
+
   useEffect(() => {
-    if (!ready || !authenticated || !wallets || wallets.length === 0) {
+    if (!ready || !authenticated || !walletsFingerprint) {
       setIsInitialBalanceLoading(false);
       return;
     }
 
-    setIsInitialBalanceLoading(true);
+    const isNewLoadCycle = initialLoadKeyRef.current !== initialLoadKey;
+    if (isNewLoadCycle) {
+      initialLoadKeyRef.current = initialLoadKey;
+      setIsInitialBalanceLoading(true);
+    }
 
     if (fetchBalanceTimerRef.current) {
       clearTimeout(fetchBalanceTimerRef.current);
     }
 
-    const hasExternalWallet = wallets.some((w) => w.walletClientType !== "privy");
+    const hasExternalWallet = (wallets ?? []).some((w) => w.walletClientType !== "privy");
     const delay = hasExternalWallet ? 1500 : 300;
 
     let cancelled = false;
@@ -212,9 +261,12 @@ export function useBalanceSync({
     fetchBalanceTimerRef.current = setTimeout(() => {
       void (async () => {
         if (cancelled) return;
+        const runFetch = fetchBalanceRef.current;
+        if (!runFetch) return;
+
         let ok = false;
         for (let attempt = 0; attempt < BALANCE_INITIAL_MAX_ATTEMPTS && !ok && !cancelled; attempt += 1) {
-          ok = await fetchBalance(false);
+          ok = await runFetch(false);
           if (ok || cancelled) break;
           const backoffMs = Math.min(1000 * 2 ** attempt, 8000);
           await sleep(backoffMs);
@@ -229,25 +281,35 @@ export function useBalanceSync({
         clearTimeout(fetchBalanceTimerRef.current);
         fetchBalanceTimerRef.current = null;
       }
-      setIsInitialBalanceLoading(false);
     };
-  }, [ready, wallets, authenticated, userWalletAddress, fetchBalance]);
+  }, [ready, authenticated, initialLoadKey, walletsFingerprint]);
 
   useEffect(() => {
-    if (!ready || !authenticated || !wallets || wallets.length === 0) {
+    const wasAwaiting = prevAwaitingEmbeddedSyncRef.current;
+    prevAwaitingEmbeddedSyncRef.current = awaitingEmbeddedWalletSync;
+    if (wasAwaiting && !awaitingEmbeddedWalletSync && ready && authenticated && walletsFingerprint) {
+      setIsInitialBalanceLoading(true);
+      void fetchBalanceRef.current?.(false).finally(() => {
+        setIsInitialBalanceLoading(false);
+      });
+    }
+  }, [awaitingEmbeddedWalletSync, ready, authenticated, walletsFingerprint]);
+
+  useEffect(() => {
+    if (!ready || !authenticated || !walletsFingerprint) {
       stopSilentRefresh();
       return;
     }
 
     stopSilentRefresh();
     silentRefreshIntervalRef.current = setInterval(() => {
-      void fetchBalance(false);
+      void fetchBalanceRef.current?.(false);
     }, BALANCE_SILENT_REFRESH_INTERVAL_MS);
 
     return () => {
       stopSilentRefresh();
     };
-  }, [ready, authenticated, wallets, fetchBalance, stopSilentRefresh]);
+  }, [ready, authenticated, walletsFingerprint, stopSilentRefresh]);
 
   return {
     usdcBalance,

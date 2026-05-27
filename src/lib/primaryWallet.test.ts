@@ -14,6 +14,11 @@ const embedded = {
   walletClientType: "privy",
 } as const;
 
+const embedded2 = {
+  address: "0xdddddddddddddddddddddddddddddddddddddddd",
+  walletClientType: "privy",
+} as const;
+
 describe("selectPrimaryWallet", () => {
   it("无 sticky 时仍优先第一个外链再 embedded", () => {
     expect(selectPrimaryWallet([embedded, metamask], null)).toEqual(metamask);
@@ -61,5 +66,33 @@ describe("selectPrimaryWallet", () => {
 
   it("preferEmbedded 且无 embedded 时不回退外链", () => {
     expect(selectPrimaryWallet([metamask], null, { preferEmbedded: true })).toBeUndefined();
+  });
+
+  it("preferEmbedded 且有 preferred 但未命中时不回退第一个 privy", () => {
+    expect(
+      selectPrimaryWallet([embedded, embedded2], embedded2.address, { preferEmbedded: true })
+    ).toEqual(embedded2);
+    expect(
+      selectPrimaryWallet(
+        [embedded, embedded2],
+        "0xdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+        { preferEmbedded: true }
+      )
+    ).toBeUndefined();
+  });
+
+  it("preferEmbedded 且多个 privy 且无 preferred 时不猜测", () => {
+    expect(
+      selectPrimaryWallet([embedded, embedded2], null, { preferEmbedded: true })
+    ).toBeUndefined();
+  });
+
+  it("awaitingWalletSync 时 embedded 会话暂不选路", () => {
+    expect(
+      selectPrimaryWallet([embedded], embedded.address, {
+        preferEmbedded: true,
+        awaitingWalletSync: true,
+      })
+    ).toBeUndefined();
   });
 });

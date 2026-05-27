@@ -9,7 +9,11 @@ import { selectPrimaryWallet, type SelectPrimaryWalletOptions } from "@/lib/prim
 import { shouldSyncPrivyActiveWallet } from "@/lib/privyActiveWalletSync";
 import { disconnectExternalWallets } from "@/lib/disconnectExternalWallets";
 import { clearWalletConnectStorage } from "@/lib/clearWalletConnectStorage";
-import { normalizeAddress } from "@/lib/accountSwitchGuard";
+import {
+  hasMatchingEmbeddedWallet,
+  normalizeAddress,
+  walletListFingerprint,
+} from "@/lib/accountSwitchGuard";
 import {
   type AuthSessionMode,
   clearStoredSessionMode,
@@ -53,6 +57,11 @@ interface PolymarketAuthContextValue {
   clearAccountDriftPrompt: () => void;
 }
 
+/** embedded 换账号后，wallets 指纹未变时仍尝试解除同步等待的毫秒数 */
+const EMBEDDED_WALLET_SYNC_FALLBACK_MS = 1_500;
+/** 换账号后 Privy 仍无法对齐 embedded 钱包时整页刷新（与 ADR-0005 external 登出 reload 同理） */
+const EMBEDDED_WALLET_RELOAD_AFTER_MS = 12_000;
+
 const PolymarketAuthContext = createContext<PolymarketAuthContextValue | null>(null);
 
 export function PolymarketAuthProvider({ children }: { children: ReactNode }) {
@@ -66,26 +75,26 @@ export function PolymarketAuthProvider({ children }: { children: ReactNode }) {
   const [proxyAddress, setProxyAddress] = useState<string | null>(null);
   const [hasCreds, setHasCreds] = useState(false);
   const [stickyExternalWalletClientType, setStickyExternalWalletClientType] = useState<string | null>(null);
+  const [awaitingEmbeddedWalletSync, setAwaitingEmbeddedWalletSync] = useState(false);
 
   const persistSessionMode = useCallback((mode: AuthSessionMode) => {
     setSessionMode(mode);
     writeStoredSessionMode(mode);
   }, []);
 
-  const { login } = useLogin({
-    onComplete: ({ loginMethod }) => {
-      const mode = loginMethodToSessionMode(loginMethod);
-      if (mode) persistSessionMode(mode);
-    },
-  });
-
   const preferEmbedded = preferEmbeddedPrimaryWallet(sessionMode);
+  const walletsAtUserSwitchRef = useRef("");
+  const embeddedSwitchAtRef = useRef(0);
+  const prevPrivyUserIdRef = useRef<string | null>(null);
+  const embeddedReloadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastEmbeddedUnavailableAtRef = useRef(0);
   const primaryWalletOptions = useMemo(
     () => ({
       stickyClientType: stickyExternalWalletClientType,
       preferEmbedded,
+      awaitingWalletSync: awaitingEmbeddedWalletSync,
     }),
-    [stickyExternalWalletClientType, preferEmbedded]
+    [stickyExternalWalletClientType, preferEmbedded, awaitingEmbeddedWalletSync]
   );
 
   const isEvmSignerReady = useMemo(
@@ -96,6 +105,52 @@ export function PolymarketAuthProvider({ children }: { children: ReactNode }) {
   const sessionAddress = useMemo(() => normalizeAddress(user?.wallet?.address), [user?.wallet?.address]);
   const hasTriedCreateWalletRef = useRef(false);
   const { sessionEpoch, bumpSessionEpoch } = useSessionOverlays(authenticated);
+
+  const clearEmbeddedReloadTimer = useCallback(() => {
+    if (embeddedReloadTimerRef.current != null) {
+      clearTimeout(embeddedReloadTimerRef.current);
+      embeddedReloadTimerRef.current = null;
+    }
+  }, []);
+
+  const scheduleEmbeddedWalletReloadFallback = useCallback(() => {
+    if (typeof window === "undefined") return;
+    clearEmbeddedReloadTimer();
+    embeddedReloadTimerRef.current = setTimeout(() => {
+      console.warn("[embedded 钱包] Privy 长时间未对齐，整页刷新以恢复 Signer EOA");
+      window.location.reload();
+    }, EMBEDDED_WALLET_RELOAD_AFTER_MS);
+  }, [clearEmbeddedReloadTimer]);
+
+  const beginEmbeddedWalletSync = useCallback(() => {
+    walletsAtUserSwitchRef.current = walletListFingerprint(wallets);
+    embeddedSwitchAtRef.current = Date.now();
+    setAwaitingEmbeddedWalletSync(true);
+    scheduleEmbeddedWalletReloadFallback();
+  }, [wallets, scheduleEmbeddedWalletReloadFallback]);
+
+  const finishEmbeddedWalletSync = useCallback(() => {
+    setAwaitingEmbeddedWalletSync(false);
+    clearEmbeddedReloadTimer();
+  }, [clearEmbeddedReloadTimer]);
+
+  const ensureEmbeddedWalletForUser = useCallback(() => {
+    if (hasTriedCreateWalletRef.current) return;
+    hasTriedCreateWalletRef.current = true;
+    console.log("[自动钱包] embedded 会话缺少与当前 user 匹配的 Embedded Wallet，正在创建...");
+    void createWallet()
+      .then(() => console.log("[自动钱包] Embedded Wallet 创建成功"))
+      .catch((err) => console.warn("[自动钱包] Embedded Wallet 创建失败（可能已存在）:", err));
+  }, [createWallet]);
+
+  const handleEmbeddedWalletUnavailable = useCallback(() => {
+    const now = Date.now();
+    if (now - lastEmbeddedUnavailableAtRef.current < 5_000) return;
+    lastEmbeddedUnavailableAtRef.current = now;
+    hasTriedCreateWalletRef.current = false;
+    beginEmbeddedWalletSync();
+    ensureEmbeddedWalletForUser();
+  }, [beginEmbeddedWalletSync, ensureEmbeddedWalletForUser]);
 
   const {
     usdcBalance,
@@ -109,13 +164,70 @@ export function PolymarketAuthProvider({ children }: { children: ReactNode }) {
     authenticated,
     wallets,
     userWalletAddress: user?.wallet?.address,
+    privyUserId: user?.id,
     stickyExternalWalletClientType,
     preferEmbeddedForPrimaryWallet: preferEmbedded,
+    awaitingEmbeddedWalletSync,
+    onEmbeddedWalletUnavailable: handleEmbeddedWalletUnavailable,
     setStickyExternalWalletClientType,
     setHasCreds,
     setWalletAddress,
     setProxyAddress,
   });
+
+  const resetForPrivyUserSwitch = useCallback(() => {
+    clearCredsCache();
+    setWalletAddress("");
+    setProxyAddress(null);
+    setHasCreds(false);
+    resetBalanceState();
+    hasTriedCreateWalletRef.current = false;
+    setStickyExternalWalletClientType(null);
+    bumpSessionEpoch();
+    beginEmbeddedWalletSync();
+  }, [resetBalanceState, bumpSessionEpoch, beginEmbeddedWalletSync]);
+
+  const { login } = useLogin({
+    onComplete: ({ loginMethod }) => {
+      const mode = loginMethodToSessionMode(loginMethod);
+      if (mode) persistSessionMode(mode);
+    },
+  });
+
+  useEffect(() => {
+    const userId = user?.id ?? null;
+    const prev = prevPrivyUserIdRef.current;
+    if (prev !== null && userId !== null && prev !== userId) {
+      resetForPrivyUserSwitch();
+    }
+    prevPrivyUserIdRef.current = userId;
+  }, [user?.id, resetForPrivyUserSwitch]);
+
+  useEffect(() => {
+    if (!awaitingEmbeddedWalletSync || !preferEmbedded || !authenticated) return;
+
+    const currentKey = walletListFingerprint(wallets);
+    const walletsChanged = currentKey !== walletsAtUserSwitchRef.current;
+    const userWalletInList = hasMatchingEmbeddedWallet(wallets, user?.wallet?.address);
+    const elapsed = Date.now() - embeddedSwitchAtRef.current;
+
+    if (userWalletInList && (walletsChanged || elapsed >= EMBEDDED_WALLET_SYNC_FALLBACK_MS)) {
+      finishEmbeddedWalletSync();
+    }
+  }, [
+    awaitingEmbeddedWalletSync,
+    preferEmbedded,
+    authenticated,
+    wallets,
+    user?.wallet?.address,
+    finishEmbeddedWalletSync,
+  ]);
+
+  useEffect(() => {
+    if (!ready || !authenticated || !user || sessionMode !== "embedded") return;
+    if (hasMatchingEmbeddedWallet(wallets, user?.wallet?.address)) return;
+    ensureEmbeddedWalletForUser();
+  }, [ready, authenticated, user, wallets, sessionMode, ensureEmbeddedWalletForUser]);
 
   useEffect(() => {
     if (!authenticated) {
@@ -153,6 +265,7 @@ export function PolymarketAuthProvider({ children }: { children: ReactNode }) {
   const performSessionLogout = useCallback(async () => {
     const modeForCleanup = sessionMode ?? readStoredSessionMode();
     bumpSessionEpoch();
+    clearEmbeddedReloadTimer();
     clearCredsCache();
     setWalletAddress("");
     setProxyAddress(null);
@@ -160,6 +273,7 @@ export function PolymarketAuthProvider({ children }: { children: ReactNode }) {
     resetBalanceState();
     hasTriedCreateWalletRef.current = false;
     setStickyExternalWalletClientType(null);
+    setAwaitingEmbeddedWalletSync(false);
     setSessionMode(null);
     clearStoredSessionMode();
     if (modeForCleanup === "external") {
@@ -168,7 +282,10 @@ export function PolymarketAuthProvider({ children }: { children: ReactNode }) {
     }
     await logout();
     console.log("[退出登录] 已清除所有状态 ✅");
-  }, [logout, resetBalanceState, bumpSessionEpoch, sessionMode, wallets]);
+    if (modeForCleanup === "embedded" && typeof window !== "undefined") {
+      window.location.reload();
+    }
+  }, [logout, resetBalanceState, bumpSessionEpoch, sessionMode, wallets, clearEmbeddedReloadTimer]);
 
   const {
     accountDriftRequiresRelogin,
@@ -212,16 +329,18 @@ export function PolymarketAuthProvider({ children }: { children: ReactNode }) {
   }, [clearAccountChangeDebounce, resetReloginState, performSessionLogout]);
 
   useEffect(() => {
+    return () => {
+      clearEmbeddedReloadTimer();
+    };
+  }, [clearEmbeddedReloadTimer]);
+
+  useEffect(() => {
     if (!ready || !authenticated || !user || sessionMode !== "embedded") return;
     const hasEmbeddedWallet = wallets.some((w) => w.walletClientType === "privy");
     if (!hasEmbeddedWallet && !hasTriedCreateWalletRef.current) {
-      hasTriedCreateWalletRef.current = true;
-      console.log("[自动钱包] embedded 会话无 Embedded Wallet，正在创建...");
-      createWallet()
-        .then(() => console.log("[自动钱包] Embedded Wallet 创建成功"))
-        .catch((err) => console.warn("[自动钱包] Embedded Wallet 创建失败（可能已存在）:", err));
+      ensureEmbeddedWalletForUser();
     }
-  }, [ready, authenticated, user, wallets, createWallet, sessionMode]);
+  }, [ready, authenticated, user, wallets, sessionMode, ensureEmbeddedWalletForUser]);
 
   const { identifier: displayIdentifier, avatarUrl: displayAvatar } = useMemo(
     () =>

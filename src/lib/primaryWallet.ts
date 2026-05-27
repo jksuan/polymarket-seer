@@ -12,6 +12,10 @@ export type SelectPrimaryWalletOptions = {
   stickyClientType?: string | null;
   /** embedded 会话：优先 privy，且无 embedded 时不回退外链 */
   preferEmbedded?: boolean;
+  /**
+   * Privy 换账号后 wallets 尚未与 user 对齐：暂勿选路，避免误选上一用户的 embedded EOA。
+   */
+  awaitingWalletSync?: boolean;
 };
 
 function normalizeClientType(type: string | undefined): string | undefined {
@@ -25,6 +29,10 @@ export function selectPrimaryWallet<T extends WalletLike>(
   options?: SelectPrimaryWalletOptions
 ): T | undefined {
   if (!wallets || wallets.length === 0) return undefined;
+
+  if (options?.preferEmbedded && options.awaitingWalletSync) {
+    return undefined;
+  }
 
   const normalizedPreferred = preferredAddress?.toLowerCase();
   if (normalizedPreferred) {
@@ -44,15 +52,17 @@ export function selectPrimaryWallet<T extends WalletLike>(
     return sameConnector ?? undefined;
   }
 
-  const embeddedWallet = wallets.find(
-    (wallet) => wallet.walletClientType === "privy"
-  );
+  const privyWallets = wallets.filter((wallet) => wallet.walletClientType === "privy");
+  const embeddedWallet = privyWallets[0];
   const externalWallet = wallets.find(
     (wallet) => wallet.walletClientType && wallet.walletClientType !== "privy"
   );
 
   if (options?.preferEmbedded) {
-    if (embeddedWallet) return embeddedWallet;
+    // 有 user.wallet 锚点但未命中：勿回退「第一个 privy」，等待 Privy 同步
+    if (normalizedPreferred) return undefined;
+    if (privyWallets.length === 1) return privyWallets[0];
+    if (privyWallets.length > 1) return undefined;
     return undefined;
   }
 
