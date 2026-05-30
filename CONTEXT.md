@@ -36,6 +36,19 @@
 - **登录身份解析**：统一由 `src/auth/privyUserIdentity.ts` 提供展示名与 Connected 充提门禁（`sessionMode === 'external'` 才展示 Connected）。
 - **Issue #8（已关闭）**：iPhone MM(WC)→退出→Google 为 Privy SDK 已知问题；通过去掉 wallet 登录规避，不做应用层 patch。
 
+### 余额与交易 collateral（ADR-0004）
+
+- **可交易余额**：顶栏与下单预检均展示 **CLOB sync 后的 pUSD collateral**，不与链上未 wrap 的 USDC.e 简单取 max。
+- **ensureProxyCollateralSynced**：`updateBalanceAllowance` → `getBalanceAllowance(COLLATERAL)`；若 CLOB=0 且 proxy 仍有 legacy USDC.e，经 relayer 执行 **Collateral Onramp wrap** 后再 sync。
+- **实现集中**：`src/auth/collateralBalance.ts`、`readUsdcBalanceDisplay.ts`；细则见 `docs/adr/0004-polymarket-auth-invariants.md` §1。
+
+### 世界杯市场数据（Gamma tag 102232）
+
+- **数据源**：`/api/search?q=FIFA World Cup`（或 `wc=1`）→ Gamma `events?tag_id=102232`。
+- **翻页拉全**：单页 `limit=100` 不足；服务端按 `offset` 翻页去重（见 `worldCupEvents.ts`）。
+- **衍生盘过滤**：返回前剔除 **无 moneyline 的 vs 衍生 event**（如 More Markets、Exact Score）；非 vs 趣味盘保留。
+- **客户端解析**：`parseMatchEvents` 仍只摘 `sportsMarketType=moneyline` 且恰好 3 个子市场；小组赛共 **72 场** moneyline 对阵。
+
 ## 当前上下文约定
 
 - Transfer 与 Connected 是两条并行入口，避免互相阻塞主路径。

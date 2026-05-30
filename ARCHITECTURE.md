@@ -1,6 +1,6 @@
 # Crazy Fox — 工程架构文档 (ARCHITECTURE)
 
-> **版本**：v1.5 · 最后更新：2026-05-20
+> **版本**：v1.6 · 最后更新：2026-05-28
 > **技术栈**：Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS v4 · SWR · ethers.js · Privy
 
 ## 文档维护边界
@@ -23,7 +23,8 @@ polymarket-seer/
 │   │   │   ├── cards/route.ts      # 市场卡片数据代理
 │   │   │   ├── images/[id]/route.ts # 图片代理（绕 CORS）
 │   │   │   ├── proxy-image/route.ts # 通用图片代理
-│   │   │   ├── search/route.ts     # 搜索 API 代理
+│   │   │   ├── search/route.ts     # 搜索 / 世界杯 events 代理
+│   │   │   ├── search/worldCupEvents.ts # tag 102232 翻页拉全 + 衍生盘过滤
 │   │   │   ├── share-card/route.tsx # 分享卡片 SSR 渲染
 │   │   │   ├── sign/route.ts       # Polymarket CLOB 签名代理
 │   │   │   ├── sports/route.ts     # 体育赛事数据代理
@@ -52,9 +53,10 @@ polymarket-seer/
 │   │   ├── TxOverlay.tsx           # 交易状态全屏遮罩
 │   │   │
 │   │   ├── pages/                  # ★ 页面级组件
-│   │   │   ├── DiscoverPage.tsx    # 全新聚合发现页（替换原首页首屏，展现 4 大主题卡片）
-│   │   │   ├── HomePage.tsx        # 赛事大厅（赛程/积分榜/射手榜/淘汰赛）
-│   │   │   ├── ChallengePage.tsx   # 挑战页（世界杯专属赛事预测）
+│   │   │   ├── DiscoverPage.tsx    # 挑战 Tab：聚合发现流（夺冠/热门/胶着/冷门大卡片）
+│   │   │   ├── discover/DiscoverPageSkeleton.tsx # 挑战 Tab 加载骨架屏
+│   │   │   ├── HomePage.tsx        # 首页：赛程/积分榜/射手榜/趣味投注
+│   │   │   ├── ChallengePage.tsx   # 发现 Tab：Tinder 式划动对阵卡片
 │   │   │   ├── SearchPage.tsx      # 搜索页（全局搜索入口）
 │   │   │   ├── LeaderboardPage.tsx # 排行页（待重构）
 │   │   │   ├── ProfilePage.tsx     # 个人中心（Tab 容器：总览/持仓/挂单/战绩/明细）
@@ -123,7 +125,10 @@ polymarket-seer/
 │   ├── auth/                       # 认证与余额同步（从 Context 拆出的逻辑）
 │   │   ├── sessionMode.ts          # loginMethod → embedded/external
 │   │   ├── privyUserIdentity.ts    # 社交/邮箱展示名与 Connected 门禁
-│   │   ├── useBalanceSync.ts       # CLOB / 链上余额拉取与重试
+│   │   ├── collateralBalance.ts    # pUSD collateral sync / Onramp wrap / 预检共用
+│   │   ├── safeRelayExecutor.ts    # Safe relayer gasless 批次
+│   │   ├── readUsdcBalanceDisplay.ts # 顶栏可交易余额格式化
+│   │   ├── useBalanceSync.ts       # CLOB 余额拉取与重试
 │   │   ├── useExternalAccountDrift.ts # 外链钱包漂移检测
 │   │   └── resolveClobApiKeyCreds.ts  # CLOB 凭证解析
 │   │
@@ -190,9 +195,9 @@ polymarket-seer/
 │      ├── AppRouterContent                        │
 │      │   ├── AnimatePresence (页面过渡动画)        │
 │      │   │   ├── HomePage                        │
-│      │   │   ├── ChallengePage                   │
+│      │   │   ├── DiscoverPage (challenge Tab)   │
+│      │   │   ├── ChallengePage (discover Tab)    │
 │      │   │   ├── SearchPage                      │
-│      │   │   ├── LeaderboardPage                 │
 │      │   │   └── ProfilePage                     │
 │      │   ├── BottomNav (底部导航)                  │
 │      │   └── TxOverlay (交易状态遮罩)              │
@@ -223,8 +228,10 @@ polymarket-seer/
 │  1. 获取嵌入式钱包地址   │
 │  2. 向 CLOB 注册 API Key │ ← POST /api/sign
 │  3. 获取 Proxy Wallet    │
-│  4. 查询 USDC 余额       │
-│  5. 缓存凭据到 localStorage │
+│  4. ensureProxyCollateralSynced │
+│     (CLOB sync → 必要时 USDC.e→pUSD) │
+│  5. 顶栏展示可交易 pUSD 余额 │
+│  6. 缓存凭据到 localStorage │
 └──────────┬───────────┘
            │
            ▼
@@ -277,7 +284,7 @@ polymarket-seer/
 | 代理路由 | 上游 API | 用途 |
 |---|---|---|
 | `/api/sports` | `gamma-api.polymarket.com` | 获取体育赛事市场列表 |
-| `/api/search` | `gamma-api.polymarket.com` | 搜索市场 |
+| `/api/search` | `gamma-api.polymarket.com` | 搜索市场；FIFA 查询对 tag 102232 **翻页拉全**，返回前过滤无 moneyline 的 vs 衍生 event（见 `worldCupEvents.ts`） |
 | `/api/cards` | `gamma-api.polymarket.com` | 获取市场卡片详情 |
 | `/api/book` | `clob.polymarket.com` | 获取订单簿 + Tick Size |
 | `/api/sign` | `clob.polymarket.com` | CLOB API Key 注册/签名 |
@@ -300,7 +307,7 @@ polymarket-seer/
 
 ### 3.1 资金模块（充值 / 提现）
 
-顶栏 **余额 pill**（`$` + `▾`）展开 `FundsActionSheet`，分别进入 `DepositDrawer` 与 `WithdrawDrawer`。领域术语与不变量见 `CONTEXT.md`；Transfer 白名单、Connected 引擎分流、bridge 状态行顺序等见 `docs/adr/0001`–`0003`；**Privy 认证与 sessionMode** 见 `docs/adr/0005`（`0004` 余额/CLOB 条款仍继承自 `0004`）。
+顶栏 **余额 pill**（`$` + `▾`）展开 `FundsActionSheet`，分别进入 `DepositDrawer` 与 `WithdrawDrawer`。展示值为 **CLOB sync 后可交易 pUSD**（非链上 USDC.e 简单相加）；legacy Safe 经 Collateral Onramp wrap。领域术语见 `CONTEXT.md`；Transfer / Connected 见 `docs/adr/0001`–`0003`；余额与 CLOB 见 `docs/adr/0004`；认证见 `docs/adr/0005`。
 
 | 模块 | 入口 | 要点 |
 |---|---|---|
@@ -337,7 +344,7 @@ polymarket-seer/
 2. **钱包初始化**：从 Privy 嵌入式钱包获取 EOA 地址
 3. **CLOB 凭据**：自动向 Polymarket 注册 API Key 并缓存
 4. **Proxy Wallet**：建立代理钱包关系
-5. **余额查询**：实时获取 USDC 余额
+5. **余额同步**：`ensureProxyCollateralSynced`（CLOB sync + 必要时 Onramp），顶栏与下单预检共用
 6. **登出清理**：`handleLogout()` 清除所有 localStorage 状态
 
 ### 3.4 UI 与动画体系设计
