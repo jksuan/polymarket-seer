@@ -104,6 +104,8 @@ export function PolymarketAuthProvider({ children }: { children: ReactNode }) {
 
   const sessionAddress = useMemo(() => normalizeAddress(user?.wallet?.address), [user?.wallet?.address]);
   const hasTriedCreateWalletRef = useRef(false);
+  const clobAuthRejectionLogoutInFlightRef = useRef(false);
+  const performSessionLogoutRef = useRef<() => Promise<void>>(async () => {});
   const { sessionEpoch, bumpSessionEpoch } = useSessionOverlays(authenticated);
 
   const clearEmbeddedReloadTimer = useCallback(() => {
@@ -152,6 +154,17 @@ export function PolymarketAuthProvider({ children }: { children: ReactNode }) {
     ensureEmbeddedWalletForUser();
   }, [beginEmbeddedWalletSync, ensureEmbeddedWalletForUser]);
 
+  const handleClobAuthRejected = useCallback(async () => {
+    if (clobAuthRejectionLogoutInFlightRef.current) return;
+    clobAuthRejectionLogoutInFlightRef.current = true;
+    try {
+      await performSessionLogoutRef.current();
+    } catch (err) {
+      clobAuthRejectionLogoutInFlightRef.current = false;
+      console.warn("[ClobAuth] 取消签名后登出失败:", err);
+    }
+  }, []);
+
   const {
     usdcBalance,
     setUsdcBalance,
@@ -169,6 +182,9 @@ export function PolymarketAuthProvider({ children }: { children: ReactNode }) {
     preferEmbeddedForPrimaryWallet: preferEmbedded,
     awaitingEmbeddedWalletSync,
     onEmbeddedWalletUnavailable: handleEmbeddedWalletUnavailable,
+    onClobAuthRejected: () => {
+      void handleClobAuthRejected();
+    },
     setStickyExternalWalletClientType,
     setHasCreds,
     setWalletAddress,
@@ -286,6 +302,8 @@ export function PolymarketAuthProvider({ children }: { children: ReactNode }) {
       window.location.reload();
     }
   }, [logout, resetBalanceState, bumpSessionEpoch, sessionMode, wallets, clearEmbeddedReloadTimer]);
+
+  performSessionLogoutRef.current = performSessionLogout;
 
   const {
     accountDriftRequiresRelogin,

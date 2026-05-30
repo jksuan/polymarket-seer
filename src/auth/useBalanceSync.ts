@@ -50,6 +50,8 @@ export type UseBalanceSyncParams = {
   awaitingEmbeddedWalletSync: boolean;
   /** embedded 钱包对象失效（换账号残留）时由上层重同步 / createWallet */
   onEmbeddedWalletUnavailable?: () => void;
+  /** 用户取消 ClobAuth 签名时由上层回滚 Privy 会话 */
+  onClobAuthRejected?: () => void;
   setStickyExternalWalletClientType: (value: string | null) => void;
   setHasCreds: (value: boolean) => void;
   setWalletAddress: (value: string) => void;
@@ -66,6 +68,7 @@ export function useBalanceSync({
   preferEmbeddedForPrimaryWallet,
   awaitingEmbeddedWalletSync,
   onEmbeddedWalletUnavailable,
+  onClobAuthRejected,
   setStickyExternalWalletClientType,
   setHasCreds,
   setWalletAddress,
@@ -84,8 +87,11 @@ export function useBalanceSync({
   const fetchBalanceRef = useRef<((showLoading?: boolean) => Promise<boolean>) | null>(null);
   const initialLoadKeyRef = useRef<string | null>(null);
   const prevAwaitingEmbeddedSyncRef = useRef(awaitingEmbeddedWalletSync);
+  const clobAuthRejectedHandledRef = useRef(false);
+  const onClobAuthRejectedRef = useRef(onClobAuthRejected);
 
   awaitingEmbeddedWalletSyncRef.current = awaitingEmbeddedWalletSync;
+  onClobAuthRejectedRef.current = onClobAuthRejected;
 
   const walletsFingerprint = walletListFingerprint(wallets);
   const initialLoadKey = `${privyUserId ?? ""}:${walletsFingerprint}:${userWalletAddress ?? ""}`;
@@ -115,6 +121,7 @@ export function useBalanceSync({
     setIsRefreshingBalance(false);
     isFetchingBalanceRef.current = false;
     hasTriedDeriveCredsRef.current = false;
+    clobAuthRejectedHandledRef.current = false;
     stopSilentRefresh();
     if (fetchBalanceTimerRef.current) {
       clearTimeout(fetchBalanceTimerRef.current);
@@ -125,7 +132,13 @@ export function useBalanceSync({
 
   const fetchBalance = useCallback(
     async (showLoading = false): Promise<boolean> => {
-      if (isFetchingBalanceRef.current || !authenticated || !wallets || wallets.length === 0) {
+      if (
+        isFetchingBalanceRef.current ||
+        !authenticated ||
+        !wallets ||
+        wallets.length === 0 ||
+        clobAuthRejectedHandledRef.current
+      ) {
         return false;
       }
 
@@ -166,7 +179,7 @@ export function useBalanceSync({
           await new Promise((r) => setTimeout(r, 200));
         }
 
-        const { creds, hasCreds: resolvedHasCreds } = await resolveClobApiKeyCreds({
+        const { creds, hasCreds: resolvedHasCreds, userRejected } = await resolveClobApiKeyCreds({
           walletAddress: wallet.address,
           getCachedCreds,
           clearCachedCredsForWallet,
@@ -178,6 +191,16 @@ export function useBalanceSync({
             hasTriedDeriveCredsRef.current = true;
           },
         });
+
+        if (userRejected) {
+          clobAuthRejectedHandledRef.current = true;
+          setHasCreds(false);
+          setWalletAddress("");
+          setProxyAddress(null);
+          onClobAuthRejectedRef.current?.();
+          return false;
+        }
+
         setHasCreds(resolvedHasCreds);
 
         const validCreds = isValidApiKeyCreds(creds) ? creds : null;
@@ -234,6 +257,7 @@ export function useBalanceSync({
       stickyExternalWalletClientType,
       preferEmbeddedForPrimaryWallet,
       onEmbeddedWalletUnavailable,
+      onClobAuthRejected,
       setStickyExternalWalletClientType,
       setHasCreds,
       setWalletAddress,
@@ -272,6 +296,7 @@ export function useBalanceSync({
 
         let ok = false;
         for (let attempt = 0; attempt < BALANCE_INITIAL_MAX_ATTEMPTS && !ok && !cancelled; attempt += 1) {
+          if (clobAuthRejectedHandledRef.current) break;
           ok = await runFetch(false);
           if (ok || cancelled) break;
           const backoffMs = Math.min(1000 * 2 ** attempt, 8000);
