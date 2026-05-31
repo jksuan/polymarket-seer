@@ -1,18 +1,23 @@
 import { ethers } from "ethers";
 import { RelayClient, RelayerTxType } from "@polymarket/builder-relayer-client";
 import { BuilderConfig } from "@polymarket/builder-relayer-client/node_modules/@polymarket/builder-signing-sdk";
+import { ensureSafeDeployed } from "@/auth/ensureSafeDeployed";
 import { ERC20_ABI, POLYGON_CHAIN_ID, RELAYER_URL } from "@/lib/constants";
 import { PUSD_ADDRESS } from "./constants";
 
 export async function executePusdWithdrawTransfer({
   signer,
+  proxyAddress,
   bridgeDepositAddress,
   amountBaseUnit,
 }: {
   signer: ethers.Signer;
+  proxyAddress: string;
   bridgeDepositAddress: string;
   amountBaseUnit: string;
 }): Promise<string> {
+  await ensureSafeDeployed(signer, proxyAddress);
+
   const erc20 = new ethers.utils.Interface([
     ...ERC20_ABI,
     "function transfer(address to, uint256 amount) returns (bool)",

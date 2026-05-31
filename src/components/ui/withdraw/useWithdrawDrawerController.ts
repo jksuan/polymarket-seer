@@ -339,6 +339,7 @@ export function useWithdrawDrawerController({
 
       await executePusdWithdrawTransfer({
         signer,
+        proxyAddress,
         bridgeDepositAddress,
         amountBaseUnit,
       });
