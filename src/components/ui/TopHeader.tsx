@@ -19,15 +19,15 @@ interface TopHeaderProps {
 }
 
 interface LangToggleProps {
-  locale: string;
   onOpen: () => void;
+  title: string;
 }
 
-function LangToggle({ locale, onOpen }: LangToggleProps) {
+function LangToggle({ onOpen, title }: LangToggleProps) {
   return (
     <button
       onClick={onOpen}
-      title={locale === 'zh' ? 'Switch Language' : '切换语言'}
+      title={title}
       className="w-8 h-8 rounded-full flex items-center justify-center bg-white/5 border border-white/10 hover:bg-white/10 active:scale-95 transition-all shrink-0"
     >
       <Globe size={14} className="text-[#00F0FF]" />
@@ -50,7 +50,7 @@ export function TopHeader({ isSticky = false }: TopHeaderProps = {}) {
     accountDriftRequiresRelogin,
     clearAccountDriftPrompt,
   } = usePolymarketAuth();
-  const { t, locale } = useTranslation();
+  const { t } = useTranslation();
 
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [depositOpen, setDepositOpen] = useState(false);
@@ -99,7 +99,7 @@ export function TopHeader({ isSticky = false }: TopHeaderProps = {}) {
         {!authenticated ? (
           // 未登录状态
           <div className="flex items-center gap-2">
-            <LangToggle locale={locale} onOpen={() => setLangOpen(true)} />
+            <LangToggle title={t.settings.language} onOpen={() => setLangOpen(true)} />
             <button
               onClick={() => {
                 clearAccountDriftPrompt();
@@ -146,7 +146,7 @@ export function TopHeader({ isSticky = false }: TopHeaderProps = {}) {
                 ) : null}
               </button>
               
-              <LangToggle locale={locale} onOpen={() => setLangOpen(true)} />
+              <LangToggle title={t.settings.language} onOpen={() => setLangOpen(true)} />
             </div>
 
             <button 

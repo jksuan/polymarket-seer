@@ -138,12 +138,18 @@ export function PolymarketAuthProvider({ children }: { children: ReactNode }) {
 
   const ensureEmbeddedWalletForUser = useCallback(() => {
     if (hasTriedCreateWalletRef.current) return;
+    if (typeof createWallet !== "function") {
+      console.warn("[自动钱包] createWallet 不可用，跳过");
+      return;
+    }
+    if (hasMatchingEmbeddedWallet(wallets, user?.wallet?.address)) return;
+
     hasTriedCreateWalletRef.current = true;
     console.log("[自动钱包] embedded 会话缺少与当前 user 匹配的 Embedded Wallet，正在创建...");
     void createWallet()
       .then(() => console.log("[自动钱包] Embedded Wallet 创建成功"))
       .catch((err) => console.warn("[自动钱包] Embedded Wallet 创建失败（可能已存在）:", err));
-  }, [createWallet]);
+  }, [createWallet, wallets, user?.wallet?.address]);
 
   const handleEmbeddedWalletUnavailable = useCallback(() => {
     const now = Date.now();
@@ -351,14 +357,6 @@ export function PolymarketAuthProvider({ children }: { children: ReactNode }) {
       clearEmbeddedReloadTimer();
     };
   }, [clearEmbeddedReloadTimer]);
-
-  useEffect(() => {
-    if (!ready || !authenticated || !user || sessionMode !== "embedded") return;
-    const hasEmbeddedWallet = wallets.some((w) => w.walletClientType === "privy");
-    if (!hasEmbeddedWallet && !hasTriedCreateWalletRef.current) {
-      ensureEmbeddedWalletForUser();
-    }
-  }, [ready, authenticated, user, wallets, sessionMode, ensureEmbeddedWalletForUser]);
 
   const { identifier: displayIdentifier, avatarUrl: displayAvatar } = useMemo(
     () =>

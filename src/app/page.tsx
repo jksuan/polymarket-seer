@@ -5,7 +5,6 @@ import { AnimatePresence, motion } from 'motion/react';
 
 import { PolymarketAuthProvider, usePolymarketAuth } from "@/contexts/PolymarketAuthContext";
 import { useTrading } from "@/hooks/useTrading";
-import { I18nProvider } from "@/i18n";
 
 import { BottomNav } from '@/components/ui/BottomNav';
 import { HomePage } from '@/components/pages/HomePage';
@@ -167,12 +166,10 @@ function AppRouterContent() {
 
 export default function AppRouter() {
   return (
-    <I18nProvider>
-      <PolymarketAuthProvider>
-        <Suspense fallback={<div className="min-h-[100dvh] bg-[#0D0518] text-white flex items-center justify-center">Loading...</div>}>
-          <AppRouterContent />
-        </Suspense>
-      </PolymarketAuthProvider>
-    </I18nProvider>
+    <PolymarketAuthProvider>
+      <Suspense fallback={<div className="min-h-[100dvh] bg-[#0D0518] text-white flex items-center justify-center">Loading...</div>}>
+        <AppRouterContent />
+      </Suspense>
+    </PolymarketAuthProvider>
   );
 }
