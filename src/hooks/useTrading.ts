@@ -2,35 +2,40 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import useSWR from "swr";
 import { ethers } from "ethers";
-import { ClobClient } from "@polymarket/clob-client";
-import { RelayClient, RelayerTxType } from "@polymarket/builder-relayer-client";
-import { BuilderConfig } from "@polymarket/builder-relayer-client/node_modules/@polymarket/builder-signing-sdk";
-import { deriveSafe } from "@polymarket/builder-relayer-client/dist/builder/derive";
+import { AssetType, OrderType, Side } from "@polymarket/clob-client-v2";
 import { useWallets } from "@privy-io/react-auth";
 import { useTranslation } from "@/i18n";
 
 import {
   POLYGON_CHAIN_ID,
-  CLOB_API_URL,
-  SAFE_FACTORY_POLYGON,
   DATA_API_URL,
-  RELAYER_URL,
   ADDRESSES,
   CTF_ABI,
   NEG_RISK_ADAPTER_ABI,
-  SIGNATURE_TYPE_GNOSIS_SAFE,
   ZERO_PARENT_COLLECTION_ID,
 } from "@/lib/constants";
+import { createClobClient } from "@/lib/clobClientFactory";
+import { isClobOrderSuccess, parseClobOrderError } from "@/lib/clobOrderResponse";
 import { usePolymarketAuth } from "@/contexts/PolymarketAuthContext";
 import { getCachedCreds, setCachedCreds } from "@/lib/utils";
 import { selectPrimaryWallet } from "@/lib/primaryWallet";
 import {
-  buildTradingApprovalRelayBatch,
   ensureProxyCollateralSynced,
   formatCollateralBalanceFromAtomicUnits,
+  getExchangeSpenderForMarket,
+  getRequiredPusdSpendersForMarket,
   readProxyUsdcEAtomic,
+  readProxyPusdAtomic,
+  readPusdAllowanceAtomic,
+  type ClobCollateralClient,
 } from "@/auth/collateralBalance";
-import { createSafeRelayExecutor } from "@/auth/safeRelayExecutor";
+import { createDepositRelayExecutor } from "@/auth/depositRelayExecutor";
+import {
+  createTradingRelayClient,
+  ensureDepositVaultDeployed,
+  ensureDepositTradingApprovals,
+  resolveTradingVault,
+} from "@/auth/vault";
 
 export type TxStep = "idle" | "preparing" | "deploying" | "approving" | "placing" | "success" | "error";
 
@@ -114,7 +119,13 @@ export function useTrading(
     }
 
     // 3. 从 CLOB SDK 获取挂单
-    const clob = new ClobClient(CLOB_API_URL, POLYGON_CHAIN_ID, signer, creds, SIGNATURE_TYPE_GNOSIS_SAFE, proxyAddr);
+    const vault = await resolveTradingVault(signer, proxyAddr);
+    const clob = createClobClient({
+      signer: signer as never,
+      creds,
+      funderAddress: vault.address,
+      signatureType: vault.signatureType,
+    });
     const rawOrders = await clob.getOpenOrders().catch(() => []);
     const ordersArr: any[] = Array.isArray(rawOrders) ? rawOrders : [];
 
@@ -265,6 +276,7 @@ export function useTrading(
       const ethereumProvider = await wallet.getEthereumProvider();
       const provider = new ethers.providers.Web3Provider(ethereumProvider as any);
       const signer = provider.getSigner();
+      const vault = await resolveTradingVault(signer, proxyAddress);
 
       // ── Step 1: 检测市场类型（NegRisk vs Standard） ──
       let isNegRisk = false;
@@ -272,7 +284,12 @@ export function useTrading(
         try {
           const creds = getCachedCreds(walletAddress);
           if (creds) {
-            const clobClient = new ClobClient(CLOB_API_URL, POLYGON_CHAIN_ID, signer as any, creds, SIGNATURE_TYPE_GNOSIS_SAFE, proxyAddress);
+            const clobClient = createClobClient({
+              signer: signer as never,
+              creds,
+              funderAddress: vault.address,
+              signatureType: vault.signatureType,
+            });
             isNegRisk = await clobClient.getNegRisk(pos.asset);
           }
         } catch (e) {
@@ -281,11 +298,8 @@ export function useTrading(
       }
       console.log(`[Redeem] Market type: ${isNegRisk ? "NegRisk (多结果)" : "Standard (二元)"}, conditionId: ${pos.conditionId}, asset: ${pos.asset}`);
 
-      // ── Step 2: 构造 Relayer 客户端 ──
-      const builderConfig = new BuilderConfig({ remoteBuilderConfig: { url: `${window.location.origin}/api/sign` } });
-      const relayClient = new RelayClient(RELAYER_URL, POLYGON_CHAIN_ID, signer as any, builderConfig, RelayerTxType.SAFE);
-
-      // ── Step 3: 根据市场类型，构造不同的合约调用 ──
+      const relayClient = createTradingRelayClient(signer);
+      await ensureDepositVaultDeployed(relayClient, vault.address);
       let redeemTx: { to: string; data: string; value: string };
 
       if (isNegRisk) {
@@ -301,7 +315,7 @@ export function useTrading(
           ["function balanceOf(address account, uint256 id) view returns (uint256)"],
           provider
         );
-        const tokenBalance = await ctfContract.balanceOf(proxyAddress, pos.asset);
+        const tokenBalance = await ctfContract.balanceOf(vault.address, pos.asset);
         console.log(`[Redeem NegRisk] Token balance on-chain: ${tokenBalance.toString()}, outcomeIndex: ${pos.outcomeIndex}`);
 
         // 构造 amounts 数组：[outcome0_amount, outcome1_amount]
@@ -336,13 +350,17 @@ export function useTrading(
         : t.tx.activatingRedeem
       );
 
-      const tx = await relayClient.execute([redeemTx], mode === "archive" ? "Archive Position" : "Redeem Positions");
+      await executeDepositWalletRelayBatch(
+        relayClient,
+        vault.address,
+        [redeemTx],
+        mode === "archive" ? "Archive Position" : "Redeem Positions"
+      );
 
       setTxMessage(mode === "archive"
         ? t.tx.archiveBroadcasted
         : t.tx.redeemBroadcasted
       );
-      await tx.wait();
 
       setTxStep("success");
       setTxMessage(mode === "archive"
@@ -394,102 +412,122 @@ export function useTrading(
       let creds = getCachedCreds(wallet.address);
       if (!creds) {
         setTxMessage(t.tx.generatingCreds);
-        const clobClient = new ClobClient(CLOB_API_URL, POLYGON_CHAIN_ID, signer as any);
+        const clobClient = createClobClient({ signer: signer as never });
         try {
-          creds = await clobClient.deriveApiKey();
-        } catch (e) {
-          try {
-            creds = await clobClient.createApiKey();
-          } catch (err) {
-            console.warn("createApiKey failed:", err);
-          }
+          creds = await clobClient.createOrDeriveApiKey();
+        } catch (err) {
+          console.warn("createOrDeriveApiKey failed:", err);
         }
         if (creds && creds.key) {
           setCachedCreds(wallet.address, creds);
         } else {
-          // 如果生成失败，可能是因为没激活且余额为 0（Polymarket 拒绝未入金的新地址）。
-          // 在此拦截，假装是余额不足，从而让页面弹起充值引导层。
-          const derivedProxy = proxyAddress || deriveSafe(wallet.address, SAFE_FACTORY_POLYGON);
-          const onchainBalWei = await readProxyUsdcEAtomic(provider, derivedProxy);
-          const onchainBal = Number(formatCollateralBalanceFromAtomicUnits(onchainBalWei));
+          const vault = await resolveTradingVault(signer, proxyAddress);
+          const [usdcEAtomic, pusdAtomic] = await Promise.all([
+            readProxyUsdcEAtomic(provider, vault.address),
+            readProxyPusdAtomic(provider, vault.address),
+          ]);
+          const onchainBal = Number(
+            formatCollateralBalanceFromAtomicUnits(usdcEAtomic + pusdAtomic)
+          );
           if (onchainBal < Number(amount)) {
             throw new Error(`余额不足: 当前金库含 $${onchainBal.toFixed(2)}，但下注需要 $${Number(amount).toFixed(2)}`);
           }
           throw new Error("API 凭据初始化失败，请在 Polygon 链准备少量资产后重试");
         }
       }
-      const derivedProxy = proxyAddress || deriveSafe(wallet.address, SAFE_FACTORY_POLYGON);
-
-      // --- Step 1: Pre-flight Check (Balance) ---
-      setTxMessage(t.tx.checkingBalance);
-      const clobClientWithCreds = new ClobClient(CLOB_API_URL, POLYGON_CHAIN_ID, signer as any, creds, SIGNATURE_TYPE_GNOSIS_SAFE, derivedProxy as string);
-      const relayExecutor = createSafeRelayExecutor(signer);
-      try {
-        const { balanceAtomic } = await ensureProxyCollateralSynced({
-          clobClient: clobClientWithCreds,
-          provider,
-          proxyAddress: derivedProxy,
-          relayExecutor,
-        });
-        const currentBalance = Number(formatCollateralBalanceFromAtomicUnits(balanceAtomic));
-        const targetAmount = Number(amount);
-        if (currentBalance < targetAmount) {
-          throw new Error(`余额不足: 当前可交易余额 $${currentBalance.toFixed(2)}，但下注需要 $${targetAmount.toFixed(2)}`);
-        }
-      } catch (balErr: any) {
-        if (balErr.message && balErr.message.includes("余额不足")) {
-          throw balErr;
-        }
-        console.warn("余额查询失败，如果确认有钱请忽略", balErr);
-      }
+      const vault = await resolveTradingVault(signer, proxyAddress);
+      const clobClientWithCreds = createClobClient({
+        signer: signer as never,
+        creds,
+        funderAddress: vault.address,
+        signatureType: vault.signatureType,
+      });
+      const relayClient = createTradingRelayClient(signer);
+      const relayExecutor = createDepositRelayExecutor(signer, vault.address);
 
       setTxMessage(customTokenId ? t.tx.linkedTargetMarket : t.tx.fetchingActiveMarket);
-      let finalTokenId = customTokenId;
+      const finalTokenId = customTokenId;
       if (!finalTokenId) throw new Error("未获取到有效的交易代币 ID，请从市场列表重新选择下注目标");
 
-      // --- Step 2: Deploy Safe Wallet ---
+      const tickSizeEarly = await clobClientWithCreds.getTickSize(finalTokenId).catch(() => "0.01") as "0.1" | "0.01" | "0.001" | "0.0001";
+      const negRiskEarly = await clobClientWithCreds.getNegRisk(finalTokenId).catch(() => false);
+      const requiredSpender = getExchangeSpenderForMarket(negRiskEarly);
+      const requiredSpenders = getRequiredPusdSpendersForMarket(negRiskEarly);
+
+      // --- Step 1: Deploy Deposit Wallet ---
       setTxStep("deploying");
       setTxMessage(t.tx.checkingVaultState);
-      const builderConfig = new BuilderConfig({ remoteBuilderConfig: { url: `${window.location.origin}/api/sign` } });
-      const relayClient = new RelayClient(RELAYER_URL, POLYGON_CHAIN_ID, signer as any, builderConfig, RelayerTxType.SAFE);
 
       try {
-        const isDeployed = await relayClient.getDeployed(derivedProxy as string);
-        if (!isDeployed) {
+        const wasDeployed = await ensureDepositVaultDeployed(relayClient, vault.address);
+        if (!wasDeployed) {
           setTxMessage(t.tx.vaultNotActivated);
-          const d = await relayClient.deploy();
           setTxMessage(t.tx.deployTxSubmitted);
-          await d.wait();
         } else {
           setTxMessage(t.tx.vaultActivated);
         }
-      } catch (deployErr: any) {
-        if (!String(deployErr.message || deployErr).includes("deployed")) {
+      } catch (deployErr: unknown) {
+        const deployMsg = deployErr instanceof Error ? deployErr.message : String(deployErr);
+        if (!deployMsg.includes("deployed")) {
           console.error("Deploy error:", deployErr);
         }
       }
 
-      // --- Step 2: Batch Token Approvals ---
+      // --- Step 2: Batch Token Approvals（分块 + 链上校验）---
       setTxStep("approving");
       setTxMessage(t.tx.settingApproval);
 
-      try {
-        await relayClient.execute(buildTradingApprovalRelayBatch(), "Batch Approve");
-        setTxMessage(t.tx.approveSuccess);
-      } catch (approveErr: any) {
-        console.warn("Approval may have already been set:", approveErr);
-        setTxMessage(t.tx.approvalExists);
+      await ensureDepositTradingApprovals(relayClient, vault.address, provider, requiredSpenders);
+      setTxMessage(t.tx.approveSuccess);
+
+      const marketAllowance = await readPusdAllowanceAtomic(provider, vault.address, requiredSpender);
+      if (marketAllowance === BigInt(0)) {
+        throw new Error(
+          `pUSD 仍未授权给 ${negRiskEarly ? "Neg Risk Adapter" : "Exchange V2"}，请重试并完成签名。`
+        );
       }
 
       try {
-        await clobClientWithCreds.updateBalanceAllowance({ asset_type: "COLLATERAL" as any });
+        await clobClientWithCreds.updateBalanceAllowance({ asset_type: AssetType.COLLATERAL });
       } catch (e) { console.warn("updateBalanceAllowance non-critical", e); }
 
-      // --- Step 3: Place Market Order ---
+      // --- Step 3: Balance sync（部署+授权后再读 CLOB 可交易余额）---
+      setTxStep("preparing");
+      setTxMessage(t.tx.checkingBalance);
+      const { balanceAtomic } = await ensureProxyCollateralSynced({
+        clobClient: clobClientWithCreds as ClobCollateralClient,
+        provider,
+        proxyAddress: vault.address,
+        relayExecutor,
+      });
+      const currentBalance = Number(formatCollateralBalanceFromAtomicUnits(balanceAtomic));
+      const targetAmount = Number(amount);
+      if (currentBalance < targetAmount) {
+        const [usdcEAtomic, pusdAtomic] = await Promise.all([
+          readProxyUsdcEAtomic(provider, vault.address),
+          readProxyPusdAtomic(provider, vault.address),
+        ]);
+        const onChainHint = Number(
+          formatCollateralBalanceFromAtomicUnits(usdcEAtomic + pusdAtomic)
+        );
+        if (onChainHint >= targetAmount) {
+          throw new Error(
+            `余额同步中: 金库链上约 $${onChainHint.toFixed(2)}，CLOB 可交易 $${currentBalance.toFixed(2)}。Bridge 到账后请等待 1–2 分钟再试。`
+          );
+        }
+        throw new Error(
+          `余额不足: 当前可交易余额 $${currentBalance.toFixed(2)}，但下注需要 $${targetAmount.toFixed(2)}`
+        );
+      }
+
+      // --- Step 4: Place Market Order ---
       setTxStep("placing");
       setTxMessage(t.tx.submittingBuyOrder);
       const parsedAmount = Number(amount);
       if (isNaN(parsedAmount) || parsedAmount <= 0) throw new Error("下注金额无效");
+
+      const tickSize = tickSizeEarly;
+      const negRisk = negRiskEarly;
 
       // Apply 3% implicit slippage (increases FOK fill rate for large or low-liquidity orders)
       const limitPrice = executionPrice 
@@ -499,26 +537,18 @@ export function useTrading(
       const resp = await clobClientWithCreds.createAndPostMarketOrder({
         tokenID: finalTokenId, 
         amount: parsedAmount, 
-        side: "BUY" as any,
+        side: Side.BUY,
         price: limitPrice,
-        orderType: "FOK" as any
-      });
+        orderType: OrderType.FOK,
+      }, { tickSize, negRisk });
 
-      if (resp && resp.success) {
+      if (isClobOrderSuccess(resp)) {
         setTxStep("success");
         setTxMessage(t.tx.placeSuccess);
         setTxOrderId(resp.orderID || null);
         syncData(1500);
       } else {
-        let errorMsg = resp?.error || JSON.stringify(resp);
-        try {
-          const parsed = JSON.parse(errorMsg);
-          if (parsed?.data?.error) {
-            errorMsg = parsed.data.error;
-          }
-        } catch (e) { }
-
-        throw new Error(errorMsg);
+        throw new Error(parseClobOrderError(resp));
       }
 
     } catch (err: any) {
@@ -534,7 +564,15 @@ export function useTrading(
       }
 
       setTxStep("error");
-      if (finalMsg.includes("not enough balance")) finalMsg = "余额不足或授权尚未生效，请确认金库中有足够的可交易余额。";
+      if (finalMsg.toLowerCase().includes("deadline too soon")) {
+        finalMsg = "授权签名有效期不足，请重新下注并在弹窗出现后尽快完成全部签名。";
+      }
+      if (finalMsg.toLowerCase().includes("allowance")) {
+        finalMsg = "交易授权不足：Neg Risk 市场需授权 Neg Risk Adapter，请重试并完成全部签名。";
+      }
+      if (finalMsg.includes("not enough balance")) {
+        finalMsg = "余额不足或授权尚未生效，请确认金库中有足够的可交易余额。";
+      }
       if (finalMsg.includes("user rejected")) finalMsg = "用户取消了签名请求。";
 
       if (finalMsg.includes("余额不足") || finalMsg.includes("not enough balance")) {
@@ -566,7 +604,13 @@ export function useTrading(
       const creds = getCachedCreds(wallet.address);
       if (!creds) throw new Error("API凭证已过期或不存在，请重新连接");
 
-      const clobClient = new ClobClient(CLOB_API_URL, POLYGON_CHAIN_ID, signer as any, creds, SIGNATURE_TYPE_GNOSIS_SAFE, proxyAddress);
+      const vault = await resolveTradingVault(signer, proxyAddress);
+      const clobClient = createClobClient({
+        signer: signer as never,
+        creds,
+        funderAddress: vault.address,
+        signatureType: vault.signatureType,
+      });
 
       setTxStep("placing");
       setTxMessage(t.tx.cancelingOrder);
@@ -617,7 +661,13 @@ export function useTrading(
       const creds = getCachedCreds(wallet.address);
       if (!creds) throw new Error("API凭证过期，请重启");
 
-      const clobClient = new ClobClient(CLOB_API_URL, POLYGON_CHAIN_ID, signer as any, creds, SIGNATURE_TYPE_GNOSIS_SAFE, proxyAddress);
+      const vault = await resolveTradingVault(signer, proxyAddress);
+      const clobClient = createClobClient({
+        signer: signer as never,
+        creds,
+        funderAddress: vault.address,
+        signatureType: vault.signatureType,
+      });
 
       const parsedShares = Number(sharesToSell);
       if (!parsedShares || parsedShares <= 0) {
@@ -638,23 +688,18 @@ export function useTrading(
       const resp = await clobClient.createAndPostMarketOrder({
         tokenID: tokenId,
         amount: parsedShares,
-        side: "SELL" as any,
+        side: Side.SELL,
         price: limitPrice,
-        orderType: "FOK" as any
+        orderType: OrderType.FOK,
       }, { tickSize, negRisk });
 
-      if (resp && resp.success) {
+      if (isClobOrderSuccess(resp)) {
         setTxStep("success");
         setTxMessage(t.tx.sellSuccess);
         setTxOrderId(resp.orderID || null);
         syncData(1500);
       } else {
-        let errorMsg = resp?.error || JSON.stringify(resp);
-        try {
-          const parsed = JSON.parse(errorMsg);
-          if (parsed?.data?.error) errorMsg = parsed.data.error;
-        } catch (e) {}  
-        throw new Error(errorMsg);
+        throw new Error(parseClobOrderError(resp));
       }
     } catch (err: any) {
       console.error("Sell position error:", err);
@@ -695,7 +740,13 @@ export function useTrading(
       const creds = getCachedCreds(wallet.address);
       if (!creds) throw new Error("API凭证过期，请重启");
 
-      const clobClient = new ClobClient(CLOB_API_URL, POLYGON_CHAIN_ID, signer as any, creds, SIGNATURE_TYPE_GNOSIS_SAFE, proxyAddress);
+      const vault = await resolveTradingVault(signer, proxyAddress);
+      const clobClient = createClobClient({
+        signer: signer as never,
+        creds,
+        funderAddress: vault.address,
+        signatureType: vault.signatureType,
+      });
 
       const parsedShares = Number(sharesToSell);
       if (!parsedShares || parsedShares <= 0 || !limitPrice || limitPrice <= 0) {
@@ -712,21 +763,16 @@ export function useTrading(
         tokenID: tokenId,
         size: parsedShares,
         price: limitPrice,
-        side: "SELL" as any
+        side: Side.SELL,
       }, { tickSize, negRisk });
 
-      if (resp && resp.success) {
+      if (isClobOrderSuccess(resp)) {
         setTxStep("success");
         setTxMessage(t.tx.limitOrderSuccess);
         setTxOrderId(resp.orderID || null);
         syncData(1500);
       } else {
-        let errorMsg = resp?.error || JSON.stringify(resp);
-        try {
-          const parsed = JSON.parse(errorMsg);
-          if (parsed?.data?.error) errorMsg = parsed.data.error;
-        } catch (e) {}  
-        throw new Error(errorMsg);
+        throw new Error(parseClobOrderError(resp));
       }
     } catch (err: any) {
       console.error("Limit sell error:", err);

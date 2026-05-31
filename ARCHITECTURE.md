@@ -403,7 +403,8 @@ Bridge 代理上游请求可附带 `X-Builder-Code`（env `POLY_BUILDER_CODE`，
 | `swr` | 2.4.1 | 数据获取与缓存 |
 | `ethers` | 5.8.0 | 以太坊交互（签名、合约调用） |
 | `@privy-io/react-auth` | 3.16.0 | 社交登录 + 嵌入式钱包 |
-| `@polymarket/clob-client` | 5.8.0 | Polymarket CLOB 交易客户端 |
+| `@polymarket/clob-client-v2` | 1.0.6 | Polymarket CLOB V2 交易客户端 |
+| `viem` | 2.46.x | CLOB V2 推荐依赖（Privy 仍可用 ethers signer） |
 | `@polymarket/builder-relayer-client` | 0.0.8 | 兑现操作 Relayer |
 | `recharts` | 3.8.0 | 图表（分类盈亏条形图） |
 | `lucide-react` | 0.577.0 | 图标库 |

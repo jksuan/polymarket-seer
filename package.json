@@ -15,8 +15,9 @@
     "test:e2e:ui": "playwright test --ui"
   },
   "dependencies": {
-    "@polymarket/builder-relayer-client": "^0.0.8",
-    "@polymarket/clob-client": "^5.8.0",
+    "@polymarket/builder-relayer-client": "^0.0.10",
+    "@polymarket/builder-signing-sdk": "^0.0.8",
+    "@polymarket/clob-client-v2": "^1.0.6",
     "@privy-io/react-auth": "^3.16.0",
     "@types/canvas-confetti": "^1.9.0",
     "canvas-confetti": "^1.9.4",
@@ -37,7 +38,8 @@
     "react-qr-code": "^2.0.18",
     "recharts": "^3.8.0",
     "swr": "^2.4.1",
-    "tailwind-merge": "^3.5.0"
+    "tailwind-merge": "^3.5.0",
+    "viem": "^2.46.3"
   },
   "devDependencies": {
     "@playwright/test": "^1.59.1",

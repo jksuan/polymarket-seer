@@ -2,14 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ethers } from "ethers";
-import { ClobClient } from "@polymarket/clob-client";
-import { deriveSafe } from "@polymarket/builder-relayer-client/dist/builder/derive";
 
 import {
   POLYGON_CHAIN_ID,
-  CLOB_API_URL,
-  SAFE_FACTORY_POLYGON,
-  SIGNATURE_TYPE_GNOSIS_SAFE,
 } from "@/lib/constants";
 import {
   getCachedCreds,
@@ -18,13 +13,19 @@ import {
 } from "@/lib/utils";
 import { selectPrimaryWallet } from "@/lib/primaryWallet";
 import { isValidApiKeyCreds } from "@/lib/clobApiKeyCreds";
+import { createClobClient } from "@/lib/clobClientFactory";
 import { resolveClobApiKeyCreds } from "@/auth/resolveClobApiKeyCreds";
 import { readUsdcBalanceDisplay } from "@/auth/readUsdcBalanceDisplay";
 import {
   ensureProxyCollateralSynced,
   type ClobCollateralClient,
 } from "@/auth/collateralBalance";
-import { createSafeRelayExecutor } from "@/auth/safeRelayExecutor";
+import { createDepositRelayExecutor } from "@/auth/depositRelayExecutor";
+import {
+  createTradingRelayClient,
+  ensureDepositVaultDeployed,
+  resolveTradingVault,
+} from "@/auth/vault";
 import { isEmbeddedWalletUnavailableError, walletListFingerprint } from "@/lib/accountSwitchGuard";
 
 /** 首次进入后拉余额的最大尝试次数（含第一次） */
@@ -170,10 +171,10 @@ export function useBalanceSync({
         const ethereumProvider = await wallet.getEthereumProvider();
         const provider = new ethers.providers.Web3Provider(ethereumProvider as any);
         const signer = provider.getSigner();
-        const clobClient = new ClobClient(CLOB_API_URL, POLYGON_CHAIN_ID, signer as any);
+        const clobClient = createClobClient({ signer: signer as never });
 
-        const derivedProxy = deriveSafe(wallet.address, SAFE_FACTORY_POLYGON);
-        setProxyAddress(derivedProxy);
+        const vault = await resolveTradingVault(signer);
+        setProxyAddress(vault.address);
 
         if (!getCachedCreds(wallet.address)) {
           await new Promise((r) => setTimeout(r, 200));
@@ -210,19 +211,23 @@ export function useBalanceSync({
             if (!validCreds) {
               return { balanceAtomic: BigInt(0), readOk: false };
             }
-            const clobWithCreds = new ClobClient(
-              CLOB_API_URL,
-              POLYGON_CHAIN_ID,
-              signer as any,
-              validCreds,
-              SIGNATURE_TYPE_GNOSIS_SAFE,
-              derivedProxy
-            );
-            const relayExecutor = createSafeRelayExecutor(signer);
+            const clobWithCreds = createClobClient({
+              signer: signer as never,
+              creds: validCreds,
+              funderAddress: vault.address,
+              signatureType: vault.signatureType,
+            });
+            const relayClient = createTradingRelayClient(signer);
+            try {
+              await ensureDepositVaultDeployed(relayClient, vault.address);
+            } catch (deployErr) {
+              console.warn("[余额] Deposit Wallet 部署检查失败", deployErr);
+            }
+            const relayExecutor = createDepositRelayExecutor(signer, vault.address);
             const { balanceAtomic } = await ensureProxyCollateralSynced({
               clobClient: clobWithCreds as ClobCollateralClient,
               provider,
-              proxyAddress: derivedProxy,
+              proxyAddress: vault.address,
               relayExecutor,
             });
             return { balanceAtomic, readOk: true };

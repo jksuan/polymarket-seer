@@ -1,4 +1,4 @@
-/** Polymarket CLOB L2 凭证（与 @polymarket/clob-client ApiKeyCreds 一致） */
+/** Polymarket CLOB L2 凭证（与 @polymarket/clob-client-v2 ApiKeyCreds 一致） */
 export type ClobApiKeyCredsLike = {
   key?: string | null;
   secret?: string | null;
