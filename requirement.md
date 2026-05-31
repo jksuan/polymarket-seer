@@ -1,6 +1,6 @@
 # Crazy Fox — 产品需求文档 (PRD)
 
-> **版本**：v2.6 · 最后更新：2026-05-28
+> **版本**：v2.7 · 最后更新：2026-05-30
 > **产品定位**：2026 世界杯体育预测 H5 应用，以 Polymarket 为底层交易引擎。
 
 ## 文档维护边界
@@ -19,7 +19,7 @@
 | **设计风格** | 暗黑系新野兽主义 (Dark Neobrutalism)，以深紫底 `#0D0518` 为主色调，荧光绿 `#6bff8f` 为强调色，搭配玻璃拟态 (Glassmorphism) 卡片 |
 | **动效标准** | 全站使用 Framer Motion 过渡动画，页面切换带模糊聚焦效果，交互元素带 `active:scale-95` 微按压反馈 |
 | **加载策略** | 全页面采用高保真骨架屏 (Skeleton Screen)，禁止使用旋转圈或"加载中"文本 |
-| **国际化 (i18n)** | 全局原生强类型的中英双语支持。已建立独立的 **LanguageDrawer** 作为全局一级入口，支持底部滑出式（Bottom Sheet）交互。已覆盖基础 UI、内容卡片、充值抽屉（DepositDrawer）及 40 余项交易状态文案。 |
+| **国际化 (i18n)** | 全局原生强类型的中英双语支持。已建立独立的 **LanguageDrawer** 作为全局一级入口，支持底部滑出式（Bottom Sheet）交互。语言偏好写入 Cookie + localStorage，SSR 通过 `initialLocale` 与首屏对齐。已覆盖基础 UI、内容卡片、充值抽屉（DepositDrawer）及 40 余项交易状态文案。 |
 | **适配目标** | 移动端 H5 优先（特别优化 X/Twitter 内置浏览器体验），使用 `100dvh` 适配各类视口。 |
 
 ---
@@ -159,7 +159,7 @@ Compass「发现」Tab：Tinder 式 **左右划动** 单场对阵卡片，低门
 ### 4.1 用户认证流程
 1. 使用 **Privy** 社交/邮箱登录（默认：邮箱、Google、X/Twitter、GitHub；**不含** MetaMask / WalletConnect 登录入口）
 2. **Telegram** 登录代码已实现，弹窗入口默认关闭（`NEXT_PUBLIC_ENABLE_TELEGRAM_LOGIN=true` 可启用）
-3. 登录后自动创建/恢复 Polygon 链上嵌入式钱包
+3. 登录后由应用层 `createWallet()` 创建/恢复 Polygon Embedded 钱包（Privy `createOnLogin` 已关闭，见 ADR-0005 §6 修订）
 4. 自动向 Polymarket CLOB 服务注册 API Key（签名授权）
 5. 建立 Proxy Wallet 代理关系
 6. 全程免 Gas（Polymarket 代付）
@@ -193,10 +193,10 @@ Compass「发现」Tab：Tinder 式 **左右划动** 单场对阵卡片，低门
 #### 4.4.2 提现 (WithdrawDrawer)
 
 - **入口**：顶栏资金菜单 → 提现。
-- **表单**：选择 Receive token / chain（白名单联动）、收款地址（可一键填入已连接钱包）、金额；展示费用明细与网络费说明。
-- **执行**：用户确认后获取 Bridge 报价并发起提现；轮询状态（含失败提示、约 2 分钟超时与重试查询）；进行中禁用重复提交；完成后展示成功态并可重置表单。
+- **表单**：到账固定 **Polygon · PUSD**（只读）；用户填写 **收款地址**（external 会话可一键填入已连接钱包）、**金额**；展示 Uniswap 换币引导（需 USDC 等时自行兑换）。
+- **执行**：`POST /withdraw` 创建 bridge 入金地址 → `ensureSafeDeployed` → relayer 以 Safe 身份转 pUSD 至 bridge → `/status` 轮询（含失败提示、约 2 分钟超时与重试）；进行中禁用重复提交；完成后展示成功态。
 
-工程细节与白名单规则见 `CONTEXT.md` 与 `docs/adr/`。
+工程细节见 `CONTEXT.md` 与 `docs/adr/`。
 
 ---
 

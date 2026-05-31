@@ -1,6 +1,6 @@
 # Crazy Fox — 工程架构文档 (ARCHITECTURE)
 
-> **版本**：v1.6 · 最后更新：2026-05-28
+> **版本**：v1.7 · 最后更新：2026-05-30
 > **技术栈**：Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS v4 · SWR · ethers.js · Privy
 
 ## 文档维护边界
@@ -28,7 +28,7 @@ polymarket-seer/
 │   │   │   ├── share-card/route.tsx # 分享卡片 SSR 渲染
 │   │   │   ├── sign/route.ts       # Polymarket CLOB 签名代理
 │   │   │   ├── sports/route.ts     # 体育赛事数据代理
-│   │   │   ├── bridge/             # Polymarket Bridge 代理（充值地址 / 报价 / 提现 / 状态）
+│   │   │   ├── bridge/             # Polymarket Bridge 代理（充值地址 / 提现 / 状态；quote 路由保留但提现 UI 未调用）
 │   │   │   │   ├── deposit/route.ts
 │   │   │   │   ├── withdraw/route.ts
 │   │   │   │   ├── quote/route.ts
@@ -41,7 +41,7 @@ polymarket-seer/
 │   │   ├── testing/                # 开发联调页（生产默认关闭，见 README）
 │   │   ├── c/[id]/                 # 动态路由：分享卡片详情页
 │   │   ├── globals.css             # 全局样式（Tailwind + 自定义）
-│   │   ├── layout.tsx              # 根布局（HTML head、字体、Providers）
+│   │   ├── layout.tsx              # 根布局（HTML head、字体、Providers、i18n initialLocale）
 │   │   └── page.tsx                # ★ 应用主入口（SPA 路由控制器）
 │   │
 │   ├── components/                 # 组件库
@@ -49,7 +49,8 @@ polymarket-seer/
 │   │   ├── MarketSearch.tsx        # 搜索结果卡片
 │   │   ├── Navbar.tsx              # 顶部导航栏（已登录态）
 │   │   ├── Portfolio.tsx           # 投资组合面板（旧版，保留参考）
-│   │   ├── Providers.tsx           # 全局 Provider 封装（Privy）
+│   │   ├── Providers.tsx           # 全局 Provider 封装（Privy；embedded createOnLogin: off）
+│   │   ├── AppI18nShell.tsx        # layout 注入 initialLocale 的 i18n 壳层
 │   │   ├── TxOverlay.tsx           # 交易状态全屏遮罩
 │   │   │
 │   │   ├── pages/                  # ★ 页面级组件
@@ -100,7 +101,7 @@ polymarket-seer/
 │   │       ├── WithdrawDrawer.tsx  # 提现抽屉（Bridge withdraw + 状态轮询）
 │   │       ├── FundsMovementTermsPanel.tsx # 充/提/转入共用适用条款摘要
 │   │       ├── deposit/            # 充值子模块（connected / transfer / confirm 等）
-│   │       ├── withdraw/           # 提现子模块（表单 / 报价 / 校验 / 执行）
+│   │       ├── withdraw/           # 提现子模块（表单 / 校验 / Safe 执行 / 状态轮询）
 │   │       ├── SettingsDrawer.tsx  # 设置抽屉（账户信息、法律文档入口）
 │   │       ├── LanguageDrawer.tsx  # ★ 语言选择抽屉（全局一级入口，Portaled 底部滑出）
 │   │       ├── settings/           # ★ 模块化设置内容组件
@@ -126,6 +127,7 @@ polymarket-seer/
 │   │   ├── sessionMode.ts          # loginMethod → embedded/external
 │   │   ├── privyUserIdentity.ts    # 社交/邮箱展示名与 Connected 门禁
 │   │   ├── collateralBalance.ts    # pUSD collateral sync / Onramp wrap / 预检共用
+│   │   ├── ensureSafeDeployed.ts   # 提现等 Safe 批次前 getDeployed / deploy
 │   │   ├── safeRelayExecutor.ts    # Safe relayer gasless 批次
 │   │   ├── readUsdcBalanceDisplay.ts # 顶栏可交易余额格式化
 │   │   ├── useBalanceSync.ts       # CLOB 余额拉取与重试
@@ -147,7 +149,8 @@ polymarket-seer/
 │   │
 │   ├── i18n/                       # ★ 全局国际化体系
 │   │   ├── locales/                # 字典目录 (zh.ts / en.ts)
-│   │   ├── I18nContext.tsx         # 国际化上下文 Provider
+│   │   ├── I18nContext.tsx         # 国际化上下文 Provider（接受 initialLocale）
+│   │   ├── localeStorage.ts        # locale Cookie / localStorage 读写
 │   │   ├── useTranslation.ts       # t / locale 获取 Hook
 │   │   └── countryNames.ts         # 体育垂直领域专用：国家名词典映射引擎
 │   │
@@ -292,8 +295,8 @@ polymarket-seer/
 | `/api/proxy-image` | 任意图片 URL | 通用图片代理 |
 | `/api/share-card` | — (SSR) | 服务端渲染分享卡片 |
 | `/api/bridge/deposit` | Polymarket Bridge | 创建 Transfer 入账地址 |
-| `/api/bridge/withdraw` | Polymarket Bridge | 创建提现临时 bridge 地址 |
-| `/api/bridge/quote` | Polymarket Bridge | 提现报价 |
+| `/api/bridge/withdraw` | Polymarket Bridge | 创建提现临时 bridge 地址（`X-Builder-Code` 见 `POLY_BUILDER_CODE`） |
+| `/api/bridge/quote` | Polymarket Bridge | Bridge 报价（路由保留；当前 WithdrawDrawer **未调用**） |
 | `/api/bridge/status/[address]` | Polymarket Bridge | 入账地址交易状态轮询 |
 | `/api/bridge/supported-assets` | Polymarket Bridge | 可充值资产列表 |
 | `/api/dln/quote` | deBridge DLN | Connected 跨链报价 |
@@ -313,7 +316,9 @@ polymarket-seer/
 |---|---|---|
 | **充值 · Connected** | 已连接钱包 → 选资产 / 金额 → 确认 | EVM / SVM 执行引擎分流；报价经 `/api/dln/*`；失败可回退 Transfer |
 | **充值 · Transfer** | 链上转入 | 自动创建 `Deposit Address`；`/api/bridge/status` 轮询；会话基线过滤历史终态 |
-| **提现** | 选 Receive token/chain、收款地址、金额 | `/api/bridge/quote` + `POST /withdraw`；状态轮询与超时重试 |
+| **提现** | 收款地址、金额（到账固定 Polygon · PUSD） | `POST /withdraw` → `ensureSafeDeployed` → relayer 转 pUSD → `/status` 轮询 |
+
+Bridge 代理上游请求可附带 `X-Builder-Code`（env `POLY_BUILDER_CODE`，开发者码；与 Relayer HMAC 三件套不同）。
 
 `isEvmSignerReady` 为 false 时顶栏禁用资金入口并展示说明条（见 `docs/superpowers/specs/2026-05-12-evm-wallet-readiness-design.md`）。
 
@@ -341,7 +346,7 @@ polymarket-seer/
 管理整个应用的认证生命周期：
 
 1. **Privy 集成**：监听 `usePrivy()` 的 `authenticated` 状态
-2. **钱包初始化**：从 Privy 嵌入式钱包获取 EOA 地址
+2. **钱包初始化**：Embedded 路线由 `ensureEmbeddedWalletForUser()` 统一 `createWallet()`（Privy `createOnLogin: off`）
 3. **CLOB 凭据**：自动向 Polymarket 注册 API Key 并缓存
 4. **Proxy Wallet**：建立代理钱包关系
 5. **余额同步**：`ensureProxyCollateralSynced`（CLOB sync + 必要时 Onramp），顶栏与下单预检共用
@@ -364,6 +369,7 @@ polymarket-seer/
 
 4. **全球化自适应渲染 (i18n Engine)**
    - 基于纯 Context 打造了轻量级、完全类型安全的国际化引擎字典 (`zh.ts` 与 `en.ts`)。
+   - **SSR 对齐**：`layout.tsx` 读 Cookie `seer_locale` → `AppI18nShell` → `I18nProvider initialLocale`；客户端 `setLocale` 同步写 Cookie + localStorage。
    - 实现了特殊的 `countryNames.ts` 翻译器，确保由于 API 返回的原生国家名称（甚至特殊变体如 `BIH/ITA/NIR/WAL`）可以无缝、原子化地翻译，不再出现中英混杂硬编码问题。
    - 全局图文架构中，涉及到 `国旗` 的场景，全部使用 `getCountryFlagUrl(name, 'svg')` 请求统一的正规 4:3 矢量 SVG 资源，取代失真 PNG，强化“转播级”专业感。
    - 【核心演进】将语言切换提升为全局一级交互，使用 **LanguageDrawer** 配合 `createPortal` 挂载至 `document.body`，彻底解决了 `fixed` 定位在嵌套容器中的渲染冲突，确保在移动端始终能稳固贴底。
