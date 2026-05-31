@@ -235,7 +235,7 @@ function WithdrawRecipientField({
           onChange(e.target.value);
           syncHeight();
         }}
-        className="min-h-5 max-h-32 min-w-0 flex-1 resize-none overflow-hidden bg-transparent text-sm font-medium leading-5 text-white break-all outline-none placeholder:text-white/25"
+        className="min-h-5 max-h-32 min-w-0 flex-1 resize-none overflow-hidden bg-transparent text-base font-medium leading-5 text-white break-all outline-none placeholder:text-white/25"
       />
       {showUseConnected ? (
         <button
