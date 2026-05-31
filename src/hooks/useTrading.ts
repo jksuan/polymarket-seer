@@ -23,7 +23,9 @@ import {
   ensureProxyCollateralSynced,
   formatCollateralBalanceFromAtomicUnits,
   getExchangeSpenderForMarket,
+  getRequiredErc1155OperatorsForMarket,
   getRequiredPusdSpendersForMarket,
+  readErc1155IsApprovedForAll,
   readProxyUsdcEAtomic,
   readProxyPusdAtomic,
   readPusdAllowanceAtomic,
@@ -33,7 +35,9 @@ import { createDepositRelayExecutor } from "@/auth/depositRelayExecutor";
 import {
   createTradingRelayClient,
   ensureDepositVaultDeployed,
+  ensureDepositErc1155Approvals,
   ensureDepositTradingApprovals,
+  executeDepositWalletRelayBatch,
   resolveTradingVault,
 } from "@/auth/vault";
 
@@ -478,6 +482,12 @@ export function useTrading(
       setTxMessage(t.tx.settingApproval);
 
       await ensureDepositTradingApprovals(relayClient, vault.address, provider, requiredSpenders);
+      await ensureDepositErc1155Approvals(
+        relayClient,
+        vault.address,
+        provider,
+        getRequiredErc1155OperatorsForMarket(negRiskEarly)
+      );
       setTxMessage(t.tx.approveSuccess);
 
       const marketAllowance = await readPusdAllowanceAtomic(provider, vault.address, requiredSpender);
@@ -654,6 +664,8 @@ export function useTrading(
       const wallet = selectPrimaryWallet(wallets, walletAddress || user?.wallet?.address, primaryWalletSelectOptions);
       if (!wallet) throw new Error("未找到已连接钱包");
 
+      try { await wallet.switchChain(POLYGON_CHAIN_ID); } catch (e) { console.warn("Switch chain skipped", e); }
+
       const ethereumProvider = await wallet.getEthereumProvider();
       const provider = new ethers.providers.Web3Provider(ethereumProvider as any);
       const signer = provider.getSigner();
@@ -674,11 +686,41 @@ export function useTrading(
           throw new Error("无效的出售份额");
       }
 
-      setTxStep("placing");
-      setTxMessage(t.tx.submittingSellOrder);
-
       const tickSize = await clobClient.getTickSize(tokenId).catch(() => "0.01") as "0.1" | "0.01" | "0.001" | "0.0001";
       const negRisk = await clobClient.getNegRisk(tokenId).catch(() => false);
+      const requiredErc1155Operators = getRequiredErc1155OperatorsForMarket(negRisk);
+      const relayClient = createTradingRelayClient(signer);
+
+      setTxStep("approving");
+      setTxMessage(t.tx.settingApproval);
+      await ensureDepositVaultDeployed(relayClient, vault.address);
+      await ensureDepositErc1155Approvals(
+        relayClient,
+        vault.address,
+        provider,
+        requiredErc1155Operators
+      );
+
+      for (const operator of requiredErc1155Operators) {
+        const approved = await readErc1155IsApprovedForAll(provider, vault.address, operator);
+        if (!approved) {
+          throw new Error(
+            `Outcome 代币仍未授权给 ${negRisk ? "Neg Risk Exchange V2" : "Exchange V2"}，请重试并完成签名。`
+          );
+        }
+      }
+
+      try {
+        await clobClient.updateBalanceAllowance({
+          asset_type: AssetType.CONDITIONAL,
+          token_id: tokenId,
+        });
+      } catch (e) {
+        console.warn("updateBalanceAllowance conditional non-critical", e);
+      }
+
+      setTxStep("placing");
+      setTxMessage(t.tx.submittingSellOrder);
 
       // Apply 3% implicit slippage for SELL (we accept slightly lower sell price)
       const limitPrice = executionPrice 
@@ -714,6 +756,12 @@ export function useTrading(
       }
 
       setTxStep("error");
+      if (finalMsg.toLowerCase().includes("deadline too soon")) {
+        finalMsg = "授权签名有效期不足，请重新卖出并在弹窗出现后尽快完成全部签名。";
+      }
+      if (finalMsg.toLowerCase().includes("allowance")) {
+        finalMsg = "Outcome 代币授权不足：Neg Risk 市场需授权 Neg Risk Exchange V2，请重试并完成全部签名。";
+      }
       if (finalMsg.includes("user rejected")) finalMsg = "用户取消了签名请求。";
       
       setTxError(finalMsg);
@@ -732,6 +780,8 @@ export function useTrading(
     try {
       const wallet = selectPrimaryWallet(wallets, walletAddress || user?.wallet?.address, primaryWalletSelectOptions);
       if (!wallet) throw new Error("未找到已连接钱包");
+
+      try { await wallet.switchChain(POLYGON_CHAIN_ID); } catch (e) { console.warn("Switch chain skipped", e); }
 
       const ethereumProvider = await wallet.getEthereumProvider();
       const provider = new ethers.providers.Web3Provider(ethereumProvider as any);
@@ -753,11 +803,41 @@ export function useTrading(
           throw new Error("无效的出售份额或价格");
       }
 
-      setTxStep("placing");
-      setTxMessage(t.tx.submittingLimitOrder);
-
       const tickSize = await clobClient.getTickSize(tokenId).catch(() => "0.01") as "0.1" | "0.01" | "0.001" | "0.0001";
       const negRisk = await clobClient.getNegRisk(tokenId).catch(() => false);
+      const requiredErc1155Operators = getRequiredErc1155OperatorsForMarket(negRisk);
+      const relayClient = createTradingRelayClient(signer);
+
+      setTxStep("approving");
+      setTxMessage(t.tx.settingApproval);
+      await ensureDepositVaultDeployed(relayClient, vault.address);
+      await ensureDepositErc1155Approvals(
+        relayClient,
+        vault.address,
+        provider,
+        requiredErc1155Operators
+      );
+
+      for (const operator of requiredErc1155Operators) {
+        const approved = await readErc1155IsApprovedForAll(provider, vault.address, operator);
+        if (!approved) {
+          throw new Error(
+            `Outcome 代币仍未授权给 ${negRisk ? "Neg Risk Exchange V2" : "Exchange V2"}，请重试并完成签名。`
+          );
+        }
+      }
+
+      try {
+        await clobClient.updateBalanceAllowance({
+          asset_type: AssetType.CONDITIONAL,
+          token_id: tokenId,
+        });
+      } catch (e) {
+        console.warn("updateBalanceAllowance conditional non-critical", e);
+      }
+
+      setTxStep("placing");
+      setTxMessage(t.tx.submittingLimitOrder);
 
       const resp = await clobClient.createAndPostOrder({
         tokenID: tokenId,
@@ -787,6 +867,12 @@ export function useTrading(
       }
 
       setTxStep("error");
+      if (finalMsg.toLowerCase().includes("deadline too soon")) {
+        finalMsg = "授权签名有效期不足，请重新挂单并在弹窗出现后尽快完成全部签名。";
+      }
+      if (finalMsg.toLowerCase().includes("allowance")) {
+        finalMsg = "Outcome 代币授权不足：Neg Risk 市场需授权 Neg Risk Exchange V2，请重试并完成全部签名。";
+      }
       if (finalMsg.includes("user rejected")) finalMsg = "用户取消了签名请求。";
       
       setTxError(finalMsg);

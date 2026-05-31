@@ -6,6 +6,7 @@ import {
   ensureProxyCollateralSynced,
   formatCollateralBalanceFromAtomicUnits,
   getExchangeSpenderForMarket,
+  getRequiredErc1155OperatorsForMarket,
   getRequiredPusdSpendersForMarket,
   parseCollateralAtomicUnits,
   resetCollateralWrapStateForTests,
@@ -169,6 +170,14 @@ describe("collateralBalance", () => {
       ADDRESSES.NEG_RISK_ADAPTER,
       ADDRESSES.NEG_RISK_CTF_EXCHANGE_V2,
     ]);
+  });
+
+  it("getRequiredErc1155OperatorsForMarket Neg Risk 含 Adapter 与 Exchange V2", () => {
+    expect(getRequiredErc1155OperatorsForMarket(true)).toEqual([
+      ADDRESSES.NEG_RISK_ADAPTER,
+      ADDRESSES.NEG_RISK_CTF_EXCHANGE_V2,
+    ]);
+    expect(getRequiredErc1155OperatorsForMarket(false)).toEqual([ADDRESSES.CTF_EXCHANGE_V2]);
   });
 
   it("CLOB 已有余额时不触发 wrap", async () => {

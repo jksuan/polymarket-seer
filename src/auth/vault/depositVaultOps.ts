@@ -3,10 +3,13 @@ import type { ethers } from "ethers";
 
 import type { RelayTransaction } from "@/auth/collateralBalance";
 import {
+  buildErc1155ApprovalRelayBatchForOperators,
   buildPusdApprovalRelayBatchForSpenders,
   buildTradingApprovalRelayBatch,
+  findMissingErc1155Operators,
   findMissingPusdAllowances,
   TRADING_APPROVAL_SPENDERS,
+  TRADING_ERC1155_OPERATORS,
 } from "@/auth/collateralBalance";
 
 const DEPOSIT_BATCH_DEADLINE_SEC = 600;
@@ -117,6 +120,57 @@ export async function ensureDepositTradingApprovals(
   if (missing.length > 0) {
     throw new Error(
       `pUSD 授权未完成（缺少 ${missing.length} 个 spender，含 Exchange V2）。请完成全部签名后重试。`
+    );
+  }
+}
+
+/**
+ * 确保 CTF outcome token (ERC1155) 已对 Exchange 授权（卖出必需）。
+ * 优先补当前市场所需 operator，再扫全量 TRADING_ERC1155_OPERATORS。
+ */
+export async function ensureDepositErc1155Approvals(
+  relayClient: RelayClient,
+  walletAddress: string,
+  provider: ethers.providers.Provider,
+  priorityOperators: readonly string[] = []
+): Promise<void> {
+  const priority = [...new Set(priorityOperators.filter(Boolean))];
+  if (priority.length > 0) {
+    const missingPriority = await findMissingErc1155Operators(
+      provider,
+      walletAddress,
+      priority
+    );
+    if (missingPriority.length > 0) {
+      await executeDepositWalletRelayBatchInChunks(
+        relayClient,
+        walletAddress,
+        buildErc1155ApprovalRelayBatchForOperators(missingPriority)
+      );
+    }
+  }
+
+  let missing = await findMissingErc1155Operators(
+    provider,
+    walletAddress,
+    TRADING_ERC1155_OPERATORS
+  );
+  if (missing.length > 0) {
+    await executeDepositWalletRelayBatchInChunks(
+      relayClient,
+      walletAddress,
+      buildErc1155ApprovalRelayBatchForOperators(missing)
+    );
+    missing = await findMissingErc1155Operators(
+      provider,
+      walletAddress,
+      TRADING_ERC1155_OPERATORS
+    );
+  }
+
+  if (missing.length > 0) {
+    throw new Error(
+      `Outcome 代币授权未完成（缺少 ${missing.length} 个 Exchange operator）。请完成全部签名后重试。`
     );
   }
 }

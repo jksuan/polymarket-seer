@@ -96,6 +96,37 @@ export function getRequiredPusdSpendersForMarket(negRisk: boolean): readonly str
     : [ADDRESSES.CTF_EXCHANGE_V2];
 }
 
+/** 单市场卖出前需 ensure 的 CTF outcome token (ERC1155) operators */
+export function getRequiredErc1155OperatorsForMarket(negRisk: boolean): readonly string[] {
+  return negRisk
+    ? [ADDRESSES.NEG_RISK_ADAPTER, ADDRESSES.NEG_RISK_CTF_EXCHANGE_V2]
+    : [ADDRESSES.CTF_EXCHANGE_V2];
+}
+
+export async function readErc1155IsApprovedForAll(
+  provider: ethers.providers.Provider,
+  owner: string,
+  operator: string
+): Promise<boolean> {
+  const ctf = new ethers.Contract(ADDRESSES.CTF, ERC1155_ABI, provider);
+  return ctf.isApprovedForAll(owner, operator) as Promise<boolean>;
+}
+
+export async function findMissingErc1155Operators(
+  provider: ethers.providers.Provider,
+  owner: string,
+  operators: readonly string[] = TRADING_ERC1155_OPERATORS
+): Promise<string[]> {
+  const missing: string[] = [];
+  for (const operator of operators) {
+    const approved = await readErc1155IsApprovedForAll(provider, owner, operator);
+    if (!approved) {
+      missing.push(operator);
+    }
+  }
+  return missing;
+}
+
 export async function findMissingPusdAllowances(
   provider: ethers.providers.Provider,
   owner: string,
@@ -174,6 +205,13 @@ function buildErc1155OperatorApprovalBatch(operators: readonly string[]): RelayT
     data: erc1155.encodeFunctionData("setApprovalForAll", [operator, true]),
     value: "0",
   }));
+}
+
+/** Outcome token (ERC1155) setApprovalForAll 批次 */
+export function buildErc1155ApprovalRelayBatchForOperators(
+  operators: readonly string[]
+): RelayTransaction[] {
+  return buildErc1155OperatorApprovalBatch(operators);
 }
 
 /** pUSD 交易所需 allowance（含 CTF Exchange V2，与 clob-client-v2 对齐） */
