@@ -3,9 +3,10 @@
 import { AlertTriangle, Loader2, Wallet } from "lucide-react";
 import { useLayoutEffect, useRef } from "react";
 import { formatUsd } from "@/components/ui/deposit/format";
-import { WithdrawAssetPickers } from "@/components/ui/withdraw/WithdrawAssetPickers";
+import { resolveChainIconUrl } from "@/components/ui/deposit/icons";
+import { TokenIcon } from "@/components/ui/deposit/shared-ui";
 import { useTranslation } from "@/i18n";
-import { WithdrawBreakdown } from "./WithdrawBreakdown";
+import { POLYGON_CHAIN_ID } from "./constants";
 import { WithdrawFeedbackLine } from "./WithdrawFeedbackLine";
 import type { useWithdrawDrawerController } from "./useWithdrawDrawerController";
 
@@ -63,27 +64,47 @@ export function WithdrawFormStep({ c }: { c: Controller }) {
         </div>
       </section>
 
-      <WithdrawAssetPickers
-        assetsLoading={c.assetsLoading}
-        chainOptions={c.chainOptions}
-        onChainChange={c.handleChainChange}
-        onTokenChange={c.handleTokenChange}
-        receiveChainLabel={wf.receiveChain}
-        receiveTokenLabel={wf.receiveToken}
-        selectedChainId={c.selectedChainId}
-        selectedTokenOptionId={c.selectedTokenOptionId}
-        tokenOptions={c.tokenOptions}
-      />
+      <section className="space-y-2 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3">
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-xs font-bold text-white/45">{wf.receiveToken}</span>
+          <span className="inline-flex items-center gap-1.5 text-sm font-bold text-white">
+            <TokenIcon
+              compact
+              iconUrl={c.selectedAsset.iconUrl}
+              symbol={c.selectedAsset.symbol}
+            />
+            PUSD
+          </span>
+        </div>
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-xs font-bold text-white/45">{wf.receiveChain}</span>
+          <span className="inline-flex items-center gap-1.5 text-sm font-bold text-white">
+            <WithdrawChainIcon chainId={String(POLYGON_CHAIN_ID)} chainName="Polygon" />
+            Polygon
+          </span>
+        </div>
+      </section>
+
+      <p className="text-xs leading-relaxed text-white/50">
+        {wf.pusdDirectHint}{" "}
+        <a
+          href={c.uniswapSwapUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-semibold text-[#ADFF2F] underline decoration-[#ADFF2F]/40 underline-offset-2 hover:decoration-[#ADFF2F]"
+        >
+          Uniswap
+        </a>
+        {wf.pusdDirectHintSuffix}
+      </p>
 
       <div className="flex items-center justify-between gap-3">
         <span className="text-sm text-white/45">{wf.youWillReceive}</span>
         <span className="text-right text-sm font-bold text-white">
-          {c.isQuoting ? (
-            <Loader2 className="ml-auto inline h-4 w-4 animate-spin" />
-          ) : c.quote ? (
+          {c.receiveAmountDisplay ? (
             <>
-              {c.quote.receiveAmountDisplay}{" "}
-              <span className="text-white/45">{formatUsd(c.quote.receiveUsd)}</span>
+              {c.receiveAmountDisplay}{" "}
+              <span className="text-white/45">{formatUsd(c.amountUsd)}</span>
             </>
           ) : (
             "—"
@@ -91,11 +112,6 @@ export function WithdrawFormStep({ c }: { c: Controller }) {
         </span>
       </div>
 
-      {c.quote?.fee ? <WithdrawBreakdown fee={c.quote.fee} /> : null}
-
-      {c.quoteError ? (
-        <p className="text-center text-xs font-medium text-red-400">{c.quoteError}</p>
-      ) : null}
       {c.executionError ? (
         <p className="text-center text-xs font-medium text-red-400">{c.executionError}</p>
       ) : null}
@@ -149,6 +165,29 @@ export function WithdrawFormStep({ c }: { c: Controller }) {
         )}
       </button>
     </div>
+  );
+}
+
+function WithdrawChainIcon({ chainId, chainName }: { chainId?: string; chainName?: string }) {
+  const iconUrl = resolveChainIconUrl(chainId, chainName);
+  if (iconUrl) {
+    return (
+      <span
+        aria-hidden="true"
+        className="h-5 w-5 shrink-0 rounded-full bg-cover bg-center bg-no-repeat"
+        style={{ backgroundImage: `url(${iconUrl})` }}
+      />
+    );
+  }
+
+  const initial = (chainName || "?").slice(0, 1).toUpperCase();
+  return (
+    <span
+      aria-hidden="true"
+      className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/20 text-[8px] font-bold leading-none text-white/90"
+    >
+      {initial}
+    </span>
   );
 }
 

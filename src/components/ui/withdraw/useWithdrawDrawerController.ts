@@ -3,13 +3,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ethers } from "ethers";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
-import {
-  createWithdrawAddress,
-  getBridgeQuote,
-  useBridgeStatus,
-  useSupportedAssets,
-} from "@/hooks/useBridge";
+import { createWithdrawAddress, useBridgeStatus } from "@/hooks/useBridge";
 import { usePolymarketAuth } from "@/contexts/PolymarketAuthContext";
+import { resolveTokenIconUrl } from "@/components/ui/deposit/icons";
 import { selectPrimaryWallet } from "@/lib/primaryWallet";
 import { extractDepositAddress } from "@/components/ui/deposit/addresses";
 import { shouldOfferConnectedWalletFunds } from "@/auth/privyUserIdentity";
@@ -17,34 +13,25 @@ import {
   formatAmountUsdInput,
   parseAmountUsd,
   sanitizeAmountUsdInput,
-  toNumber,
 } from "@/components/ui/deposit/format";
 import type { CreateWithdrawResponse } from "@/types/bridge";
 import {
-  POLYGON_CHAIN_ID,
-  PUSD_ADDRESS,
   PUSD_DECIMALS,
-  QUOTE_DEBOUNCE_MS,
+  UNISWAP_SWAP_URL,
   WITHDRAW_STATUS_POLL_TIMEOUT_MS,
 } from "./constants";
 import { isWithdrawStatusPollTimedOut } from "./withdrawStatusPoll";
 import { executePusdWithdrawTransfer } from "./executePusdWithdraw";
-import type { WithdrawDestinationAsset, WithdrawFeedback, WithdrawQuoteState } from "./types";
-import { resolveRecipientAddressType } from "./recipientAddressType";
+import type { WithdrawDestinationAsset, WithdrawFeedback } from "./types";
 import { isValidWithdrawRecipient, validateWithdrawAmountUsd, validateWithdrawRecipient } from "./validation";
-import {
-  buildWithdrawDestinationAssets,
-  findWithdrawAssetForChainAndSymbol,
-  getDefaultWithdrawAsset,
-  getUniqueWithdrawTokenOptions,
-  getWithdrawChainOptionsForSymbol,
-} from "./withdrawAssets";
-import { normalizeWithdrawTokenSymbol } from "./withdrawWhitelist";
+import { getPolygonPusdWithdrawAsset } from "./withdrawAssets";
 import {
   formatWithdrawExecutionError,
   getWithdrawFlowMessages,
   isWithdrawUserRejection,
 } from "./withdrawMessages";
+
+const PUSD_WITHDRAW_ASSET = getPolygonPusdWithdrawAsset();
 
 export function useWithdrawDrawerController({
   isOpen,
@@ -64,28 +51,22 @@ export function useWithdrawDrawerController({
   const { user } = usePrivy();
   const { wallets } = useWallets();
   const { primaryWalletSelectOptions, sessionMode } = usePolymarketAuth();
-  const { data: supportedAssets, isLoading: assetsLoading } = useSupportedAssets();
 
   const [recipientAddr, setRecipientAddr] = useState("");
   const [amountInput, setAmountInput] = useState("");
-  const [selectedChainId, setSelectedChainId] = useState("");
-  const [selectedAssetId, setSelectedAssetId] = useState("");
   const [fundsTermsOpen, setFundsTermsOpen] = useState(false);
-  const [quote, setQuote] = useState<WithdrawQuoteState | null>(null);
-  const [quoteError, setQuoteError] = useState("");
-  const [isQuoting, setIsQuoting] = useState(false);
   const [isExecuting, setIsExecuting] = useState(false);
   const [executionError, setExecutionError] = useState("");
   const [statusMessage, setStatusMessage] = useState("");
   const [withdrawFeedback, setWithdrawFeedback] = useState<WithdrawFeedback | null>(null);
   const [bridgePollAddress, setBridgePollAddress] = useState<string | null>(null);
 
-  const quoteRequestRef = useRef(0);
   const isExecutingRef = useRef(false);
   const lastCompletedPollAddressRef = useRef<string | null>(null);
   const lastWithdrawAmountRef = useRef(0);
   const lastWithdrawTokenRef = useRef<{ symbol: string; iconUrl?: string }>({
-    symbol: "USDC",
+    symbol: "PUSD",
+    iconUrl: resolveTokenIconUrl("PUSD"),
   });
   const bridgePollStartedAtRef = useRef<number | null>(null);
   const [statusPollTick, setStatusPollTick] = useState(0);
@@ -105,7 +86,7 @@ export function useWithdrawDrawerController({
       message: string,
       tone: WithdrawFeedback["tone"],
       amountUsd?: number,
-      options?: { celebrate?: boolean }
+      options?: { celebrate?: boolean; tokenSymbol?: string; tokenIconUrl?: string }
     ) => {
       const amount = amountUsd ?? lastWithdrawAmountRef.current;
       const token = lastWithdrawTokenRef.current;
@@ -113,8 +94,8 @@ export function useWithdrawDrawerController({
         amountUsd: amount,
         message,
         tone,
-        tokenSymbol: token.symbol,
-        tokenIconUrl: token.iconUrl,
+        tokenSymbol: options?.tokenSymbol ?? token.symbol,
+        tokenIconUrl: options?.tokenIconUrl ?? token.iconUrl,
         celebrate: options?.celebrate ?? false,
       });
       setStatusMessage("");
@@ -129,55 +110,10 @@ export function useWithdrawDrawerController({
     [wallets, user?.wallet?.address, primaryWalletSelectOptions]
   );
 
-  const destinationAssets = useMemo(
-    () => buildWithdrawDestinationAssets(supportedAssets),
-    [supportedAssets]
-  );
-
-  const uniqueTokenOptions = useMemo(
-    () => getUniqueWithdrawTokenOptions(destinationAssets),
-    [destinationAssets]
-  );
-
-  const selectedAsset = useMemo((): WithdrawDestinationAsset | null => {
-    const found = destinationAssets.find((a) => a.id === selectedAssetId);
-    if (found) return found;
-    return getDefaultWithdrawAsset(destinationAssets);
-  }, [destinationAssets, selectedAssetId]);
-
-  const selectedTokenSymbol = useMemo(
-    () => normalizeWithdrawTokenSymbol(selectedAsset?.symbol ?? ""),
-    [selectedAsset?.symbol]
-  );
-
-  const chainOptions = useMemo(
-    () =>
-      selectedTokenSymbol
-        ? getWithdrawChainOptionsForSymbol(destinationAssets, selectedTokenSymbol)
-        : [],
-    [destinationAssets, selectedTokenSymbol]
-  );
-
-  const tokenOptions = uniqueTokenOptions;
-
-  const selectedTokenOptionId = useMemo(() => {
-    const option = tokenOptions.find(
-      (asset) => normalizeWithdrawTokenSymbol(asset.symbol) === selectedTokenSymbol
-    );
-    return option?.id ?? selectedAsset?.id ?? "";
-  }, [tokenOptions, selectedTokenSymbol, selectedAsset?.id]);
-
-  const recipientAddressType = useMemo(() => {
-    const chainId = selectedChainId || selectedAsset?.chainId || "";
-    const chainName =
-      selectedAsset?.chainName ||
-      chainOptions.find((c) => c.chainId === chainId)?.chainName;
-    return resolveRecipientAddressType(chainId, chainName);
-  }, [chainOptions, selectedAsset?.chainId, selectedAsset?.chainName, selectedChainId]);
+  const selectedAsset: WithdrawDestinationAsset = PUSD_WITHDRAW_ASSET;
 
   const showUseConnected = Boolean(
-    shouldOfferConnectedWalletFunds(sessionMode, activeWallet?.address) &&
-      recipientAddressType === "evm"
+    shouldOfferConnectedWalletFunds(sessionMode, activeWallet?.address)
   );
 
   const balanceNumber = useMemo(() => parseAmountUsd(balanceUsd), [balanceUsd]);
@@ -189,25 +125,23 @@ export function useWithdrawDrawerController({
   }, [amountInput, amountUsd, balanceNumber, locale]);
 
   const recipientError = useMemo(() => {
-    return validateWithdrawRecipient(recipientAddr, recipientAddressType, locale);
-  }, [recipientAddr, recipientAddressType, locale]);
+    return validateWithdrawRecipient(recipientAddr, "evm", locale);
+  }, [recipientAddr, locale]);
+
+  const receiveAmountDisplay = useMemo(() => {
+    if (amountUsd <= 0) return null;
+    return `${amountUsd.toFixed(5)} PUSD`;
+  }, [amountUsd]);
 
   const resetWithdrawFormAfterSuccess = useCallback(() => {
     setAmountInput("");
-    setQuote(null);
-    setQuoteError("");
-    setIsQuoting(false);
     setExecutionError("");
     setBridgePollAddress(null);
-    quoteRequestRef.current += 1;
   }, []);
 
   const resetState = useCallback(() => {
     setRecipientAddr("");
     setAmountInput("");
-    setQuote(null);
-    setQuoteError("");
-    setIsQuoting(false);
     setIsExecuting(false);
     setExecutionError("");
     setStatusMessage("");
@@ -216,17 +150,11 @@ export function useWithdrawDrawerController({
     bridgePollStartedAtRef.current = null;
     lastCompletedPollAddressRef.current = null;
     lastWithdrawAmountRef.current = 0;
-    lastWithdrawTokenRef.current = { symbol: "USDC" };
-    quoteRequestRef.current += 1;
+    lastWithdrawTokenRef.current = {
+      symbol: "PUSD",
+      iconUrl: resolveTokenIconUrl("PUSD"),
+    };
   }, []);
-
-  useEffect(() => {
-    if (!isOpen) return;
-    const defaultAsset = getDefaultWithdrawAsset(destinationAssets);
-    if (!defaultAsset) return;
-    setSelectedChainId(defaultAsset.chainId);
-    setSelectedAssetId(defaultAsset.id);
-  }, [isOpen, destinationAssets]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -253,26 +181,6 @@ export function useWithdrawDrawerController({
     setAmountInput(formatAmountUsdInput(balanceNumber));
   }, [balanceNumber, clearWithdrawFeedback]);
 
-  const handleChainChange = useCallback(
-    (chainId: string) => {
-      setSelectedChainId(chainId);
-      setQuote(null);
-      setQuoteError("");
-      clearWithdrawFeedback();
-    },
-    [clearWithdrawFeedback]
-  );
-
-  const handleTokenChange = useCallback(
-    (assetId: string) => {
-      setSelectedAssetId(assetId);
-      setQuote(null);
-      setQuoteError("");
-      clearWithdrawFeedback();
-    },
-    [clearWithdrawFeedback]
-  );
-
   const handleRecipientChange = useCallback(
     (value: string) => {
       clearWithdrawFeedback();
@@ -281,119 +189,15 @@ export function useWithdrawDrawerController({
     [clearWithdrawFeedback]
   );
 
-  useEffect(() => {
-    if (destinationAssets.length === 0) return;
-    const exists = destinationAssets.some((asset) => asset.id === selectedAssetId);
-    if (!exists) {
-      const fallback = getDefaultWithdrawAsset(destinationAssets);
-      if (fallback) setSelectedAssetId(fallback.id);
-    }
-  }, [destinationAssets, selectedAssetId]);
-
-  useEffect(() => {
-    if (!selectedTokenSymbol) {
-      if (selectedChainId) setSelectedChainId("");
-      return;
-    }
-    if (chainOptions.length === 0) {
-      if (selectedChainId) setSelectedChainId("");
-      return;
-    }
-    const chainExists = chainOptions.some((chain) => chain.chainId === selectedChainId);
-    if (!chainExists) {
-      setSelectedChainId(chainOptions[0].chainId);
-    }
-  }, [chainOptions, selectedChainId, selectedTokenSymbol]);
-
-  useEffect(() => {
-    if (!selectedTokenSymbol || !selectedChainId) return;
-    const matched = findWithdrawAssetForChainAndSymbol(
-      destinationAssets,
-      selectedChainId,
-      selectedTokenSymbol
-    );
-    if (matched && matched.id !== selectedAssetId) {
-      setSelectedAssetId(matched.id);
-    }
-  }, [destinationAssets, selectedAssetId, selectedChainId, selectedTokenSymbol]);
-
-  const canQuote = Boolean(
+  const canSubmitBase = Boolean(
     proxyAddress &&
-      selectedAsset &&
-      isValidWithdrawRecipient(recipientAddr, recipientAddressType) &&
+      isValidWithdrawRecipient(recipientAddr, "evm") &&
       !amountError &&
-      amountUsd > 0
+      amountUsd > 0 &&
+      !recipientError
   );
 
-  useEffect(() => {
-    if (!isOpen || !canQuote || !selectedAsset) {
-      setQuote(null);
-      setQuoteError("");
-      return;
-    }
-
-    const requestId = ++quoteRequestRef.current;
-    const timer = window.setTimeout(async () => {
-      setIsQuoting(true);
-      setQuoteError("");
-      try {
-        const amountBaseUnit = ethers.utils
-          .parseUnits(amountUsd.toFixed(PUSD_DECIMALS), PUSD_DECIMALS)
-          .toString();
-        const response = await getBridgeQuote({
-          fromAmountBaseUnit: amountBaseUnit,
-          fromChainId: String(POLYGON_CHAIN_ID),
-          fromTokenAddress: PUSD_ADDRESS,
-          recipientAddress: recipientAddr.trim(),
-          toChainId: selectedAsset.chainId,
-          toTokenAddress: selectedAsset.tokenAddress,
-        });
-        if (quoteRequestRef.current !== requestId) return;
-
-        const estOutputUsd = toNumber(response.estOutputUsd) ?? amountUsd;
-        const estToBase = response.estToTokenBaseUnit;
-        let receiveAmountDisplay = `${amountUsd.toFixed(5)} ${selectedAsset.symbol}`;
-        if (estToBase) {
-          try {
-            const formatted = ethers.utils.formatUnits(estToBase, selectedAsset.decimals);
-            receiveAmountDisplay = `${Number(formatted).toFixed(5)} ${selectedAsset.symbol}`;
-          } catch {
-            receiveAmountDisplay = `${estOutputUsd.toFixed(5)} ${selectedAsset.symbol}`;
-          }
-        }
-
-        setQuote({
-          response,
-          fee: response.estFeeBreakdown,
-          receiveAmountDisplay,
-          receiveUsd: estOutputUsd,
-          quotedAtMs: Date.now(),
-        });
-      } catch {
-        if (quoteRequestRef.current !== requestId) return;
-        setQuote(null);
-        setQuoteError(wfMessages.quoteError);
-      } finally {
-        if (quoteRequestRef.current === requestId) {
-          setIsQuoting(false);
-        }
-      }
-    }, QUOTE_DEBOUNCE_MS);
-
-    return () => window.clearTimeout(timer);
-  }, [
-    amountUsd,
-    canQuote,
-    isOpen,
-    locale,
-    recipientAddr,
-    selectedAsset,
-    proxyAddress,
-    wfMessages.quoteError,
-  ]);
-
   const bridgeStatus = useBridgeStatus(bridgePollAddress, Boolean(bridgePollAddress));
-
   const isWithdrawInFlight = Boolean(bridgePollAddress);
 
   useEffect(() => {
@@ -449,14 +253,18 @@ export function useWithdrawDrawerController({
     if (status === "COMPLETED") {
       if (lastCompletedPollAddressRef.current === bridgePollAddress) return;
       lastCompletedPollAddressRef.current = bridgePollAddress;
-      showWithdrawFeedback(wfMessages.completed, "success", lastWithdrawAmountRef.current, {
+      showWithdrawFeedback(wfMessages.completedPusd, "success", lastWithdrawAmountRef.current, {
         celebrate: true,
+        tokenSymbol: "PUSD",
+        tokenIconUrl: resolveTokenIconUrl("PUSD"),
       });
       resetWithdrawFormAfterSuccess();
       onBalanceRefresh();
       return;
     }
     if (status === "FAILED") {
+      if (lastCompletedPollAddressRef.current === bridgePollAddress) return;
+      lastCompletedPollAddressRef.current = bridgePollAddress;
       showWithdrawFeedback(wfMessages.failed, "error", lastWithdrawAmountRef.current);
       return;
     }
@@ -475,7 +283,7 @@ export function useWithdrawDrawerController({
     if (isExecuting) {
       return wfMessages.processing;
     }
-    if (!recipientAddr.trim() || !amountInput.trim() || amountError || recipientError || !quote) {
+    if (!recipientAddr.trim() || !amountInput.trim() || amountError || recipientError) {
       return "Enter amount";
     }
     return "Withdraw";
@@ -483,24 +291,17 @@ export function useWithdrawDrawerController({
     amountError,
     amountInput,
     isExecuting,
-    quote,
     wfMessages.processing,
     recipientAddr,
     recipientError,
   ]);
 
   const canSubmit = Boolean(
-    canQuote &&
-      quote &&
-      !isQuoting &&
-      !isExecuting &&
-      !recipientError &&
-      !amountError &&
-      !isWithdrawInFlight
+    canSubmitBase && !isExecuting && !isWithdrawInFlight
   );
 
   const handleWithdraw = useCallback(async () => {
-    if (!canSubmit || !selectedAsset || !proxyAddress || isExecutingRef.current) return;
+    if (!canSubmit || !proxyAddress || isExecutingRef.current) return;
     isExecutingRef.current = true;
     setIsExecuting(true);
     setExecutionError("");
@@ -508,8 +309,8 @@ export function useWithdrawDrawerController({
     setWithdrawFeedback(null);
     lastWithdrawAmountRef.current = amountUsd;
     lastWithdrawTokenRef.current = {
-      symbol: selectedAsset.symbol,
-      iconUrl: selectedAsset.iconUrl,
+      symbol: "PUSD",
+      iconUrl: resolveTokenIconUrl("PUSD"),
     };
 
     try {
@@ -572,7 +373,8 @@ export function useWithdrawDrawerController({
     wfMessages,
     proxyAddress,
     recipientAddr,
-    selectedAsset,
+    selectedAsset.chainId,
+    selectedAsset.tokenAddress,
     primaryWalletSelectOptions,
     user?.wallet?.address,
     wallets,
@@ -584,43 +386,31 @@ export function useWithdrawDrawerController({
     amountError,
     amountInput,
     amountUsd,
-    assetsLoading,
     balanceNumber,
     bridgeStatus,
     canSubmit,
     isWithdrawInFlight,
-    chainOptions,
-    destinationAssets,
-    selectedTokenSymbol,
-    uniqueTokenOptions,
     executionError,
     fundsTermsOpen,
     handleAmountChange,
-    handleChainChange,
     handleMax,
-    handleTokenChange,
     handleUseConnected,
     handleWithdraw,
     isExecuting,
-    isQuoting,
     onClose,
     primaryButtonLabel,
-    quote,
-    quoteError,
+    receiveAmountDisplay,
     recipientAddr,
     recipientError,
     selectedAsset,
-    selectedChainId,
-    selectedTokenOptionId,
     setFundsTermsOpen,
     setRecipientAddr: handleRecipientChange,
-    recipientAddressType,
     showUseConnected,
     statusMessage,
     statusPollAlertMessage,
     isRetryingStatusPoll: bridgeStatus.isValidating,
     onRetryStatusPoll: handleRetryStatusPoll,
-    tokenOptions,
+    uniswapSwapUrl: UNISWAP_SWAP_URL,
     withdrawFeedback,
   };
 }
