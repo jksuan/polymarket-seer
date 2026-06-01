@@ -289,6 +289,7 @@ const zh = {
     orders: '挂单',
     history: '战绩',
     transactions: '明细',
+    funds: '资金',
     totalPnl: '总净盈亏',
     totalInvested: '总投入',
     totalReturned: '总收入',
@@ -349,6 +350,9 @@ const zh = {
     orderEmpty: '暂无未成交的订单',
     orderUnknown: '未知市场',
     // Transactions
+    fundsEmpty: '暂无充提记录',
+    txDeposit: '充值',
+    txWithdraw: '提现',
     txEmpty: '暂无交易记录',
     txUnknown: '未知市场',
     txBuy: '买入',

@@ -17,6 +17,17 @@ vi.mock("@/contexts/PolymarketAuthContext", () => ({
   usePolymarketAuth: vi.fn(),
 }));
 
+vi.mock("@/contexts/FundsPersistenceContext", () => ({
+  useFundsPersistenceContext: () => ({
+    syncDepositBridges: vi.fn(),
+    recordDepositComplete: vi.fn(),
+    recordTransferDepositComplete: vi.fn(),
+    syncWithdrawDestination: vi.fn(),
+    recordWithdrawComplete: vi.fn(),
+    fetchMovements: vi.fn().mockResolvedValue([]),
+  }),
+}));
+
 vi.mock("@/i18n", async () => {
   const z = (await import("@/i18n/locales/zh")).default;
   return {

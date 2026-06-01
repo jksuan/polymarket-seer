@@ -4,10 +4,14 @@ export function useDepositBalanceRefresh({
   depositBridgeComplete,
   transferBridgeComplete,
   onBalanceRefresh,
+  onDepositBridgeComplete,
+  onTransferBridgeComplete,
 }: {
   depositBridgeComplete: boolean;
   transferBridgeComplete: boolean;
   onBalanceRefresh?: () => void;
+  onDepositBridgeComplete?: () => void;
+  onTransferBridgeComplete?: () => void;
 }) {
   const prevDepositBridgeCompleteRef = useRef(false);
   const prevTransferBridgeCompleteRef = useRef(false);
@@ -40,14 +44,26 @@ export function useDepositBalanceRefresh({
     prevDepositBridgeCompleteRef.current = depositBridgeComplete;
     if (!rose) return;
     onBalanceRefresh?.();
+    onDepositBridgeComplete?.();
     scheduleBalanceRefreshRetries();
-  }, [depositBridgeComplete, onBalanceRefresh, scheduleBalanceRefreshRetries]);
+  }, [
+    depositBridgeComplete,
+    onBalanceRefresh,
+    onDepositBridgeComplete,
+    scheduleBalanceRefreshRetries,
+  ]);
 
   useEffect(() => {
     const rose = transferBridgeComplete && !prevTransferBridgeCompleteRef.current;
     prevTransferBridgeCompleteRef.current = transferBridgeComplete;
     if (!rose) return;
     onBalanceRefresh?.();
+    onTransferBridgeComplete?.();
     scheduleBalanceRefreshRetries();
-  }, [onBalanceRefresh, scheduleBalanceRefreshRetries, transferBridgeComplete]);
+  }, [
+    onBalanceRefresh,
+    onTransferBridgeComplete,
+    scheduleBalanceRefreshRetries,
+    transferBridgeComplete,
+  ]);
 }

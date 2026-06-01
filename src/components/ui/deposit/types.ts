@@ -1,12 +1,18 @@
 import type { BridgeAddressType, QuoteFeeBreakdown } from "@/types/bridge";
 import type { DlnTx } from "@/types/dln";
 
+import type { FundsPersistenceApi } from "@/hooks/useFundsPersistence";
+
 export interface DepositDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   proxyAddress: string;
   balanceUsd?: string;
   onBalanceRefresh?: () => void;
+  fundsPersistence?: Pick<
+    FundsPersistenceApi,
+    "syncDepositBridges" | "recordDepositComplete" | "recordTransferDepositComplete"
+  >;
 }
 
 export type FlowStep = "home" | "asset" | "amount" | "confirm" | "transfer";

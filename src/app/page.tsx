@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense, useRef, useCallback } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 
 import { PolymarketAuthProvider, usePolymarketAuth } from "@/contexts/PolymarketAuthContext";
+import { FundsPersistenceProvider } from "@/contexts/FundsPersistenceContext";
 import { useTrading } from "@/hooks/useTrading";
 
 import { BottomNav } from '@/components/ui/BottomNav';
@@ -167,9 +168,11 @@ function AppRouterContent() {
 export default function AppRouter() {
   return (
     <PolymarketAuthProvider>
-      <Suspense fallback={<div className="min-h-[100dvh] bg-[#0D0518] text-white flex items-center justify-center">Loading...</div>}>
-        <AppRouterContent />
-      </Suspense>
+      <FundsPersistenceProvider>
+        <Suspense fallback={<div className="min-h-[100dvh] bg-[#0D0518] text-white flex items-center justify-center">Loading...</div>}>
+          <AppRouterContent />
+        </Suspense>
+      </FundsPersistenceProvider>
     </PolymarketAuthProvider>
   );
 }

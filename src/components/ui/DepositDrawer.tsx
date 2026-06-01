@@ -1,4 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useRef } from "react";
+import type { CreateDepositResponse } from "@/types/bridge";
+import {
+  findLatestCompletedBridgeTx,
+  resolveBridgeDepositAmountUsd,
+} from "@/lib/funds/bridgeTxAmount";
+import { savePendingTransferDeposit } from "@/lib/funds/pendingTransferDeposit";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "motion/react";
 import { ArrowLeft, X } from "lucide-react";
@@ -36,6 +42,7 @@ function DrawerContent({
   onClose,
   proxyAddress,
   onBalanceRefresh,
+  fundsPersistence,
 }: DepositDrawerProps) {
   useLockBodyScroll(isOpen);
   const { locale, t } = useTranslation();
@@ -53,12 +60,22 @@ function DrawerContent({
     resetTransferState: resetTransferStateStable,
   });
 
+  const handleDepositResponse = useCallback(
+    (response: CreateDepositResponse | null) => {
+      c.setDepositResponse(response);
+      if (response && fundsPersistence) {
+        fundsPersistence.syncDepositBridges(response);
+      }
+    },
+    [c.setDepositResponse, fundsPersistence]
+  );
+
   const tf = useTransferDepositFlow({
     connectedSubmitFastUntilMs: c.connectedSubmitFastUntilMs,
     depositAssets: c.depositAssets,
     isOpen,
     locale,
-    onDepositResponse: c.setDepositResponse,
+    onDepositResponse: handleDepositResponse,
     proxyAddress,
     setStep: c.setStep,
     step: c.step,
@@ -84,10 +101,46 @@ function DrawerContent({
     ]
   );
 
+  useEffect(() => {
+    if (!isOpen || !proxyAddress || !tf.transferAddress) return;
+    savePendingTransferDeposit({
+      proxyAddress,
+      bridgeStatusAddress: tf.transferAddress,
+      addressCreatedAtMs: tf.transferAddressCreatedAtMs,
+    });
+  }, [isOpen, proxyAddress, tf.transferAddress, tf.transferAddressCreatedAtMs]);
+
   useDepositBalanceRefresh({
     depositBridgeComplete,
     transferBridgeComplete: tf.transferBridgeComplete,
     onBalanceRefresh,
+    onDepositBridgeComplete: () => {
+      if (!fundsPersistence) return;
+      const amountUsd = c.snapshot?.amountUsd ?? c.amountNumber;
+      fundsPersistence.recordDepositComplete({
+        amountUsd,
+        bridgeStatusAddress: tf.transferAddress || null,
+        txHash: c.executionTxHash || null,
+        fromChainId: c.snapshot?.asset.chainId ?? null,
+        tokenSymbol: c.snapshot?.asset.symbol ?? null,
+      });
+    },
+    onTransferBridgeComplete: () => {
+      if (!fundsPersistence) return;
+      const tx = findLatestCompletedBridgeTx(tf.transferStatus.data?.transactions);
+      const amountUsd = resolveBridgeDepositAmountUsd(tx);
+      fundsPersistence.recordTransferDepositComplete({
+        amountUsd,
+        bridgeStatusAddress: tf.transferAddress || null,
+        txHash: tx?.txHash ?? null,
+        fromChainId: tx?.fromChainId ?? null,
+        fromTokenAddress: tx?.fromTokenAddress ?? null,
+        toChainId: tx?.toChainId ?? null,
+        toTokenAddress: tx?.toTokenAddress ?? null,
+        fromAmountBaseUnit: tx?.fromAmountBaseUnit ?? null,
+        rawBridgeTransaction: tx,
+      });
+    },
   });
 
   const dlnStatus = useDlnOrderStatus(c.submittedOrderId, Boolean(c.submittedOrderId && isOpen));

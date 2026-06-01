@@ -427,6 +427,7 @@ export function useTransferDepositFlow({
     setSelectedTransferChainId,
     setTransferAddress,
     transferAddress,
+    transferAddressCreatedAtMs,
     transferAssets,
     transferBridgeComplete,
     transferChainOptions,

@@ -16,6 +16,7 @@ function DrawerContent({
   proxyAddress,
   balanceUsd,
   onBalanceRefresh,
+  fundsPersistence,
 }: WithdrawDrawerProps) {
   useLockBodyScroll(isOpen);
   const { locale, t } = useTranslation();
@@ -27,6 +28,7 @@ function DrawerContent({
     locale,
     onBalanceRefresh,
     onClose,
+    fundsPersistence,
   });
 
   return (

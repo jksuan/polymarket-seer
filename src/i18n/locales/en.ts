@@ -290,6 +290,7 @@ const en: TranslationKeys = {
     orders: 'Orders',
     history: 'History',
     transactions: 'Transactions',
+    funds: 'Funds',
     totalPnl: 'Total P&L',
     totalInvested: 'Total Invested',
     totalReturned: 'Total Returned',
@@ -350,6 +351,9 @@ const en: TranslationKeys = {
     orderEmpty: 'No open orders',
     orderUnknown: 'Unknown Market',
     // Transactions labels
+    fundsEmpty: 'No deposit or withdrawal history',
+    txDeposit: 'Deposit',
+    txWithdraw: 'Withdraw',
     txEmpty: 'No transaction history',
     txUnknown: 'Unknown Market',
     txBuy: 'Buy',

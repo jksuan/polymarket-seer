@@ -13,6 +13,7 @@ import { WithdrawDrawer } from '@/components/ui/WithdrawDrawer';
 import { FundsActionSheet } from '@/components/ui/FundsActionSheet';
 import { LanguageDrawer } from '@/components/ui/LanguageDrawer';
 import { useTranslation } from '@/i18n';
+import { useFundsPersistenceContext } from '@/contexts/FundsPersistenceContext';
 
 interface TopHeaderProps {
   isSticky?: boolean;
@@ -51,6 +52,7 @@ export function TopHeader({ isSticky = false }: TopHeaderProps = {}) {
     clearAccountDriftPrompt,
   } = usePolymarketAuth();
   const { t } = useTranslation();
+  const fundsPersistence = useFundsPersistenceContext();
 
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [depositOpen, setDepositOpen] = useState(false);
@@ -214,6 +216,7 @@ export function TopHeader({ isSticky = false }: TopHeaderProps = {}) {
         proxyAddress={proxyAddress || ""}
         balanceUsd={usdcBalance}
         onBalanceRefresh={() => fetchBalance(true)}
+        fundsPersistence={fundsPersistence}
       />
       <WithdrawDrawer
         isOpen={resolveOverlayOpen(withdrawOpen, authenticated)}
@@ -221,6 +224,7 @@ export function TopHeader({ isSticky = false }: TopHeaderProps = {}) {
         proxyAddress={proxyAddress || ""}
         balanceUsd={usdcBalance}
         onBalanceRefresh={() => fetchBalance(true)}
+        fundsPersistence={fundsPersistence}
       />
       <LanguageDrawer
         isOpen={langOpen}

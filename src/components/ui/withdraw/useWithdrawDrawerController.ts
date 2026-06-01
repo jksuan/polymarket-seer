@@ -22,6 +22,7 @@ import {
 } from "./constants";
 import { isWithdrawStatusPollTimedOut } from "./withdrawStatusPoll";
 import { executePusdWithdrawTransfer } from "./executePusdWithdraw";
+import type { FundsPersistenceApi } from "@/hooks/useFundsPersistence";
 import type { WithdrawDestinationAsset, WithdrawFeedback } from "./types";
 import { isValidWithdrawRecipient, validateWithdrawAmountUsd, validateWithdrawRecipient } from "./validation";
 import { getPolygonPusdWithdrawAsset } from "./withdrawAssets";
@@ -40,6 +41,7 @@ export function useWithdrawDrawerController({
   locale,
   onBalanceRefresh,
   onClose,
+  fundsPersistence,
 }: {
   isOpen: boolean;
   proxyAddress: string;
@@ -47,6 +49,10 @@ export function useWithdrawDrawerController({
   locale: string;
   onBalanceRefresh: () => void;
   onClose: () => void;
+  fundsPersistence?: Pick<
+    FundsPersistenceApi,
+    "syncWithdrawDestination" | "recordWithdrawComplete"
+  >;
 }) {
   const { user } = usePrivy();
   const { wallets } = useWallets();
@@ -64,6 +70,7 @@ export function useWithdrawDrawerController({
   const isExecutingRef = useRef(false);
   const lastCompletedPollAddressRef = useRef<string | null>(null);
   const lastWithdrawAmountRef = useRef(0);
+  const lastRecipientAddrRef = useRef("");
   const lastWithdrawTokenRef = useRef<{ symbol: string; iconUrl?: string }>({
     symbol: "PUSD",
     iconUrl: resolveTokenIconUrl("PUSD"),
@@ -258,6 +265,14 @@ export function useWithdrawDrawerController({
         tokenSymbol: "PUSD",
         tokenIconUrl: resolveTokenIconUrl("PUSD"),
       });
+      fundsPersistence?.recordWithdrawComplete({
+        amountUsd: lastWithdrawAmountRef.current,
+        bridgeStatusAddress: bridgePollAddress,
+        toChainId: selectedAsset.chainId,
+        toTokenAddress: selectedAsset.tokenAddress,
+        recipientAddr: lastRecipientAddrRef.current,
+        tokenSymbol: selectedAsset.symbol,
+      });
       resetWithdrawFormAfterSuccess();
       onBalanceRefresh();
       return;
@@ -275,6 +290,11 @@ export function useWithdrawDrawerController({
     bridgeStatus.latestStatus,
     onBalanceRefresh,
     resetWithdrawFormAfterSuccess,
+    fundsPersistence,
+    recipientAddr,
+    selectedAsset.chainId,
+    selectedAsset.symbol,
+    selectedAsset.tokenAddress,
     showWithdrawFeedback,
     wfMessages,
   ]);
@@ -308,6 +328,7 @@ export function useWithdrawDrawerController({
     setStatusMessage("");
     setWithdrawFeedback(null);
     lastWithdrawAmountRef.current = amountUsd;
+    lastRecipientAddrRef.current = recipientAddr.trim();
     lastWithdrawTokenRef.current = {
       symbol: "PUSD",
       iconUrl: resolveTokenIconUrl("PUSD"),
@@ -332,6 +353,13 @@ export function useWithdrawDrawerController({
       if (!ethers.utils.isAddress(bridgeDepositAddress)) {
         throw new Error(wfMessages.noWithdrawAddress);
       }
+
+      fundsPersistence?.syncWithdrawDestination({
+        toChainId: selectedAsset.chainId,
+        toTokenAddress: selectedAsset.tokenAddress,
+        recipientAddr: recipientAddr.trim(),
+        bridgeEvm: bridgeDepositAddress,
+      });
 
       const ethereumProvider = await wallet.getEthereumProvider();
       const provider = new ethers.providers.Web3Provider(ethereumProvider as any);
@@ -369,6 +397,7 @@ export function useWithdrawDrawerController({
   }, [
     amountUsd,
     canSubmit,
+    fundsPersistence,
     locale,
     onBalanceRefresh,
     wfMessages,

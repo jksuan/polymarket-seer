@@ -1,4 +1,5 @@
 import type { QuoteFeeBreakdown, QuoteResponse } from "@/types/bridge";
+import type { FundsPersistenceApi } from "@/hooks/useFundsPersistence";
 
 export type WithdrawDestinationAsset = {
   id: string;
@@ -17,6 +18,10 @@ export type WithdrawDrawerProps = {
   proxyAddress: string;
   balanceUsd: string;
   onBalanceRefresh: () => void;
+  fundsPersistence?: Pick<
+    FundsPersistenceApi,
+    "syncWithdrawDestination" | "recordWithdrawComplete"
+  >;
 };
 
 export type WithdrawQuoteState = {

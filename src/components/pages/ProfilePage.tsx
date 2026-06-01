@@ -12,6 +12,8 @@ import { ProfilePositions } from "./profile/ProfilePositions";
 import { ProfileOrders } from "./profile/ProfileOrders";
 import { ProfileHistory } from "./profile/ProfileHistory";
 import { ProfileTransactions } from "./profile/ProfileTransactions";
+import { ProfileFunds } from "./profile/ProfileFunds";
+import { useFundsPersistenceContext } from "@/contexts/FundsPersistenceContext";
 
 export interface ProfilePageProps {
   authenticated: boolean;
@@ -41,7 +43,10 @@ export function ProfilePage({
 }: ProfilePageProps) {
   const { displayIdentifier } = usePolymarketAuth();
   const { t } = useTranslation();
-  const [activeTab, setActiveTabRaw] = useState<"stats" | "active" | "orders" | "history" | "transactions">("stats");
+  const [activeTab, setActiveTabRaw] = useState<
+    "stats" | "active" | "orders" | "history" | "transactions" | "funds"
+  >("stats");
+  const fundsPersistence = useFundsPersistenceContext();
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -52,14 +57,14 @@ export function ProfilePage({
     }
   }, []);
 
-  const setActiveTab = (tab: "stats" | "active" | "orders" | "history" | "transactions") => {
+  const setActiveTab = (tab: "stats" | "active" | "orders" | "history" | "transactions" | "funds") => {
     setActiveTabRaw(tab);
     if (typeof window !== "undefined") {
       sessionStorage.setItem("seer_active_tab", tab);
     }
   };
 
-  const handleTabChange = (tab: "stats" | "active" | "orders" | "history" | "transactions") => {
+  const handleTabChange = (tab: "stats" | "active" | "orders" | "history" | "transactions" | "funds") => {
     setActiveTab(tab);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -173,6 +178,20 @@ export function ProfilePage({
               />
             )}
           </button>
+          <button
+            onClick={() => handleTabChange("funds")}
+            className="relative pb-2 font-bold text-[14px] transition-colors shrink-0"
+            style={{ color: activeTab === "funds" ? "#dee5ff" : "#a3aac4" }}
+          >
+            {t.profile.funds}
+            {activeTab === "funds" && (
+              <motion.div
+                layoutId="activeTabIndicator"
+                className="absolute bottom-[-9px] left-0 w-full h-[3px] rounded-t-md"
+                style={{ background: "#6bff8f", boxShadow: "0 -2px 10px rgba(107,255,143,0.5)" }}
+              />
+            )}
+          </button>
           </div>
         </div>
       </div>
@@ -192,6 +211,9 @@ export function ProfilePage({
         )}
         {activeTab === "transactions" && (
           <ProfileTransactions portfolioLoading={portfolioLoading} trades={trades} />
+        )}
+        {activeTab === "funds" && (
+          <ProfileFunds isActive fundsPersistence={fundsPersistence} />
         )}
       </div>
     </div>

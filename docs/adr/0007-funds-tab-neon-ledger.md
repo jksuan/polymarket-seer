@@ -116,7 +116,8 @@ Bridge 行为经实测与文档确认：
 - `requirement.md` §3.5：增加 **资金** Tab 说明（P1 实施时同步）。
 - `CONTEXT.md`：增加 **资金 Tab**、**资金流水（funds_movements）** 等术语（P2 亦可）。
 - `ARCHITECTURE.md`：资金模块与 Neon 依赖（实现后补 API 路径指针）。
-- 新代码预期位置：`src/app/api/funds/`（或等价）、`src/db/`（或 `src/lib/db/`）、`src/components/pages/profile/ProfileFunds.tsx`。
+- 新代码预期位置：`src/app/api/funds/`、`src/db/`、`src/lib/funds/client.ts`（P1 UI：`ProfileFunds.tsx`）。
+- P0 API 说明：`docs/api/funds-p0.md`。
 
 ## 后续动作
 
