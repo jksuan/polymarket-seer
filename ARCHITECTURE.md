@@ -1,6 +1,6 @@
 # Crazy Fox — 工程架构文档 (ARCHITECTURE)
 
-> **版本**：v1.7 · 最后更新：2026-05-30
+> **版本**：v1.8 · 最后更新：2026-05-31
 > **技术栈**：Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS v4 · SWR · ethers.js · Privy
 
 ## 文档维护边界
@@ -101,7 +101,7 @@ polymarket-seer/
 │   │       ├── WithdrawDrawer.tsx  # 提现抽屉（Bridge withdraw + 状态轮询）
 │   │       ├── FundsMovementTermsPanel.tsx # 充/提/转入共用适用条款摘要
 │   │       ├── deposit/            # 充值子模块（connected / transfer / confirm 等）
-│   │       ├── withdraw/           # 提现子模块（表单 / 校验 / Safe 执行 / 状态轮询）
+│   │       ├── withdraw/           # 提现子模块（表单 / 校验 / Deposit Wallet 执行 / 状态轮询）
 │   │       ├── SettingsDrawer.tsx  # 设置抽屉（账户信息、法律文档入口）
 │   │       ├── LanguageDrawer.tsx  # ★ 语言选择抽屉（全局一级入口，Portaled 底部滑出）
 │   │       ├── settings/           # ★ 模块化设置内容组件
@@ -126,9 +126,10 @@ polymarket-seer/
 │   ├── auth/                       # 认证与余额同步（从 Context 拆出的逻辑）
 │   │   ├── sessionMode.ts          # loginMethod → embedded/external
 │   │   ├── privyUserIdentity.ts    # 社交/邮箱展示名与 Connected 门禁
-│   │   ├── collateralBalance.ts    # pUSD collateral sync / Onramp wrap / 预检共用
-│   │   ├── ensureSafeDeployed.ts   # 提现等 Safe 批次前 getDeployed / deploy
-│   │   ├── safeRelayExecutor.ts    # Safe relayer gasless 批次
+│   │   ├── collateralBalance.ts    # pUSD collateral sync / Onramp wrap / 授权批次
+│   │   ├── depositRelayExecutor.ts # Deposit Wallet relayer gasless 批次
+│   │   ├── ensureTradingVaultDeployed.ts # 提现等批次前 deployDepositWallet
+│   │   ├── vault/                  # 交易金库抽象（resolve / depositVaultOps / relay）
 │   │   ├── readUsdcBalanceDisplay.ts # 顶栏可交易余额格式化
 │   │   ├── useBalanceSync.ts       # CLOB 余额拉取与重试
 │   │   ├── useExternalAccountDrift.ts # 外链钱包漂移检测
@@ -158,6 +159,8 @@ polymarket-seer/
 │   │   ├── brandAssets.ts          # APP_BRAND_NAME、Logo、favicon 单一来源
 │   │   ├── brandFont.ts            # 顶栏品牌字体（Bigtimes.otf）
 │   │   ├── constants.ts            # 全局常量（合约地址、API 端点等）
+│   │   ├── clobClientFactory.ts    # CLOB V2 客户端工厂（POLY_1271 默认）
+│   │   ├── clobOrderResponse.ts    # 下单响应成功/错误解析
 │   │   ├── bridgeClient.ts         # Bridge API 客户端封装
 │   │   ├── dlnClient.ts            # DLN API 客户端封装
 │   │   ├── utils.ts                # 通用工具函数
@@ -228,9 +231,9 @@ polymarket-seer/
            ▼
 ┌──────────────────────┐
 │  PolymarketAuthContext │
-│  1. 获取嵌入式钱包地址   │
+│  1. 获取嵌入式钱包地址（Signer EOA）│
 │  2. 向 CLOB 注册 API Key │ ← POST /api/sign
-│  3. 获取 Proxy Wallet    │
+│  3. 解析 Deposit Wallet（交易金库）│ ← resolveTradingVault
 │  4. ensureProxyCollateralSynced │
 │     (CLOB sync → 必要时 USDC.e→pUSD) │
 │  5. 顶栏展示可交易 pUSD 余额 │
@@ -247,7 +250,7 @@ polymarket-seer/
 
 **凭据存储**：
 - `seer_clob_api_key` / `seer_clob_api_secret` / `seer_clob_api_passphrase` → localStorage
-- `seer_proxy_address` / `seer_wallet_address` → localStorage
+- `seer_proxy_address` / `seer_wallet_address` → localStorage（proxy 为 Deposit Wallet 地址）
 - 登出时全部清除
 
 ### 2.3 数据流架构
@@ -310,13 +313,13 @@ polymarket-seer/
 
 ### 3.1 资金模块（充值 / 提现）
 
-顶栏 **余额 pill**（`$` + `▾`）展开 `FundsActionSheet`，分别进入 `DepositDrawer` 与 `WithdrawDrawer`。展示值为 **CLOB sync 后可交易 pUSD**（非链上 USDC.e 简单相加）；legacy Safe 经 Collateral Onramp wrap。领域术语见 `CONTEXT.md`；Transfer / Connected 见 `docs/adr/0001`–`0003`；余额与 CLOB 见 `docs/adr/0004`；认证见 `docs/adr/0005`。
+顶栏 **余额 pill**（`$` + `▾`）展开 `FundsActionSheet`，分别进入 `DepositDrawer` 与 `WithdrawDrawer`。展示值为 **CLOB sync 后可交易 pUSD**（非链上 USDC.e 简单相加）；legacy 金库经 Collateral Onramp wrap。领域术语见 `CONTEXT.md`；Transfer / Connected 见 `docs/adr/0001`–`0003`；余额与 CLOB 见 `docs/adr/0004`；交易金库与 CLOB V2 见 `docs/adr/0006`；认证见 `docs/adr/0005`。
 
 | 模块 | 入口 | 要点 |
 |---|---|---|
 | **充值 · Connected** | 已连接钱包 → 选资产 / 金额 → 确认 | EVM / SVM 执行引擎分流；报价经 `/api/dln/*`；失败可回退 Transfer |
 | **充值 · Transfer** | 链上转入 | 自动创建 `Deposit Address`；`/api/bridge/status` 轮询；会话基线过滤历史终态 |
-| **提现** | 收款地址、金额（到账固定 Polygon · PUSD） | `POST /withdraw` → `ensureSafeDeployed` → relayer 转 pUSD → `/status` 轮询 |
+| **提现** | 收款地址、金额（到账固定 Polygon · PUSD） | `POST /withdraw` → `ensureTradingVaultDeployed` → Deposit Wallet batch 转 pUSD → `/status` 轮询 |
 
 Bridge 代理上游请求可附带 `X-Builder-Code`（env `POLY_BUILDER_CODE`，开发者码；与 Relayer HMAC 三件套不同）。
 
@@ -329,15 +332,17 @@ Bridge 代理上游请求可附带 `X-Builder-Code`（env `POLY_BUILDER_CODE`，
 | 功能 | 实现方式 |
 |---|---|
 | **账户数据获取** | SWR 集成，以 `[proxyAddress, walletAddress]` 为 Key，15 秒自动轮询 |
-| **市价下单** | `handlePlaceRealBet()` → 构建 Market Order → CLOB 签名 → Relayer 提交 |
-| **限价卖出** | `handleLimitSellPosition()` → 构建 Limit Order → CLOB 签名 → 直接提交 |
-| **市价卖出** | `handleSellPosition()` → 构建 Market Sell → 签名 → 提交 |
-| **兑现/归档** | `handleRedeem()` → 调用 Builder Relayer Client 执行链上兑现 |
+| **市价下单** | `handlePlaceRealBet()` → 部署 Deposit Wallet → pUSD/ERC1155 授权 → CLOB V2 市价单 |
+| **限价卖出** | `handleLimitSellPosition()` → ERC1155 授权 → CLOB V2 限价卖单 |
+| **市价卖出** | `handleSellPosition()` → ERC1155 授权 → CLOB V2 FOK 卖单 |
+| **兑现/归档** | `handleRedeem()` → Deposit Wallet batch 经 Relayer 执行链上 redeem |
 | **取消订单** | `handleCancelOrder()` → CLOB Cancel API |
-| **交易状态管理** | `txStep` 状态机：idle → signing → submitting → confirming → done/error |
-| **Loading 状态** | `portfolioLoading = isLoading || isAuthInitializing`（覆盖凭据初始化缝隙） |
+| **交易状态管理** | `txStep` 状态机：idle → preparing → deploying → approving → placing → success/error |
+| **Loading 状态** | `portfolioLoading = isLoading \|\| isAuthInitializing`（覆盖凭据初始化缝隙） |
 
 **关键设计**：
+- CLOB 经 `createClobClient()`（`@polymarket/clob-client-v2`，funder = Deposit Wallet，`POLY_1271`）
+- 授权分块经 `ensureDepositTradingApprovals`（pUSD）与 `ensureDepositErc1155Approvals`（卖出 Outcome 代币）
 - `isAuthInitializing`：当 `authenticated=true` 但 `swrKey=null && !data` 时强制为 loading，消除空态文字闪现
 - SWR 的 `isLoading` vs `isValidating`：前者仅首次加载为 true，后者每次轮询为 true。`portfolioLoading` 只绑定 `isLoading`，确保后台静默轮询不会触发骨架屏
 
@@ -348,7 +353,7 @@ Bridge 代理上游请求可附带 `X-Builder-Code`（env `POLY_BUILDER_CODE`，
 1. **Privy 集成**：监听 `usePrivy()` 的 `authenticated` 状态
 2. **钱包初始化**：Embedded 路线由 `ensureEmbeddedWalletForUser()` 统一 `createWallet()`（Privy `createOnLogin: off`）
 3. **CLOB 凭据**：自动向 Polymarket 注册 API Key 并缓存
-4. **Proxy Wallet**：建立代理钱包关系
+4. **Deposit Wallet**：`resolveTradingVault` 推导交易金库地址（UI 仍称智能金库）
 5. **余额同步**：`ensureProxyCollateralSynced`（CLOB sync + 必要时 Onramp），顶栏与下单预检共用
 6. **登出清理**：`handleLogout()` 清除所有 localStorage 状态
 
@@ -404,8 +409,9 @@ Bridge 代理上游请求可附带 `X-Builder-Code`（env `POLY_BUILDER_CODE`，
 | `ethers` | 5.8.0 | 以太坊交互（签名、合约调用） |
 | `@privy-io/react-auth` | 3.16.0 | 社交登录 + 嵌入式钱包 |
 | `@polymarket/clob-client-v2` | 1.0.6 | Polymarket CLOB V2 交易客户端 |
+| `@polymarket/builder-signing-sdk` | 0.0.8 | Builder 远程签名（/api/sign） |
 | `viem` | 2.46.x | CLOB V2 推荐依赖（Privy 仍可用 ethers signer） |
-| `@polymarket/builder-relayer-client` | 0.0.8 | 兑现操作 Relayer |
+| `@polymarket/builder-relayer-client` | 0.0.10 | Deposit Wallet 部署与 gasless 批次 |
 | `recharts` | 3.8.0 | 图表（分类盈亏条形图） |
 | `lucide-react` | 0.577.0 | 图标库 |
 | `html-to-image` / `html2canvas` | — | 分享海报生成 |

@@ -1,6 +1,6 @@
 # Crazy Fox — 产品需求文档 (PRD)
 
-> **版本**：v2.7 · 最后更新：2026-05-30
+> **版本**：v2.8 · 最后更新：2026-05-31
 > **产品定位**：2026 世界杯体育预测 H5 应用，以 Polymarket 为底层交易引擎。
 
 ## 文档维护边界
@@ -161,8 +161,8 @@ Compass「发现」Tab：Tinder 式 **左右划动** 单场对阵卡片，低门
 2. **Telegram** 登录代码已实现，弹窗入口默认关闭（`NEXT_PUBLIC_ENABLE_TELEGRAM_LOGIN=true` 可启用）
 3. 登录后由应用层 `createWallet()` 创建/恢复 Polygon Embedded 钱包（Privy `createOnLogin` 已关闭，见 ADR-0005 §6 修订）
 4. 自动向 Polymarket CLOB 服务注册 API Key（签名授权）
-5. 建立 Proxy Wallet 代理关系
-6. 全程免 Gas（Polymarket 代付）
+5. 建立 **Deposit Wallet（交易金库）** 关系：Privy EOA 签名，链上 funder 为 Polymarket Deposit Wallet（CLOB type 3）；详见 ADR-0006
+6. 全程免 Gas（Polymarket Relayer 代付链上批次）
 
 ### 4.2 下单交易流程
 1. 用户选择预测方向 → 确认弹窗展示赔率和预期收益
@@ -194,7 +194,7 @@ Compass「发现」Tab：Tinder 式 **左右划动** 单场对阵卡片，低门
 
 - **入口**：顶栏资金菜单 → 提现。
 - **表单**：到账固定 **Polygon · PUSD**（只读）；用户填写 **收款地址**（external 会话可一键填入已连接钱包）、**金额**；展示 Uniswap 换币引导（需 USDC 等时自行兑换）。
-- **执行**：`POST /withdraw` 创建 bridge 入金地址 → `ensureSafeDeployed` → relayer 以 Safe 身份转 pUSD 至 bridge → `/status` 轮询（含失败提示、约 2 分钟超时与重试）；进行中禁用重复提交；完成后展示成功态。
+- **执行**：`POST /withdraw` 创建 bridge 入金地址 → `ensureTradingVaultDeployed` → relayer 以 **Deposit Wallet** batch 转 pUSD 至 bridge → `/status` 轮询（含失败提示、约 2 分钟超时与重试）；进行中禁用重复提交；完成后展示成功态。
 
 工程细节见 `CONTEXT.md` 与 `docs/adr/`。
 
@@ -233,7 +233,7 @@ Compass「发现」Tab：Tinder 式 **左右划动** 单场对阵卡片，低门
 | 样式 | Tailwind CSS v4 |
 | 动画 | Framer Motion (motion/react) |
 | 数据 | SWR |
-| 链上 | ethers.js v5 + Polymarket CLOB Client |
+| 链上 | ethers.js v5 + `@polymarket/clob-client-v2` + Builder Relayer（Deposit Wallet） |
 | 认证 | Privy (嵌入式钱包 + 社交登录) |
 | 图表 | Recharts |
 | 图标 | Lucide React |
