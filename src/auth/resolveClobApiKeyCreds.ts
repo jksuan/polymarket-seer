@@ -52,7 +52,9 @@ async function tryCreateApiKey(clobClient: ClobApiKeyClient): Promise<DeriveOrCr
   try {
     const created = await clobClient.createApiKey();
     return {
-      creds: isValidApiKeyCreds(created) ? created : null,
+      creds: isValidApiKeyCreds(created as ClobApiKeyCredsLike | null | undefined)
+        ? (created as ValidClobApiKeyCreds)
+        : null,
       userRejected: false,
     };
   } catch (err) {
@@ -70,8 +72,8 @@ async function deriveOrCreateApiKey(
   await switchChain();
   try {
     const derived = await clobClient.deriveApiKey();
-    if (isValidApiKeyCreds(derived)) {
-      return { creds: derived, userRejected: false };
+    if (isValidApiKeyCreds(derived as ClobApiKeyCredsLike | null | undefined)) {
+      return { creds: derived as ValidClobApiKeyCreds, userRejected: false };
     }
     return tryCreateApiKey(clobClient);
   } catch (deriveErr) {

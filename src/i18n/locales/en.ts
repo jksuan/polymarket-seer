@@ -290,6 +290,7 @@ const en: TranslationKeys = {
     orders: 'Orders',
     history: 'History',
     transactions: 'Transactions',
+    funds: 'Funds',
     totalPnl: 'Total P&L',
     totalInvested: 'Total Invested',
     totalReturned: 'Total Returned',
@@ -357,6 +358,9 @@ const en: TranslationKeys = {
     txRedeem: 'Rdm',
     txArchive: 'Arch',
     txOther: 'Other',
+    txDeposit: 'Deposit',
+    txWithdraw: 'Withdraw',
+    fundsEmpty: 'No deposit or withdrawal records yet',
   },
 
   // ─── Challenge Page ───

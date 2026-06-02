@@ -289,6 +289,7 @@ const zh = {
     orders: '挂单',
     history: '战绩',
     transactions: '明细',
+    funds: '资金',
     totalPnl: '总净盈亏',
     totalInvested: '总投入',
     totalReturned: '总收入',
@@ -356,6 +357,9 @@ const zh = {
     txRedeem: '兑换',
     txArchive: '归档',
     txOther: '其他',
+    txDeposit: '充值',
+    txWithdraw: '提现',
+    fundsEmpty: '暂无充提记录',
   },
 
   // ─── 挑战页 ───
