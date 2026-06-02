@@ -22,6 +22,7 @@
 - **Withdraw Vault Deploy**：仅充值、从未交易的金库可能未部署；提现执行前 `ensureTradingVaultDeployed`（`getDeployed(WALLET)` → 必要时 `deployDepositWallet()`），与 `useTrading` 下单路径一致。见 ADR-0006。
 - **Withdraw Recipient**：用户指定的 `recipientAddr`；`sessionMode === 'external'` 时可一键填入 Connected Wallet（**Use connected**）。
 - **Funds Action Sheet**：TopHeader 余额 pill（`$` + `▾`）展开的资金菜单，用于选择充值或提现入口。
+- **Profile Funds Tab**：「我的」页第六 Tab（`funds`）；激活时服务端 `GET /api/funds/movements-live` 拉 Etherscan V2 `tokentx`，按 proxy 上 **pUSD / USDC.e** 转入/转出展示充提列表（**无刷新按钮**、**不入 Neon**）。分类：`matchOrders` 等撮合顶层 `methodId` 整笔 tx 排除 → `from`/`to` 相对 proxy → Exchange/CTF/Onramp denylist 兜底。登录且解析出 proxy 后 `PUT /api/funds/wallet` 仅 UPSERT Neon **`user_wallets`**。充提抽屉仍走 Bridge 轮询，**不写库**。见 `docs/adr/0008-funds-tab-live-etherscan-user-wallets.md`。
 - **Transfer UI Session Baseline**：每次从充值首页进入 Transfer Crypto 步骤时记录的时间戳；与同一张 Deposit Address 的创建时间取较大值，用于过滤 bridge 返回的 `transactions`，避免复用缓存地址时沿用上一笔终态。中间态若暂未带 `createdTimeMs`（例如 `DEPOSIT_DETECTED`），仍予以保留以便展示「处理中」，不在过滤器侧仅凭「列表中存在更早的旧流水」丢弃。
 - **Bridge Transfer Row Priority**：同一地址 `status` 接口返回的 `transactions` 约定为新在前；会话过滤后的 **第一条** 即视为当前阶段状态（与官网「仅最新一条为 `DEPOSIT_DETECTED` 才提示处理中」一致）。上游在 `DEPOSIT_DETECTED` 阶段往往 **不提供 `txHash` 与 `createdTimeMs`**，无法用哈希或时间戳与列表内其它行做稳定关联，因此 **顺序是该阶段唯一可信的权威信号**，不再用各行的 `createdTimeMs` 取最大值代替排序语义。
 - **Supported Assets**：后端桥接接口返回的可充值资产全集，前端可按业务策略进行白名单过滤。
@@ -66,6 +67,7 @@
 - Connected Wallet 在 `quote/build` 前必须完成执行引擎分流，不在 execute 阶段临时分支。
 - Transfer 流程默认“自动创建地址”，减少用户显式操作步骤。
 - 与业务规则强耦合的展示约束需通过 ADR 留痕，并在代码中可追溯。
+- **合入 `main` 时**：需 revert 或替换 `main` 上 ADR-0007 实现提交（`1dfd1aa`、`6da21c9`），避免 Neon 流水与 ADR-0008 live 方案并存；详见 ADR-0008。
 
 ## 联调验证记录（Transfer Crypto）
 
