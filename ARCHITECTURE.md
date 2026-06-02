@@ -1,6 +1,6 @@
 # Crazy Fox — 工程架构文档 (ARCHITECTURE)
 
-> **版本**：v1.5 · 最后更新：2026-05-20
+> **版本**：v1.8 · 最后更新：2026-05-31
 > **技术栈**：Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS v4 · SWR · ethers.js · Privy
 
 ## 文档维护边界
@@ -23,11 +23,12 @@ polymarket-seer/
 │   │   │   ├── cards/route.ts      # 市场卡片数据代理
 │   │   │   ├── images/[id]/route.ts # 图片代理（绕 CORS）
 │   │   │   ├── proxy-image/route.ts # 通用图片代理
-│   │   │   ├── search/route.ts     # 搜索 API 代理
+│   │   │   ├── search/route.ts     # 搜索 / 世界杯 events 代理
+│   │   │   ├── search/worldCupEvents.ts # tag 102232 翻页拉全 + 衍生盘过滤
 │   │   │   ├── share-card/route.tsx # 分享卡片 SSR 渲染
 │   │   │   ├── sign/route.ts       # Polymarket CLOB 签名代理
 │   │   │   ├── sports/route.ts     # 体育赛事数据代理
-│   │   │   ├── bridge/             # Polymarket Bridge 代理（充值地址 / 报价 / 提现 / 状态）
+│   │   │   ├── bridge/             # Polymarket Bridge 代理（充值地址 / 提现 / 状态；quote 路由保留但提现 UI 未调用）
 │   │   │   │   ├── deposit/route.ts
 │   │   │   │   ├── withdraw/route.ts
 │   │   │   │   ├── quote/route.ts
@@ -40,7 +41,7 @@ polymarket-seer/
 │   │   ├── testing/                # 开发联调页（生产默认关闭，见 README）
 │   │   ├── c/[id]/                 # 动态路由：分享卡片详情页
 │   │   ├── globals.css             # 全局样式（Tailwind + 自定义）
-│   │   ├── layout.tsx              # 根布局（HTML head、字体、Providers）
+│   │   ├── layout.tsx              # 根布局（HTML head、字体、Providers、i18n initialLocale）
 │   │   └── page.tsx                # ★ 应用主入口（SPA 路由控制器）
 │   │
 │   ├── components/                 # 组件库
@@ -48,26 +49,30 @@ polymarket-seer/
 │   │   ├── MarketSearch.tsx        # 搜索结果卡片
 │   │   ├── Navbar.tsx              # 顶部导航栏（已登录态）
 │   │   ├── Portfolio.tsx           # 投资组合面板（旧版，保留参考）
-│   │   ├── Providers.tsx           # 全局 Provider 封装（Privy）
+│   │   ├── Providers.tsx           # 全局 Provider 封装（Privy；embedded createOnLogin: off）
+│   │   ├── AppI18nShell.tsx        # layout 注入 initialLocale 的 i18n 壳层
 │   │   ├── TxOverlay.tsx           # 交易状态全屏遮罩
 │   │   │
 │   │   ├── pages/                  # ★ 页面级组件
-│   │   │   ├── DiscoverPage.tsx    # 全新聚合发现页（替换原首页首屏，展现 4 大主题卡片）
-│   │   │   ├── HomePage.tsx        # 赛事大厅（赛程/积分榜/射手榜/淘汰赛）
-│   │   │   ├── ChallengePage.tsx   # 挑战页（世界杯专属赛事预测）
+│   │   │   ├── DiscoverPage.tsx    # 挑战 Tab：聚合发现流（夺冠/热门/胶着/冷门大卡片）
+│   │   │   ├── discover/DiscoverPageSkeleton.tsx # 挑战 Tab 加载骨架屏
+│   │   │   ├── HomePage.tsx        # 首页：赛程/积分榜/射手榜/趣味投注
+│   │   │   ├── ChallengePage.tsx   # 发现 Tab：Tinder 式划动对阵卡片
 │   │   │   ├── SearchPage.tsx      # 搜索页（全局搜索入口）
 │   │   │   ├── LeaderboardPage.tsx # 排行页（待重构）
-│   │   │   ├── ProfilePage.tsx     # 个人中心（Tab 容器：总览/持仓/挂单/战绩/明细）
+│   │   │   ├── ProfilePage.tsx     # 个人中心（Tab 容器：总览/持仓/挂单/战绩/明细/资金）
 │   │   │   └── profile/            # 个人中心子页面
 │   │   │       ├── ProfileOverview.tsx      # 总览 Tab（盈亏统计+持仓摘要+分类图表）
 │   │   │       ├── ProfilePositions.tsx     # 持仓 Tab（当前头寸列表）
 │   │   │       ├── ProfileOrders.tsx        # 挂单 Tab（未成交订单列表）
 │   │   │       ├── ProfileHistory.tsx       # 战绩 Tab（已结算交易）
 │   │   │       ├── ProfileTransactions.tsx  # 明细 Tab（全部交易流水）
+│   │   │       ├── ProfileFunds.tsx         # 资金 Tab（Etherscan live 充提列表）
 │   │   │       ├── CategoryPnlChart.tsx     # 分类盈亏条形图组件
 │   │   │       ├── useProfileStats.ts       # 总览数据计算 Hook
 │   │   │       ├── useProfileHistory.ts     # 战绩数据处理 Hook
 │   │   │       ├── useProfileTransactions.ts # 明细数据处理 Hook
+│   │   │       ├── useProfileFunds.ts       # 资金 Tab 数据 Hook
 │   │   │       ├── utils.ts                 # Profile 工具函数
 │   │   │       └── components/              # Profile 共享子组件
 │   │   │           ├── GlassCard.tsx                # 玻璃拟态卡片容器
@@ -98,7 +103,7 @@ polymarket-seer/
 │   │       ├── WithdrawDrawer.tsx  # 提现抽屉（Bridge withdraw + 状态轮询）
 │   │       ├── FundsMovementTermsPanel.tsx # 充/提/转入共用适用条款摘要
 │   │       ├── deposit/            # 充值子模块（connected / transfer / confirm 等）
-│   │       ├── withdraw/           # 提现子模块（表单 / 报价 / 校验 / 执行）
+│   │       ├── withdraw/           # 提现子模块（表单 / 校验 / Deposit Wallet 执行 / 状态轮询）
 │   │       ├── SettingsDrawer.tsx  # 设置抽屉（账户信息、法律文档入口）
 │   │       ├── LanguageDrawer.tsx  # ★ 语言选择抽屉（全局一级入口，Portaled 底部滑出）
 │   │       ├── settings/           # ★ 模块化设置内容组件
@@ -123,16 +128,29 @@ polymarket-seer/
 │   ├── auth/                       # 认证与余额同步（从 Context 拆出的逻辑）
 │   │   ├── sessionMode.ts          # loginMethod → embedded/external
 │   │   ├── privyUserIdentity.ts    # 社交/邮箱展示名与 Connected 门禁
-│   │   ├── useBalanceSync.ts       # CLOB / 链上余额拉取与重试
+│   │   ├── collateralBalance.ts    # pUSD collateral sync / Onramp wrap / 授权批次
+│   │   ├── depositRelayExecutor.ts # Deposit Wallet relayer gasless 批次
+│   │   ├── ensureTradingVaultDeployed.ts # 提现等批次前 deployDepositWallet
+│   │   ├── vault/                  # 交易金库抽象（resolve / depositVaultOps / relay）
+│   │   ├── readUsdcBalanceDisplay.ts # 顶栏可交易余额格式化
+│   │   ├── useBalanceSync.ts       # CLOB 余额拉取与重试
 │   │   ├── useExternalAccountDrift.ts # 外链钱包漂移检测
 │   │   └── resolveClobApiKeyCreds.ts  # CLOB 凭证解析
 │   │
 │   ├── contexts/                   # React Context 全局状态
-│   │   └── PolymarketAuthContext.tsx # ★ 认证上下文（Privy + Polymarket CLOB 鉴权）
+│   │   ├── PolymarketAuthContext.tsx # ★ 认证上下文（Privy + Polymarket CLOB 鉴权）
+│   │   └── UserWalletSyncContext.tsx # 登录后 UPSERT Neon user_wallets（ADR-0008）
+│   │
+│   ├── db/                         # Neon Postgres（服务端）
+│   │   ├── client.ts               # @neondatabase/serverless 连接
+│   │   ├── rows.ts                 # 表行类型
+│   │   └── repositories/
+│   │       └── userWallets.ts      # user_wallets UPSERT / 按 privy 查询
 │   │
 │   ├── hooks/                      # 自定义 Hooks
 │   │   ├── useTrading.ts           # ★ 核心交易 Hook（下单/卖出/兑现/SWR轮询）
 │   │   ├── useBridge.ts            # Bridge 充值地址 / 状态 / 提现 API
+│   │   ├── useUserWalletSync.ts    # 登录后同步 proxy → Neon user_wallets
 │   │   ├── useDln.ts               # deBridge DLN 报价与订单状态
 │   │   ├── useLockBodyScroll.ts    # 抽屉打开时锁定 body 滚动
 │   │   ├── useMatchData.ts         # 比赛数据获取 Hook
@@ -142,7 +160,8 @@ polymarket-seer/
 │   │
 │   ├── i18n/                       # ★ 全局国际化体系
 │   │   ├── locales/                # 字典目录 (zh.ts / en.ts)
-│   │   ├── I18nContext.tsx         # 国际化上下文 Provider
+│   │   ├── I18nContext.tsx         # 国际化上下文 Provider（接受 initialLocale）
+│   │   ├── localeStorage.ts        # locale Cookie / localStorage 读写
 │   │   ├── useTranslation.ts       # t / locale 获取 Hook
 │   │   └── countryNames.ts         # 体育垂直领域专用：国家名词典映射引擎
 │   │
@@ -150,8 +169,17 @@ polymarket-seer/
 │   │   ├── brandAssets.ts          # APP_BRAND_NAME、Logo、favicon 单一来源
 │   │   ├── brandFont.ts            # 顶栏品牌字体（Bigtimes.otf）
 │   │   ├── constants.ts            # 全局常量（合约地址、API 端点等）
+│   │   ├── clobClientFactory.ts    # CLOB V2 客户端工厂（POLY_1271 默认）
+│   │   ├── clobOrderResponse.ts    # 下单响应成功/错误解析
 │   │   ├── bridgeClient.ts         # Bridge API 客户端封装
 │   │   ├── dlnClient.ts            # DLN API 客户端封装
+│   │   ├── funds/                  # 资金 Tab / Neon 登记（ADR-0008）
+│   │   │   ├── client.ts           # PUT wallet / GET movements-live 客户端
+│   │   │   ├── onchain/            # Etherscan tokentx 分类与拉取
+│   │   │   ├── mapFundsMovementDisplay.ts
+│   │   │   ├── privyAuth.ts
+│   │   │   ├── requestGuards.ts
+│   │   │   └── validation.ts
 │   │   ├── utils.ts                # 通用工具函数
 │   │   ├── countryFlags.ts         # 国旗 Emoji + 国家名映射表
 │   │   ├── mockStandings.ts        # 世界杯积分榜静态数据（2026/2022/2018/2014）
@@ -162,8 +190,15 @@ polymarket-seer/
 │   └── types/                      # TypeScript 类型定义
 │       ├── sports.ts               # 体育相关类型
 │       ├── bridge.ts               # Bridge 充提 API 类型
-│       └── dln.ts                  # DLN 报价 / 订单类型
+│       ├── dln.ts                  # DLN 报价 / 订单类型
+│       └── funds.ts                # 资金 Tab live 列表 DTO
 │
+├── db/                             # SQL 迁移（Neon；ADR-0008 仅写 user_wallets）
+│   └── migrations/
+│       └── 001_funds_schema.sql
+│
+├── scripts/
+│   └── run-db-migrate.mjs          # npm run db:migrate
 ├── requirement.md                  # 产品需求文档 (PRD)
 ├── ARCHITECTURE.md                 # 本文档（工程架构）
 ├── package.json                    # 依赖管理
@@ -190,9 +225,9 @@ polymarket-seer/
 │      ├── AppRouterContent                        │
 │      │   ├── AnimatePresence (页面过渡动画)        │
 │      │   │   ├── HomePage                        │
-│      │   │   ├── ChallengePage                   │
+│      │   │   ├── DiscoverPage (challenge Tab)   │
+│      │   │   ├── ChallengePage (discover Tab)    │
 │      │   │   ├── SearchPage                      │
-│      │   │   ├── LeaderboardPage                 │
 │      │   │   └── ProfilePage                     │
 │      │   ├── BottomNav (底部导航)                  │
 │      │   └── TxOverlay (交易状态遮罩)              │
@@ -220,11 +255,13 @@ polymarket-seer/
            ▼
 ┌──────────────────────┐
 │  PolymarketAuthContext │
-│  1. 获取嵌入式钱包地址   │
+│  1. 获取嵌入式钱包地址（Signer EOA）│
 │  2. 向 CLOB 注册 API Key │ ← POST /api/sign
-│  3. 获取 Proxy Wallet    │
-│  4. 查询 USDC 余额       │
-│  5. 缓存凭据到 localStorage │
+│  3. 解析 Deposit Wallet（交易金库）│ ← resolveTradingVault
+│  4. ensureProxyCollateralSynced │
+│     (CLOB sync → 必要时 USDC.e→pUSD) │
+│  5. 顶栏展示可交易 pUSD 余额 │
+│  6. 缓存凭据到 localStorage │
 └──────────┬───────────┘
            │
            ▼
@@ -237,7 +274,7 @@ polymarket-seer/
 
 **凭据存储**：
 - `seer_clob_api_key` / `seer_clob_api_secret` / `seer_clob_api_passphrase` → localStorage
-- `seer_proxy_address` / `seer_wallet_address` → localStorage
+- `seer_proxy_address` / `seer_wallet_address` → localStorage（proxy 为 Deposit Wallet 地址）
 - 登出时全部清除
 
 ### 2.3 数据流架构
@@ -277,7 +314,7 @@ polymarket-seer/
 | 代理路由 | 上游 API | 用途 |
 |---|---|---|
 | `/api/sports` | `gamma-api.polymarket.com` | 获取体育赛事市场列表 |
-| `/api/search` | `gamma-api.polymarket.com` | 搜索市场 |
+| `/api/search` | `gamma-api.polymarket.com` | 搜索市场；FIFA 查询对 tag 102232 **翻页拉全**，返回前过滤无 moneyline 的 vs 衍生 event（见 `worldCupEvents.ts`） |
 | `/api/cards` | `gamma-api.polymarket.com` | 获取市场卡片详情 |
 | `/api/book` | `clob.polymarket.com` | 获取订单簿 + Tick Size |
 | `/api/sign` | `clob.polymarket.com` | CLOB API Key 注册/签名 |
@@ -285,14 +322,16 @@ polymarket-seer/
 | `/api/proxy-image` | 任意图片 URL | 通用图片代理 |
 | `/api/share-card` | — (SSR) | 服务端渲染分享卡片 |
 | `/api/bridge/deposit` | Polymarket Bridge | 创建 Transfer 入账地址 |
-| `/api/bridge/withdraw` | Polymarket Bridge | 创建提现临时 bridge 地址 |
-| `/api/bridge/quote` | Polymarket Bridge | 提现报价 |
+| `/api/bridge/withdraw` | Polymarket Bridge | 创建提现临时 bridge 地址（`X-Builder-Code` 见 `POLY_BUILDER_CODE`） |
+| `/api/bridge/quote` | Polymarket Bridge | Bridge 报价（路由保留；当前 WithdrawDrawer **未调用**） |
 | `/api/bridge/status/[address]` | Polymarket Bridge | 入账地址交易状态轮询 |
 | `/api/bridge/supported-assets` | Polymarket Bridge | 可充值资产列表 |
 | `/api/dln/quote` | deBridge DLN | Connected 跨链报价 |
 | `/api/dln/same-chain` | deBridge DLN | 同链报价 |
 | `/api/dln/order/[id]` | deBridge DLN | 订单状态查询 |
 | `/api/dln/order/[id]/cancel-tx` | deBridge DLN | 取消交易构造（如适用） |
+| `/api/funds/wallet` | Neon Postgres | Privy 鉴权；UPSERT `user_wallets`（登录登记） |
+| `/api/funds/movements-live` | Etherscan V2 + Neon | Privy 鉴权 + proxy 归属校验；`tokentx` live 充提列表（不入库） |
 
 ---
 
@@ -300,13 +339,16 @@ polymarket-seer/
 
 ### 3.1 资金模块（充值 / 提现）
 
-顶栏 **余额 pill**（`$` + `▾`）展开 `FundsActionSheet`，分别进入 `DepositDrawer` 与 `WithdrawDrawer`。领域术语与不变量见 `CONTEXT.md`；Transfer 白名单、Connected 引擎分流、bridge 状态行顺序等见 `docs/adr/0001`–`0003`；**Privy 认证与 sessionMode** 见 `docs/adr/0005`（`0004` 余额/CLOB 条款仍继承自 `0004`）。
+顶栏 **余额 pill**（`$` + `▾`）展开 `FundsActionSheet`，分别进入 `DepositDrawer` 与 `WithdrawDrawer`。展示值为 **CLOB sync 后可交易 pUSD**（非链上 USDC.e 简单相加）；legacy 金库经 Collateral Onramp wrap。领域术语见 `CONTEXT.md`；Transfer / Connected 见 `docs/adr/0001`–`0003`；余额与 CLOB 见 `docs/adr/0004`；交易金库与 CLOB V2 见 `docs/adr/0006`；认证见 `docs/adr/0005`；**Profile 资金 Tab 与 Neon 登记**见 `docs/adr/0008`（取代 ADR-0007 流水方案）。
 
 | 模块 | 入口 | 要点 |
 |---|---|---|
 | **充值 · Connected** | 已连接钱包 → 选资产 / 金额 → 确认 | EVM / SVM 执行引擎分流；报价经 `/api/dln/*`；失败可回退 Transfer |
 | **充值 · Transfer** | 链上转入 | 自动创建 `Deposit Address`；`/api/bridge/status` 轮询；会话基线过滤历史终态 |
-| **提现** | 选 Receive token/chain、收款地址、金额 | `/api/bridge/quote` + `POST /withdraw`；状态轮询与超时重试 |
+| **提现** | 收款地址、金额（到账固定 Polygon · PUSD） | `POST /withdraw` → `ensureTradingVaultDeployed` → Deposit Wallet batch 转 pUSD → `/status` 轮询 |
+| **Profile · 资金 Tab** | 我的 → **资金** | 激活 Tab 时 `GET /api/funds/movements-live`；Etherscan `tokentx` 分类充提；**无刷新按钮**；**不写** `funds_movements`；登录后 `PUT /api/funds/wallet` 仅登记 `user_wallets` |
+
+Bridge 代理上游请求可附带 `X-Builder-Code`（env `POLY_BUILDER_CODE`，开发者码；与 Relayer HMAC 三件套不同）。**Bridge `/status` 终态不写入 Neon**（ADR-0008）。
 
 `isEvmSignerReady` 为 false 时顶栏禁用资金入口并展示说明条（见 `docs/superpowers/specs/2026-05-12-evm-wallet-readiness-design.md`）。
 
@@ -317,15 +359,17 @@ polymarket-seer/
 | 功能 | 实现方式 |
 |---|---|
 | **账户数据获取** | SWR 集成，以 `[proxyAddress, walletAddress]` 为 Key，15 秒自动轮询 |
-| **市价下单** | `handlePlaceRealBet()` → 构建 Market Order → CLOB 签名 → Relayer 提交 |
-| **限价卖出** | `handleLimitSellPosition()` → 构建 Limit Order → CLOB 签名 → 直接提交 |
-| **市价卖出** | `handleSellPosition()` → 构建 Market Sell → 签名 → 提交 |
-| **兑现/归档** | `handleRedeem()` → 调用 Builder Relayer Client 执行链上兑现 |
+| **市价下单** | `handlePlaceRealBet()` → 部署 Deposit Wallet → pUSD/ERC1155 授权 → CLOB V2 市价单 |
+| **限价卖出** | `handleLimitSellPosition()` → ERC1155 授权 → CLOB V2 限价卖单 |
+| **市价卖出** | `handleSellPosition()` → ERC1155 授权 → CLOB V2 FOK 卖单 |
+| **兑现/归档** | `handleRedeem()` → Deposit Wallet batch 经 Relayer 执行链上 redeem |
 | **取消订单** | `handleCancelOrder()` → CLOB Cancel API |
-| **交易状态管理** | `txStep` 状态机：idle → signing → submitting → confirming → done/error |
-| **Loading 状态** | `portfolioLoading = isLoading || isAuthInitializing`（覆盖凭据初始化缝隙） |
+| **交易状态管理** | `txStep` 状态机：idle → preparing → deploying → approving → placing → success/error |
+| **Loading 状态** | `portfolioLoading = isLoading \|\| isAuthInitializing`（覆盖凭据初始化缝隙） |
 
 **关键设计**：
+- CLOB 经 `createClobClient()`（`@polymarket/clob-client-v2`，funder = Deposit Wallet，`POLY_1271`）
+- 授权分块经 `ensureDepositTradingApprovals`（pUSD）与 `ensureDepositErc1155Approvals`（卖出 Outcome 代币）
 - `isAuthInitializing`：当 `authenticated=true` 但 `swrKey=null && !data` 时强制为 loading，消除空态文字闪现
 - SWR 的 `isLoading` vs `isValidating`：前者仅首次加载为 true，后者每次轮询为 true。`portfolioLoading` 只绑定 `isLoading`，确保后台静默轮询不会触发骨架屏
 
@@ -334,10 +378,10 @@ polymarket-seer/
 管理整个应用的认证生命周期：
 
 1. **Privy 集成**：监听 `usePrivy()` 的 `authenticated` 状态
-2. **钱包初始化**：从 Privy 嵌入式钱包获取 EOA 地址
+2. **钱包初始化**：Embedded 路线由 `ensureEmbeddedWalletForUser()` 统一 `createWallet()`（Privy `createOnLogin: off`）
 3. **CLOB 凭据**：自动向 Polymarket 注册 API Key 并缓存
-4. **Proxy Wallet**：建立代理钱包关系
-5. **余额查询**：实时获取 USDC 余额
+4. **Deposit Wallet**：`resolveTradingVault` 推导交易金库地址（UI 仍称智能金库）
+5. **余额同步**：`ensureProxyCollateralSynced`（CLOB sync + 必要时 Onramp），顶栏与下单预检共用
 6. **登出清理**：`handleLogout()` 清除所有 localStorage 状态
 
 ### 3.4 UI 与动画体系设计
@@ -357,6 +401,7 @@ polymarket-seer/
 
 4. **全球化自适应渲染 (i18n Engine)**
    - 基于纯 Context 打造了轻量级、完全类型安全的国际化引擎字典 (`zh.ts` 与 `en.ts`)。
+   - **SSR 对齐**：`layout.tsx` 读 Cookie `seer_locale` → `AppI18nShell` → `I18nProvider initialLocale`；客户端 `setLocale` 同步写 Cookie + localStorage。
    - 实现了特殊的 `countryNames.ts` 翻译器，确保由于 API 返回的原生国家名称（甚至特殊变体如 `BIH/ITA/NIR/WAL`）可以无缝、原子化地翻译，不再出现中英混杂硬编码问题。
    - 全局图文架构中，涉及到 `国旗` 的场景，全部使用 `getCountryFlagUrl(name, 'svg')` 请求统一的正规 4:3 矢量 SVG 资源，取代失真 PNG，强化“转播级”专业感。
    - 【核心演进】将语言切换提升为全局一级交互，使用 **LanguageDrawer** 配合 `createPortal` 挂载至 `document.body`，彻底解决了 `fixed` 定位在嵌套容器中的渲染冲突，确保在移动端始终能稳固贴底。
@@ -390,8 +435,10 @@ polymarket-seer/
 | `swr` | 2.4.1 | 数据获取与缓存 |
 | `ethers` | 5.8.0 | 以太坊交互（签名、合约调用） |
 | `@privy-io/react-auth` | 3.16.0 | 社交登录 + 嵌入式钱包 |
-| `@polymarket/clob-client` | 5.8.0 | Polymarket CLOB 交易客户端 |
-| `@polymarket/builder-relayer-client` | 0.0.8 | 兑现操作 Relayer |
+| `@polymarket/clob-client-v2` | 1.0.6 | Polymarket CLOB V2 交易客户端 |
+| `@polymarket/builder-signing-sdk` | 0.0.8 | Builder 远程签名（/api/sign） |
+| `viem` | 2.46.x | CLOB V2 推荐依赖（Privy 仍可用 ethers signer） |
+| `@polymarket/builder-relayer-client` | 0.0.10 | Deposit Wallet 部署与 gasless 批次 |
 | `recharts` | 3.8.0 | 图表（分类盈亏条形图） |
 | `lucide-react` | 0.577.0 | 图标库 |
 | `html-to-image` / `html2canvas` | — | 分享海报生成 |

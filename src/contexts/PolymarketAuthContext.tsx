@@ -104,6 +104,8 @@ export function PolymarketAuthProvider({ children }: { children: ReactNode }) {
 
   const sessionAddress = useMemo(() => normalizeAddress(user?.wallet?.address), [user?.wallet?.address]);
   const hasTriedCreateWalletRef = useRef(false);
+  const clobAuthRejectionLogoutInFlightRef = useRef(false);
+  const performSessionLogoutRef = useRef<() => Promise<void>>(async () => {});
   const { sessionEpoch, bumpSessionEpoch } = useSessionOverlays(authenticated);
 
   const clearEmbeddedReloadTimer = useCallback(() => {
@@ -136,12 +138,18 @@ export function PolymarketAuthProvider({ children }: { children: ReactNode }) {
 
   const ensureEmbeddedWalletForUser = useCallback(() => {
     if (hasTriedCreateWalletRef.current) return;
+    if (typeof createWallet !== "function") {
+      console.warn("[自动钱包] createWallet 不可用，跳过");
+      return;
+    }
+    if (hasMatchingEmbeddedWallet(wallets, user?.wallet?.address)) return;
+
     hasTriedCreateWalletRef.current = true;
     console.log("[自动钱包] embedded 会话缺少与当前 user 匹配的 Embedded Wallet，正在创建...");
     void createWallet()
       .then(() => console.log("[自动钱包] Embedded Wallet 创建成功"))
       .catch((err) => console.warn("[自动钱包] Embedded Wallet 创建失败（可能已存在）:", err));
-  }, [createWallet]);
+  }, [createWallet, wallets, user?.wallet?.address]);
 
   const handleEmbeddedWalletUnavailable = useCallback(() => {
     const now = Date.now();
@@ -151,6 +159,17 @@ export function PolymarketAuthProvider({ children }: { children: ReactNode }) {
     beginEmbeddedWalletSync();
     ensureEmbeddedWalletForUser();
   }, [beginEmbeddedWalletSync, ensureEmbeddedWalletForUser]);
+
+  const handleClobAuthRejected = useCallback(async () => {
+    if (clobAuthRejectionLogoutInFlightRef.current) return;
+    clobAuthRejectionLogoutInFlightRef.current = true;
+    try {
+      await performSessionLogoutRef.current();
+    } catch (err) {
+      clobAuthRejectionLogoutInFlightRef.current = false;
+      console.warn("[ClobAuth] 取消签名后登出失败:", err);
+    }
+  }, []);
 
   const {
     usdcBalance,
@@ -169,6 +188,9 @@ export function PolymarketAuthProvider({ children }: { children: ReactNode }) {
     preferEmbeddedForPrimaryWallet: preferEmbedded,
     awaitingEmbeddedWalletSync,
     onEmbeddedWalletUnavailable: handleEmbeddedWalletUnavailable,
+    onClobAuthRejected: () => {
+      void handleClobAuthRejected();
+    },
     setStickyExternalWalletClientType,
     setHasCreds,
     setWalletAddress,
@@ -287,6 +309,8 @@ export function PolymarketAuthProvider({ children }: { children: ReactNode }) {
     }
   }, [logout, resetBalanceState, bumpSessionEpoch, sessionMode, wallets, clearEmbeddedReloadTimer]);
 
+  performSessionLogoutRef.current = performSessionLogout;
+
   const {
     accountDriftRequiresRelogin,
     clearAccountChangeDebounce,
@@ -333,14 +357,6 @@ export function PolymarketAuthProvider({ children }: { children: ReactNode }) {
       clearEmbeddedReloadTimer();
     };
   }, [clearEmbeddedReloadTimer]);
-
-  useEffect(() => {
-    if (!ready || !authenticated || !user || sessionMode !== "embedded") return;
-    const hasEmbeddedWallet = wallets.some((w) => w.walletClientType === "privy");
-    if (!hasEmbeddedWallet && !hasTriedCreateWalletRef.current) {
-      ensureEmbeddedWalletForUser();
-    }
-  }, [ready, authenticated, user, wallets, sessionMode, ensureEmbeddedWalletForUser]);
 
   const { identifier: displayIdentifier, avatarUrl: displayAvatar } = useMemo(
     () =>

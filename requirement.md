@@ -1,6 +1,6 @@
 # Crazy Fox — 产品需求文档 (PRD)
 
-> **版本**：v2.5 · 最后更新：2026-05-20
+> **版本**：v2.8 · 最后更新：2026-05-31
 > **产品定位**：2026 世界杯体育预测 H5 应用，以 Polymarket 为底层交易引擎。
 
 ## 文档维护边界
@@ -19,7 +19,7 @@
 | **设计风格** | 暗黑系新野兽主义 (Dark Neobrutalism)，以深紫底 `#0D0518` 为主色调，荧光绿 `#6bff8f` 为强调色，搭配玻璃拟态 (Glassmorphism) 卡片 |
 | **动效标准** | 全站使用 Framer Motion 过渡动画，页面切换带模糊聚焦效果，交互元素带 `active:scale-95` 微按压反馈 |
 | **加载策略** | 全页面采用高保真骨架屏 (Skeleton Screen)，禁止使用旋转圈或"加载中"文本 |
-| **国际化 (i18n)** | 全局原生强类型的中英双语支持。已建立独立的 **LanguageDrawer** 作为全局一级入口，支持底部滑出式（Bottom Sheet）交互。已覆盖基础 UI、内容卡片、充值抽屉（DepositDrawer）及 40 余项交易状态文案。 |
+| **国际化 (i18n)** | 全局原生强类型的中英双语支持。已建立独立的 **LanguageDrawer** 作为全局一级入口，支持底部滑出式（Bottom Sheet）交互。语言偏好写入 Cookie + localStorage，SSR 通过 `initialLocale` 与首屏对齐。已覆盖基础 UI、内容卡片、充值抽屉（DepositDrawer）及 40 余项交易状态文案。 |
 | **适配目标** | 移动端 H5 优先（特别优化 X/Twitter 内置浏览器体验），使用 `100dvh` 适配各类视口。 |
 
 ---
@@ -37,18 +37,20 @@
 - **右侧**：
   - **未登录**：显示"登录"按钮 + 全局语言切换图标
   - **已登录**：
-    - **余额胶囊**：荧光绿 pill 展示 `$XX.XX` 与下拉箭头；点击展开 **资金菜单 (Funds Action Sheet)**，可选择充值或提现。副标题统一为「余额: $x.xx」（与充值抽屉标题区一致）。EVM 签名未就绪时禁用资金入口并展示简短说明条。
+    - **余额胶囊**：荧光绿 pill 展示 `$XX.XX` 与下拉箭头（**可交易 pUSD 余额**，与 CLOB 一致，见 ADR-0004）；点击展开 **资金菜单 (Funds Action Sheet)**，可选择充值或提现。副标题统一为「余额: $x.xx」。EVM 签名未就绪时禁用资金入口并展示简短说明条。
     - **极简语言切换**：Globe 图标，点击调起全局语言选择器。
     - **用户头像**：点击弹出设置抽屉（包含账户管理、法律条款等）。
 
 ### 2.3 底部导航栏 (BottomNav) — 五大频道
 
-| 序号 | Tab ID | 名称 | 图标 | 页面组件 |
+> **Tab ID 与页面组件映射以 `src/app/page.tsx` 为准**（名称与组件语义 intentionally 交叉，见各节说明）。
+
+| 序号 | Tab ID | 名称 | 图标/位置 | 页面组件 |
 |---|---|---|---|---|
 | 1 | `home` | 首页 | Home 🏠 | `HomePage` |
-| 2 | `challenge` | 挑战 | Swords ⚔️ | `ChallengePage` |
-| 3 | `search` | 搜索 | Search 🔍 | `SearchPage` |
-| 4 | `leaderboard` | 排行 | Trophy 🏆 | `LeaderboardPage` |
+| 2 | `discover` | 发现 | Compass 🧭 | `ChallengePage`（划动对阵卡片） |
+| 3 | `challenge` | 挑战 | 中央奖杯 ⚽ | `DiscoverPage`（聚合发现流大卡片） |
+| 4 | `search` | 搜索 | Search 🔍 | `SearchPage` |
 | 5 | `profile` | 我的 | User 👤 | `ProfilePage` |
 
 ---
@@ -60,74 +62,59 @@
 #### 3.1.1 导航层
 - **分类标签栏 (CategoryTabs)**：横向滚动选项，包含"⚡ 全部"以及各联赛/运动分类（世界杯、NBA、网球等），由 API 动态获取
 - **子标签栏 (SubTabs)**：
-  - **赛程 Tab**：二级可切换 `全部 | A组 | B组 | ... | H组 | 淘汰赛`，支持按世界杯小组和淘汰赛阶段筛选
+  - **赛程 Tab**：二级可切换 `全部 | A组 | B组 | ... | L组 | 淘汰赛`，支持按世界杯小组和淘汰赛阶段筛选；可选 **TeamFilterSheet** 按球队过滤；**小组赛 moneyline 对阵共 72 场**（经 `/api/search` 翻页拉全 tag 102232 后由 `parseMatchEvents` 解析）
   - **积分榜 Tab**：展示 2026/2022/2018/2014 四届世界杯积分排名表
   - **射手榜 Tab**：展示各届最佳射手统计
-  - **淘汰赛 Tab**：展示世界杯淘汰赛对阵图
-  - **趣味投注 Tab**：展示非比赛类的趣味性 Outright 预测市场
+  - **趣味投注 Tab**：展示非比赛类的 Outright 预测市场（冠军、小组第一、射手等）
 
-#### 3.1.2 内容层：模块化发现流 (Discover Feed)
-应用摒弃了传统的列表展示，采用基于算法分类的卡片流 (Cards Container)，建立 1-4 级视觉权重梯度：
-- **1. TITLE RACE (夺冠热门)**：殿堂级金卡设计，绑定 Outright 市场，带有顶部大旗帜英雄卡和底部横向 Top 10 赔率选单。
-- **2. TRENDING (热门对赌)**：橙色系高亮，展示交易量 (Volume) 最大的焦点单场对决。
-- **3. SPLIT (势均力敌)**：紫红色系，严格筛选赔率差在 15% 以内、极其胶着的生死战。
-- **4. LONG SHOT (以小博大)**：危险洋红 (Danger Magenta) 主题色，筛选低概率 (5%-20%) 的冷门倒挂比赛，强化高风险高回报的视觉暗示。
-- **组件交互**：每种类型卡片均配备 HorizontalMatchRow (横排小卡候选列表)，支持 Master-Detail (主次联动) 切换，选中底层卡片瞬间切换顶部 Hero 主卡。
-- **加载态**：全页面采用统一的原子骨架屏 (Skeleton)，彻底消除传统 Spinners 造成的 Layout Shifts 和空态文字闪烁。
+#### 3.1.2 内容层
+- **赛程**：按日期分组的 `MatchCard` 列表；加载态使用 `MatchCardSkeleton`
+- **趣味投注**：`OutrightCard` / `BinaryOutrightCard`；加载态使用 `OutrightCardSkeleton`
 
-### 3.1.3 交互流
-1. 用户在卡片上点击投注按钮：
-   - 传统市场：直接调起确认下单弹窗 (ConfirmModal)
-   - 复杂赛局（如：世界杯胜平负）：率先调起独立全局组件 **ChooseSideDrawer** 进行阵营选择，组件具备 SVG 级标量国旗与动态背景染色
-2. 弹窗内展示：选中方向、实时赔率、预期收益、滑动金额选择器（完全支持双语化渲染，拒绝中英混杂）
-3. 确认下注 → TxOverlay 展示链上交易进度（包括部署金库、代币授权、单边买卖等核心进度）
+#### 3.1.3 交互流
+1. 用户在卡片上点击投注按钮 → 调起 **ChooseSideDrawer**（胜平负）或 **ConfirmModal**
+2. 弹窗内展示：选中方向、实时赔率、预期收益、滑动金额选择器
+3. 确认下注 → TxOverlay 展示链上交易进度
 
-### 3.2 挑战 (Challenge)
+### 3.2 挑战 (Challenge Tab → `DiscoverPage`)
 
 #### 3.2.1 功能定义
-面向世界杯赛事的专属挑战模式页面，提供沉浸式的比赛预测体验。
+中央奖杯 Tab，展示 **模块化发现流**：夺冠热门、热门对赌、势均力敌、以小博大等主题大卡片。
 
-#### 3.2.2 UI 结构
-- **顶部区域**：世界杯品牌横幅 + "2026 FIFA World Cup" 标题
-- **筛选器**：
-  - 日期筛选横向滚动：今天 / 明天 / 后天 / 自定义日期
-  - 球队筛选弹出框 (TeamFilterSheet)：支持按组搜索和选择特定球队
-- **每日挑战赛程**：按比赛日期分组展示
-- **挑战卡片 (ChallengeCard)**：
-  - 大尺寸国旗 + VS 对决布局
-  - 三向胜平负预测按钮
-  - 比赛时间、联赛信息
-  - 实时人气（参与人数）
-- **加载态**：全屏级结构化骨架屏（国旗占位、VS文字、按钮槽位）
+#### 3.2.2 UI 结构（Discover Feed）
+- **1. TITLE RACE (夺冠热门)**：Outright 金卡 + 横向 Top 候选列表
+- **2. TRENDING (热门对赌)**：交易量最大的焦点单场
+- **3. SPLIT (势均力敌)**：赔率差 ≤15% 的胶着战
+- **4. LONG SHOT (以小博大)**：低概率 (5%–20%) 冷门
+- 各主题均配 **HorizontalMatchRow** 横排小卡，支持 Master-Detail 切换 Hero 主卡
+- **加载态**：`DiscoverPageSkeleton` 结构化骨架屏（与首页 Skeleton 视觉一致），禁止居中英文 Loading 文案
 
-#### 3.2.3 分享功能
-- 战报卡片 (ShareCardModal)：Canvas 生成分享海报
-- 海报内容：预测详情 + 赔率 + 国旗/队徽视觉图 + 专属 QR 码
+#### 3.2.3 交互流
+1. 点击大卡片 → **ChooseSideDrawer** → **ConfirmModal** → TxOverlay
 
-### 3.3 搜索 (Search)
+### 3.3 发现 (Discover Tab → `ChallengePage`)
 
 #### 3.3.1 功能定义
-全局球队/赛事快速搜索入口。
+Compass「发现」Tab：Tinder 式 **左右划动** 单场对阵卡片，低门槛探索下注。
 
 #### 3.3.2 UI 结构
+- 全屏轮播 `CarouselCard`：大圆圈国旗、胜平负赔率、市场池、底部三键下注
+- 左右切换更多场次；加载态为与卡片布局对齐的 **内联骨架屏**（见 `ChallengePage`）
+
+#### 3.3.3 分享功能
+- 战报卡片 (ShareCardModal)：Canvas 生成分享海报
+
+### 3.4 搜索 (Search)
+
+#### 3.4.1 功能定义
+全局球队/赛事快速搜索入口。
+
+#### 3.4.2 UI 结构
 - **搜索框**：顶部常驻，支持中英文模糊搜索
 - **热门推荐**：空闲态展示热门赛事/球队快捷入口
 - **搜索结果**：实时匹配 Polymarket API 返回结果，以卡片列表形式展示
 - **详情进入**：点击搜索结果卡片可直接展开投注操作
 - **加载态**：结构化骨架反馈
-
-### 3.4 排行 (Leaderboard)
-
-#### 3.4.1 功能定义
-展示平台用户的收益排行榜，提供"跟单大神"的社交激励。
-
-#### 3.4.2 当前状态
-> ⚠️ **待重构**：当前为基础占位页面，计划重构为完整的排行系统。
-
-#### 3.4.3 规划功能
-- 收益榜 / 胜率榜 / 连胜榜 多维度排名
-- 查看大神预测详情和跟单
-- 个人排名及排名变化趋势
 
 ### 3.5 我的 (Profile)
 
@@ -137,7 +124,7 @@
 #### 3.5.2 未登录状态
 - 居中登录引导页："连接进入预测场" + 大按钮"登录"
 
-#### 3.5.3 已登录状态 — 五大 Tab
+#### 3.5.3 已登录状态 — 六大 Tab
 | Tab | 名称 | 功能 |
 |---|---|---|
 | `stats` | 总览 | 总净盈亏、总投入/总收入、当前持仓汇总（总本金/总价值/浮动盈亏）、分类盈亏条形图 |
@@ -145,13 +132,14 @@
 | `orders` | 挂单 | 未成交的限价订单列表，支持取消操作 |
 | `history` | 战绩 | 已结算的历史交易记录，按赛事展示胜率和盈亏 |
 | `transactions` | 明细 | 全部交易流水（入账、出账、兑现），按时间倒序展示 |
+| `funds` | 资金 | **链上充提列表**（非 CLOB 交易明细）：激活 Tab 时请求 `movements-live`，展示 proxy 上 pUSD/USDC.e 充值/提现标签、美元金额、时间；**无手动刷新**；数据源 Etherscan live，**不入 Neon 流水表**（见 ADR-0008） |
 
 #### 3.5.4 加载策略
 - 所有 Tab 统一使用骨架屏过渡
 - "总览"使用 `ProfileOverviewSkeleton`（三联卡片骨架）
 - "持仓/挂单/战绩"使用 `ProfileCardSkeleton`（通用卡片骨架）
-- "明细"使用 `ProfileTransactionSkeleton`（单行流骨架）
-- 空态文字（如"暂无历史战绩"）仅在数据请求完毕且结果为空时才展示
+- "明细"与"资金"使用 `ProfileTransactionSkeleton`（单行流骨架）
+- 空态文字（如"暂无历史战绩"、"暂无充提记录"）仅在数据请求完毕且结果为空时才展示
 
 #### 3.5.5 分享功能
 - 持仓分享卡片 (PositionShareCard)
@@ -172,10 +160,10 @@
 ### 4.1 用户认证流程
 1. 使用 **Privy** 社交/邮箱登录（默认：邮箱、Google、X/Twitter、GitHub；**不含** MetaMask / WalletConnect 登录入口）
 2. **Telegram** 登录代码已实现，弹窗入口默认关闭（`NEXT_PUBLIC_ENABLE_TELEGRAM_LOGIN=true` 可启用）
-3. 登录后自动创建/恢复 Polygon 链上嵌入式钱包
+3. 登录后由应用层 `createWallet()` 创建/恢复 Polygon Embedded 钱包（Privy `createOnLogin` 已关闭，见 ADR-0005 §6 修订）
 4. 自动向 Polymarket CLOB 服务注册 API Key（签名授权）
-5. 建立 Proxy Wallet 代理关系
-6. 全程免 Gas（Polymarket 代付）
+5. 建立 **Deposit Wallet（交易金库）** 关系：Privy EOA 签名，链上 funder 为 Polymarket Deposit Wallet（CLOB type 3）；详见 ADR-0006
+6. 全程免 Gas（Polymarket Relayer 代付链上批次）
 
 ### 4.2 下单交易流程
 1. 用户选择预测方向 → 确认弹窗展示赔率和预期收益
@@ -206,10 +194,10 @@
 #### 4.4.2 提现 (WithdrawDrawer)
 
 - **入口**：顶栏资金菜单 → 提现。
-- **表单**：选择 Receive token / chain（白名单联动）、收款地址（可一键填入已连接钱包）、金额；展示费用明细与网络费说明。
-- **执行**：用户确认后获取 Bridge 报价并发起提现；轮询状态（含失败提示、约 2 分钟超时与重试查询）；进行中禁用重复提交；完成后展示成功态并可重置表单。
+- **表单**：到账固定 **Polygon · PUSD**（只读）；用户填写 **收款地址**（external 会话可一键填入已连接钱包）、**金额**；展示 Uniswap 换币引导（需 USDC 等时自行兑换）。
+- **执行**：`POST /withdraw` 创建 bridge 入金地址 → `ensureTradingVaultDeployed` → relayer 以 **Deposit Wallet** batch 转 pUSD 至 bridge → `/status` 轮询（含失败提示、约 2 分钟超时与重试）；进行中禁用重复提交；完成后展示成功态。
 
-工程细节与白名单规则见 `CONTEXT.md` 与 `docs/adr/`。
+工程细节见 `CONTEXT.md` 与 `docs/adr/`。
 
 ---
 
@@ -222,7 +210,7 @@
 | **页面可见性** | 利用 Page Visibility API，后台暂停轮询以节省资源 |
 | **缓存与原子化** | SWR 去重 + 模块级缓存；针对 Tick Size & 赔率 API 存在竞态条件的问题，通过原子化的服务端请求和精准拦截，彻底消除价格跳动与滑点失败 |
 | **交易延迟** | 下单弹窗内使用高频轮询（3 秒）确保买卖盘赔率即时准确 |
-| **布局稳定** | 严禁 Layout Shift；搭建原子 `Skeleton` 库，涵盖 Discover、Profile 的全部页面，无缝过渡 |
+| **布局稳定** | 严禁 Layout Shift；原子 `Skeleton` 覆盖首页赛程、挑战 Tab（DiscoverPage）、发现 Tab（ChallengePage）、Profile 等 |
 | **持仓数据透传** | 通过全局 Data Hook 贯穿整个组件树，用户的 Size 和 Avg Price 直观显示在任何卡片顶部 |
 | **离线容错** | 弱网环境显示最后一次成功的缓存数据 |
 
@@ -246,7 +234,7 @@
 | 样式 | Tailwind CSS v4 |
 | 动画 | Framer Motion (motion/react) |
 | 数据 | SWR |
-| 链上 | ethers.js v5 + Polymarket CLOB Client |
+| 链上 | ethers.js v5 + `@polymarket/clob-client-v2` + Builder Relayer（Deposit Wallet） |
 | 认证 | Privy (嵌入式钱包 + 社交登录) |
 | 图表 | Recharts |
 | 图标 | Lucide React |

@@ -290,6 +290,7 @@ const en: TranslationKeys = {
     orders: 'Orders',
     history: 'History',
     transactions: 'Transactions',
+    funds: 'Funds',
     totalPnl: 'Total P&L',
     totalInvested: 'Total Invested',
     totalReturned: 'Total Returned',
@@ -357,6 +358,9 @@ const en: TranslationKeys = {
     txRedeem: 'Rdm',
     txArchive: 'Arch',
     txOther: 'Other',
+    txDeposit: 'Deposit',
+    txWithdraw: 'Withdraw',
+    fundsEmpty: 'No deposit or withdrawal records yet',
   },
 
   // ─── Challenge Page ───
@@ -428,7 +432,9 @@ const en: TranslationKeys = {
     withdraw: 'Withdraw',
     withdrawing: 'Processing…',
     submitted: 'Withdrawal initiated',
-    completed: 'Withdrawal completed',
+    completedPusd: 'PUSD withdrawal completed',
+    pusdDirectHint: 'Withdrawals send pUSD on Polygon to your wallet. To get USDC or other tokens, swap on',
+    pusdDirectHintSuffix: '.',
     processing: 'Processing…',
     userRejected: 'Withdrawal request cancelled',
     noWallet: 'No connected wallet',

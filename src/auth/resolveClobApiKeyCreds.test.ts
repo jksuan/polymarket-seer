@@ -78,4 +78,26 @@ describe("resolveClobApiKeyCreds", () => {
     expect(deriveApiKey).not.toHaveBeenCalled();
     expect(createApiKey).not.toHaveBeenCalled();
   });
+
+  it("用户拒绝 derive 签名时返回 userRejected 且不尝试 create", async () => {
+    const deriveApiKey = vi.fn().mockRejectedValue(new Error("User rejected the request"));
+    const createApiKey = vi.fn();
+
+    const result = await resolveClobApiKeyCreds({
+      walletAddress: "0xdddd",
+      getCachedCreds: () => null,
+      clearCachedCredsForWallet: vi.fn(),
+      setCachedCreds: vi.fn(),
+      switchChain: vi.fn(),
+      clobClient: { deriveApiKey, createApiKey },
+      hasAttemptedDerive: false,
+      markDeriveAttempted: vi.fn(),
+    });
+
+    expect(result.creds).toBeNull();
+    expect(result.hasCreds).toBe(false);
+    expect(result.userRejected).toBe(true);
+    expect(deriveApiKey).toHaveBeenCalledTimes(1);
+    expect(createApiKey).not.toHaveBeenCalled();
+  });
 });

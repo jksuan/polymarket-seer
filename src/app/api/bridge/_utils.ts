@@ -70,6 +70,29 @@ export function createRequestId(): string {
   return `req_${Date.now()}_${Math.random().toString(36).slice(2)}`;
 }
 
+/** Bridge 上游请求头；配置 POLY_BUILDER_CODE 时附带 X-Builder-Code（开发者码）。 */
+export function buildBridgeUpstreamHeaders(
+  init?: HeadersInit
+): Record<string, string> {
+  const headers: Record<string, string> = {
+    Accept: "application/json",
+  };
+
+  const builderCode = process.env.POLY_BUILDER_CODE?.trim();
+  if (builderCode) {
+    headers["X-Builder-Code"] = builderCode;
+  }
+
+  if (init) {
+    const extra = new Headers(init);
+    extra.forEach((value, key) => {
+      headers[key] = value;
+    });
+  }
+
+  return headers;
+}
+
 export function successResponse<T>(
   data: T,
   requestId: string,
@@ -179,9 +202,8 @@ export async function bridgeFetch<T>(
     const response = await fetch(`${BRIDGE_API_BASE_URL}${path}`, {
       ...init,
       headers: {
-        Accept: "application/json",
+        ...buildBridgeUpstreamHeaders(init?.headers),
         ...(init?.body ? { "Content-Type": "application/json" } : {}),
-        ...init?.headers,
       },
       cache: "no-store",
       signal: controller.signal,

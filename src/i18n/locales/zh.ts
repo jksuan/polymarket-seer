@@ -289,6 +289,7 @@ const zh = {
     orders: '挂单',
     history: '战绩',
     transactions: '明细',
+    funds: '资金',
     totalPnl: '总净盈亏',
     totalInvested: '总投入',
     totalReturned: '总收入',
@@ -356,6 +357,9 @@ const zh = {
     txRedeem: '兑换',
     txArchive: '归档',
     txOther: '其他',
+    txDeposit: '充值',
+    txWithdraw: '提现',
+    fundsEmpty: '暂无充提记录',
   },
 
   // ─── 挑战页 ───
@@ -428,7 +432,9 @@ const zh = {
     withdraw: '提现',
     withdrawing: '处理中…',
     submitted: '已发起提现',
-    completed: '提现已完成',
+    completedPusd: 'PUSD 提现已完成',
+    pusdDirectHint: '提现将发送 Polygon 上的 pUSD 到您的钱包。如需 USDC 等其他代币，请前往',
+    pusdDirectHintSuffix: ' 兑换。',
     processing: '处理中…',
     userRejected: '提现请求被取消',
     noWallet: '未找到已连接钱包',

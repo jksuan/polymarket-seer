@@ -1,20 +1,20 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
 import {
-
   buildLegacyUsdcWrapRelayBatch,
-
+  buildPusdTradingApprovalRelayBatch,
   ensureProxyCollateralSynced,
-
   formatCollateralBalanceFromAtomicUnits,
-
+  getExchangeSpenderForMarket,
+  getRequiredErc1155OperatorsForMarket,
+  getRequiredPusdSpendersForMarket,
   parseCollateralAtomicUnits,
-
   resetCollateralWrapStateForTests,
-
   syncAndGetClobCollateralAllowance,
-
+  TRADING_APPROVAL_SPENDERS,
 } from "./collateralBalance";
+
+import { ADDRESSES } from "@/lib/constants";
 
 
 
@@ -129,6 +129,56 @@ describe("collateralBalance", () => {
   });
 
 
+
+  it("CLOB=0 且 proxy 有 pUSD 时经 relayer approve 后返回 sync 余额", async () => {
+    let clobBalance = "0";
+    const updateBalanceAllowance = vi.fn(async () => {});
+    const getBalanceAllowance = vi.fn(async () => ({ balance: clobBalance }));
+    const clobClient = { updateBalanceAllowance, getBalanceAllowance };
+
+    const execute = vi.fn(async () => {
+      clobBalance = "3000000";
+    });
+
+    const result = await ensureProxyCollateralSynced({
+      clobClient,
+      provider: {} as any,
+      proxyAddress: TEST_PROXY,
+      relayExecutor: { execute },
+      readUsdcEAtomic: async () => 0n,
+      readPusdAtomic: async () => 3_000_000n,
+    });
+
+    expect(execute).toHaveBeenCalledOnce();
+    expect(result.balanceAtomic).toBe(3000000n);
+  });
+
+  it("buildPusdTradingApprovalRelayBatch 包含 CTF Exchange V2 spenders", () => {
+    const batch = buildPusdTradingApprovalRelayBatch();
+    expect(batch).toHaveLength(TRADING_APPROVAL_SPENDERS.length);
+    expect(TRADING_APPROVAL_SPENDERS).toContain(ADDRESSES.CTF_EXCHANGE_V2);
+    expect(batch.every((tx) => tx.to === ADDRESSES.pUSD)).toBe(true);
+  });
+
+  it("getExchangeSpenderForMarket 返回 CLOB 实际校验的 spender", () => {
+    expect(getExchangeSpenderForMarket(false)).toBe(ADDRESSES.CTF_EXCHANGE_V2);
+    expect(getExchangeSpenderForMarket(true)).toBe(ADDRESSES.NEG_RISK_ADAPTER);
+  });
+
+  it("getRequiredPusdSpendersForMarket Neg Risk 含 Adapter 与 Exchange V2", () => {
+    expect(getRequiredPusdSpendersForMarket(true)).toEqual([
+      ADDRESSES.NEG_RISK_ADAPTER,
+      ADDRESSES.NEG_RISK_CTF_EXCHANGE_V2,
+    ]);
+  });
+
+  it("getRequiredErc1155OperatorsForMarket Neg Risk 含 Adapter 与 Exchange V2", () => {
+    expect(getRequiredErc1155OperatorsForMarket(true)).toEqual([
+      ADDRESSES.NEG_RISK_ADAPTER,
+      ADDRESSES.NEG_RISK_CTF_EXCHANGE_V2,
+    ]);
+    expect(getRequiredErc1155OperatorsForMarket(false)).toEqual([ADDRESSES.CTF_EXCHANGE_V2]);
+  });
 
   it("CLOB 已有余额时不触发 wrap", async () => {
 

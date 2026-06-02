@@ -3,7 +3,7 @@ import zh from "@/i18n/locales/zh";
 
 export type WithdrawFlowMessages = {
   submitted: string;
-  completed: string;
+  completedPusd: string;
   processing: string;
   failed: string;
   userRejected: string;
@@ -19,7 +19,7 @@ export function getWithdrawFlowMessages(locale: string): WithdrawFlowMessages {
   const wf = locale === "zh" ? zh.withdrawFlow : en.withdrawFlow;
   return {
     submitted: wf.submitted,
-    completed: wf.completed,
+    completedPusd: wf.completedPusd,
     processing: wf.processing,
     failed: wf.failed,
     userRejected: wf.userRejected,

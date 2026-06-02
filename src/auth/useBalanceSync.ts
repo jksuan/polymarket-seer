@@ -2,14 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ethers } from "ethers";
-import { ClobClient } from "@polymarket/clob-client";
-import { deriveSafe } from "@polymarket/builder-relayer-client/dist/builder/derive";
 
 import {
   POLYGON_CHAIN_ID,
-  CLOB_API_URL,
-  SAFE_FACTORY_POLYGON,
-  SIGNATURE_TYPE_GNOSIS_SAFE,
 } from "@/lib/constants";
 import {
   getCachedCreds,
@@ -18,13 +13,19 @@ import {
 } from "@/lib/utils";
 import { selectPrimaryWallet } from "@/lib/primaryWallet";
 import { isValidApiKeyCreds } from "@/lib/clobApiKeyCreds";
+import { createClobClient } from "@/lib/clobClientFactory";
 import { resolveClobApiKeyCreds } from "@/auth/resolveClobApiKeyCreds";
 import { readUsdcBalanceDisplay } from "@/auth/readUsdcBalanceDisplay";
 import {
   ensureProxyCollateralSynced,
   type ClobCollateralClient,
 } from "@/auth/collateralBalance";
-import { createSafeRelayExecutor } from "@/auth/safeRelayExecutor";
+import { createDepositRelayExecutor } from "@/auth/depositRelayExecutor";
+import {
+  createTradingRelayClient,
+  ensureDepositVaultDeployed,
+  resolveTradingVault,
+} from "@/auth/vault";
 import { isEmbeddedWalletUnavailableError, walletListFingerprint } from "@/lib/accountSwitchGuard";
 
 /** 首次进入后拉余额的最大尝试次数（含第一次） */
@@ -50,6 +51,8 @@ export type UseBalanceSyncParams = {
   awaitingEmbeddedWalletSync: boolean;
   /** embedded 钱包对象失效（换账号残留）时由上层重同步 / createWallet */
   onEmbeddedWalletUnavailable?: () => void;
+  /** 用户取消 ClobAuth 签名时由上层回滚 Privy 会话 */
+  onClobAuthRejected?: () => void;
   setStickyExternalWalletClientType: (value: string | null) => void;
   setHasCreds: (value: boolean) => void;
   setWalletAddress: (value: string) => void;
@@ -66,6 +69,7 @@ export function useBalanceSync({
   preferEmbeddedForPrimaryWallet,
   awaitingEmbeddedWalletSync,
   onEmbeddedWalletUnavailable,
+  onClobAuthRejected,
   setStickyExternalWalletClientType,
   setHasCreds,
   setWalletAddress,
@@ -84,8 +88,11 @@ export function useBalanceSync({
   const fetchBalanceRef = useRef<((showLoading?: boolean) => Promise<boolean>) | null>(null);
   const initialLoadKeyRef = useRef<string | null>(null);
   const prevAwaitingEmbeddedSyncRef = useRef(awaitingEmbeddedWalletSync);
+  const clobAuthRejectedHandledRef = useRef(false);
+  const onClobAuthRejectedRef = useRef(onClobAuthRejected);
 
   awaitingEmbeddedWalletSyncRef.current = awaitingEmbeddedWalletSync;
+  onClobAuthRejectedRef.current = onClobAuthRejected;
 
   const walletsFingerprint = walletListFingerprint(wallets);
   const initialLoadKey = `${privyUserId ?? ""}:${walletsFingerprint}:${userWalletAddress ?? ""}`;
@@ -115,6 +122,7 @@ export function useBalanceSync({
     setIsRefreshingBalance(false);
     isFetchingBalanceRef.current = false;
     hasTriedDeriveCredsRef.current = false;
+    clobAuthRejectedHandledRef.current = false;
     stopSilentRefresh();
     if (fetchBalanceTimerRef.current) {
       clearTimeout(fetchBalanceTimerRef.current);
@@ -125,7 +133,13 @@ export function useBalanceSync({
 
   const fetchBalance = useCallback(
     async (showLoading = false): Promise<boolean> => {
-      if (isFetchingBalanceRef.current || !authenticated || !wallets || wallets.length === 0) {
+      if (
+        isFetchingBalanceRef.current ||
+        !authenticated ||
+        !wallets ||
+        wallets.length === 0 ||
+        clobAuthRejectedHandledRef.current
+      ) {
         return false;
       }
 
@@ -157,16 +171,16 @@ export function useBalanceSync({
         const ethereumProvider = await wallet.getEthereumProvider();
         const provider = new ethers.providers.Web3Provider(ethereumProvider as any);
         const signer = provider.getSigner();
-        const clobClient = new ClobClient(CLOB_API_URL, POLYGON_CHAIN_ID, signer as any);
+        const clobClient = createClobClient({ signer: signer as never });
 
-        const derivedProxy = deriveSafe(wallet.address, SAFE_FACTORY_POLYGON);
-        setProxyAddress(derivedProxy);
+        const vault = await resolveTradingVault(signer);
+        setProxyAddress(vault.address);
 
         if (!getCachedCreds(wallet.address)) {
           await new Promise((r) => setTimeout(r, 200));
         }
 
-        const { creds, hasCreds: resolvedHasCreds } = await resolveClobApiKeyCreds({
+        const { creds, hasCreds: resolvedHasCreds, userRejected } = await resolveClobApiKeyCreds({
           walletAddress: wallet.address,
           getCachedCreds,
           clearCachedCredsForWallet,
@@ -178,6 +192,16 @@ export function useBalanceSync({
             hasTriedDeriveCredsRef.current = true;
           },
         });
+
+        if (userRejected) {
+          clobAuthRejectedHandledRef.current = true;
+          setHasCreds(false);
+          setWalletAddress("");
+          setProxyAddress(null);
+          onClobAuthRejectedRef.current?.();
+          return false;
+        }
+
         setHasCreds(resolvedHasCreds);
 
         const validCreds = isValidApiKeyCreds(creds) ? creds : null;
@@ -187,19 +211,23 @@ export function useBalanceSync({
             if (!validCreds) {
               return { balanceAtomic: BigInt(0), readOk: false };
             }
-            const clobWithCreds = new ClobClient(
-              CLOB_API_URL,
-              POLYGON_CHAIN_ID,
-              signer as any,
-              validCreds,
-              SIGNATURE_TYPE_GNOSIS_SAFE,
-              derivedProxy
-            );
-            const relayExecutor = createSafeRelayExecutor(signer);
+            const clobWithCreds = createClobClient({
+              signer: signer as never,
+              creds: validCreds,
+              funderAddress: vault.address,
+              signatureType: vault.signatureType,
+            });
+            const relayClient = createTradingRelayClient(signer);
+            try {
+              await ensureDepositVaultDeployed(relayClient, vault.address);
+            } catch (deployErr) {
+              console.warn("[余额] Deposit Wallet 部署检查失败", deployErr);
+            }
+            const relayExecutor = createDepositRelayExecutor(signer, vault.address);
             const { balanceAtomic } = await ensureProxyCollateralSynced({
               clobClient: clobWithCreds as ClobCollateralClient,
               provider,
-              proxyAddress: derivedProxy,
+              proxyAddress: vault.address,
               relayExecutor,
             });
             return { balanceAtomic, readOk: true };
@@ -234,6 +262,7 @@ export function useBalanceSync({
       stickyExternalWalletClientType,
       preferEmbeddedForPrimaryWallet,
       onEmbeddedWalletUnavailable,
+      onClobAuthRejected,
       setStickyExternalWalletClientType,
       setHasCreds,
       setWalletAddress,
@@ -272,6 +301,7 @@ export function useBalanceSync({
 
         let ok = false;
         for (let attempt = 0; attempt < BALANCE_INITIAL_MAX_ATTEMPTS && !ok && !cancelled; attempt += 1) {
+          if (clobAuthRejectedHandledRef.current) break;
           ok = await runFetch(false);
           if (ok || cancelled) break;
           const backoffMs = Math.min(1000 * 2 ** attempt, 8000);

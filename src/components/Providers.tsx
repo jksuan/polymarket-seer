@@ -63,7 +63,8 @@ export default function Providers({ children }: { children: React.ReactNode }) {
         loginMethods: [...resolveEmbeddedLoginMethods()],
         embeddedWallets: {
           ethereum: {
-            createOnLogin: "users-without-wallets",
+            // 由 PolymarketAuthContext.ensureEmbeddedWalletForUser 统一创建，避免与 createOnLogin 竞态导致双钱包及 Privy 内置开户屏崩溃
+            createOnLogin: "off",
           },
         },
         appearance: {

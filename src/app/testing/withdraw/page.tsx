@@ -25,14 +25,6 @@ export default function WithdrawTestPage() {
       {entered ? (
         <div className="max-w-md">
           <WithdrawFormStep c={c as never} />
-          <button
-            type="button"
-            data-testid="refresh-quote"
-            onClick={c.refreshQuote}
-            className="mt-3 rounded-md border border-white/20 px-3 py-2 text-xs"
-          >
-            Mock quote refresh
-          </button>
         </div>
       ) : null}
     </main>

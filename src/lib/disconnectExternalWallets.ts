@@ -1,6 +1,6 @@
 type DisconnectableWallet = {
   walletClientType?: string;
-  disconnect?: () => Promise<void>;
+  disconnect?: () => void | Promise<void>;
 };
 
 export async function disconnectExternalWallets(
@@ -13,7 +13,7 @@ export async function disconnectExternalWallets(
       .filter((w) => w.walletClientType && w.walletClientType !== "privy")
       .map(async (w) => {
         try {
-          await w.disconnect?.();
+          await Promise.resolve(w.disconnect?.());
         } catch (err) {
           console.warn("[退出登录] 断开外链失败:", w.walletClientType, err);
         }

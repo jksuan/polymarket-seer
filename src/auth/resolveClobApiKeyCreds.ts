@@ -1,5 +1,5 @@
 import { isValidApiKeyCreds, type ClobApiKeyCredsLike } from "@/lib/clobApiKeyCreds";
-import { isPermanentClobFailure, isUserRejection } from "./clobCredentialErrors";
+import { isUserRejection } from "./clobCredentialErrors";
 
 export type ValidClobApiKeyCreds = {
   key: string;
@@ -26,6 +26,13 @@ export type ResolveClobApiKeyCredsParams = {
 export type ResolveClobApiKeyCredsResult = {
   creds: ValidClobApiKeyCreds | null;
   hasCreds: boolean;
+  /** 用户主动取消 ClobAuth EIP-712 签名 */
+  userRejected?: boolean;
+};
+
+type DeriveOrCreateResult = {
+  creds: ValidClobApiKeyCreds | null;
+  userRejected: boolean;
 };
 
 function loadSanitizedCachedCreds(
@@ -41,34 +48,37 @@ function loadSanitizedCachedCreds(
   return creds;
 }
 
-async function tryCreateApiKey(
-  clobClient: ClobApiKeyClient
-): Promise<ValidClobApiKeyCreds | null> {
+async function tryCreateApiKey(clobClient: ClobApiKeyClient): Promise<DeriveOrCreateResult> {
   try {
     const created = await clobClient.createApiKey();
-    return isValidApiKeyCreds(created) ? created : null;
-  } catch {
-    return null;
+    return {
+      creds: isValidApiKeyCreds(created as ClobApiKeyCredsLike | null | undefined)
+        ? (created as ValidClobApiKeyCreds)
+        : null,
+      userRejected: false,
+    };
+  } catch (err) {
+    return {
+      creds: null,
+      userRejected: isUserRejection(err),
+    };
   }
 }
 
 async function deriveOrCreateApiKey(
   clobClient: ClobApiKeyClient,
   switchChain: () => Promise<void>
-): Promise<ValidClobApiKeyCreds | null> {
+): Promise<DeriveOrCreateResult> {
   await switchChain();
   try {
     const derived = await clobClient.deriveApiKey();
-    if (isValidApiKeyCreds(derived)) {
-      return derived;
+    if (isValidApiKeyCreds(derived as ClobApiKeyCredsLike | null | undefined)) {
+      return { creds: derived as ValidClobApiKeyCreds, userRejected: false };
     }
     return tryCreateApiKey(clobClient);
   } catch (deriveErr) {
     if (isUserRejection(deriveErr)) {
-      return null;
-    }
-    if (isPermanentClobFailure(deriveErr)) {
-      return tryCreateApiKey(clobClient);
+      return { creds: null, userRejected: true };
     }
     return tryCreateApiKey(clobClient);
   }
@@ -100,9 +110,12 @@ export async function resolveClobApiKeyCreds(
   if (!creds && !hasAttemptedDerive) {
     markDeriveAttempted();
     const resolved = await deriveOrCreateApiKey(clobClient, switchChain);
-    if (isValidApiKeyCreds(resolved)) {
-      setCachedCreds(walletAddress, resolved);
-      return { creds: resolved, hasCreds: true };
+    if (resolved.userRejected) {
+      return { creds: null, hasCreds: false, userRejected: true };
+    }
+    if (isValidApiKeyCreds(resolved.creds)) {
+      setCachedCreds(walletAddress, resolved.creds);
+      return { creds: resolved.creds, hasCreds: true };
     }
     return { creds: null, hasCreds: false };
   }
