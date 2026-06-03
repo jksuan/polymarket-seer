@@ -34,7 +34,7 @@ const bannerData = [
     color1: '#ADFF2F',
     color2: '#00FF00',
     icon: <Flame size={18} color="#ADFF2F" />,
-    image: '/images/worldcup.png',
+    image: '/images/worldcup2.png',
   },
 ];
 
