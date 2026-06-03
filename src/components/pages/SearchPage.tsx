@@ -27,7 +27,7 @@ const HOT_TOPIC_KEYS = [
   { keyword: 'Mbappe', labelKey: 'topicMbappe' as const, icon: User },
   { keyword: 'Ronaldo', labelKey: 'topicRonaldo' as const, icon: User },
   { keyword: 'World Cup Winner', labelKey: 'topicChampion' as const, icon: Trophy },
-  { keyword: 'Golden Boot', labelKey: 'topicGoldenBoot' as const, icon: TrendingUp },
+  { keyword: 'Top Goalscorer', labelKey: 'topicGoldenBoot' as const, icon: TrendingUp },
 ];
 
 // ═══════════════════════════════════════════════════
