@@ -1,6 +1,6 @@
 # Crazy Fox — 工程架构文档 (ARCHITECTURE)
 
-> **版本**：v1.8 · 最后更新：2026-05-31
+> **版本**：v1.9 · 最后更新：2026-06-03
 > **技术栈**：Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS v4 · SWR · ethers.js · Privy
 
 ## 文档维护边界
@@ -41,7 +41,7 @@ polymarket-seer/
 │   │   ├── testing/                # 开发联调页（生产默认关闭，见 README）
 │   │   ├── c/[id]/                 # 动态路由：分享卡片详情页
 │   │   ├── globals.css             # 全局样式（Tailwind + 自定义）
-│   │   ├── layout.tsx              # 根布局（HTML head、字体、Providers、i18n initialLocale）
+│   │   ├── layout.tsx              # 根布局（Inter 全局字体、Geist Mono、Providers、i18n initialLocale）
 │   │   └── page.tsx                # ★ 应用主入口（SPA 路由控制器）
 │   │
 │   ├── components/                 # 组件库
@@ -58,18 +58,18 @@ polymarket-seer/
 │   │   │   ├── discover/DiscoverPageSkeleton.tsx # 挑战 Tab 加载骨架屏
 │   │   │   ├── HomePage.tsx        # 首页：赛程/积分榜/射手榜/趣味投注
 │   │   │   ├── ChallengePage.tsx   # 发现 Tab：Tinder 式划动对阵卡片
-│   │   │   ├── SearchPage.tsx      # 搜索页（全局搜索入口）
+│   │   │   ├── SearchPage.tsx      # 搜索页（赛程/趣味投注；热门词含 Top Goalscorer）
 │   │   │   ├── LeaderboardPage.tsx # 排行页（待重构）
 │   │   │   ├── ProfilePage.tsx     # 个人中心（Tab 容器：总览/持仓/挂单/战绩/明细/资金）
 │   │   │   └── profile/            # 个人中心子页面
-│   │   │       ├── ProfileOverview.tsx      # 总览 Tab（盈亏统计+持仓摘要+分类图表）
+│   │   │       ├── ProfileOverview.tsx      # 总览 Tab（盈亏统计+持仓摘要；分类盈亏图已下架）
 │   │   │       ├── ProfilePositions.tsx     # 持仓 Tab（当前头寸列表）
-│   │   │       ├── ProfileOrders.tsx        # 挂单 Tab（未成交订单列表）
+│   │   │       ├── ProfileOrders.tsx        # 挂单 Tab（未成交订单；无 Expires 列，目标概率居中）
 │   │   │       ├── ProfileHistory.tsx       # 战绩 Tab（已结算交易）
 │   │   │       ├── ProfileTransactions.tsx  # 明细 Tab（全部交易流水）
-│   │   │       ├── ProfileFunds.tsx         # 资金 Tab（Etherscan live 充提列表）
-│   │   │       ├── CategoryPnlChart.tsx     # 分类盈亏条形图组件
-│   │   │       ├── useProfileStats.ts       # 总览数据计算 Hook
+│   │   │       ├── ProfileFunds.tsx         # 资金 Tab（Etherscan live 充提；激活 Tab 拉取；i18n 标签）
+│   │   │       ├── CategoryPnlChart.tsx     # 分类盈亏条形图（已下架，文件保留）
+│   │   │       ├── useProfileStats.ts       # 总览盈亏/持仓汇总 Hook
 │   │   │       ├── useProfileHistory.ts     # 战绩数据处理 Hook
 │   │   │       ├── useProfileTransactions.ts # 明细数据处理 Hook
 │   │   │       ├── useProfileFunds.ts       # 资金 Tab 数据 Hook
@@ -89,8 +89,8 @@ polymarket-seer/
 │   │       ├── DiscoverCard.tsx    # ★ 聚合发现流组件集合包 (包含 Champion/Trending/Split/Underdog)
 │   │       ├── CategoryTabs.tsx    # 分类导航标签
 │   │       ├── SubTabs.tsx         # 子标签栏（首页二级导航）
-│   │       ├── BannerCarousel.tsx  # 轮播图（首页横幅）
-│   │       ├── MatchCard.tsx       # 比赛卡片 + MatchCardSkeleton
+│   │       ├── BannerCarousel.tsx  # 首页轮播（世界杯/金靴两屏；i18n 标题副标题）
+│   │       ├── MatchCard.tsx       # 比赛卡片（Home/Search 共用；英文无 Kickoff、VOL 标签）
 │   │       ├── OutrightCard.tsx    # 趣味投注卡片 + OutrightCardSkeleton
 │   │       ├── MarketCard.tsx      # 通用市场卡片
 │   │       ├── BinaryOutrightCard.tsx # 二元/Outright 市场卡片
@@ -346,9 +346,11 @@ polymarket-seer/
 | **充值 · Connected** | 已连接钱包 → 选资产 / 金额 → 确认 | EVM / SVM 执行引擎分流；报价经 `/api/dln/*`；失败可回退 Transfer |
 | **充值 · Transfer** | 链上转入 | 自动创建 `Deposit Address`；`/api/bridge/status` 轮询；会话基线过滤历史终态 |
 | **提现** | 收款地址、金额（到账固定 Polygon · PUSD） | `POST /withdraw` → `ensureTradingVaultDeployed` → Deposit Wallet batch 转 pUSD → `/status` 轮询 |
-| **Profile · 资金 Tab** | 我的 → **资金** | 激活 Tab 时 `GET /api/funds/movements-live`；Etherscan `tokentx` 分类充提；**无刷新按钮**；**不写** `funds_movements`；登录后 `PUT /api/funds/wallet` 仅登记 `user_wallets` |
+| **Profile · 资金 Tab** | 我的 → **资金** | 激活 Tab 时 `GET /api/funds/movements-live`（`isActive` 触发，刷新停留 Tab 亦拉取）；Etherscan `tokentx` 分类充提；**无刷新按钮**；**不写** `funds_movements`；登录后 `PUT /api/funds/wallet` 仅登记 `user_wallets` |
 
 Bridge 代理上游请求可附带 `X-Builder-Code`（env `POLY_BUILDER_CODE`，开发者码；与 Relayer HMAC 三件套不同）。**Bridge `/status` 终态不写入 Neon**（ADR-0008）。
+
+**提现文案**：执行层仍为 Polygon pUSD `transfer` 至 Bridge；到账 token 由 Bridge 兑付决定（可能为 USDC/USDC.e 等），UI 已说明并可选 Jumper 引导。
 
 `isEvmSignerReady` 为 false 时顶栏禁用资金入口并展示说明条（见 `docs/superpowers/specs/2026-05-12-evm-wallet-readiness-design.md`）。
 
@@ -359,7 +361,7 @@ Bridge 代理上游请求可附带 `X-Builder-Code`（env `POLY_BUILDER_CODE`，
 | 功能 | 实现方式 |
 |---|---|
 | **账户数据获取** | SWR 集成，以 `[proxyAddress, walletAddress]` 为 Key，15 秒自动轮询 |
-| **市价下单** | `handlePlaceRealBet()` → 部署 Deposit Wallet → pUSD/ERC1155 授权 → CLOB V2 市价单 |
+| **市价下单** | `handlePlaceRealBet()` → 部署 Deposit Wallet → pUSD/ERC1155 授权 → CLOB V2 市价单（**待**下单前 Geoblock，见 GitHub #17） |
 | **限价卖出** | `handleLimitSellPosition()` → ERC1155 授权 → CLOB V2 限价卖单 |
 | **市价卖出** | `handleSellPosition()` → ERC1155 授权 → CLOB V2 FOK 卖单 |
 | **兑现/归档** | `handleRedeem()` → Deposit Wallet batch 经 Relayer 执行链上 redeem |
@@ -401,7 +403,9 @@ Bridge 代理上游请求可附带 `X-Builder-Code`（env `POLY_BUILDER_CODE`，
 
 4. **全球化自适应渲染 (i18n Engine)**
    - 基于纯 Context 打造了轻量级、完全类型安全的国际化引擎字典 (`zh.ts` 与 `en.ts`)。
+   - **全局字体**：`layout.tsx` 经 `next/font` 加载 **Inter**（`--font-inter`），`globals.css` 将历史内联 `fontFamily: Inter` 对齐；`Geist Mono` 仅用于 `font-mono`。
    - **SSR 对齐**：`layout.tsx` 读 Cookie `seer_locale` → `AppI18nShell` → `I18nProvider initialLocale`；客户端 `setLocale` 同步写 Cookie + localStorage。
+   - **首页轮播**：`BannerCarousel` 两屏（世界杯 / 金靴），文案走 `home.banner*` i18n；图片 `worldcup.png` / `worldcup2.png`。
    - 实现了特殊的 `countryNames.ts` 翻译器，确保由于 API 返回的原生国家名称（甚至特殊变体如 `BIH/ITA/NIR/WAL`）可以无缝、原子化地翻译，不再出现中英混杂硬编码问题。
    - 全局图文架构中，涉及到 `国旗` 的场景，全部使用 `getCountryFlagUrl(name, 'svg')` 请求统一的正规 4:3 矢量 SVG 资源，取代失真 PNG，强化“转播级”专业感。
    - 【核心演进】将语言切换提升为全局一级交互，使用 **LanguageDrawer** 配合 `createPortal` 挂载至 `document.body`，彻底解决了 `fixed` 定位在嵌套容器中的渲染冲突，确保在移动端始终能稳固贴底。
@@ -439,7 +443,7 @@ Bridge 代理上游请求可附带 `X-Builder-Code`（env `POLY_BUILDER_CODE`，
 | `@polymarket/builder-signing-sdk` | 0.0.8 | Builder 远程签名（/api/sign） |
 | `viem` | 2.46.x | CLOB V2 推荐依赖（Privy 仍可用 ethers signer） |
 | `@polymarket/builder-relayer-client` | 0.0.10 | Deposit Wallet 部署与 gasless 批次 |
-| `recharts` | 3.8.0 | 图表（分类盈亏条形图） |
+| `recharts` | 3.8.0 | 图表（`CategoryPnlChart` 已下架，依赖仍保留） |
 | `lucide-react` | 0.577.0 | 图标库 |
 | `html-to-image` / `html2canvas` | — | 分享海报生成 |
 | `qrcode.react` | 4.2.0 | QR 码生成 |
@@ -474,3 +478,7 @@ Bridge 代理上游请求可附带 `X-Builder-Code`（env `POLY_BUILDER_CODE`，
 - 深色主题基色：`#0D0518`
 - 强调色：荧光绿 `#6bff8f`
 - 卡片背景：玻璃拟态渐变 `rgba(255,255,255,0.04) → rgba(255,255,255,0.01)` + `border: 1px solid rgba(255,255,255,0.06)`
+
+### 6.5 待办（GitHub Issues，非阻塞主干）
+- **#16**：桌面端横向滚动发现性（Profile Tab / Home 日期条 / 挑战页大卡下横滑条）。
+- **#17**：下单前 Polymarket `GET https://polymarket.com/api/geoblock` 合规预检（Builder 要求）。

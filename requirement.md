@@ -1,6 +1,6 @@
 # Crazy Fox — 产品需求文档 (PRD)
 
-> **版本**：v2.8 · 最后更新：2026-05-31
+> **版本**：v2.9 · 最后更新：2026-06-03
 > **产品定位**：2026 世界杯体育预测 H5 应用，以 Polymarket 为底层交易引擎。
 
 ## 文档维护边界
@@ -19,8 +19,9 @@
 | **设计风格** | 暗黑系新野兽主义 (Dark Neobrutalism)，以深紫底 `#0D0518` 为主色调，荧光绿 `#6bff8f` 为强调色，搭配玻璃拟态 (Glassmorphism) 卡片 |
 | **动效标准** | 全站使用 Framer Motion 过渡动画，页面切换带模糊聚焦效果，交互元素带 `active:scale-95` 微按压反馈 |
 | **加载策略** | 全页面采用高保真骨架屏 (Skeleton Screen)，禁止使用旋转圈或"加载中"文本 |
-| **国际化 (i18n)** | 全局原生强类型的中英双语支持。已建立独立的 **LanguageDrawer** 作为全局一级入口，支持底部滑出式（Bottom Sheet）交互。语言偏好写入 Cookie + localStorage，SSR 通过 `initialLocale` 与首屏对齐。已覆盖基础 UI、内容卡片、充值抽屉（DepositDrawer）及 40 余项交易状态文案。 |
-| **适配目标** | 移动端 H5 优先（特别优化 X/Twitter 内置浏览器体验），使用 `100dvh` 适配各类视口。 |
+| **国际化 (i18n)** | 全局原生强类型的中英双语支持。已建立独立的 **LanguageDrawer** 作为全局一级入口，支持底部滑出式（Bottom Sheet）交互。语言偏好写入 Cookie + localStorage，SSR 通过 `initialLocale` 与首屏对齐。已覆盖基础 UI、内容卡片、充值抽屉（DepositDrawer）、首页轮播文案、资金 Tab 标签及 40 余项交易状态文案。 |
+| **正文字体** | UI 正文与数字使用 **Inter**（`next/font` 全局加载）；顶栏品牌名仍用 Bigtimes；等宽数字场景用 Geist Mono。 |
+| **适配目标** | 移动端 H5 优先（特别优化 X/Twitter 内置浏览器体验），使用 `100dvh` 适配各类视口。桌面端部分横向 Tab/日期条可 Shift+滚轮横滑（横滑提示见 GitHub #16，待做）。 |
 
 ---
 
@@ -59,6 +60,11 @@
 
 ### 3.1 首页 (Home)
 
+#### 3.1.0 顶部轮播 (BannerCarousel)
+- **屏数**：两屏 — **2026 世界杯**（`worldcup.png`）、**金靴奖**（`worldcup2.png`）；已移除小组赛 GROUP STAGE 屏。
+- **文案**：标题/副标题走 i18n（`home.banner*`）。中文示例：「2026 世界杯」+「哪个国家会夺得冠军？」；「金靴奖」+「谁是射手王？」。英文保持 WORLD CUP / GOLDEN BOOT 等营销句式。
+- **交互**：自动轮播 + 底部分页指示器。
+
 #### 3.1.1 导航层
 - **分类标签栏 (CategoryTabs)**：横向滚动选项，包含"⚡ 全部"以及各联赛/运动分类（世界杯、NBA、网球等），由 API 动态获取
 - **子标签栏 (SubTabs)**：
@@ -68,7 +74,10 @@
   - **趣味投注 Tab**：展示非比赛类的 Outright 预测市场（冠军、小组第一、射手等）
 
 #### 3.1.2 内容层
-- **赛程**：按日期分组的 `MatchCard` 列表；加载态使用 `MatchCardSkeleton`
+- **赛程**：按日期分组的 `MatchCard` 列表（**Search 页赛程结果复用同一组件**）；加载态使用 `MatchCardSkeleton`
+  - **顶栏信息**：开球时间、小组/淘汰赛标签、成交量、状态（未开赛/进行中/已结束）
+  - **英文文案**：开球行不显示 Kickoff 前缀，仅时间；成交量标签为 **VOL**（趣味投注卡等同）
+  - **中文文案**：保留「开赛 + 时间」；成交量为「交易量」
 - **趣味投注**：`OutrightCard` / `BinaryOutrightCard`；加载态使用 `OutrightCardSkeleton`
 
 #### 3.1.3 交互流
@@ -111,8 +120,9 @@ Compass「发现」Tab：Tinder 式 **左右划动** 单场对阵卡片，低门
 
 #### 3.4.2 UI 结构
 - **搜索框**：顶部常驻，支持中英文模糊搜索
-- **热门推荐**：空闲态展示热门赛事/球队快捷入口
-- **搜索结果**：实时匹配 Polymarket API 返回结果，以卡片列表形式展示
+- **热门推荐**：空闲态展示「世界杯 · 热门球队」与「世界杯 · 热门话题」快捷胶囊；点击将关键词填入搜索框并触发搜索
+  - **金靴奖**：展示文案为「金靴奖」，实际搜索关键词为 **Top Goalscorer**（与 Polymarket 市场命名对齐）
+- **搜索结果**：分 **赛程 (Matches)** 与 **趣味投注 (Fun Bets)** 两区；赛程区使用 `MatchCard`，趣味投注使用 Outright/Binary 卡
 - **详情进入**：点击搜索结果卡片可直接展开投注操作
 - **加载态**：结构化骨架反馈
 
@@ -127,12 +137,12 @@ Compass「发现」Tab：Tinder 式 **左右划动** 单场对阵卡片，低门
 #### 3.5.3 已登录状态 — 六大 Tab
 | Tab | 名称 | 功能 |
 |---|---|---|
-| `stats` | 总览 | 总净盈亏、总投入/总收入、当前持仓汇总（总本金/总价值/浮动盈亏）、分类盈亏条形图 |
+| `stats` | 总览 | 总净盈亏、总投入/总收入、当前持仓汇总（总本金/总价值/浮动盈亏）；**已下架**「分类盈亏 · 全周期」条形图（`CategoryPnlChart` 文件保留） |
 | `active` | 持仓 | 当前持有的预测头寸列表，支持卖出（市价/限价）和兑现操作 |
-| `orders` | 挂单 | 未成交的限价订单列表，支持取消操作 |
+| `orders` | 挂单 | 未成交的限价订单列表，支持取消；**无**到期时间列，**目标概率**列居中展示 |
 | `history` | 战绩 | 已结算的历史交易记录，按赛事展示胜率和盈亏 |
 | `transactions` | 明细 | 全部交易流水（入账、出账、兑现），按时间倒序展示 |
-| `funds` | 资金 | **链上充提列表**（非 CLOB 交易明细）：激活 Tab 时请求 `movements-live`，展示 proxy 上 pUSD/USDC.e 充值/提现标签、美元金额、时间；**无手动刷新**；数据源 Etherscan live，**不入 Neon 流水表**（见 ADR-0008） |
+| `funds` | 资金 | **链上充提列表**（非 CLOB 交易明细）：**进入或停留在该 Tab 时**请求 `movements-live`（含页面刷新后仍停留资金 Tab）；展示 proxy 上 pUSD/USDC.e 充值/提现标签（随语言切换）、美元金额、时间；**无手动刷新按钮**；数据源 Etherscan live，**不入 Neon 流水表**（见 ADR-0008） |
 
 #### 3.5.4 加载策略
 - 所有 Tab 统一使用骨架屏过渡
@@ -147,9 +157,9 @@ Compass「发现」Tab：Tinder 式 **左右划动** 单场对阵卡片，低门
 - 一键生成海报 + QR 码
 
 #### 3.5.6 规划优化 (图表与大盘重构计划 - 待开发)
-待核心功能闭环后，计划对现有的单调图表（如 Recharts）进行深度情感化与视觉重构：
+总览 Tab **已不再展示**分类盈亏条形图。待核心功能闭环后，计划对 Profile 数据可视化进行情感化重构（可复用 Recharts）：
 1. **统一的高保真视觉语言**：摒弃干瘪压抑的扁平图表，运用如首页般发光的动态渐变、玻璃态阴影，实现霓虹呼吸感。
-2. **引入时间走势曲线 (Equity Curve)**：打破单一的分类统计截面，增加“Robinhood式”平滑资金时间走势曲线图，增强连续性的多巴胺正向反馈。
+2. **引入时间走势曲线 (Equity Curve)**：在总览增加 Robinhood 式平滑资金时间走势曲线，增强连续性的正向反馈（替代已下架的分类截面图）。
 3. **增加高阶触觉交互**：重做 Tooltip，使其在滑动屏幕触摸节点时支持震动反馈及 iOS 级别原生流畅飘带提示框。
 4. **盈亏情绪渲染**：赋予盈浮大字与背景板动态光晕呼吸效，盈利时触发荧光绿生命力光效，亏损时转为暗红警示光环，引发更强的交易情绪价值。
 
@@ -194,10 +204,21 @@ Compass「发现」Tab：Tinder 式 **左右划动** 单场对阵卡片，低门
 #### 4.4.2 提现 (WithdrawDrawer)
 
 - **入口**：顶栏资金菜单 → 提现。
-- **表单**：到账固定 **Polygon · PUSD**（只读）；用户填写 **收款地址**（external 会话可一键填入已连接钱包）、**金额**；展示 Uniswap 换币引导（需 USDC 等时自行兑换）。
-- **执行**：`POST /withdraw` 创建 bridge 入金地址 → `ensureTradingVaultDeployed` → relayer 以 **Deposit Wallet** batch 转 pUSD 至 bridge → `/status` 轮询（含失败提示、约 2 分钟超时与重试）；进行中禁用重复提交；完成后展示成功态。
+- **表单**：到账展示为 **Polygon · PUSD**（只读，指用户从金库转出的资产）；用户填写 **收款地址**（external 会话可一键填入已连接钱包）、**金额**；文案说明 **Bridge 兑付** 可能到账 USDC / USDC.e 等，并提供 Uniswap、**Jumper** 等换币引导。
+- **执行**：`POST /withdraw` 创建 bridge 入金地址 → `ensureTradingVaultDeployed` → relayer 以 **Deposit Wallet** batch 转 **pUSD** 至 bridge → `/status` 轮询（含失败提示、约 2 分钟超时与重试）；进行中禁用重复提交；完成后展示成功态。链上执行层始终为 pUSD transfer，最终到账 token 由 Bridge 决定。
 
 工程细节见 `CONTEXT.md` 与 `docs/adr/`。
+
+### 4.5 合规与地理限制（待开发，GitHub #17）
+
+Polymarket Builder 要求：因监管与制裁合规，**下单前**应验证用户地理位置（`GET https://polymarket.com/api/geoblock`）。受限地区订单会被拒。
+
+**规划**：
+1. Next.js 代理 `/api/geoblock`，避免浏览器 CORS。
+2. 应用启动与每次确认下注前检查；`blocked === true` 时禁用开仓并展示中英文说明（与 `TermsContent` 受限地区条款一致）。
+3. close-only 国家（仅平仓）与卖出/撤单是否放行 — 实现前需对照官方 API 实测。
+
+详见 [Polymarket Geographic Restrictions](https://docs.polymarket.com/api-reference/geoblock) 与 GitHub Issue #17。
 
 ---
 

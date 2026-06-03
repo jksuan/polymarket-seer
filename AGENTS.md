@@ -28,6 +28,7 @@
 
 - 对改动过的 TypeScript 文件建议至少：`npm run lint`（按需加路径）、`npx tsc --noEmit`。
 - 若曾出现乱码，可本地用编辑器或脚本确认文件为合法 UTF-8，并检查是否出现异常的连续 `?` 字面量。
+- 合入 `main` 前：若变更影响产品行为或模块边界，更新 **ARCHITECTURE.md** 与 **CONTEXT.md**（版本日期、待办 Issue 可写在 ARCHITECTURE §6.5）；术语新增优先写 CONTEXT，避免只在代码注释里留痕。
 
 ## 5. Cursor 专用规则文件
 

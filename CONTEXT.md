@@ -7,7 +7,7 @@
 ## 品牌与对外资源
 
 - **单一来源**：`src/lib/brandAssets.ts` — `APP_BRAND_NAME`、Logo（`/images/logo.png`）、favicon（`/images/logo.svg`）。
-- **顶栏品牌字体**：`src/lib/brandFont.ts`（Bigtimes.otf）；全站文案引用 `APP_BRAND_NAME`，勿硬编码产品名。
+- **顶栏品牌字体**：`src/lib/brandFont.ts`（Bigtimes.otf）；全站 UI 正文字体为 **Inter**（`layout.tsx` + `next/font`，见 `globals.css` `--font-inter`）；全站文案引用 `APP_BRAND_NAME`，勿硬编码产品名。
 
 ## 关键领域术语
 
@@ -44,6 +44,9 @@
 
 - **Locale 持久化**：`localStorage` 键 `seer_locale` + Cookie `seer_locale`（`src/i18n/localeStorage.ts`）。
 - **SSR 对齐**：`layout.tsx` 读 Cookie 注入 `I18nProvider initialLocale`，避免首屏 Login/登录 水合不一致。
+- **首页轮播文案**：`BannerCarousel` 使用 `home.bannerWorldCup*` / `home.bannerGoldenBoot*`（中文示例：哪个国家会夺得冠军？ / 谁是射手王？）。
+- **赛事卡顶栏（英文）**：`MatchCard` 英文仅显示开球时间（无 Kickoff 前缀）；全站 `home.volume` 英文为 **VOL**（Home / Search / 趣味投注卡共用）。
+- **搜索热门词**：金靴奖胶囊点击填入 **Top Goalscorer**（非 Golden Boot），见 `SearchPage` `HOT_TOPIC_KEYS`。
 
 ### 余额与交易 collateral（ADR-0004 / ADR-0006）
 
@@ -59,6 +62,14 @@
 - **翻页拉全**：单页 `limit=100` 不足；服务端按 `offset` 翻页去重（见 `worldCupEvents.ts`）。
 - **衍生盘过滤**：返回前剔除 **无 moneyline 的 vs 衍生 event**（如 More Markets、Exact Score）；非 vs 趣味盘保留。
 - **客户端解析**：`parseMatchEvents` 仍只摘 `sportsMarketType=moneyline` 且恰好 3 个子市场；小组赛共 **72 场** moneyline 对阵。
+
+### Profile 总览（2026-06）
+
+- **分类盈亏条形图**：`CategoryPnlChart` 已从总览 Tab **下架**（组件文件保留）；`useProfileStats` 仅汇总历史/持仓盈亏数字。
+
+### Builder 合规（待实现，Issue #17）
+
+- Polymarket 要求 Builder 在**下单前**调用 `GET https://polymarket.com/api/geoblock` 校验 IP 地理；`blocked` 地区订单会被拒。计划经 Next `/api/geoblock` 代理并在 `handlePlaceRealBet` 入口拦截。详见 [docs](https://docs.polymarket.com/api-reference/geoblock) 与 GitHub #17。
 
 ## 当前上下文约定
 
