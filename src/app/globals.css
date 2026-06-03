@@ -120,8 +120,8 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 }
 
 @layer base {
@@ -130,7 +130,15 @@
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans;
+    font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  }
+
+  /* 组件内联 fontFamily: Inter 与 next/font 对齐，避免移动端回退到衬线 */
+  [style*="font-family: Inter"],
+  [style*="font-family: 'Inter'"],
+  [style*='font-family: "Inter"'] {
+    font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif !important;
   }
 
   html {

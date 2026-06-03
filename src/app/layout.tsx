@@ -1,15 +1,16 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Providers from "@/components/Providers";
 import { AppI18nShell } from "@/components/AppI18nShell";
 import { APP_BRAND_NAME, APP_FAVICON_URL } from "@/lib/brandAssets";
 import { LOCALE_COOKIE_NAME, parseLocale } from "@/i18n/localeStorage";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
+  display: "swap",
 });
 
 const geistMono = Geist_Mono({
@@ -38,7 +39,7 @@ export default async function RootLayout({
   return (
     <html lang={initialLocale}>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${inter.variable} ${inter.className} ${geistMono.variable} font-sans antialiased`}
         style={{ background: '#0D0518', minHeight: '100dvh' }}
       >
         <div style={{ maxWidth: '480px', margin: '0 auto', position: 'relative', overflowX: 'hidden', minHeight: '100dvh' }}>
