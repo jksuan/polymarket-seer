@@ -433,9 +433,10 @@ const zh = {
     withdrawing: '处理中…',
     submitted: '已发起提现',
     completedPusd: 'PUSD 提现已完成',
-    pusdDirectHint: '提现将发送 Polygon 上的 pUSD 到您的钱包。如需 USDC 等其他代币，请前往',
+    pusdDirectHint:
+      '提现经 Polymarket Bridge 处理，到账可能为 Polygon 上的 PUSD、USDC 或 USDC.e（以实际入账为准），金额与发起时一致。如需其他代币，到账后请通过 ',
     pusdDirectHintOr: ' 或 ',
-    pusdDirectHintSuffix: ' 兑换。',
+    pusdDirectHintSuffix: ' 自行兑换。',
     processing: '处理中…',
     userRejected: '提现请求被取消',
     noWallet: '未找到已连接钱包',

@@ -433,9 +433,10 @@ const en: TranslationKeys = {
     withdrawing: 'Processing…',
     submitted: 'Withdrawal initiated',
     completedPusd: 'PUSD withdrawal completed',
-    pusdDirectHint: 'Withdrawals send pUSD on Polygon to your wallet. To get USDC or other tokens, swap on',
+    pusdDirectHint:
+      'Processed by Polymarket Bridge. You may receive PUSD, USDC, or USDC.e on Polygon (as credited on-chain). The USD amount matches your withdrawal. For other tokens, swap via ',
     pusdDirectHintOr: ' or ',
-    pusdDirectHintSuffix: '.',
+    pusdDirectHintSuffix: ' after arrival.',
     processing: 'Processing…',
     userRejected: 'Withdrawal request cancelled',
     noWallet: 'No connected wallet',
