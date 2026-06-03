@@ -19,10 +19,13 @@ export async function loadProfileFundsRows(
 
 export function useProfileFunds({
   isActive,
+  fetchReady,
   labels,
   fetchMovements,
 }: {
   isActive: boolean;
+  /** Privy 与 proxy 就绪后再请求，避免刷新后过早 return [] 被当成空列表 */
+  fetchReady: boolean;
   labels: ProfileFundsLabels;
   fetchMovements: () => Promise<FundsMovementListItem[]>;
 }) {
@@ -39,6 +42,13 @@ export function useProfileFunds({
 
   useEffect(() => {
     if (!isActive) return;
+
+    if (!fetchReady) {
+      setLoading(true);
+      setLoadedOnce(false);
+      loadedOnceRef.current = false;
+      return;
+    }
 
     let cancelled = false;
 
@@ -71,7 +81,7 @@ export function useProfileFunds({
     return () => {
       cancelled = true;
     };
-  }, [isActive]);
+  }, [isActive, fetchReady]);
 
   const reload = useCallback(async () => {
     setLoading(true);

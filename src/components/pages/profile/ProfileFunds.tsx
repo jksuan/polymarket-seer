@@ -17,8 +17,9 @@ export interface ProfileFundsProps {
 
 export function ProfileFunds({ isActive }: ProfileFundsProps) {
   const { t } = useTranslation();
-  const { getAccessToken } = usePrivy();
+  const { getAccessToken, ready, authenticated } = usePrivy();
   const { proxyAddress } = usePolymarketAuth();
+  const fetchReady = ready && authenticated && Boolean(proxyAddress);
 
   const labels = useMemo(
     () => ({
@@ -38,6 +39,7 @@ export function ProfileFunds({ isActive }: ProfileFundsProps) {
 
   const { loading, rows, loadedOnce } = useProfileFunds({
     isActive,
+    fetchReady,
     labels,
     fetchMovements,
   });

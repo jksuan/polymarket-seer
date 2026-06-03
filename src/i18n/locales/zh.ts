@@ -434,6 +434,7 @@ const zh = {
     submitted: '已发起提现',
     completedPusd: 'PUSD 提现已完成',
     pusdDirectHint: '提现将发送 Polygon 上的 pUSD 到您的钱包。如需 USDC 等其他代币，请前往',
+    pusdDirectHintOr: ' 或 ',
     pusdDirectHintSuffix: ' 兑换。',
     processing: '处理中…',
     userRejected: '提现请求被取消',

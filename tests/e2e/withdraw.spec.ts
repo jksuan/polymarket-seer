@@ -14,12 +14,16 @@ test("shows minimum amount error below $3", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Enter amount" })).toBeDisabled();
 });
 
-test("shows fixed Polygon PUSD destination and Uniswap hint", async ({ page }) => {
+test("shows fixed Polygon PUSD destination and swap hints", async ({ page }) => {
   await expect(page.getByText("Polygon")).toBeVisible();
   await expect(page.getByText("PUSD")).toBeVisible();
   await expect(page.getByRole("link", { name: "Uniswap" })).toHaveAttribute(
     "href",
     "https://app.uniswap.org/"
+  );
+  await expect(page.getByRole("link", { name: "Jumper" })).toHaveAttribute(
+    "href",
+    "https://jumper.xyz/"
   );
 });
 

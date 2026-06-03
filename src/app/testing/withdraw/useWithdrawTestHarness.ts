@@ -6,7 +6,7 @@ import {
   parseAmountUsd,
   sanitizeAmountUsdInput,
 } from "@/components/ui/deposit/format";
-import { UNISWAP_SWAP_URL } from "@/components/ui/withdraw/constants";
+import { JUMPER_SWAP_URL, UNISWAP_SWAP_URL } from "@/components/ui/withdraw/constants";
 import type { WithdrawDestinationAsset } from "@/components/ui/withdraw/types";
 import {
   isValidWithdrawRecipient,
@@ -77,6 +77,7 @@ export function useWithdrawTestHarness() {
     isRetryingStatusPoll: false,
     onRetryStatusPoll: () => {},
     uniswapSwapUrl: UNISWAP_SWAP_URL,
+    jumperSwapUrl: JUMPER_SWAP_URL,
     withdrawFeedback: null,
   };
 }

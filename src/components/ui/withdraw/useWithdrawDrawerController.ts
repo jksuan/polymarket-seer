@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/deposit/format";
 import type { CreateWithdrawResponse } from "@/types/bridge";
 import {
+  JUMPER_SWAP_URL,
   PUSD_DECIMALS,
   UNISWAP_SWAP_URL,
   WITHDRAW_STATUS_POLL_TIMEOUT_MS,
@@ -412,6 +413,7 @@ export function useWithdrawDrawerController({
     isRetryingStatusPoll: bridgeStatus.isValidating,
     onRetryStatusPoll: handleRetryStatusPoll,
     uniswapSwapUrl: UNISWAP_SWAP_URL,
+    jumperSwapUrl: JUMPER_SWAP_URL,
     withdrawFeedback,
   };
 }

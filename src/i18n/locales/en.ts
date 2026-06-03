@@ -434,6 +434,7 @@ const en: TranslationKeys = {
     submitted: 'Withdrawal initiated',
     completedPusd: 'PUSD withdrawal completed',
     pusdDirectHint: 'Withdrawals send pUSD on Polygon to your wallet. To get USDC or other tokens, swap on',
+    pusdDirectHintOr: ' or ',
     pusdDirectHintSuffix: '.',
     processing: 'Processing…',
     userRejected: 'Withdrawal request cancelled',

@@ -95,6 +95,15 @@ export function WithdrawFormStep({ c }: { c: Controller }) {
         >
           Uniswap
         </a>
+        {wf.pusdDirectHintOr}
+        <a
+          href={c.jumperSwapUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-semibold text-[#ADFF2F] underline decoration-[#ADFF2F]/40 underline-offset-2 hover:decoration-[#ADFF2F]"
+        >
+          Jumper
+        </a>
         {wf.pusdDirectHintSuffix}
       </p>
 
