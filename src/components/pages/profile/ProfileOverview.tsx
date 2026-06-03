@@ -1,7 +1,5 @@
 import { motion } from "motion/react";
 import { useProfileStats } from "./useProfileStats";
-import { CategoryPnlChart } from "./CategoryPnlChart";
-import { useSportCategories } from "@/hooks/useSportCategories";
 import { useTranslation } from "@/i18n";
 import { Skeleton } from "@/components/ui/Skeleton";
 
@@ -13,7 +11,6 @@ export interface ProfileOverviewProps {
 
 export function ProfileOverview({ portfolioLoading, trades, positions }: ProfileOverviewProps) {
   const { t } = useTranslation();
-  const { leagueToSport, keywords, iconToCategory } = useSportCategories();
 
   const {
     historyInvested,
@@ -23,11 +20,7 @@ export function ProfileOverview({ portfolioLoading, trades, positions }: Profile
     historyNetProfit,
     currentUnrealizedPnl,
     currentUnrealizedPct,
-
-    categoryPnlData,
-  } = useProfileStats(trades, positions, leagueToSport, keywords, iconToCategory);
-
-  const hasCategoryData = categoryPnlData && categoryPnlData.length > 0;
+  } = useProfileStats(trades, positions);
 
   if (portfolioLoading) {
     return (
@@ -142,40 +135,6 @@ export function ProfileOverview({ portfolioLoading, trades, positions }: Profile
           </div>
         </div>
       </div>
-
-
-
-      {/* ── 分类盈亏条形图 ── */}
-      <div className="w-full mb-6 relative z-20">
-        <div
-          className="p-4 rounded-3xl"
-          style={{
-            background: "linear-gradient(160deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01))",
-            border: "1px solid rgba(255,255,255,0.06)",
-            boxShadow: "0 12px 32px rgba(0,0,0,0.3)",
-          }}
-        >
-          <div className="flex items-center justify-between mb-3">
-            <div className="text-[11px] font-bold text-white/50 uppercase tracking-wider">
-              {t.profile.overviewCategoryPnl}
-            </div>
-            {hasCategoryData && (
-              <div className="text-[10px] text-white/25 font-medium">
-                {t.profile.overviewAutoCategory(categoryPnlData.length)}
-              </div>
-            )}
-          </div>
-          <div className="w-full">
-            {hasCategoryData ? (
-              <CategoryPnlChart data={categoryPnlData} width={320} />
-            ) : (
-              <div className="flex items-center justify-center flex-col gap-1.5" style={{ height: 80 }}>
-                <span className="text-[12px] font-medium text-white/40 tracking-wide">{t.profile.overviewNoData}</span>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
     </motion.div>
   );
 }
@@ -234,34 +193,6 @@ function ProfileOverviewSkeleton() {
                  <Skeleton className="w-16 h-[15px] rounded" />
                  <Skeleton className="w-12 h-[10px] rounded mt-2" />
               </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Bottom Chart Skeleton */}
-      <div className="w-full mb-6 relative z-20">
-        <div
-          className="p-4 rounded-3xl h-[160px]"
-          style={{
-            background: "linear-gradient(160deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01))",
-            border: "1px solid rgba(255,255,255,0.06)",
-          }}
-        >
-          <div className="flex items-center justify-between mb-5">
-            <Skeleton className="w-32 h-[11px] rounded" />
-            <Skeleton className="w-24 h-[10px] rounded" />
-          </div>
-          <div className="w-full flex flex-col gap-4">
-            <div className="flex items-center gap-3">
-              <Skeleton className="w-8 h-[12px] rounded" />
-              <Skeleton className="h-[24px] rounded-md w-1/2" />
-              <Skeleton className="w-10 h-[10px] rounded" />
-            </div>
-            <div className="flex items-center gap-3">
-              <Skeleton className="w-8 h-[12px] rounded" />
-              <Skeleton className="h-[24px] rounded-md w-1/4" />
-              <Skeleton className="w-10 h-[10px] rounded" />
             </div>
           </div>
         </div>

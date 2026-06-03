@@ -1,3 +1,4 @@
+/** 总览「分类盈亏」已下架；组件保留供后续图表改版复用。 */
 "use client";
 import React from "react";
 
