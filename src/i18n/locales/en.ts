@@ -97,6 +97,10 @@ const en: TranslationKeys = {
     clearFilter: 'Clear filter',
     noTeamsFound: 'No teams found',
     groupSuffix: ' Group',
+    bannerWorldCupTitle: 'WORLD CUP 2026',
+    bannerWorldCupSubtitle: 'PREDICT THE CHAMPION 🇺🇸🇲🇽🇨🇦',
+    bannerGoldenBootTitle: 'GOLDEN BOOT',
+    bannerGoldenBootSubtitle: 'WHO SCORES THE MOST? BET NOW',
     knockoutsTrans: {
       '32强': 'R32',
       '16强': 'R16',

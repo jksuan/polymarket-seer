@@ -1,51 +1,47 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import useEmblaCarousel from 'embla-carousel-react';
 import { motion } from 'motion/react';
-import { Sparkles, Trophy, Flame } from 'lucide-react';
+import { Trophy, Flame } from 'lucide-react';
+import { useTranslation } from '@/i18n';
 
-const bannerData = [
+const BANNER_SLIDES = [
   {
     id: 1,
-    title: 'WORLD CUP 2026',
-    subtitle: 'PREDICT THE CHAMPION 🇺🇸🇲🇽🇨🇦',
-    tag: 'HOT',
-    color1: '#FFD700',
-    color2: '#FF8C00',
+    titleKey: 'bannerWorldCupTitle' as const,
+    subtitleKey: 'bannerWorldCupSubtitle' as const,
     icon: <Trophy size={18} color="#FFD700" />,
     image: '/images/worldcup.png',
   },
   {
     id: 2,
-    title: 'GROUP STAGE',
-    subtitle: '48 TEAMS · 12 GROUPS · WHO SURVIVES?',
-    tag: 'LIVE',
-    color1: '#00F0FF',
-    color2: '#007AFF',
-    icon: <Sparkles size={18} color="#00F0FF" />,
-    image: '/images/worldcup.png',
-  },
-  {
-    id: 3,
-    title: 'GOLDEN BOOT',
-    subtitle: 'WHO SCORES THE MOST? BET NOW',
-    tag: 'TRENDING',
-    color1: '#ADFF2F',
-    color2: '#00FF00',
+    titleKey: 'bannerGoldenBootTitle' as const,
+    subtitleKey: 'bannerGoldenBootSubtitle' as const,
     icon: <Flame size={18} color="#ADFF2F" />,
     image: '/images/worldcup2.png',
   },
-];
+] as const;
 
 export function BannerCarousel() {
+  const { t } = useTranslation();
   const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true });
   const [selectedIndex, setSelectedIndex] = useState(0);
+
+  const bannerData = useMemo(
+    () =>
+      BANNER_SLIDES.map((slide) => ({
+        ...slide,
+        title: t.home[slide.titleKey],
+        subtitle: t.home[slide.subtitleKey],
+      })),
+    [t],
+  );
 
   const onSelect = useCallback(() => {
     if (!emblaApi) return;
     setSelectedIndex(emblaApi.selectedScrollSnap());
-  }, [emblaApi, setSelectedIndex]);
+  }, [emblaApi]);
 
   useEffect(() => {
     if (!emblaApi) return;
@@ -70,9 +66,9 @@ export function BannerCarousel() {
         {bannerData.map((banner, index) => (
           <div
             key={banner.id}
-            style={{ 
-              flex: '0 0 100%', 
-              minWidth: 0, 
+            style={{
+              flex: '0 0 100%',
+              minWidth: 0,
             }}
           >
             <motion.div
@@ -118,7 +114,7 @@ export function BannerCarousel() {
           </div>
         ))}
       </div>
-      
+
       {/* Indicators */}
       <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-2 z-20">
         {bannerData.map((_, i) => (

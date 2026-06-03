@@ -96,6 +96,10 @@ const zh = {
     clearFilter: '清除筛选',
     noTeamsFound: '未找到匹配的球队',
     groupSuffix: '组',
+    bannerWorldCupTitle: '2026 世界杯',
+    bannerWorldCupSubtitle: '哪个国家会夺得冠军？',
+    bannerGoldenBootTitle: '金靴奖',
+    bannerGoldenBootSubtitle: '谁是射手王？',
     knockoutsTrans: {
       '32强': '32强',
       '16强': '16强',
