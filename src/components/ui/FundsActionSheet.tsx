@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { CircleArrowDown, CircleArrowUp } from "lucide-react";
 import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 import { useTranslation } from "@/i18n";
+import { useGeoblock } from "@/contexts/GeoblockContext";
 
 export function FundsActionSheet({
   isOpen,
@@ -21,7 +22,9 @@ export function FundsActionSheet({
 }) {
   useLockBodyScroll(isOpen);
   const { t } = useTranslation();
+  const { status } = useGeoblock();
   const fm = t.fundsMenu;
+  const depositDisabled = status.checkedAt !== null && status.blocked;
 
   if (typeof document === "undefined") return null;
 
@@ -57,16 +60,31 @@ export function FundsActionSheet({
             <div className="grid gap-3">
               <button
                 type="button"
+                disabled={depositDisabled}
+                aria-disabled={depositDisabled}
                 onClick={() => {
+                  if (depositDisabled) return;
                   onClose();
                   onDeposit();
                 }}
-                className="flex items-center justify-center gap-3 rounded-2xl border border-[#ADFF2F]/30 bg-[#ADFF2F]/10 p-4 active:scale-[0.98] hover:bg-[#ADFF2F]/15"
+                className={`flex items-center justify-center gap-3 rounded-2xl border p-4 ${
+                  depositDisabled
+                    ? "cursor-not-allowed border-white/10 bg-white/[0.03] opacity-45"
+                    : "border-[#ADFF2F]/30 bg-[#ADFF2F]/10 active:scale-[0.98] hover:bg-[#ADFF2F]/15"
+                }`}
               >
-                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#ADFF2F]/20 text-[#ADFF2F]">
+                <span
+                  className={`flex h-10 w-10 items-center justify-center rounded-xl ${
+                    depositDisabled ? "bg-white/10 text-white/40" : "bg-[#ADFF2F]/20 text-[#ADFF2F]"
+                  }`}
+                >
                   <CircleArrowDown size={20} strokeWidth={1.75} />
                 </span>
-                <span className="text-base font-black text-[#ADFF2F]">{fm.deposit}</span>
+                <span
+                  className={`text-base font-black ${depositDisabled ? "text-white/40" : "text-[#ADFF2F]"}`}
+                >
+                  {fm.deposit}
+                </span>
               </button>
               <button
                 type="button"

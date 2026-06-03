@@ -208,6 +208,12 @@ const zh = {
     chooseSide: '选择阵营',
   },
 
+  // ─── 地理合规（Polymarket Geoblock）───
+  geoblock: {
+    banner: '当前地区暂不支持下单',
+    confirmDisabled: '您所在地区暂不支持下单',
+  },
+
   // ─── 交易状态遮罩 ───
   tx: {
     preparing: '准备中',

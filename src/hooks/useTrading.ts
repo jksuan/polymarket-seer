@@ -17,6 +17,10 @@ import {
 import { createClobClient } from "@/lib/clobClientFactory";
 import { isClobOrderSuccess, parseClobOrderError } from "@/lib/clobOrderResponse";
 import { usePolymarketAuth } from "@/contexts/PolymarketAuthContext";
+import { useGeoblock } from "@/contexts/GeoblockContext";
+import { evaluateGeoblockForOrder } from "@/lib/geoblock/orderGate";
+import { formatGeoblockOrderError } from "@/lib/geoblock/geoblockMessages";
+import { formatTradingExecutionError } from "@/lib/geoblock/tradingErrors";
 import { getCachedCreds, setCachedCreds } from "@/lib/utils";
 import { selectPrimaryWallet } from "@/lib/primaryWallet";
 import {
@@ -58,7 +62,8 @@ export function useTrading(
     isEvmSignerReady,
   } = usePolymarketAuth();
   const { wallets } = useWallets();
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
+  const { refreshBeforeOrder } = useGeoblock();
 
   // --- Transaction Progress Overlay States ---
   const [txStep, setTxStep] = useState<TxStep>("idle");
@@ -396,6 +401,17 @@ export function useTrading(
     if (!authenticated || !wallets || wallets.length === 0) { login(); return; }
     if (guardEvmSignerOrShowError()) return;
 
+    const geoblockStatus = await refreshBeforeOrder();
+    const gate = evaluateGeoblockForOrder(geoblockStatus);
+    if (!gate.allowed) {
+      const { title, description } = formatGeoblockOrderError(locale, gate);
+      setTxStep("error");
+      setTxMessage(title);
+      setTxError(description);
+      setTxOrderId(null);
+      return;
+    }
+
     setTxStep("preparing");
     setTxMessage(t.tx.switchingNetwork);
     setTxOrderId(null);
@@ -656,6 +672,17 @@ export function useTrading(
     if (!authenticated || !wallets || wallets.length === 0 || !proxyAddress) return;
     if (guardEvmSignerOrShowError()) return;
 
+    const geoblockForClose = await refreshBeforeOrder();
+    const closeGate = evaluateGeoblockForOrder(geoblockForClose);
+    if (!closeGate.allowed) {
+      const { title, description } = formatGeoblockOrderError(locale, closeGate);
+      setTxStep("error");
+      setTxMessage(title);
+      setTxError(description);
+      setTxOrderId(null);
+      return;
+    }
+
     setTxStep("preparing");
     setTxMessage(t.tx.preparingSell);
     setTxError(null);
@@ -745,7 +772,7 @@ export function useTrading(
       }
     } catch (err: any) {
       console.error("Sell position error:", err);
-      let finalMsg = err.message || String(err);
+      let finalMsg = formatTradingExecutionError(err, locale, geoblockForClose.blocked);
 
       if (finalMsg.toLowerCase().includes("timeout")) {
         setTxStep("error");
@@ -756,22 +783,33 @@ export function useTrading(
       }
 
       setTxStep("error");
-      if (finalMsg.toLowerCase().includes("deadline too soon")) {
+      if (!geoblockForClose.blocked && finalMsg.toLowerCase().includes("deadline too soon")) {
         finalMsg = "授权签名有效期不足，请重新卖出并在弹窗出现后尽快完成全部签名。";
       }
-      if (finalMsg.toLowerCase().includes("allowance")) {
+      if (!geoblockForClose.blocked && finalMsg.toLowerCase().includes("allowance")) {
         finalMsg = "Outcome 代币授权不足：Neg Risk 市场需授权 Neg Risk Exchange V2，请重试并完成全部签名。";
       }
-      if (finalMsg.includes("user rejected")) finalMsg = "用户取消了签名请求。";
+      if (!geoblockForClose.blocked && finalMsg.includes("user rejected")) finalMsg = "用户取消了签名请求。";
       
       setTxError(finalMsg);
-      setTxMessage(t.tx.sellFailed);
+      setTxMessage(geoblockForClose.blocked ? formatGeoblockOrderError(locale, { allowed: false, reason: "blocked" }).title : t.tx.sellFailed);
     }
   };
 
   const handleLimitSellPosition = async (tokenId: string, sharesToSell: string, limitPrice: number) => {
     if (!authenticated || !wallets || wallets.length === 0 || !proxyAddress) return;
     if (guardEvmSignerOrShowError()) return;
+
+    const geoblockForClose = await refreshBeforeOrder();
+    const closeGate = evaluateGeoblockForOrder(geoblockForClose);
+    if (!closeGate.allowed) {
+      const { title, description } = formatGeoblockOrderError(locale, closeGate);
+      setTxStep("error");
+      setTxMessage(title);
+      setTxError(description);
+      setTxOrderId(null);
+      return;
+    }
 
     setTxStep("preparing");
     setTxMessage(t.tx.preparingLimitOrder);
@@ -856,7 +894,7 @@ export function useTrading(
       }
     } catch (err: any) {
       console.error("Limit sell error:", err);
-      let finalMsg = err.message || String(err);
+      let finalMsg = formatTradingExecutionError(err, locale, geoblockForClose.blocked);
 
       if (finalMsg.toLowerCase().includes("timeout")) {
         setTxStep("error");
@@ -867,16 +905,16 @@ export function useTrading(
       }
 
       setTxStep("error");
-      if (finalMsg.toLowerCase().includes("deadline too soon")) {
+      if (!geoblockForClose.blocked && finalMsg.toLowerCase().includes("deadline too soon")) {
         finalMsg = "授权签名有效期不足，请重新挂单并在弹窗出现后尽快完成全部签名。";
       }
-      if (finalMsg.toLowerCase().includes("allowance")) {
+      if (!geoblockForClose.blocked && finalMsg.toLowerCase().includes("allowance")) {
         finalMsg = "Outcome 代币授权不足：Neg Risk 市场需授权 Neg Risk Exchange V2，请重试并完成全部签名。";
       }
-      if (finalMsg.includes("user rejected")) finalMsg = "用户取消了签名请求。";
+      if (!geoblockForClose.blocked && finalMsg.includes("user rejected")) finalMsg = "用户取消了签名请求。";
       
       setTxError(finalMsg);
-      setTxMessage(t.tx.limitSellFailed);
+      setTxMessage(geoblockForClose.blocked ? formatGeoblockOrderError(locale, { allowed: false, reason: "blocked" }).title : t.tx.limitSellFailed);
     }
   };
 

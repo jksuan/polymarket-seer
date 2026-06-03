@@ -69,7 +69,7 @@
 
 ### Builder 合规（待实现，Issue #17）
 
-- Polymarket 要求 Builder 在**下单前**调用 `GET https://polymarket.com/api/geoblock` 校验 IP 地理；`blocked` 地区订单会被拒。计划经 Next `/api/geoblock` 代理并在 `handlePlaceRealBet` 入口拦截。详见 [docs](https://docs.polymarket.com/api-reference/geoblock) 与 GitHub #17。
+- Polymarket 要求 Builder 在**下单前**调用 `GET https://polymarket.com/api/geoblock` 校验 IP 地理；以响应字段 **`blocked`** 为准（`true` 即受限，禁止开/平仓与充值入口）。经 Next `GET /api/geoblock` 代理、`GeoblockProvider` 与 `evaluateGeoblockForOrder`（GitHub #17）。详见 [docs](https://docs.polymarket.com/api-reference/geoblock)。
 
 ## 当前上下文约定
 

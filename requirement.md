@@ -209,16 +209,16 @@ Compass「发现」Tab：Tinder 式 **左右划动** 单场对阵卡片，低门
 
 工程细节见 `CONTEXT.md` 与 `docs/adr/`。
 
-### 4.5 合规与地理限制（待开发，GitHub #17）
+### 4.5 合规与地理限制（GitHub #17，已实现）
 
 Polymarket Builder 要求：因监管与制裁合规，**下单前**应验证用户地理位置（`GET https://polymarket.com/api/geoblock`）。受限地区订单会被拒。
 
-**规划**：
-1. Next.js 代理 `/api/geoblock`，避免浏览器 CORS。
-2. 应用启动与每次确认下注前检查；`blocked === true` 时禁用开仓并展示中英文说明（与 `TermsContent` 受限地区条款一致）。
-3. close-only 国家（仅平仓）与卖出/撤单是否放行 — 实现前需对照官方 API 实测。
+**实现**：
+1. Next.js 代理 `GET /api/geoblock`（转发客户端 IP，60s 私有缓存），避免浏览器 CORS。
+2. `GeoblockProvider`：应用启动、切回前台、打开 ConfirmModal、交易前强制复检。
+3. 仅以 API 字段 **`blocked`** 判断受限：`true` 时禁开/平仓、顶栏提示、禁用充值、交易失败文案为「当前地区暂不支持下单交易」（不含 VPN 提示）。
 
-详见 [Polymarket Geographic Restrictions](https://docs.polymarket.com/api-reference/geoblock) 与 GitHub Issue #17。
+详见 [Polymarket Geographic Restrictions](https://docs.polymarket.com/api-reference/geoblock)。
 
 ---
 

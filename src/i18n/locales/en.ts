@@ -209,6 +209,12 @@ const en: TranslationKeys = {
     chooseSide: 'CHOOSE SIDE',
   },
 
+  // ─── Geographic compliance (Polymarket Geoblock) ───
+  geoblock: {
+    banner: 'Trading unavailable in your region',
+    confirmDisabled: 'Trading unavailable in your region',
+  },
+
   // ─── Transaction Overlay ───
   tx: {
     preparing: 'Preparing',

@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense, useRef, useCallback } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 
 import { PolymarketAuthProvider, usePolymarketAuth } from "@/contexts/PolymarketAuthContext";
+import { GeoblockProvider } from "@/contexts/GeoblockContext";
 import { UserWalletSyncProvider } from "@/contexts/UserWalletSyncContext";
 import { useTrading } from "@/hooks/useTrading";
 
@@ -89,15 +90,7 @@ function AppRouterContent() {
             这是因为左右划动卡片本质上是一个低门槛的探索过程，更符合“发现”的语义逻辑与直觉。
           */}
           {activeTab === 'discover' && (
-            <ChallengePage
-              onPlaceBet={async (amount, tokenId, executionPrice) => {
-                const action = () => handlePlaceRealBet(amount, tokenId, executionPrice);
-                lastActionRef.current = action;
-                setLastBetAmount(amount);
-                await action();
-              }}
-              positions={positions}
-            />
+            <ChallengePage onPlaceBet={handlePlaceBetWrap} positions={positions} />
           )}
           {activeTab === 'profile' && (
             <ProfilePage 
@@ -168,11 +161,13 @@ function AppRouterContent() {
 export default function AppRouter() {
   return (
     <PolymarketAuthProvider>
-      <UserWalletSyncProvider>
-        <Suspense fallback={<div className="min-h-[100dvh] bg-[#0D0518] text-white flex items-center justify-center">Loading...</div>}>
-          <AppRouterContent />
-        </Suspense>
-      </UserWalletSyncProvider>
+      <GeoblockProvider>
+        <UserWalletSyncProvider>
+          <Suspense fallback={<div className="min-h-[100dvh] bg-[#0D0518] text-white flex items-center justify-center">Loading...</div>}>
+            <AppRouterContent />
+          </Suspense>
+        </UserWalletSyncProvider>
+      </GeoblockProvider>
     </PolymarketAuthProvider>
   );
 }

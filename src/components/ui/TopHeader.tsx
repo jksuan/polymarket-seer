@@ -13,6 +13,8 @@ import { WithdrawDrawer } from '@/components/ui/WithdrawDrawer';
 import { FundsActionSheet } from '@/components/ui/FundsActionSheet';
 import { LanguageDrawer } from '@/components/ui/LanguageDrawer';
 import { useTranslation } from '@/i18n';
+import { useGeoblock } from '@/contexts/GeoblockContext';
+import { getGeoblockBannerText } from '@/lib/geoblock/geoblockMessages';
 
 interface TopHeaderProps {
   isSticky?: boolean;
@@ -50,7 +52,10 @@ export function TopHeader({ isSticky = false }: TopHeaderProps = {}) {
     accountDriftRequiresRelogin,
     clearAccountDriftPrompt,
   } = usePolymarketAuth();
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
+  const { status } = useGeoblock();
+  const geoblockBannerText = getGeoblockBannerText(locale, status.blocked);
+  const showGeoblockBanner = status.checkedAt !== null && geoblockBannerText !== null;
 
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [depositOpen, setDepositOpen] = useState(false);
@@ -160,6 +165,18 @@ export function TopHeader({ isSticky = false }: TopHeaderProps = {}) {
           </div>
         )}
       </div>
+
+      {showGeoblockBanner ? (
+        <div
+          role="status"
+          className="mx-4 mb-2 rounded-xl border border-rose-500/35 bg-rose-500/10 px-3 py-2 text-rose-50"
+        >
+          <div className="flex gap-2">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-rose-300" aria-hidden />
+            <p className="text-xs font-bold leading-snug">{geoblockBannerText}</p>
+          </div>
+        </div>
+      ) : null}
 
       {authenticated && !isEvmSignerReady ? (
         <div

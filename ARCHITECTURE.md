@@ -26,6 +26,7 @@ polymarket-seer/
 │   │   │   ├── search/route.ts     # 搜索 / 世界杯 events 代理
 │   │   │   ├── search/worldCupEvents.ts # tag 102232 翻页拉全 + 衍生盘过滤
 │   │   │   ├── share-card/route.tsx # 分享卡片 SSR 渲染
+│   │   │   ├── geoblock/route.ts   # Polymarket 地理合规预检代理（Builder #17）
 │   │   │   ├── sign/route.ts       # Polymarket CLOB 签名代理
 │   │   │   ├── sports/route.ts     # 体育赛事数据代理
 │   │   │   ├── bridge/             # Polymarket Bridge 代理（充值地址 / 提现 / 状态；quote 路由保留但提现 UI 未调用）
@@ -139,6 +140,7 @@ polymarket-seer/
 │   │
 │   ├── contexts/                   # React Context 全局状态
 │   │   ├── PolymarketAuthContext.tsx # ★ 认证上下文（Privy + Polymarket CLOB 鉴权）
+│   │   ├── GeoblockContext.tsx       # Polymarket 地理合规预检（#17，`useGeoblock`）
 │   │   └── UserWalletSyncContext.tsx # 登录后 UPSERT Neon user_wallets（ADR-0008）
 │   │
 │   ├── db/                         # Neon Postgres（服务端）
@@ -361,7 +363,7 @@ Bridge 代理上游请求可附带 `X-Builder-Code`（env `POLY_BUILDER_CODE`，
 | 功能 | 实现方式 |
 |---|---|
 | **账户数据获取** | SWR 集成，以 `[proxyAddress, walletAddress]` 为 Key，15 秒自动轮询 |
-| **市价下单** | `handlePlaceRealBet()` → 部署 Deposit Wallet → pUSD/ERC1155 授权 → CLOB V2 市价单（**待**下单前 Geoblock，见 GitHub #17） |
+| **市价下单** | `handlePlaceRealBet()` → **Geoblock 预检**（`/api/geoblock`）→ 部署 Deposit Wallet → pUSD/ERC1155 授权 → CLOB V2 市价单 |
 | **限价卖出** | `handleLimitSellPosition()` → ERC1155 授权 → CLOB V2 限价卖单 |
 | **市价卖出** | `handleSellPosition()` → ERC1155 授权 → CLOB V2 FOK 卖单 |
 | **兑现/归档** | `handleRedeem()` → Deposit Wallet batch 经 Relayer 执行链上 redeem |
@@ -481,4 +483,4 @@ Bridge 代理上游请求可附带 `X-Builder-Code`（env `POLY_BUILDER_CODE`，
 
 ### 6.5 待办（GitHub Issues，非阻塞主干）
 - **#16**：桌面端横向滚动发现性（Profile Tab / Home 日期条 / 挑战页大卡下横滑条）。
-- **#17**：下单前 Polymarket `GET https://polymarket.com/api/geoblock` 合规预检（Builder 要求）。
+- **#17**（已实现）：`GeoblockProvider` + `GET /api/geoblock` 代理 `polymarket.com/api/geoblock`；`handlePlaceRealBet` 入口硬拦截；顶栏/ConfirmModal UI 提示。

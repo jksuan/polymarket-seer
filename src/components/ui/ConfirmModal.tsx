@@ -10,6 +10,8 @@ import { usePrivy } from '@privy-io/react-auth';
 import { usePolymarketAuth } from '@/contexts/PolymarketAuthContext';
 import useSWR from 'swr';
 import { useTranslation, translateCountryName } from '@/i18n';
+import { useGeoblock } from '@/contexts/GeoblockContext';
+import { getGeoblockConfirmDisabledText } from '@/lib/geoblock/geoblockMessages';
 
 // ──────────────────────────────────────────────
 // OutrightInfo: data block for the "outright" / Yes-No panel
@@ -72,6 +74,8 @@ export function ConfirmModal({
   const { t, locale } = useTranslation();
   const { authenticated, login } = usePrivy();
   const { usdcBalance, isRefreshingBalance, sessionEpoch } = usePolymarketAuth();
+  const { orderBlocked, refresh } = useGeoblock();
+  const geoblockConfirmHint = getGeoblockConfirmDisabledText(locale);
 
   // ── Ensure tokenId is a primitive string ──
   const actualTokenId = Array.isArray(tokenId) ? tokenId[0] : tokenId;
@@ -94,6 +98,10 @@ export function ConfirmModal({
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (isOpen) void refresh({ force: false });
+  }, [isOpen, refresh]);
 
   useDismissOverlayOnSessionEnd(isOpen, sessionEpoch, onCancel);
 
@@ -119,8 +127,11 @@ export function ConfirmModal({
   const profit         = ((amount * displayOdds) - amount).toFixed(2);
 
   const handleConfirm = () => {
+    if (orderBlocked) return;
     onConfirm(amount, activePrice);
   };
+
+  const geoblockBlocked = orderBlocked;
 
   const handleCancel = () => {
     onCancel();
@@ -403,7 +414,9 @@ export function ConfirmModal({
 
                 {/* Confirm / Login button */}
                 <button
+                  disabled={authenticated && geoblockBlocked}
                   onClick={authenticated ? () => {
+                    if (geoblockBlocked) return;
                     const maxAllowed = parseFloat(usdcBalance || '0');
                     if (amount < 1 || amount > maxAllowed) {
                       setShowError(true);
@@ -411,12 +424,14 @@ export function ConfirmModal({
                       handleConfirm();
                     }
                   } : login}
-                  className="relative w-full py-4 rounded-[16px] active:scale-[0.98] transition-all overflow-hidden group"
+                  className="relative w-full py-4 rounded-[16px] active:scale-[0.98] transition-all overflow-hidden group disabled:opacity-45 disabled:cursor-not-allowed disabled:active:scale-100"
                   style={
                     authenticated 
                       ? {
-                          background: 'linear-gradient(90deg, #ADFF2F 0%, #00F0FF 100%)',
-                          boxShadow: '0 8px 30px rgba(173,255,47,0.3)',
+                          background: geoblockBlocked
+                            ? 'rgba(255,255,255,0.12)'
+                            : 'linear-gradient(90deg, #ADFF2F 0%, #00F0FF 100%)',
+                          boxShadow: geoblockBlocked ? 'none' : '0 8px 30px rgba(173,255,47,0.3)',
                         }
                       : {
                           background: '#2469F6', // Standard Web3 connect blue
@@ -424,24 +439,34 @@ export function ConfirmModal({
                         }
                   }
                 >
-                  <div className={`absolute inset-0 bg-black/10 group-active:bg-black/20 transition-colors ${!authenticated && 'hidden'}`} />
-                  {/* Glossy overlay only for authenticated state */}
-                  {authenticated && (
-                    <div className="absolute top-0 left-0 right-0 h-1/2 bg-white/20 rounded-t-[16px] pointer-events-none" />
-                  )}
-                  
+                  {/* 荧光绿主按钮的装饰叠层；geoblock 禁用灰底时不渲染，避免下半部发暗 */}
+                  {authenticated && !geoblockBlocked ? (
+                    <>
+                      <div className="absolute inset-0 bg-black/10 transition-colors group-active:bg-black/20" />
+                      <div className="absolute top-0 left-0 right-0 h-1/2 rounded-t-[16px] bg-white/20 pointer-events-none" />
+                    </>
+                  ) : null}
+
                   <div className="relative flex items-center justify-center gap-2">
                     <span 
                       style={{ 
                         fontFamily: 'Outfit, Inter', 
                         fontWeight: 900, 
                         fontSize: '16px', 
-                        color: authenticated ? '#0D0518' : '#ffffff', 
+                        color: authenticated
+                          ? geoblockBlocked
+                            ? 'rgba(255,255,255,0.75)'
+                            : '#0D0518'
+                          : '#ffffff',
                         letterSpacing: authenticated ? '0.03em' : '0.01em',
                         textTransform: authenticated ? 'uppercase' : 'none'
                       }}
                     >
-                      {authenticated ? `${t.trade.buy} ${badgeText} $${formatWithCommas(amount)}` : 'Login'}
+                      {authenticated
+                        ? geoblockBlocked
+                          ? geoblockConfirmHint
+                          : `${t.trade.buy} ${badgeText} $${formatWithCommas(amount)}`
+                        : 'Login'}
                     </span>
                   </div>
                 </button>
