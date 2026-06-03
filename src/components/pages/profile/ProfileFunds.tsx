@@ -65,9 +65,9 @@ export function ProfileFunds({ isActive }: ProfileFundsProps) {
       ) : (
         rows.map((row) => (
           <GlassCard key={row.key} className="p-3 flex items-center gap-3">
-            <div className="w-[42px] shrink-0">
+            <div className="min-w-[42px] w-max shrink-0">
               <div
-                className="text-[11px] font-bold py-1.5 rounded-md text-center w-full leading-none"
+                className="text-[11px] font-bold py-1.5 px-1.5 rounded-md text-center whitespace-nowrap leading-none"
                 style={{ color: row.txColor, background: row.txBg }}
               >
                 {row.label}

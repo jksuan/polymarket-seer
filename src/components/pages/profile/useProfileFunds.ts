@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { FundsMovementListItem } from "@/types/funds";
 import { mapFundsMovementList, type FundsMovementDisplayRow } from "@/lib/funds/mapFundsMovementDisplay";
 
@@ -9,12 +9,20 @@ export type ProfileFundsLabels = {
   txWithdraw: string;
 };
 
+/** 展示行由 items + 当前 labels 派生（与明细 Tab 的 useMemo(trades, t) 一致）。 */
+export function deriveProfileFundsRows(
+  items: FundsMovementListItem[],
+  labels: ProfileFundsLabels
+): FundsMovementDisplayRow[] {
+  return mapFundsMovementList(items, labels);
+}
+
 export async function loadProfileFundsRows(
   fetchMovements: () => Promise<FundsMovementListItem[]>,
   labels: ProfileFundsLabels
 ): Promise<FundsMovementDisplayRow[]> {
   const items = await fetchMovements();
-  return mapFundsMovementList(items, labels);
+  return deriveProfileFundsRows(items, labels);
 }
 
 export function useProfileFunds({
@@ -30,15 +38,18 @@ export function useProfileFunds({
   fetchMovements: () => Promise<FundsMovementListItem[]>;
 }) {
   const [loading, setLoading] = useState(false);
-  const [rows, setRows] = useState<FundsMovementDisplayRow[]>([]);
+  const [items, setItems] = useState<FundsMovementListItem[]>([]);
   const [loadedOnce, setLoadedOnce] = useState(false);
 
   const fetchMovementsRef = useRef(fetchMovements);
-  const labelsRef = useRef(labels);
   fetchMovementsRef.current = fetchMovements;
-  labelsRef.current = labels;
 
   const loadedOnceRef = useRef(false);
+
+  const rows = useMemo(
+    () => deriveProfileFundsRows(items, labels),
+    [items, labels.txDeposit, labels.txWithdraw]
+  );
 
   useEffect(() => {
     if (!isActive) return;
@@ -57,16 +68,13 @@ export function useProfileFunds({
         setLoading(true);
       }
       try {
-        const next = await loadProfileFundsRows(
-          () => fetchMovementsRef.current(),
-          labelsRef.current
-        );
+        const next = await fetchMovementsRef.current();
         if (!cancelled) {
-          setRows(next);
+          setItems(next);
         }
       } catch {
         if (!cancelled) {
-          setRows([]);
+          setItems([]);
         }
       } finally {
         if (!cancelled) {
@@ -86,14 +94,9 @@ export function useProfileFunds({
   const reload = useCallback(async () => {
     setLoading(true);
     try {
-      setRows(
-        await loadProfileFundsRows(
-          () => fetchMovementsRef.current(),
-          labelsRef.current
-        )
-      );
+      setItems(await fetchMovementsRef.current());
     } catch {
-      setRows([]);
+      setItems([]);
     } finally {
       setLoading(false);
       loadedOnceRef.current = true;
