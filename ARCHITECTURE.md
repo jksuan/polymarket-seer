@@ -364,8 +364,8 @@ Bridge 代理上游请求可附带 `X-Builder-Code`（env `POLY_BUILDER_CODE`，
 |---|---|
 | **账户数据获取** | SWR 集成，以 `[proxyAddress, walletAddress]` 为 Key，15 秒自动轮询 |
 | **市价下单** | `handlePlaceRealBet()` → **Geoblock 预检**（`/api/geoblock`）→ 部署 Deposit Wallet → pUSD/ERC1155 授权 → CLOB V2 市价单 |
-| **限价卖出** | `handleLimitSellPosition()` → ERC1155 授权 → CLOB V2 限价卖单 |
-| **市价卖出** | `handleSellPosition()` → ERC1155 授权 → CLOB V2 FOK 卖单 |
+| **限价卖出** | `handleLimitSellPosition()` → **Geoblock 预检** → ERC1155 授权 → CLOB V2 限价卖单 |
+| **市价卖出** | `handleSellPosition()` → **Geoblock 预检** → ERC1155 授权 → CLOB V2 FOK 卖单 |
 | **兑现/归档** | `handleRedeem()` → Deposit Wallet batch 经 Relayer 执行链上 redeem |
 | **取消订单** | `handleCancelOrder()` → CLOB Cancel API |
 | **交易状态管理** | `txStep` 状态机：idle → preparing → deploying → approving → placing → success/error |
@@ -414,6 +414,29 @@ Bridge 代理上游请求可附带 `X-Builder-Code`（env `POLY_BUILDER_CODE`，
    - 【核心演进】完成了核心交易流（`useTrading.ts` 及其挂载弹窗等）的状态文案与语言系统的深度解耦，实现了 40+ 交易进度文案的多语言自动化映射，并针对 `DepositDrawer`、`WithdrawDrawer` 与资金菜单补齐了充提流程的中英双语文案。
    - 【核心演进】推行“组件级双语渲染”模式处理复杂文档（如隐私政策等），绕过传统的 JSON 字典，确保了富文本排版的灵活性与开发效率。
 
+### 3.5 地理合规预检（Geoblock，GitHub #17）
+
+Polymarket Builder 要求交易前校验用户 IP 地理。浏览器不直连 `polymarket.com`，统一走 **`GET /api/geoblock`**（Route Handler 转发 `x-forwarded-for` / `x-real-ip`，上游 `https://polymarket.com/api/geoblock`，响应 60s 私有缓存）。
+
+**判定规则**：仅以 API 字段 **`blocked`** 为准（`true` = 受限；`false` = 开放）。不维护国家码黑白名单；检查失败时 fail-closed。
+
+| 模块 | 职责 |
+|---|---|
+| `GeoblockProvider` / `useGeoblock()` | 应用启动与切回前台刷新；`refreshBeforeOrder()` 供交易前强制复检 |
+| `src/lib/geoblock/orderGate.ts` | `evaluateGeoblockForOrder()`：开仓/平仓共用门禁 |
+| `src/lib/geoblock/geoblockMessages.ts` | 顶栏、ConfirmModal、TxOverlay 合规文案 |
+| `src/lib/geoblock/tradingErrors.ts` | 受限地区 CLOB 失败时映射为统一说明 |
+
+**交易门禁**：`handlePlaceRealBet`、`handleSellPosition`、`handleLimitSellPosition` 入口均先 `refreshBeforeOrder()`，未通过则不进 CLOB。
+
+**UI 门禁**（`blocked === true` 且已完成首次检查）：
+
+- `TopHeader`：顶栏「当前地区暂不支持下单」
+- `FundsActionSheet`：禁用「充值」
+- `ConfirmModal`：禁用确认钮（灰底文案「您所在地区暂不支持下单」；**无**内嵌黄色警告条；禁用态不渲染荧光按钮光泽叠层）
+
+**失败文案**：TxOverlay 详情为「当前地区暂不支持下单交易」（不含 VPN 规避提示）。术语见 `CONTEXT.md`。
+
 ---
 
 ## 4. 状态管理策略
@@ -423,6 +446,7 @@ Bridge 代理上游请求可附带 `X-Builder-Code`（env `POLY_BUILDER_CODE`，
 | 层级 | 技术 | 数据类型 |
 |---|---|---|
 | **全局认证** | React Context (`PolymarketAuthContext`) | 用户身份、钱包地址、余额 |
+| **地理合规** | React Context (`GeoblockProvider`) | `blocked`、国家/地区码、检查时间与 `orderBlocked` |
 | **服务端数据** | SWR 缓存 | 市场数据、账户持仓、订单 |
 | **页面级状态** | `useState` + `useCallback` | 当前 Tab、弹窗状态、筛选条件 |
 | **持久化** | `sessionStorage` | 当前活跃 Tab（防刷新丢失） |
@@ -483,4 +507,4 @@ Bridge 代理上游请求可附带 `X-Builder-Code`（env `POLY_BUILDER_CODE`，
 
 ### 6.5 待办（GitHub Issues，非阻塞主干）
 - **#16**：桌面端横向滚动发现性（Profile Tab / Home 日期条 / 挑战页大卡下横滑条）。
-- **#17**（已实现）：`GeoblockProvider` + `GET /api/geoblock` 代理 `polymarket.com/api/geoblock`；`handlePlaceRealBet` 入口硬拦截；顶栏/ConfirmModal UI 提示。
+- **#17**（已实现）：见 §3.5 Geoblock（代理、`blocked` 门禁、开/平仓与充值 UI）。

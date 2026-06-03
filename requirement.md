@@ -216,9 +216,18 @@ Polymarket Builder 要求：因监管与制裁合规，**下单前**应验证用
 **实现**：
 1. Next.js 代理 `GET /api/geoblock`（转发客户端 IP，60s 私有缓存），避免浏览器 CORS。
 2. `GeoblockProvider`：应用启动、切回前台、打开 ConfirmModal、交易前强制复检。
-3. 仅以 API 字段 **`blocked`** 判断受限：`true` 时禁开/平仓、顶栏提示、禁用充值、交易失败文案为「当前地区暂不支持下单交易」（不含 VPN 提示）。
+3. 仅以 API 字段 **`blocked`** 判断受限：`true` 时禁止开仓、平仓与充值入口；检查失败按 fail-closed 处理。
 
-详见 [Polymarket Geographic Restrictions](https://docs.polymarket.com/api-reference/geoblock)。
+**受限地区体验（`blocked === true`）**：
+
+| 触点 | 行为 |
+|---|---|
+| 顶栏 | 展示「当前地区暂不支持下单」 |
+| 资金抽屉 | 「充值」按钮禁用；「提现」仍可用 |
+| 交易终端（ConfirmModal） | 确认钮禁用，文案「您所在地区暂不支持下单」；**不**显示内嵌黄色警告条 |
+| 交易失败（TxOverlay） | 标题侧合规提示 + 详情「当前地区暂不支持下单交易」；**不含** VPN 规避类文案 |
+
+详见 [Polymarket Geographic Restrictions](https://docs.polymarket.com/api-reference/geoblock)。工程细节见 `ARCHITECTURE.md` §3.5。
 
 ---
 
