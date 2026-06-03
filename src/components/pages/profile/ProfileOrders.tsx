@@ -37,22 +37,6 @@ export function ProfileOrders({ portfolioLoading, openOrders, onCancelOrder }: P
           const totalAmount = (originalSize * price).toFixed(2);
           const displayTitle = order.title || (order.market && !order.market.startsWith('0x') ? order.market : t.profile.orderUnknown);
 
-          let expirationDisplay = t.profile.orderGtc;
-          if (order.expiration && Number(order.expiration) > 0) {
-            const expTime = new Date(Number(order.expiration) * 1000);
-            const now = new Date();
-            const diffMs = expTime.getTime() - now.getTime();
-            if (diffMs <= 0) {
-              expirationDisplay = t.profile.orderExpired;
-            } else if (diffMs < 3600000) {
-              expirationDisplay = t.profile.orderMinutesExpiry(Math.ceil(diffMs / 60000));
-            } else if (diffMs < 86400000) {
-              expirationDisplay = t.profile.orderHoursExpiry(Math.ceil(diffMs / 3600000));
-            } else {
-              expirationDisplay = t.profile.orderDaysExpiry(Math.ceil(diffMs / 86400000));
-            }
-          }
-
           const isBuy = order.side === 'BUY';
 
           return (
@@ -91,18 +75,14 @@ export function ProfileOrders({ portfolioLoading, openOrders, onCancelOrder }: P
               </div>
 
               <div className="mt-3.5 px-0.5 pt-3 border-t border-white/5">
-                <div className="grid grid-cols-4 gap-3 items-end">
+                <div className="grid grid-cols-3 gap-3 items-end">
                   <div className="flex flex-col gap-1">
                     <span className="text-[11px] sm:text-[12px] font-medium text-[#a3aac4] whitespace-nowrap">{t.profile.orderFilled}</span>
                     <span className="text-[15px] font-bold text-[#6bff8f] tracking-tight">${filledAmount} <span className="text-[#a3aac4] text-[12px] font-normal">/ ${totalAmount}</span></span>
                   </div>
-                  <div className="flex flex-col gap-1">
+                  <div className="flex flex-col gap-1 items-center text-center">
                     <span className="text-[11px] sm:text-[12px] font-medium text-[#a3aac4] whitespace-nowrap">{t.profile.orderTargetProb}</span>
                     <span className="text-[15px] font-bold text-[#dee5ff] tracking-tight">{(price * 100).toFixed(1)}%</span>
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <span className="text-[11px] sm:text-[12px] font-medium text-[#a3aac4] whitespace-nowrap">{t.profile.orderExpiry}</span>
-                    <span className="text-[13px] font-bold text-[#a3aac4] tracking-tight whitespace-nowrap">{expirationDisplay}</span>
                   </div>
                   <div className="flex justify-end">
                     <button 
