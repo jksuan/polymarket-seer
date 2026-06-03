@@ -117,7 +117,8 @@ export function MatchCard({ match, index = 0, onPlaceBet, positions }: MatchCard
                   letterSpacing: '0.01em',
                 }}
               >
-                <Clock size={12} /> {t.home.matchStart} {match.timeLabel}
+                <Clock size={12} />{' '}
+                {locale === 'zh' ? `${t.home.matchStart} ${match.timeLabel}` : match.timeLabel}
               </div>
               <div
                 className="px-1.5 py-[1px] rounded-[4px] text-[10px] font-black"

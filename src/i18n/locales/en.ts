@@ -70,7 +70,7 @@ const en: TranslationKeys = {
     knockout: 'Knockout',
     funBets: 'Fun Bets',
     matchStart: 'Kickoff',
-    volume: 'Volume',
+    volume: 'VOL',
     group: ' Group',
     knockoutStage: 'Knockout',
     live: 'Live',
