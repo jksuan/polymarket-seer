@@ -214,7 +214,7 @@ Compass「发现」Tab：Tinder 式 **左右划动** 单场对阵卡片，低门
 Polymarket Builder 要求：因监管与制裁合规，**下单前**应验证用户地理位置（`GET https://polymarket.com/api/geoblock`）。受限地区订单会被拒。
 
 **实现**：
-1. Next.js 代理 `GET /api/geoblock`（转发客户端 IP，60s 私有缓存），避免浏览器 CORS。
+1. 客户端优先直连 `https://polymarket.com/api/geoblock`（以用户 IP 判定）；失败时回退 Next.js 代理 `GET /api/geoblock`（转发客户端 IP，60s 私有缓存）。
 2. `GeoblockProvider`：应用启动、切回前台、打开 ConfirmModal、交易前强制复检。
 3. 仅以 API 字段 **`blocked`** 判断受限：`true` 时禁止开仓、平仓与充值入口；检查失败按 fail-closed 处理。
 

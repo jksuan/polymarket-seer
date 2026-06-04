@@ -416,7 +416,7 @@ Bridge 代理上游请求可附带 `X-Builder-Code`（env `POLY_BUILDER_CODE`，
 
 ### 3.5 地理合规预检（Geoblock，GitHub #17）
 
-Polymarket Builder 要求交易前校验用户 IP 地理。浏览器不直连 `polymarket.com`，统一走 **`GET /api/geoblock`**（Route Handler 转发 `x-forwarded-for` / `x-real-ip`，上游 `https://polymarket.com/api/geoblock`，响应 60s 私有缓存）。
+Polymarket Builder 要求交易前校验用户 IP 地理。客户端**优先浏览器直连** `https://polymarket.com/api/geoblock`（CORS `*`，以用户真实 IP 判定；Vercel 等边缘若仅走服务端代理，出站多为美国会被误拦）。直连失败时回退 **`GET /api/geoblock`**（Route Handler 转发 `x-forwarded-for` / `x-real-ip`，60s 私有缓存）。
 
 **判定规则**：仅以 API 字段 **`blocked`** 为准（`true` = 受限；`false` = 开放）。不维护国家码黑白名单；检查失败时 fail-closed。
 

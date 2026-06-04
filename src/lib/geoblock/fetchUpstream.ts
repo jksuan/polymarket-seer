@@ -1,21 +1,6 @@
+import { GEOBLOCK_UPSTREAM_URL } from "./constants";
+import { parseGeoblockBody } from "./parseResponse";
 import type { GeoblockApiResponse } from "./types";
-
-const GEOBLOCK_URL = "https://polymarket.com/api/geoblock";
-
-function parseGeoblockBody(body: string): GeoblockApiResponse | null {
-  try {
-    const data = JSON.parse(body) as Record<string, unknown>;
-    if (typeof data.blocked !== "boolean") return null;
-    return {
-      blocked: data.blocked,
-      ip: typeof data.ip === "string" ? data.ip : undefined,
-      country: typeof data.country === "string" ? data.country : undefined,
-      region: typeof data.region === "string" ? data.region : undefined,
-    };
-  } catch {
-    return null;
-  }
-}
 
 /**
  * Server-side fetch to polymarket.com geoblock (honors HTTPS_PROXY like other API routes).
@@ -30,7 +15,7 @@ export function fetchPolymarketGeoblock(clientIp?: string): Promise<GeoblockApiR
   const headers: Record<string, string> = { Accept: "application/json" };
   if (clientIp) headers["X-Forwarded-For"] = clientIp;
 
-  return fetch(GEOBLOCK_URL, { headers, cache: "no-store" }).then(async (res) => {
+  return fetch(GEOBLOCK_UPSTREAM_URL, { headers, cache: "no-store" }).then(async (res) => {
     const text = await res.text();
     if (!res.ok) {
       throw new Error(`Geoblock upstream HTTP ${res.status}: ${text.slice(0, 200)}`);
@@ -54,7 +39,7 @@ function fetchViaHttpsProxy(clientIp?: string): Promise<GeoblockApiResponse> {
 
   return new Promise((resolve, reject) => {
     const req = https.get(
-      GEOBLOCK_URL,
+      GEOBLOCK_UPSTREAM_URL,
       { agent, headers },
       (res) => {
         let body = "";
