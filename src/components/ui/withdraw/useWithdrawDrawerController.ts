@@ -8,6 +8,7 @@ import { usePolymarketAuth } from "@/contexts/PolymarketAuthContext";
 import {
   InsufficientOnChainPusdError,
   resolveWithdrawablePusdAtomic,
+  type ClobCollateralClient,
 } from "@/auth/collateralBalance";
 import { createClobClient } from "@/lib/clobClientFactory";
 import { getCachedCreds } from "@/lib/utils";
@@ -212,7 +213,7 @@ export function useWithdrawDrawerController({
         const signer = provider.getSigner();
 
         const creds = getCachedCreds(wallet.address);
-        let clobClient = null;
+        let clobClient: ClobCollateralClient | null = null;
         if (creds?.key) {
           const vault = await resolveTradingVault(signer, proxyAddress);
           clobClient = createClobClient({
@@ -220,7 +221,7 @@ export function useWithdrawDrawerController({
             creds,
             funderAddress: vault.address,
             signatureType: vault.signatureType,
-          });
+          }) as ClobCollateralClient;
         }
 
         const { withdrawableAtomic } = await resolveWithdrawablePusdAtomic({
