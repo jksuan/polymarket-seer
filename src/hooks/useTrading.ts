@@ -28,7 +28,6 @@ import {
   formatCollateralBalanceFromAtomicUnits,
   getExchangeSpenderForMarket,
   getRequiredErc1155OperatorsForMarket,
-  getRequiredPusdSpendersForMarket,
   readErc1155IsApprovedForAll,
   readProxyUsdcEAtomic,
   readProxyPusdAtomic,
@@ -39,8 +38,8 @@ import { createDepositRelayExecutor } from "@/auth/depositRelayExecutor";
 import {
   createTradingRelayClient,
   ensureDepositVaultDeployed,
-  ensureDepositErc1155Approvals,
-  ensureDepositTradingApprovals,
+  ensureDepositErc1155ApprovalsForMarket,
+  ensureDepositTradingApprovalsForMarket,
   executeDepositWalletRelayBatch,
   resolveTradingVault,
 } from "@/auth/vault";
@@ -472,8 +471,6 @@ export function useTrading(
       const tickSizeEarly = await clobClientWithCreds.getTickSize(finalTokenId).catch(() => "0.01") as "0.1" | "0.01" | "0.001" | "0.0001";
       const negRiskEarly = await clobClientWithCreds.getNegRisk(finalTokenId).catch(() => false);
       const requiredSpender = getExchangeSpenderForMarket(negRiskEarly);
-      const requiredSpenders = getRequiredPusdSpendersForMarket(negRiskEarly);
-
       // --- Step 1: Deploy Deposit Wallet ---
       setTxStep("deploying");
       setTxMessage(t.tx.checkingVaultState);
@@ -493,23 +490,22 @@ export function useTrading(
         }
       }
 
-      // --- Step 2: Batch Token Approvals（分块 + 链上校验）---
+      // --- Step 2: 本市场最小 pUSD 授权（单次 WALLET batch，买入不需 ERC1155）---
       setTxStep("approving");
       setTxMessage(t.tx.settingApproval);
 
-      await ensureDepositTradingApprovals(relayClient, vault.address, provider, requiredSpenders);
-      await ensureDepositErc1155Approvals(
+      await ensureDepositTradingApprovalsForMarket(
         relayClient,
         vault.address,
         provider,
-        getRequiredErc1155OperatorsForMarket(negRiskEarly)
+        negRiskEarly
       );
       setTxMessage(t.tx.approveSuccess);
 
       const marketAllowance = await readPusdAllowanceAtomic(provider, vault.address, requiredSpender);
       if (marketAllowance === BigInt(0)) {
         throw new Error(
-          `pUSD 仍未授权给 ${negRiskEarly ? "Neg Risk Adapter" : "Exchange V2"}，请重试并完成签名。`
+          `pUSD 仍未授权给 ${negRiskEarly ? "Neg Risk Adapter" : "Exchange V2"}，请重试并完成授权签名。`
         );
       }
 
@@ -591,10 +587,10 @@ export function useTrading(
 
       setTxStep("error");
       if (finalMsg.toLowerCase().includes("deadline too soon")) {
-        finalMsg = "授权签名有效期不足，请重新下注并在弹窗出现后尽快完成全部签名。";
+        finalMsg = "授权签名有效期不足，请重新下注并在弹窗出现后尽快完成授权与下单签名。";
       }
       if (finalMsg.toLowerCase().includes("allowance")) {
-        finalMsg = "交易授权不足：Neg Risk 市场需授权 Neg Risk Adapter，请重试并完成全部签名。";
+        finalMsg = "交易授权不足：请重试并完成本市场的 pUSD 授权签名。";
       }
       if (finalMsg.includes("not enough balance")) {
         finalMsg = "余额不足或授权尚未生效，请确认金库中有足够的可交易余额。";
@@ -721,18 +717,18 @@ export function useTrading(
       setTxStep("approving");
       setTxMessage(t.tx.settingApproval);
       await ensureDepositVaultDeployed(relayClient, vault.address);
-      await ensureDepositErc1155Approvals(
+      await ensureDepositErc1155ApprovalsForMarket(
         relayClient,
         vault.address,
         provider,
-        requiredErc1155Operators
+        negRisk
       );
 
       for (const operator of requiredErc1155Operators) {
         const approved = await readErc1155IsApprovedForAll(provider, vault.address, operator);
         if (!approved) {
           throw new Error(
-            `Outcome 代币仍未授权给 ${negRisk ? "Neg Risk Exchange V2" : "Exchange V2"}，请重试并完成签名。`
+            `Outcome 代币仍未授权给 ${negRisk ? "Neg Risk Exchange V2" : "Exchange V2"}，请重试并完成授权签名。`
           );
         }
       }
@@ -849,18 +845,18 @@ export function useTrading(
       setTxStep("approving");
       setTxMessage(t.tx.settingApproval);
       await ensureDepositVaultDeployed(relayClient, vault.address);
-      await ensureDepositErc1155Approvals(
+      await ensureDepositErc1155ApprovalsForMarket(
         relayClient,
         vault.address,
         provider,
-        requiredErc1155Operators
+        negRisk
       );
 
       for (const operator of requiredErc1155Operators) {
         const approved = await readErc1155IsApprovedForAll(provider, vault.address, operator);
         if (!approved) {
           throw new Error(
-            `Outcome 代币仍未授权给 ${negRisk ? "Neg Risk Exchange V2" : "Exchange V2"}，请重试并完成签名。`
+            `Outcome 代币仍未授权给 ${negRisk ? "Neg Risk Exchange V2" : "Exchange V2"}，请重试并完成授权签名。`
           );
         }
       }

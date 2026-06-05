@@ -74,6 +74,49 @@ export async function readProxyPusdAtomic(
   }
 }
 
+/**
+ * 提现仅能转链上 pUSD；顶栏 CLOB 余额可能高于钱包实有（挂单占用、缓存滞后等）。
+ * 返回 min(链上 pUSD, CLOB collateral) 作为可提现上限。
+ */
+export async function resolveWithdrawablePusdAtomic(params: {
+  provider: ethers.providers.Provider;
+  proxyAddress: string;
+  clobClient?: ClobCollateralClient | null;
+}): Promise<{
+  withdrawableAtomic: bigint;
+  onChainPusdAtomic: bigint;
+  clobCollateralAtomic: bigint;
+}> {
+  const onChainPusdAtomic = await readProxyPusdAtomic(params.provider, params.proxyAddress);
+  let clobCollateralAtomic = onChainPusdAtomic;
+
+  if (params.clobClient) {
+    try {
+      const allowanceResponse = await syncAndGetClobCollateralAllowance(params.clobClient);
+      clobCollateralAtomic = parseCollateralAtomicUnits(allowanceResponse?.balance ?? null);
+    } catch {
+      clobCollateralAtomic = onChainPusdAtomic;
+    }
+  }
+
+  const withdrawableAtomic =
+    onChainPusdAtomic < clobCollateralAtomic ? onChainPusdAtomic : clobCollateralAtomic;
+
+  return { withdrawableAtomic, onChainPusdAtomic, clobCollateralAtomic };
+}
+
+export class InsufficientOnChainPusdError extends Error {
+  readonly onChainPusdAtomic: bigint;
+  readonly requestedAtomic: bigint;
+
+  constructor(onChainPusdAtomic: bigint, requestedAtomic: bigint) {
+    super("INSUFFICIENT_ON_CHAIN_PUSD");
+    this.name = "InsufficientOnChainPusdError";
+    this.onChainPusdAtomic = onChainPusdAtomic;
+    this.requestedAtomic = requestedAtomic;
+  }
+}
+
 export async function readPusdAllowanceAtomic(
   provider: ethers.providers.Provider,
   owner: string,

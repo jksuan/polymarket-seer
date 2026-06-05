@@ -8,6 +8,8 @@ import {
   buildTradingApprovalRelayBatch,
   findMissingErc1155Operators,
   findMissingPusdAllowances,
+  getRequiredErc1155OperatorsForMarket,
+  getRequiredPusdSpendersForMarket,
   TRADING_APPROVAL_SPENDERS,
   TRADING_ERC1155_OPERATORS,
 } from "@/auth/collateralBalance";
@@ -15,6 +17,9 @@ import {
 const DEPOSIT_BATCH_DEADLINE_SEC = 600;
 /** 单批 Deposit Wallet 调用上限，避免 relayer 大批次部分失败 */
 const DEPOSIT_WALLET_BATCH_CHUNK_SIZE = 4;
+
+/** 普市 1 / Neg Risk 2 笔 approve 可一次 WALLET batch 签完 */
+export const MARKET_MINIMAL_SINGLE_BATCH_MAX = 3;
 
 export function relayTransactionsToDepositCalls(
   transactions: RelayTransaction[]
@@ -61,6 +66,23 @@ export async function executeDepositWalletRelayBatchInChunks(
   }
 }
 
+/**
+ * 小批次单次签名；大批次再分块（赎回等路径仍用分块）。
+ */
+export async function executeDepositWalletRelayBatches(
+  relayClient: RelayClient,
+  walletAddress: string,
+  transactions: RelayTransaction[],
+  chunkSize = DEPOSIT_WALLET_BATCH_CHUNK_SIZE
+): Promise<void> {
+  if (transactions.length === 0) return;
+  if (transactions.length <= MARKET_MINIMAL_SINGLE_BATCH_MAX) {
+    await executeDepositWalletRelayBatch(relayClient, walletAddress, transactions);
+    return;
+  }
+  await executeDepositWalletRelayBatchInChunks(relayClient, walletAddress, transactions, chunkSize);
+}
+
 /** 确保 Deposit Wallet 已部署；返回部署前是否已存在 */
 export async function ensureDepositVaultDeployed(
   relayClient: RelayClient,
@@ -77,7 +99,61 @@ export async function ensureDepositVaultDeployed(
 }
 
 /**
- * 确保 pUSD 交易授权到位（仅补缺失 spender，减少签名次数）。
+ * 仅补当前市场类型所需的 pUSD spender（买入路径，单次 WALLET batch 签名）。
+ */
+export async function ensureDepositTradingApprovalsForMarket(
+  relayClient: RelayClient,
+  walletAddress: string,
+  provider: ethers.providers.Provider,
+  negRisk: boolean
+): Promise<void> {
+  const spenders = getRequiredPusdSpendersForMarket(negRisk);
+  let missing = await findMissingPusdAllowances(provider, walletAddress, spenders);
+  if (missing.length > 0) {
+    await executeDepositWalletRelayBatches(
+      relayClient,
+      walletAddress,
+      buildPusdApprovalRelayBatchForSpenders(missing)
+    );
+    missing = await findMissingPusdAllowances(provider, walletAddress, spenders);
+  }
+
+  if (missing.length > 0) {
+    throw new Error(
+      `pUSD 授权未完成（缺少 ${missing.length} 个本市场 spender）。请完成授权签名后重试。`
+    );
+  }
+}
+
+/**
+ * 仅补当前市场类型所需的 ERC1155 operator（卖出路径）。
+ */
+export async function ensureDepositErc1155ApprovalsForMarket(
+  relayClient: RelayClient,
+  walletAddress: string,
+  provider: ethers.providers.Provider,
+  negRisk: boolean
+): Promise<void> {
+  const operators = getRequiredErc1155OperatorsForMarket(negRisk);
+  let missing = await findMissingErc1155Operators(provider, walletAddress, operators);
+  if (missing.length > 0) {
+    await executeDepositWalletRelayBatches(
+      relayClient,
+      walletAddress,
+      buildErc1155ApprovalRelayBatchForOperators(missing)
+    );
+    missing = await findMissingErc1155Operators(provider, walletAddress, operators);
+  }
+
+  if (missing.length > 0) {
+    throw new Error(
+      `Outcome 代币授权未完成（缺少 ${missing.length} 个本市场 operator）。请完成授权签名后重试。`
+    );
+  }
+}
+
+/**
+ * 确保 pUSD 交易授权到位（全量 spender，赎回/兼容路径）。
  * 分块提交并在链上校验，失败则抛错。
  */
 export async function ensureDepositTradingApprovals(
@@ -95,7 +171,7 @@ export async function ensureDepositTradingApprovals(
       priority
     );
     if (missingPriority.length > 0) {
-      await executeDepositWalletRelayBatchInChunks(
+      await executeDepositWalletRelayBatches(
         relayClient,
         walletAddress,
         buildPusdApprovalRelayBatchForSpenders(missingPriority)
@@ -109,7 +185,7 @@ export async function ensureDepositTradingApprovals(
     TRADING_APPROVAL_SPENDERS
   );
   if (missing.length > 0) {
-    await executeDepositWalletRelayBatchInChunks(
+    await executeDepositWalletRelayBatches(
       relayClient,
       walletAddress,
       buildPusdApprovalRelayBatchForSpenders(missing)
@@ -119,14 +195,13 @@ export async function ensureDepositTradingApprovals(
 
   if (missing.length > 0) {
     throw new Error(
-      `pUSD 授权未完成（缺少 ${missing.length} 个 spender，含 Exchange V2）。请完成全部签名后重试。`
+      `pUSD 授权未完成（缺少 ${missing.length} 个 spender，含 Exchange V2）。请完成授权签名后重试。`
     );
   }
 }
 
 /**
- * 确保 CTF outcome token (ERC1155) 已对 Exchange 授权（卖出必需）。
- * 优先补当前市场所需 operator，再扫全量 TRADING_ERC1155_OPERATORS。
+ * 确保 CTF outcome token (ERC1155) 已对 Exchange 授权（全量 operator，兼容路径）。
  */
 export async function ensureDepositErc1155Approvals(
   relayClient: RelayClient,
@@ -142,7 +217,7 @@ export async function ensureDepositErc1155Approvals(
       priority
     );
     if (missingPriority.length > 0) {
-      await executeDepositWalletRelayBatchInChunks(
+      await executeDepositWalletRelayBatches(
         relayClient,
         walletAddress,
         buildErc1155ApprovalRelayBatchForOperators(missingPriority)
@@ -156,7 +231,7 @@ export async function ensureDepositErc1155Approvals(
     TRADING_ERC1155_OPERATORS
   );
   if (missing.length > 0) {
-    await executeDepositWalletRelayBatchInChunks(
+    await executeDepositWalletRelayBatches(
       relayClient,
       walletAddress,
       buildErc1155ApprovalRelayBatchForOperators(missing)
@@ -170,7 +245,7 @@ export async function ensureDepositErc1155Approvals(
 
   if (missing.length > 0) {
     throw new Error(
-      `Outcome 代币授权未完成（缺少 ${missing.length} 个 Exchange operator）。请完成全部签名后重试。`
+      `Outcome 代币授权未完成（缺少 ${missing.length} 个 Exchange operator）。请完成授权签名后重试。`
     );
   }
 }
@@ -180,7 +255,7 @@ export async function executeDepositTradingApprovalBatch(
   relayClient: RelayClient,
   walletAddress: string
 ): Promise<void> {
-  await executeDepositWalletRelayBatchInChunks(
+  await executeDepositWalletRelayBatches(
     relayClient,
     walletAddress,
     buildTradingApprovalRelayBatch()

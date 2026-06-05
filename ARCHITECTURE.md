@@ -363,9 +363,9 @@ Bridge 代理上游请求可附带 `X-Builder-Code`（env `POLY_BUILDER_CODE`，
 | 功能 | 实现方式 |
 |---|---|
 | **账户数据获取** | SWR 集成，以 `[proxyAddress, walletAddress]` 为 Key，15 秒自动轮询 |
-| **市价下单** | `handlePlaceRealBet()` → **Geoblock 预检**（`/api/geoblock`）→ 部署 Deposit Wallet → pUSD/ERC1155 授权 → CLOB V2 市价单 |
-| **限价卖出** | `handleLimitSellPosition()` → **Geoblock 预检** → ERC1155 授权 → CLOB V2 限价卖单 |
-| **市价卖出** | `handleSellPosition()` → **Geoblock 预检** → ERC1155 授权 → CLOB V2 FOK 卖单 |
+| **市价下单** | `handlePlaceRealBet()` → **Geoblock 预检** → 部署 Deposit Wallet → **本市场最小 pUSD 授权**（`ensureDepositTradingApprovalsForMarket`，单次 WALLET batch）→ CLOB V2 市价单 |
+| **限价卖出** | `handleLimitSellPosition()` → **Geoblock 预检** → 本市场 ERC1155 授权（`ensureDepositErc1155ApprovalsForMarket`）→ CLOB V2 限价卖单 |
+| **市价卖出** | `handleSellPosition()` → **Geoblock 预检** → 本市场 ERC1155 授权 → CLOB V2 FOK 卖单 |
 | **兑现/归档** | `handleRedeem()` → Deposit Wallet batch 经 Relayer 执行链上 redeem |
 | **取消订单** | `handleCancelOrder()` → CLOB Cancel API |
 | **交易状态管理** | `txStep` 状态机：idle → preparing → deploying → approving → placing → success/error |
@@ -373,7 +373,8 @@ Bridge 代理上游请求可附带 `X-Builder-Code`（env `POLY_BUILDER_CODE`，
 
 **关键设计**：
 - CLOB 经 `createClobClient()`（`@polymarket/clob-client-v2`，funder = Deposit Wallet，`POLY_1271`）
-- 授权分块经 `ensureDepositTradingApprovals`（pUSD）与 `ensureDepositErc1155Approvals`（卖出 Outcome 代币）
+- 买入：仅 `ensureDepositTradingApprovalsForMarket`（普市 1 / Neg Risk 2 个 spender，≤3 笔时单次 WALLET 签名）；卖出：`ensureDepositErc1155ApprovalsForMarket`；全量授权仍保留于 `ensureDepositTradingApprovals` / `ensureDepositErc1155Approvals`（兼容）
+- 首次点确认下注（已充值、登录已有 CLOB 凭据）：普市 / Neg Risk 各约 **2 次**钱包签（授权 batch + 订单）
 - `isAuthInitializing`：当 `authenticated=true` 但 `swrKey=null && !data` 时强制为 loading，消除空态文字闪现
 - SWR 的 `isLoading` vs `isValidating`：前者仅首次加载为 true，后者每次轮询为 true。`portfolioLoading` 只绑定 `isLoading`，确保后台静默轮询不会触发骨架屏
 

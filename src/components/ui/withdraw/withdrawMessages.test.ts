@@ -19,4 +19,10 @@ describe("formatWithdrawExecutionError", () => {
   it("keeps unrelated errors", () => {
     expect(formatWithdrawExecutionError("zh", "network timeout")).toBe("network timeout");
   });
+
+  it("maps relayer batch revert to localized hint", () => {
+    expect(
+      formatWithdrawExecutionError("zh", "batch would revert: execution reverted")
+    ).toMatch(/链上 pUSD/);
+  });
 });

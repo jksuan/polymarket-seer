@@ -251,7 +251,7 @@ const en: TranslationKeys = {
     signatureTimeout: '⚠️ Signature channel slept. Transaction not sent, assets secure. Reactivating page...',
     placeSuccess: 'Bet successful! Order accepted by Polymarket matching engine.',
     switchingNetwork: 'Switching to Polygon network...',
-    settingApproval: 'Setting token approval (one-time operation)...',
+    settingApproval: 'Approving pUSD for this market (usually one signature)...',
     preparingArchive: 'Preparing archive transaction...',
     preparingRedeem: 'Constructing redeem transaction request...',
     checkingArchiveBalance: 'Multi-outcome market detected, checking on-chain token balance...',
@@ -458,6 +458,10 @@ const en: TranslationKeys = {
     statusPollError: 'Could not fetch withdrawal status. Check your connection and retry.',
     statusPollTimeout:
       'Status is taking longer than expected. Your withdrawal may still be processing. Retry or check your recipient wallet.',
+    insufficientOnChainPusd:
+      'Not enough on-chain pUSD in your vault to withdraw. Cancel open orders, sell positions, or wait for balance sync.',
+    batchReverted:
+      'Withdrawal simulation failed—usually insufficient on-chain pUSD or funds not settled yet. Refresh balance and try a smaller amount.',
     retryStatusPoll: 'Retry',
   },
 

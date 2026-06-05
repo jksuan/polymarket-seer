@@ -5,15 +5,24 @@ import { ethers } from "ethers";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { createWithdrawAddress, useBridgeStatus } from "@/hooks/useBridge";
 import { usePolymarketAuth } from "@/contexts/PolymarketAuthContext";
+import {
+  InsufficientOnChainPusdError,
+  resolveWithdrawablePusdAtomic,
+} from "@/auth/collateralBalance";
+import { createClobClient } from "@/lib/clobClientFactory";
+import { getCachedCreds } from "@/lib/utils";
+import { resolveTradingVault } from "@/auth/vault";
 import { resolveTokenIconUrl } from "@/components/ui/deposit/icons";
 import { selectPrimaryWallet } from "@/lib/primaryWallet";
 import { extractDepositAddress } from "@/components/ui/deposit/addresses";
 import { shouldOfferConnectedWalletFunds } from "@/auth/privyUserIdentity";
+import { parseAmountUsd } from "@/components/ui/deposit/format";
 import {
-  formatAmountUsdInput,
-  parseAmountUsd,
-  sanitizeAmountUsdInput,
-} from "@/components/ui/deposit/format";
+  formatPusdFromAtomic,
+  parsePusdInputToAtomic,
+  sanitizePusdAmountInput,
+  validateWithdrawAmountAtomic,
+} from "./pusdAmount";
 import type { CreateWithdrawResponse } from "@/types/bridge";
 import {
   JUMPER_SWAP_URL,
@@ -24,9 +33,10 @@ import {
 import { isWithdrawStatusPollTimedOut } from "./withdrawStatusPoll";
 import { executePusdWithdrawTransfer } from "./executePusdWithdraw";
 import type { WithdrawDestinationAsset, WithdrawFeedback } from "./types";
-import { isValidWithdrawRecipient, validateWithdrawAmountUsd, validateWithdrawRecipient } from "./validation";
+import { isValidWithdrawRecipient, validateWithdrawRecipient } from "./validation";
 import { getPolygonPusdWithdrawAsset } from "./withdrawAssets";
 import {
+  formatInsufficientOnChainPusdError,
   formatWithdrawExecutionError,
   getWithdrawFlowMessages,
   isWithdrawUserRejection,
@@ -61,6 +71,7 @@ export function useWithdrawDrawerController({
   const [statusMessage, setStatusMessage] = useState("");
   const [withdrawFeedback, setWithdrawFeedback] = useState<WithdrawFeedback | null>(null);
   const [bridgePollAddress, setBridgePollAddress] = useState<string | null>(null);
+  const [withdrawableAtomic, setWithdrawableAtomic] = useState<bigint | null>(null);
 
   const isExecutingRef = useRef(false);
   const lastCompletedPollAddressRef = useRef<string | null>(null);
@@ -118,21 +129,36 @@ export function useWithdrawDrawerController({
   );
 
   const balanceNumber = useMemo(() => parseAmountUsd(balanceUsd), [balanceUsd]);
-  const amountUsd = useMemo(() => parseAmountUsd(amountInput), [amountInput]);
+  const effectiveWithdrawableAtomic = withdrawableAtomic ?? BigInt(0);
+  const withdrawableBalanceDisplay = useMemo(() => {
+    if (withdrawableAtomic !== null) {
+      return formatPusdFromAtomic(withdrawableAtomic);
+    }
+    return null;
+  }, [withdrawableAtomic]);
+  const amountAtomic = useMemo(
+    () => parsePusdInputToAtomic(amountInput),
+    [amountInput]
+  );
+  const amountUsd = useMemo(
+    () => Number(amountAtomic) / 10 ** PUSD_DECIMALS,
+    [amountAtomic]
+  );
 
   const amountError = useMemo(() => {
     if (!amountInput.trim()) return null;
-    return validateWithdrawAmountUsd(amountUsd, balanceNumber, locale);
-  }, [amountInput, amountUsd, balanceNumber, locale]);
+    if (withdrawableAtomic === null) return null;
+    return validateWithdrawAmountAtomic(amountAtomic, effectiveWithdrawableAtomic, locale);
+  }, [amountInput, amountAtomic, effectiveWithdrawableAtomic, locale, withdrawableAtomic]);
 
   const recipientError = useMemo(() => {
     return validateWithdrawRecipient(recipientAddr, "evm", locale);
   }, [recipientAddr, locale]);
 
   const receiveAmountDisplay = useMemo(() => {
-    if (amountUsd <= 0) return null;
-    return `${amountUsd.toFixed(5)} PUSD`;
-  }, [amountUsd]);
+    if (amountAtomic <= BigInt(0)) return null;
+    return `${formatPusdFromAtomic(amountAtomic)} PUSD`;
+  }, [amountAtomic]);
 
   const resetWithdrawFormAfterSuccess = useCallback(() => {
     setAmountInput("");
@@ -160,8 +186,72 @@ export function useWithdrawDrawerController({
   useEffect(() => {
     if (!isOpen) {
       resetState();
+      setWithdrawableAtomic(null);
     }
   }, [isOpen, resetState]);
+
+  useEffect(() => {
+    if (!isOpen || !proxyAddress) {
+      setWithdrawableAtomic(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadWithdrawable = async () => {
+      try {
+        const wallet = selectPrimaryWallet(
+          wallets,
+          user?.wallet?.address,
+          primaryWalletSelectOptions
+        );
+        if (!wallet) return;
+
+        const ethereumProvider = await wallet.getEthereumProvider();
+        const provider = new ethers.providers.Web3Provider(ethereumProvider as any);
+        const signer = provider.getSigner();
+
+        const creds = getCachedCreds(wallet.address);
+        let clobClient = null;
+        if (creds?.key) {
+          const vault = await resolveTradingVault(signer, proxyAddress);
+          clobClient = createClobClient({
+            signer: signer as never,
+            creds,
+            funderAddress: vault.address,
+            signatureType: vault.signatureType,
+          });
+        }
+
+        const { withdrawableAtomic } = await resolveWithdrawablePusdAtomic({
+          provider,
+          proxyAddress,
+          clobClient,
+        });
+
+        if (!cancelled) {
+          setWithdrawableAtomic(withdrawableAtomic);
+        }
+      } catch (err) {
+        console.warn("[withdraw] load withdrawable balance failed", err);
+        if (!cancelled) {
+          setWithdrawableAtomic(null);
+        }
+      }
+    };
+
+    void loadWithdrawable();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    isOpen,
+    proxyAddress,
+    wallets,
+    user?.wallet?.address,
+    primaryWalletSelectOptions,
+    balanceUsd,
+  ]);
 
   const handleUseConnected = useCallback(() => {
     if (!activeWallet?.address) return;
@@ -172,15 +262,16 @@ export function useWithdrawDrawerController({
   const handleAmountChange = useCallback(
     (value: string) => {
       clearWithdrawFeedback();
-      setAmountInput(sanitizeAmountUsdInput(value));
+      setAmountInput(sanitizePusdAmountInput(value));
     },
     [clearWithdrawFeedback]
   );
 
   const handleMax = useCallback(() => {
     clearWithdrawFeedback();
-    setAmountInput(formatAmountUsdInput(balanceNumber));
-  }, [balanceNumber, clearWithdrawFeedback]);
+    if (withdrawableAtomic === null || withdrawableAtomic <= BigInt(0)) return;
+    setAmountInput(formatPusdFromAtomic(withdrawableAtomic));
+  }, [withdrawableAtomic, clearWithdrawFeedback]);
 
   const handleRecipientChange = useCallback(
     (value: string) => {
@@ -192,9 +283,11 @@ export function useWithdrawDrawerController({
 
   const canSubmitBase = Boolean(
     proxyAddress &&
+      withdrawableAtomic !== null &&
+      withdrawableAtomic > BigInt(0) &&
       isValidWithdrawRecipient(recipientAddr, "evm") &&
       !amountError &&
-      amountUsd > 0 &&
+      amountAtomic > BigInt(0) &&
       !recipientError
   );
 
@@ -318,9 +411,7 @@ export function useWithdrawDrawerController({
       const wallet = selectPrimaryWallet(wallets, user?.wallet?.address, primaryWalletSelectOptions);
       if (!wallet) throw new Error(wfMessages.noWallet);
 
-      const amountBaseUnit = ethers.utils
-        .parseUnits(amountUsd.toFixed(PUSD_DECIMALS), PUSD_DECIMALS)
-        .toString();
+      const amountBaseUnit = amountAtomic.toString();
 
       const withdrawResponse: CreateWithdrawResponse = await createWithdrawAddress({
         address: proxyAddress,
@@ -351,6 +442,12 @@ export function useWithdrawDrawerController({
       showWithdrawFeedback(wfMessages.submitted, "success", amountUsd);
       onBalanceRefresh();
     } catch (error) {
+      if (error instanceof InsufficientOnChainPusdError) {
+        setExecutionError(formatInsufficientOnChainPusdError(locale, error));
+        setWithdrawFeedback(null);
+        return;
+      }
+
       const raw = error instanceof Error ? error.message : wfMessages.failed;
       if (isWithdrawUserRejection(raw)) {
         showWithdrawFeedback(wfMessages.userRejected, "error", lastWithdrawAmountRef.current);
@@ -368,6 +465,7 @@ export function useWithdrawDrawerController({
       setIsExecuting(false);
     }
   }, [
+    amountAtomic,
     amountUsd,
     canSubmit,
     locale,
@@ -389,6 +487,7 @@ export function useWithdrawDrawerController({
     amountInput,
     amountUsd,
     balanceNumber,
+    withdrawableBalanceDisplay,
     bridgeStatus,
     canSubmit,
     isWithdrawInFlight,

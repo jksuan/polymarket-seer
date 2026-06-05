@@ -250,7 +250,7 @@ const zh = {
     signatureTimeout: '⚠️ 签名通道休眠，交易未发送，资产安全。即将为您重新激活页面...',
     placeSuccess: '下注成功！订单已被 Polymarket 撮合引擎接受。',
     switchingNetwork: '正在切换至 Polygon 网络...',
-    settingApproval: '正在设置代币交易授权 (一次性操作)...',
+    settingApproval: '正在为本市场设置 pUSD 授权（通常只需签名 1 次）...',
     preparingArchive: '正在准备归档交易...',
     preparingRedeem: '正在构造领奖交易请求...',
     checkingArchiveBalance: '检测到多结果市场，正在查询链上代币余额...',
@@ -458,6 +458,10 @@ const zh = {
     statusPollError: '无法获取提现状态，请检查网络后重试查询。',
     statusPollTimeout:
       '状态更新较慢，提现可能仍在处理中。请稍后重试查询，或在收款钱包中确认是否到账。',
+    insufficientOnChainPusd:
+      '金库链上 pUSD 不足，无法发起提现。请取消未成交挂单、卖出持仓或等待余额同步后再试。',
+    batchReverted:
+      '提现交易模拟失败，多为链上 pUSD 不足或余额尚未到账。请刷新余额后减少金额重试。',
     retryStatusPoll: '重试查询',
   },
 

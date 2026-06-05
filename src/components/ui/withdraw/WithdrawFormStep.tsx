@@ -15,7 +15,7 @@ type Controller = ReturnType<typeof useWithdrawDrawerController>;
 export function WithdrawFormStep({ c }: { c: Controller }) {
   const { t } = useTranslation();
   const wf = t.withdrawFlow;
-  const balanceDisplay = c.balanceNumber.toFixed(5);
+  const balanceDisplay = c.withdrawableBalanceDisplay ?? "…";
 
   return (
     <div className="space-y-5">
