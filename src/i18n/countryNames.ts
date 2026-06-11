@@ -1,3 +1,5 @@
+import { canonicalCountryName } from '@/lib/countryFlags';
+
 /**
  * Country name translations for 2026 FIFA World Cup (48 teams).
  * Maps English API names → localized names.
@@ -126,24 +128,6 @@ const shortCountryNameZh: Record<string, string> = {
   'BIH/ITA/NIR/WAL': '波黑',
 };
 
-const normalizationEn: Record<string, string> = {
-  'CZE/DEN/MKD/IRL': 'Czechia',
-  'BIH/ITA/NIR/WAL': 'Bosnia and Herzegovina',
-  'KOS/ROU/SVK/TUR': 'Türkiye',
-  'Turkiye': 'Türkiye',
-  'Turkey': 'Türkiye',
-  'BOL/IRQ/SUR': 'Iraq',
-  'DRC/JAM/NCL': 'DR Congo',
-  'Congo DR': 'DR Congo',
-  'South Korea': 'Korea Republic',
-  'USA': 'United States',
-  'Curacao': 'Curaçao',
-  'Cote d\'Ivoire': 'Côte d\'Ivoire',
-  'Ivory Coast': 'Côte d\'Ivoire',
-  'Iran': 'IR Iran',
-  'Cape Verde': 'Cabo Verde',
-};
-
 /**
  * Translate a country name based on locale.
  * Falls back to the original (English) name if no mapping is found.
@@ -153,7 +137,7 @@ export function translateCountryName(name: string, locale: string, short: boolea
     if (short && shortCountryNameZh[name]) {
       return shortCountryNameZh[name];
     }
-    return countryNameZh[name] || name;
+    return countryNameZh[name] || countryNameZh[canonicalCountryName(name)] || name;
   }
-  return normalizationEn[name] || name;
+  return canonicalCountryName(name);
 }

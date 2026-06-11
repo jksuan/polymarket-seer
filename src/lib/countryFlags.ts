@@ -87,16 +87,39 @@ const COUNTRY_CODE_MAP: Record<string, string> = {
 };
 
 /**
- * Normalize country name to handle API inconsistencies.
- * Polymarket may return "Côte D'Ivoire", "Côte d'Ivoire", or "Ivory Coast" — all mean the same team.
- * This function maps all known variants to a single canonical key used in our dictionaries.
+ * Polymarket API / i18n 别名 → 字典 canonical 名（与 countryNames.normalizationEn 对齐）。
  */
+const COUNTRY_NAME_ALIASES: Record<string, string> = {
+  'Bosnia-Herzegovina': 'Bosnia and Herzegovina',
+  'BIH/ITA/NIR/WAL': 'Bosnia and Herzegovina',
+  'CZE/DEN/MKD/IRL': 'Czechia',
+  'KOS/ROU/SVK/TUR': 'Türkiye',
+  'Turkiye': 'Türkiye',
+  'Turkey': 'Türkiye',
+  'BOL/IRQ/SUR': 'Iraq',
+  'DRC/JAM/NCL': 'DR Congo',
+  'Congo DR': 'DR Congo',
+  'South Korea': 'Korea Republic',
+  'USA': 'United States',
+  'Curacao': 'Curaçao',
+  'Cote d\'Ivoire': 'Côte d\'Ivoire',
+  'Ivory Coast': "Côte d'Ivoire",
+  'Iran': 'IR Iran',
+  'Cape Verde': 'Cabo Verde',
+};
+
+/**
+ * Normalize country name to handle API inconsistencies.
+ * Maps variants to a single canonical key used in flag / group / short-code dictionaries.
+ */
+export function canonicalCountryName(name: string): string {
+  if (!name) return name;
+  if (/c.te\s+d.ivoire/i.test(name)) return "Côte d'Ivoire";
+  return COUNTRY_NAME_ALIASES[name] ?? name;
+}
+
 function normalizeName(name: string): string {
-  // Handle Côte d'Ivoire variants (case-insensitive D/d, plus "Ivory Coast")
-  if (/c.te\s+d.ivoire/i.test(name) || name === 'Ivory Coast') return "Côte d'Ivoire";
-  // Handle Iran variants
-  if (name === 'Iran') return 'IR Iran';
-  return name;
+  return canonicalCountryName(name);
 }
 
 /**

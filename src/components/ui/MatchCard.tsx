@@ -5,7 +5,15 @@ import { motion } from 'motion/react';
 import { Clock } from 'lucide-react';
 import { SportMarket } from '@/types/sports';
 import { ConfirmModal } from './ConfirmModal';
-import { getCountryFlagUrl, getCountryShortCode, getCountryColor, getCountryGroup, isGroupStageMatch, TeamColors } from '@/lib/countryFlags';
+import {
+  canonicalCountryName,
+  getCountryFlagUrl,
+  getCountryShortCode,
+  getCountryColor,
+  getCountryGroup,
+  isGroupStageMatch,
+  TeamColors,
+} from '@/lib/countryFlags';
 import { formatVolume } from '@/lib/utils';
 import { Skeleton } from './Skeleton';
 import { useTranslation } from '@/i18n';
@@ -472,12 +480,12 @@ export function parseMatchEvents(events: any[], locale: string = 'en'): ParsedMa
     // Parse title to determine home vs away order
     // Title format: "Mexico vs. South Africa" or "Mexico vs South Africa"
     const titleParts = (evt.title || '').split(/\s+vs\.?\s+/i);
-    const homeName = titleParts[0]?.trim() || teamMarkets[0].groupItemTitle;
-    const awayName = titleParts[1]?.trim() || teamMarkets[1].groupItemTitle;
+    const homeName = canonicalCountryName(titleParts[0]?.trim() || teamMarkets[0].groupItemTitle || '');
+    const awayName = canonicalCountryName(titleParts[1]?.trim() || teamMarkets[1].groupItemTitle || '');
 
-    // Match team markets to home/away based on title order
-    let homeMarket = teamMarkets.find((m: any) => m.groupItemTitle === homeName);
-    let awayMarket = teamMarkets.find((m: any) => m.groupItemTitle === awayName);
+    // Match team markets to home/away (canonical 名对齐，兼容 BIH/ITA/NIR/WAL 等别名)
+    let homeMarket = teamMarkets.find((m: any) => canonicalCountryName(m.groupItemTitle || '') === homeName);
+    let awayMarket = teamMarkets.find((m: any) => canonicalCountryName(m.groupItemTitle || '') === awayName);
     
     // Fallback if names don't match exactly
     if (!homeMarket || !awayMarket) {
