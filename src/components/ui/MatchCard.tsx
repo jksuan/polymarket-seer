@@ -27,6 +27,10 @@ export interface ParsedMatch {
   dateISO: string;
   /** Match status */
   status: 'upcoming' | 'live' | 'ended';
+  /** Home goals when score is known (Gamma `score` home segment) */
+  homeScore: number | null;
+  /** Away goals when score is known */
+  awayScore: number | null;
   /** Total event volume in USD */
   volume: number;
   /** Home team info */
@@ -88,6 +92,9 @@ export function MatchCard({ match, index = 0, onPlaceBet, positions }: MatchCard
 
   // Static color for Draw, dynamic for teams
   const drawColor = '#334155';     // Slate
+  const showScores = match.homeScore != null && match.awayScore != null;
+  const scoreColor = match.status === 'live' ? '#fff' : 'rgba(255,255,255,0.45)';
+  const scoreWeight = match.status === 'live' ? 800 : 600;
 
   return (
     <>
@@ -221,11 +228,12 @@ export function MatchCard({ match, index = 0, onPlaceBet, positions }: MatchCard
                 style={{
                   fontFamily: 'Inter',
                   fontSize: '13px',
-                  fontWeight: 600,
-                  color: 'rgba(255,255,255,0.3)',
+                  fontWeight: scoreWeight,
+                  color: scoreColor,
+                  fontVariantNumeric: 'tabular-nums',
                 }}
               >
-                0-0
+                {showScores ? match.homeScore : '-'}
               </span>
             </div>
 
@@ -261,11 +269,12 @@ export function MatchCard({ match, index = 0, onPlaceBet, positions }: MatchCard
                 style={{
                   fontFamily: 'Inter',
                   fontSize: '13px',
-                  fontWeight: 600,
-                  color: 'rgba(255,255,255,0.3)',
+                  fontWeight: scoreWeight,
+                  color: scoreColor,
+                  fontVariantNumeric: 'tabular-nums',
                 }}
               >
-                0-0
+                {showScores ? match.awayScore : '-'}
               </span>
             </div>
           </div>
@@ -397,6 +406,39 @@ export function MatchCard({ match, index = 0, onPlaceBet, positions }: MatchCard
   );
 }
 
+// ─── Helpers: Gamma event score + status ───
+
+/** Parse Gamma `score` (e.g. "2-0"; compound esports strings use the first segment). */
+export function parseEventScore(score: string | null | undefined): { home: number; away: number } | null {
+  if (!score || typeof score !== 'string') return null;
+  const segment = score.trim().split('|')[0]?.trim() ?? '';
+  const matched = segment.match(/^(\d+)\s*-\s*(\d+)$/);
+  if (!matched) return null;
+  return { home: parseInt(matched[1], 10), away: parseInt(matched[2], 10) };
+}
+
+function resolveMatchStatus(
+  evt: { live?: boolean | null; ended?: boolean | null },
+  homeMarket: { closed?: boolean | null },
+  awayMarket: { closed?: boolean | null },
+  matchTimeMs: number,
+  now: number,
+): 'upcoming' | 'live' | 'ended' {
+  if (evt.ended === true || homeMarket.closed || awayMarket.closed) {
+    return 'ended';
+  }
+  if (evt.live === true) {
+    return 'live';
+  }
+  if (now >= matchTimeMs + 120 * 60 * 1000) {
+    return 'ended';
+  }
+  if (now >= matchTimeMs) {
+    return 'live';
+  }
+  return 'upcoming';
+}
+
 // ─── Helper: Parse raw API events into ParsedMatch objects ───
 
 export function parseMatchEvents(events: any[], locale: string = 'en'): ParsedMatch[] {
@@ -490,19 +532,12 @@ export function parseMatchEvents(events: any[], locale: string = 'en'): ParsedMa
     const awayProb = Number((parsePrice(awayMarket) * 100).toFixed(0));
     const drawProb = Number((parsePrice(drawMarket) * 100).toFixed(0));
 
-    // Determine status
-    const now = new Date().getTime();
+    const now = Date.now();
     const matchTimeMs = matchDate.getTime();
-    let matchStatus: 'upcoming' | 'live' | 'ended' = 'upcoming';
-    
-    if (homeMarket.closed || awayMarket.closed) {
-      matchStatus = 'ended';
-    } else if (now >= matchTimeMs && now < matchTimeMs + 120 * 60 * 1000) {
-      // Live if current time is within 120 minutes of start time
-      matchStatus = 'live';
-    } else if (now >= matchTimeMs + 120 * 60 * 1000) {
-      matchStatus = 'ended';
-    }
+    const matchStatus = resolveMatchStatus(evt, homeMarket, awayMarket, matchTimeMs, now);
+    const parsedScore = parseEventScore(evt.score);
+    const homeScore = parsedScore?.home ?? null;
+    const awayScore = parsedScore?.away ?? null;
 
     // Build a SportMarket-compatible object for ConfirmModal
     const rawMarket: SportMarket = {
@@ -559,6 +594,8 @@ export function parseMatchEvents(events: any[], locale: string = 'en'): ParsedMa
       timeLabel,
       dateISO,
       status: matchStatus,
+      homeScore,
+      awayScore,
       volume: parseFloat(evt.volume || '0'),
       isGroupStage: isGroupStageMatch(homeName, awayName),
       group: isGroupStageMatch(homeName, awayName) ? getCountryGroup(homeName) : undefined,

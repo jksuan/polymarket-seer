@@ -11,6 +11,11 @@ export type GammaEvent = {
   title?: string;
   description?: string;
   volume?: string | number;
+  score?: string | null;
+  live?: boolean | null;
+  ended?: boolean | null;
+  period?: string | null;
+  elapsed?: string | null;
   markets?: Array<{ sportsMarketType?: string | null }>;
 };
 
