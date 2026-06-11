@@ -23,6 +23,7 @@ import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { DiscoverPageSkeleton } from '@/components/pages/discover/DiscoverPageSkeleton';
 import { ChooseSideDrawer } from '@/components/ui/ChooseSideDrawer';
 import { ParsedMatch } from '@/components/ui/MatchCard';
+import { pickDiscoverThemeMatches } from '@/components/pages/discoverThemeMatches';
 
 interface DiscoverPageProps {
   onPlaceBet?: (amount: string, tokenId: string, executionPrice?: number) => Promise<void>;
@@ -62,43 +63,10 @@ export function DiscoverPage({ onPlaceBet, positions }: DiscoverPageProps) {
   // Champion confirm state
   const [championConfirm, setChampionConfirm] = useState<ChampionTeam | null>(null);
 
-  // Compute dynamic discovering matches
-  const { trendingMatch, splitMatch, trendingRest, splitRest, underdogMatch, underdogRest } = useMemo(() => {
-    if (!allMatches || allMatches.length === 0) return {};
-
-    // 1. Trending: simply highest volume
-    const sortedByVolume = [...allMatches].sort((a, b) => b.volume - a.volume);
-    const trending = sortedByVolume[0];
-
-    // 2. Split: tightest probability difference, filtering out trending
-    const splitMatches = allMatches.filter(m => Math.abs(m.home.probability - m.away.probability) <= 15);
-    splitMatches.sort((a, b) => Math.abs(a.home.probability - a.away.probability) - Math.abs(b.home.probability - b.away.probability));
-    const split = splitMatches.find(m => m.id !== trending?.id) || splitMatches[0] || sortedByVolume[1];
-
-    // Secondary horizontal row lists (exclude the hero card itself)
-    // trendingRest: Vol 2-6 by volume, skip the trending hero
-    const trendingRest = sortedByVolume.filter(m => m.id !== trending?.id).slice(0, 6);
-
-    // splitRest: other deathmatch candidates, skip hero; sorted by tightness
-    const splitRest = splitMatches.filter(m => m.id !== split?.id && m.id !== trending?.id).slice(0, 6);
-
-    // 4. Underdog: team with lowest probability in 5-20% range (best legitimate long shot)
-    //    Sort by ascending probability (lowest = most extreme underdog)
-    const underdogCandidates = allMatches
-      .filter(m => {
-        const minProb = Math.min(m.home.probability, m.away.probability);
-        return minProb >= 5 && minProb <= 20;
-      })
-      .sort((a, b) =>
-        Math.min(a.home.probability, a.away.probability) - Math.min(b.home.probability, b.away.probability)
-      );
-    const underdog = underdogCandidates.find(
-      m => m.id !== trending?.id && m.id !== split?.id
-    ) || underdogCandidates[0];
-    const underdogRest = underdogCandidates.filter(m => m.id !== underdog?.id).slice(0, 6);
-
-    return { trendingMatch: trending, splitMatch: split, trendingRest, splitRest, underdogMatch: underdog, underdogRest };
-  }, [allMatches]);
+  const { trendingMatch, splitMatch, trendingRest, splitRest, underdogMatch, underdogRest } = useMemo(
+    () => pickDiscoverThemeMatches(allMatches),
+    [allMatches],
+  );
 
   // Helper handling QuickPick interaction
   const handleCardClick = (match?: ParsedMatch) => {
