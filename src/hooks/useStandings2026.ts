@@ -1,5 +1,6 @@
 'use client';
 
+import { useCallback } from 'react';
 import useSWR from 'swr';
 import type { StandingsGroup } from '@/lib/mockStandings';
 
@@ -25,11 +26,14 @@ export function useStandings2026(enabled: boolean) {
     }
   );
 
+  const refresh = useCallback(() => mutate(undefined, { revalidate: true }), [mutate]);
+
   return {
     groups: data ?? [],
-    isLoading: enabled && isLoading && !data,
+    // 失败重试时 isValidating=true 但 isLoading=false，需一并算作加载中
+    isLoading: enabled && (isLoading || isValidating) && !data,
     isValidating,
     error,
-    refresh: mutate,
+    refresh,
   };
 }

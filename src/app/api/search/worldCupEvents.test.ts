@@ -46,6 +46,18 @@ describe("worldCupEvents", () => {
     expect(filtered.map((e) => e.id)).toEqual(["1", "2"]);
   });
 
+  it("fetchAllWorldCupEvents includeClosed 合并 open 与 closed", async () => {
+    const fetchPage = vi.fn(async (url: string) => {
+      if (url.includes("closed=true")) {
+        return [{ id: "closed-1", title: "A vs. B", volume: "1", markets: [{ sportsMarketType: "moneyline" }] }];
+      }
+      return [{ id: "open-1", title: "C vs. D", volume: "2", markets: [{ sportsMarketType: "moneyline" }] }];
+    });
+
+    const events = await fetchAllWorldCupEvents(fetchPage, { includeClosed: true });
+    expect(events.map((e) => e.id).sort()).toEqual(["closed-1", "open-1"]);
+  });
+
   it("fetchAllWorldCupEvents 翻页去重直至不足一页", async () => {
     const page0 = Array.from({ length: 100 }, (_, i) => ({
       id: `p0-${i}`,

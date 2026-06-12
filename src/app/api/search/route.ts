@@ -41,6 +41,7 @@ export async function GET(request: Request) {
   const q = searchParams.get("q")?.trim() || "";
   const slug = searchParams.get("slug")?.trim() || "";
   const wcOnly = searchParams.get("wc") === "1";
+  const includeClosed = searchParams.get("includeClosed") === "1";
 
   if (!q && !slug) {
     return NextResponse.json([]);
@@ -66,7 +67,9 @@ export async function GET(request: Request) {
         events = (wrapped as { events?: GammaEvent[] }).events || [wrapped as GammaEvent];
       }
     } else if (fetchWCAll) {
-      events = await fetchAllWorldCupEvents((url) => fetchGammaEventsPage(url, agent));
+      events = await fetchAllWorldCupEvents((url) => fetchGammaEventsPage(url, agent), {
+        includeClosed,
+      });
       events = filterWorldCupEventsForClient(events);
     } else {
       const fetchUrl = `https://gamma-api.polymarket.com/public-search?q=${encodeURIComponent(q)}&limit=100`;

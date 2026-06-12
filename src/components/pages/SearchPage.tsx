@@ -284,7 +284,7 @@ export function SearchPage({ onPlaceBet, positions }: SearchPageProps) {
     try {
       // 为了保证应用调性纯粹，所有的搜索全部强制挂载 wc=1，
       // 让后端直接打到世界杯专有 TAG 接口进行客户端级别的纯净度过滤
-      const res = await fetch(`/api/search?q=${encodeURIComponent(searchQuery)}&wc=1`);
+      const res = await fetch(`/api/search?q=${encodeURIComponent(searchQuery)}&wc=1&includeClosed=1`);
       const events = await res.json();
       if (Array.isArray(events)) {
         setResults(classifyAndTransform(events));

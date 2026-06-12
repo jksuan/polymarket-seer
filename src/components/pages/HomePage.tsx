@@ -61,36 +61,36 @@ export function HomePage({ onPlaceBet, positions }: { onPlaceBet?: (amount: stri
 
   // ── Filter matches based on the sub-tab selection ──
   const filteredMatchGroups = useMemo(() => {
-    let baseMatches = allMatches;
-
-    // Apply team filter globally across all sub-tabs
-    if (selectedTeam) {
-      baseMatches = baseMatches.filter(
-        m => m.home.name === selectedTeam || m.away.name === selectedTeam
-      );
-    }
+    const openMatches = allMatches.filter((m) => m.status !== 'ended');
+    const matchesForTeam = (pool: typeof allMatches) =>
+      selectedTeam
+        ? pool.filter((m) => m.home.name === selectedTeam || m.away.name === selectedTeam)
+        : pool;
 
     if (matchSub === 'hot') {
-      // "全部" — show all matches grouped by date, filtered by selected date
-      const groups = groupMatchesByDate(baseMatches);
+      // 总览「全部」/日期：仅未结束；选球队时含已结束
+      const base = selectedTeam ? matchesForTeam(allMatches) : openMatches;
+      const groups = groupMatchesByDate(base);
       if (selectedDate === 'ALL') {
         return groups;
       }
-      return groups.filter(g => g.dateISO === selectedDate);
+      return groups.filter((g) => g.dateISO === selectedDate);
     }
 
     if (matchSub === 'group') {
-      const filtered = baseMatches.filter(m => m.isGroupStage && m.group === selectedGroup);
+      const filtered = matchesForTeam(allMatches).filter(
+        (m) => m.isGroupStage && m.group === selectedGroup
+      );
       return groupMatchesByDate(filtered);
     }
 
     if (matchSub === 'knockout') {
-      const filtered = baseMatches.filter(m => !m.isGroupStage);
+      const filtered = matchesForTeam(openMatches).filter((m) => !m.isGroupStage);
       return groupMatchesByDate(filtered);
     }
 
-    return groupMatchesByDate(baseMatches);
-  }, [matchSub, selectedGroup, selectedKnockout, selectedDate, selectedTeam, allMatches, matchGroups]);
+    return groupMatchesByDate(matchesForTeam(openMatches));
+  }, [matchSub, selectedGroup, selectedKnockout, selectedDate, selectedTeam, allMatches]);
 
   // ── Derived State: skip animation when SWR has cached data ──
   if (keyword !== prevKeyword) {

@@ -1,5 +1,6 @@
 'use client';
 
+import { useCallback } from 'react';
 import useSWR from 'swr';
 import type { Scorer } from '@/lib/mockScorers';
 
@@ -25,11 +26,13 @@ export function useScorers2026(enabled: boolean) {
     }
   );
 
+  const refresh = useCallback(() => mutate(undefined, { revalidate: true }), [mutate]);
+
   return {
     scorers: data ?? [],
-    isLoading: enabled && isLoading && !data,
+    isLoading: enabled && (isLoading || isValidating) && !data,
     isValidating,
     error,
-    refresh: mutate,
+    refresh,
   };
 }

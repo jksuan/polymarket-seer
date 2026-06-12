@@ -59,7 +59,8 @@ function Live2026ScorersView() {
           {t.scorers.liveError}
         </p>
         <button
-          onClick={() => refresh()}
+          type="button"
+          onClick={() => void refresh()}
           className="px-4 py-2 rounded-lg text-[12px] font-bold text-[#00F0FF] border border-[#00F0FF]/30 bg-[#00F0FF]/10 active:scale-95 transition-transform"
         >
           {t.scorers.retry}
