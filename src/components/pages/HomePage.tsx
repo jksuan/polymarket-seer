@@ -38,7 +38,7 @@ export function HomePage({ onPlaceBet, positions }: { onPlaceBet?: (amount: stri
   const [standingsMode, setStandingsMode] = useState<'groups' | 'knockout'>('groups');
 
   // Sub-navigation picker states (for scorers)
-  const [scorersYear, setScorersYear] = useState<ScorersYear>('2022');
+  const [scorersYear, setScorersYear] = useState<ScorersYear>('2026');
 
   const [skipAnimation, setSkipAnimation] = useState(false);
   const [prevKeyword, setPrevKeyword] = useState<string>('');

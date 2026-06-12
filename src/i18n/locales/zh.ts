@@ -141,6 +141,10 @@ const zh = {
     lockedTitle: '金靴悬念 未解之谜',
     lockedDesc: '2026 美加墨世界杯正赛尚未开启，实时射手榜将在第一粒进球诞生时全面解锁。',
     awaitingKickoff: '赛事筹备中',
+    loadingLive: '正在同步进球数据…',
+    liveError: '射手榜加载失败，请稍后重试',
+    emptyLive: '暂无进球记录，首粒进球诞生后将自动更新',
+    retry: '重试',
     goals: '进球',
   },
 

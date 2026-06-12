@@ -142,6 +142,10 @@ const en: TranslationKeys = {
     lockedTitle: 'Golden Boot Bracket Locked',
     lockedDesc: 'The 2026 World Cup has not kicked off yet. The scorers leaderboard will unlock with the first goal.',
     awaitingKickoff: 'AWAITING KICKOFF',
+    loadingLive: 'Syncing goal scorers…',
+    liveError: 'Failed to load scorers. Please try again.',
+    emptyLive: 'No goals yet. The leaderboard updates after the first goal.',
+    retry: 'Retry',
     goals: 'GOALS',
   },
 
