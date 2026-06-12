@@ -84,6 +84,7 @@ export function SubTabs({
                 hot: t.home.hotOverview,
                 group: t.home.groupPicker,
                 knockout: t.home.knockoutPicker,
+                ended: t.home.endedTab,
               }[tab.id] || tab.label}
               {isGroupActive && selectedGroup && (
                 <span style={{ color: '#FFD700', fontWeight: 900, marginLeft: '2px' }}>{t.standings.groupPrefix}{selectedGroup}{t.standings.groupSuffix}</span>

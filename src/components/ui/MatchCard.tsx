@@ -103,6 +103,7 @@ export function MatchCard({ match, index = 0, onPlaceBet, positions }: MatchCard
   const showScores = match.homeScore != null && match.awayScore != null;
   const scoreColor = match.status === 'live' ? '#fff' : 'rgba(255,255,255,0.45)';
   const scoreWeight = match.status === 'live' ? 800 : 600;
+  const canBet = match.status !== 'ended';
 
   return (
     <>
@@ -291,11 +292,13 @@ export function MatchCard({ match, index = 0, onPlaceBet, positions }: MatchCard
           <div className="grid grid-cols-3 gap-2">
             {/* Home Win button */}
             <button
-              onClick={() => setConfirmSide('home')}
-              className="py-2.5 rounded-xl active:scale-95 transition-transform text-center relative"
+              type="button"
+              disabled={!canBet}
+              onClick={() => canBet && setConfirmSide('home')}
+              className="py-2.5 rounded-xl active:scale-95 transition-transform text-center relative disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100"
               style={{
                 background: match.home.style.primary,
-                boxShadow: `0 2px 8px ${match.home.style.primary}40`,
+                boxShadow: canBet ? `0 2px 8px ${match.home.style.primary}40` : 'none',
               }}
             >
               <div className="flex items-baseline justify-center gap-1 overflow-hidden px-1">
@@ -320,11 +323,13 @@ export function MatchCard({ match, index = 0, onPlaceBet, positions }: MatchCard
 
             {/* Draw button */}
             <button
-              onClick={() => setConfirmSide('draw')}
-              className="py-2.5 rounded-xl active:scale-95 transition-transform text-center"
+              type="button"
+              disabled={!canBet}
+              onClick={() => canBet && setConfirmSide('draw')}
+              className="py-2.5 rounded-xl active:scale-95 transition-transform text-center disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100"
               style={{
                 background: drawColor,
-                boxShadow: `0 2px 8px ${drawColor}40`,
+                boxShadow: canBet ? `0 2px 8px ${drawColor}40` : 'none',
               }}
             >
               <div className="flex items-baseline justify-center gap-1">
@@ -339,11 +344,13 @@ export function MatchCard({ match, index = 0, onPlaceBet, positions }: MatchCard
 
             {/* Away Win button */}
             <button
-              onClick={() => setConfirmSide('away')}
-              className="py-2.5 rounded-xl active:scale-95 transition-transform text-center relative"
+              type="button"
+              disabled={!canBet}
+              onClick={() => canBet && setConfirmSide('away')}
+              className="py-2.5 rounded-xl active:scale-95 transition-transform text-center relative disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100"
               style={{
                 background: match.away.style.primary,
-                boxShadow: `0 2px 8px ${match.away.style.primary}40`,
+                boxShadow: canBet ? `0 2px 8px ${match.away.style.primary}40` : 'none',
               }}
             >
               <div className="flex items-baseline justify-center gap-1 overflow-hidden px-1">
@@ -654,9 +661,12 @@ export interface MatchGroup {
   matches: ParsedMatch[];
 }
 
-export function groupMatchesByDate(matches: ParsedMatch[]): MatchGroup[] {
+export function groupMatchesByDate(
+  matches: ParsedMatch[],
+  order: 'asc' | 'desc' = 'asc'
+): MatchGroup[] {
   const groups: Record<string, MatchGroup> = {};
-  
+
   for (const m of matches) {
     if (!groups[m.dateISO]) {
       groups[m.dateISO] = {
@@ -668,7 +678,9 @@ export function groupMatchesByDate(matches: ParsedMatch[]): MatchGroup[] {
     groups[m.dateISO].matches.push(m);
   }
 
-  return Object.values(groups).sort((a, b) => a.dateISO.localeCompare(b.dateISO));
+  return Object.values(groups).sort((a, b) =>
+    order === 'desc' ? b.dateISO.localeCompare(a.dateISO) : a.dateISO.localeCompare(b.dateISO)
+  );
 }
 
 export function MatchCardSkeleton() {

@@ -11,9 +11,10 @@ export const PRIMARY_TABS: Array<{ id: PrimaryTab; label: string; icon: any }> =
 
 // ── Match Sub-Tabs (Tier 2 when primaryTab === 'matches') ──
 export const MATCH_SUB_TABS: Array<{ id: MatchSubTab; label: string }> = [
-  { id: 'hot',      label: '总览' },
+  { id: 'hot',      label: '热门' },
   { id: 'group',    label: '小组赛 ▾' },
   { id: 'knockout', label: '淘汰赛 ▾' },
+  { id: 'ended',    label: '已结束' },
 ];
 
 // ── World Cup 2026 Groups ──

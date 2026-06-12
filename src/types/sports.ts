@@ -2,7 +2,7 @@
 export type PrimaryTab = 'matches' | 'outrights' | 'standings' | 'scorers';
 
 // ── Sub-Tabs (contextual per primary tab) ──
-export type MatchSubTab = 'hot' | 'group' | 'knockout';
+export type MatchSubTab = 'hot' | 'group' | 'knockout' | 'ended';
 
 // Legacy alias kept for backward compatibility with other pages
 export type SportCategory = PrimaryTab;

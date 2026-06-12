@@ -68,7 +68,7 @@ export function HomePage({ onPlaceBet, positions }: { onPlaceBet?: (amount: stri
         : pool;
 
     if (matchSub === 'hot') {
-      // 总览「全部」/日期：仅未结束；选球队时含已结束
+      // 热门「全部」/日期：仅未结束；选球队时含已结束
       const base = selectedTeam ? matchesForTeam(allMatches) : openMatches;
       const groups = groupMatchesByDate(base);
       if (selectedDate === 'ALL') {
@@ -87,6 +87,11 @@ export function HomePage({ onPlaceBet, positions }: { onPlaceBet?: (amount: stri
     if (matchSub === 'knockout') {
       const filtered = matchesForTeam(openMatches).filter((m) => !m.isGroupStage);
       return groupMatchesByDate(filtered);
+    }
+
+    if (matchSub === 'ended') {
+      const filtered = matchesForTeam(allMatches).filter((m) => m.status === 'ended');
+      return groupMatchesByDate(filtered, 'desc');
     }
 
     return groupMatchesByDate(matchesForTeam(openMatches));
@@ -339,6 +344,12 @@ export function HomePage({ onPlaceBet, positions }: { onPlaceBet?: (amount: stri
                     </div>
                   </div>
                 ))}
+              </div>
+            </div>
+          ) : matchSub === 'ended' ? (
+            <div className="flex flex-col items-center justify-center h-48 opacity-40">
+              <div className="text-[12px] font-bold text-white/50 tracking-widest uppercase">
+                {t.home.noEndedMatches}
               </div>
             </div>
           ) : (
