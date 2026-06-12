@@ -115,6 +115,9 @@ const en: TranslationKeys = {
   standings: {
     lockedTitle: 'Tournament Data Suspended',
     lockedDesc: 'The 2026 World Cup standings engine is suspended. Data will be injected in real-time once the group stage begins.',
+    loadingLive: 'Syncing group stage results…',
+    liveError: 'Failed to load standings. Please try again.',
+    retry: 'Retry',
     hostQatar: 'Qatar',
     hostRussia: 'Russia',
     hostBrazil: 'Brazil',

@@ -16,7 +16,14 @@ export type GammaEvent = {
   ended?: boolean | null;
   period?: string | null;
   elapsed?: string | null;
-  markets?: Array<{ sportsMarketType?: string | null }>;
+  startTime?: string | null;
+  eventDate?: string | null;
+  markets?: Array<{
+    sportsMarketType?: string | null;
+    groupItemTitle?: string | null;
+    closed?: boolean | null;
+    gameStartTime?: string | null;
+  }>;
 };
 
 export function isVsEventTitle(title: string | undefined | null): boolean {
@@ -51,11 +58,11 @@ export function sortEventsByVolumeDesc(events: GammaEvent[]): GammaEvent[] {
   );
 }
 
-export function buildWorldCupEventsPageUrl(offset: number): string {
+export function buildWorldCupEventsPageUrl(offset: number, closed = false): string {
   const params = new URLSearchParams({
     tag_id: String(WC_TAG_ID),
     active: "true",
-    closed: "false",
+    closed: closed ? "true" : "false",
     limit: String(WC_EVENTS_PAGE_SIZE),
     offset: String(offset),
     order: "volume",
@@ -64,15 +71,15 @@ export function buildWorldCupEventsPageUrl(offset: number): string {
   return `https://gamma-api.polymarket.com/events?${params.toString()}`;
 }
 
-/** 翻页拉全 tag 102232 events，按 id 去重 */
-export async function fetchAllWorldCupEvents(
-  fetchPage: (url: string) => Promise<GammaEvent[]>
+async function fetchAllWorldCupEventsByClosedState(
+  fetchPage: (url: string) => Promise<GammaEvent[]>,
+  closed: boolean
 ): Promise<GammaEvent[]> {
   const byId = new Map<string, GammaEvent>();
 
   for (let page = 0; page < WC_EVENTS_MAX_PAGES; page += 1) {
     const offset = page * WC_EVENTS_PAGE_SIZE;
-    const batch = await fetchPage(buildWorldCupEventsPageUrl(offset));
+    const batch = await fetchPage(buildWorldCupEventsPageUrl(offset, closed));
     if (!Array.isArray(batch) || batch.length === 0) {
       break;
     }
@@ -87,5 +94,26 @@ export async function fetchAllWorldCupEvents(
     }
   }
 
+  return [...byId.values()];
+}
+
+/** 翻页拉全 tag 102232 events，按 id 去重 */
+export async function fetchAllWorldCupEvents(
+  fetchPage: (url: string) => Promise<GammaEvent[]>,
+  options?: { includeClosed?: boolean }
+): Promise<GammaEvent[]> {
+  if (!options?.includeClosed) {
+    return sortEventsByVolumeDesc(await fetchAllWorldCupEventsByClosedState(fetchPage, false));
+  }
+
+  const [open, closed] = await Promise.all([
+    fetchAllWorldCupEventsByClosedState(fetchPage, false),
+    fetchAllWorldCupEventsByClosedState(fetchPage, true),
+  ]);
+  const byId = new Map<string, GammaEvent>();
+  for (const event of [...open, ...closed]) {
+    if (event?.id == null) continue;
+    byId.set(String(event.id), event);
+  }
   return sortEventsByVolumeDesc([...byId.values()]);
 }

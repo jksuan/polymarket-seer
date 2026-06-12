@@ -20,7 +20,7 @@ export function StandingsNav({
   const { t } = useTranslation();
 
   const YEARS: Array<{ id: HistoricYear; label: string; locked?: boolean }> = [
-    { id: '2026', label: '2026 🏆', locked: true },
+    { id: '2026', label: '2026 🏆' },
     { id: '2022', label: `2022 ${t.standings.hostQatar}` },
     { id: '2018', label: `2018 ${t.standings.hostRussia}` },
     { id: '2014', label: `2014 ${t.standings.hostBrazil}` },

@@ -229,6 +229,23 @@ export function getCountryGroup(countryName: string): string | undefined {
   return COUNTRY_GROUP_MAP[normalizeName(countryName)];
 }
 
+/** 2026 世界杯 12 个小组字母（A–L） */
+export const WC2026_GROUP_LETTERS = [
+  'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L',
+] as const;
+
+/** 按小组返回 2026 参赛队 canonical 名（顺序与抽签写入 COUNTRY_GROUP_MAP 时一致） */
+export function getWc2026TeamsByGroup(): Record<string, string[]> {
+  const byGroup: Record<string, string[]> = {};
+  for (const letter of WC2026_GROUP_LETTERS) {
+    byGroup[letter] = [];
+  }
+  for (const [country, group] of Object.entries(COUNTRY_GROUP_MAP)) {
+    byGroup[group]?.push(country);
+  }
+  return byGroup;
+}
+
 /**
  * Determine if a match is a group-stage match.
  * True when both teams are in the same group.

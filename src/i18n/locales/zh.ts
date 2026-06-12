@@ -114,6 +114,9 @@ const zh = {
   standings: {
     lockedTitle: '赛事数据尚未解锁',
     lockedDesc: '2026 美加墨世界杯积分榜数据引擎挂起中，待小组赛开打后将实时同步注入系统。',
+    loadingLive: '正在同步小组赛赛果…',
+    liveError: '积分榜加载失败，请稍后重试',
+    retry: '重试',
     hostQatar: '卡塔尔',
     hostRussia: '俄罗斯',
     hostBrazil: '巴西',

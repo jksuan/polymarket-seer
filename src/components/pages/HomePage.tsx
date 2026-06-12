@@ -34,7 +34,7 @@ export function HomePage({ onPlaceBet, positions }: { onPlaceBet?: (amount: stri
   const [showTeamFilter, setShowTeamFilter] = useState(false);
 
   // Sub-navigation picker states (for standings)
-  const [standingsYear, setStandingsYear] = useState<HistoricYear>('2022');
+  const [standingsYear, setStandingsYear] = useState<HistoricYear>('2026');
   const [standingsMode, setStandingsMode] = useState<'groups' | 'knockout'>('groups');
 
   // Sub-navigation picker states (for scorers)
